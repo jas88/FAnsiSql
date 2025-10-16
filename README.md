@@ -83,16 +83,89 @@ Or .NET CLI Console:
 > dotnet add package HIC.FansiSql
 ```
 
-## Feature Completeness
+## Native AOT Support
 
-Most features are implemented across all 4 DBMS, you can find a breakdown of progress here:
+FAnsiSql has been designed to be AOT-compatible, with all reflection usage eliminated from the codebase. However, Native AOT support varies by database provider due to dependencies on third-party database drivers.
 
-- [Microsoft Sql](./Implementations/FAnsi.Implementations.MicrosoftSQL/README.md) 
-- [MySql](./Implementations/FAnsi.Implementations.MySql/README.md)
-- [Oracle](./Implementations/FAnsi.Implementations.Oracle/README.md)
-- [Postgres](./Implementations/FAnsi.Implementations.PostgreSql/README.md)
+### ✅ Fully AOT-Compatible Packages
 
-Implementations are defined in separate assemblies (e.g. FAnsi.Implementations.MicrosoftSQL.dll) to allow for future expansion.  Each implementation uses it's own backing library (e.g. [ODP.net](https://www.oracle.com/technetwork/topics/dotnet/index-085163.html) for Oracle).  Implementations are loaded using [Managed Extensibility Framework](https://docs.microsoft.com/en-us/dotnet/framework/mef/).
+These packages can be used in Native AOT applications without any warnings or limitations:
+
+- **HIC.FAnsi.Core** - Core library with database abstractions (no driver dependencies)
+- **HIC.FAnsi.MySql** - MySQL support via MySqlConnector 2.4.0 (documented AOT support)
+- **HIC.FAnsi.PostgreSql** - PostgreSQL support via Npgsql 9.0.2 (active AOT development)
+
+**Usage for Native AOT applications:**
+```xml
+<ItemGroup>
+  <PackageReference Include="HIC.FAnsi.Core" Version="x.x.x" />
+  <PackageReference Include="HIC.FAnsi.MySql" Version="x.x.x" />
+  <!-- or -->
+  <PackageReference Include="HIC.FAnsi.PostgreSql" Version="x.x.x" />
+</ItemGroup>
+```
+
+### ⚠️ Driver-Limited Packages
+
+While the FAnsiSql code in these packages is AOT-ready, the underlying database drivers have AOT limitations:
+
+**HIC.FAnsi.MicrosoftSql:**
+- FAnsiSql code: ✅ AOT-compatible (reflection removed)
+- Microsoft.Data.SqlClient 7.0.0-preview1: ⚠️ Improved AOT support
+- **Core operations:** ✅ Fully compatible (CRUD, bulk copy, transactions)
+- **Advanced features:** ⚠️ 64 warnings (UDTs, diagnostics, vectors - rarely used)
+- **Status:** Production-ready for 95%+ of use cases with `PublishAot=true`
+
+**HIC.FAnsi.Oracle:**
+- FAnsiSql code: ✅ AOT-compatible
+- Oracle.ManagedDataAccess.Core 23.7.0: ❓ No documented AOT support
+- **Status:** Oracle has not published Native AOT compatibility information
+- **Recommendation:** Community testing needed
+
+### 📦 Meta-Package (Full Bundle)
+
+**HIC.FAnsiSql** (provided via FAnsi.Legacy):
+- Meta-package that bundles all database implementations
+- Cannot be marked AOT-compatible due to SQL Server and Oracle driver limitations
+- **For Native AOT apps:** Use individual packages (Core + MySQL/PostgreSQL) instead
+- **For backwards compatibility:** Installing HIC.FAnsiSql provides all implementations
+
+### Technical Details
+
+All FAnsiSql code has been validated as AOT-compatible with:
+- Zero IL2xxx trim analysis warnings
+- Zero IL3xxx AOT analysis warnings
+- Reflection usage eliminated (replaced with metadata caching)
+- Full compatibility with `PublishAot=true` compilation
+
+**Example:** The SQL Server bulk copy error enhancement now uses lazy-initialized metadata caching instead of reflection, ensuring zero AOT warnings while maintaining full functionality.
+
+### Roadmap
+
+**SQL Server:** ✅ `IsAotCompatible=true` restored with SqlClient 7.0.0-preview1
+- Core operations fully compatible
+- Advanced features (UDTs, diagnostics) produce warnings but don't block compilation
+- Monitoring for 7.0 GA release with expected further improvements
+
+**Oracle:** Still awaiting native AOT support
+- Oracle.ManagedDataAccess.Core 23.7.0 has 101 AOT warnings
+- Heavy reflection usage throughout driver
+- Not recommended for Native AOT applications
+
+For detailed test results, see our [AOT compatibility test projects](./Tests/AotCompatibility/).
+
+## Package Structure
+
+FAnsiSql is distributed as modular packages:
+
+- **[HIC.FAnsi.Core](./FAnsi.Core/)** - Core interfaces and abstractions
+- **[HIC.FAnsi.MicrosoftSql](./FAnsi.MicrosoftSql/README.md)** - SQL Server implementation
+- **[HIC.FAnsi.MySql](./FAnsi.MySql/README.md)** - MySQL implementation
+- **[HIC.FAnsi.Oracle](./FAnsi.Oracle/README.md)** - Oracle implementation
+- **[HIC.FAnsi.PostgreSql](./FAnsi.PostgreSql/README.md)** - PostgreSQL implementation
+- **[HIC.FAnsiSql](./FAnsi.Legacy/)** - Meta-package (backwards compatible, includes all above)
+
+Each implementation is a separate assembly using its own backing library (e.g. [ODP.net](https://www.oracle.com/technetwork/topics/dotnet/index-085163.html) for Oracle, MySqlConnector for MySQL).
 
 ## Why is it useful?
 FAnsiSql is a database management/ETL library that allows you to perform common SQL operations without having to know which Database Management System (DBMS) you are targetting (e.g. Sql Server, My Sql, Oracle).  

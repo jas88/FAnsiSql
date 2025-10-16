@@ -17,7 +17,16 @@
     <Copyright>Copyright ©  2019-2025</Copyright>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <IsAotCompatible>true</IsAotCompatible>
+    <!-- IsAotCompatible: Testing with SqlClient 7.0.0-preview. Oracle remains unknown.
+         This meta-package bundles all DBMS implementations:
+         - Core: ✅ AOT-compatible
+         - MySQL: ✅ AOT-compatible (MySqlConnector 2.4.0)
+         - PostgreSQL: ✅ AOT-compatible (Npgsql 9.0.2)
+         - SQL Server: 🧪 TESTING (SqlClient 7.0.0-preview)
+         - Oracle: ❓ Unknown (no documented AOT support)
+
+         For guaranteed AOT compatibility, use: Core + MySQL/PostgreSQL only. -->
+    <!-- <IsAotCompatible>true</IsAotCompatible> -->
     <NoWarn>CS1591</NoWarn>
     <NeutralLanguage>en-GB</NeutralLanguage>
     <DebugType>embedded</DebugType>

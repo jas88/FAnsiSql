@@ -17,6 +17,9 @@
     <Copyright>Copyright ©  2019-2025</Copyright>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- IsAotCompatible: Testing with SqlClient 7.0.0-preview which has improved Native AOT support.
+         This is experimental - will validate with actual AOT compilation and tests.
+         See: https://github.com/dotnet/SqlClient/releases -->
     <IsAotCompatible>true</IsAotCompatible>
     <NoWarn>CS1591</NoWarn>
     <NeutralLanguage>en-GB</NeutralLanguage>
@@ -33,7 +36,7 @@
     <ProjectReference Include="..\FAnsi.Core\FAnsi.Core.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.Data.SqlClient" Version="6.0.1" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="7.0.0-preview1.25257.1" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
