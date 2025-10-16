@@ -2,9 +2,9 @@
 
 [![Build and test](https://github.com/HicServices/FAnsiSql/actions/workflows/dotnet-core.yml/badge.svg)](https://github.com/HicServices/FAnsiSql/actions/workflows/dotnet-core.yml)
 [![CodeQL](https://github.com/HicServices/FAnsiSql/actions/workflows/codeql.yml/badge.svg)](https://github.com/HicServices/FAnsiSql/actions/workflows/codeql.yml)
-[![NuGet Badge](https://buildstats.info/nuget/HIC.FAnsiSql)](https://www.nuget.org/packages/HIC.FansiSql/)
+[![NuGet Badge](https://buildstats.info/nuget/FAnsiSql)](https://www.nuget.org/packages/FAnsiSql/)
 
-- [Nuget](https://www.nuget.org/packages/HIC.FansiSql/)
+- [Nuget](https://www.nuget.org/packages/FAnsiSql/)
 - [Dependencies](./Packages.md)
 - [Changelog](./CHANGELOG.md)
 
@@ -72,15 +72,15 @@ It is **not** an [ORM](https://en.wikipedia.org/wiki/Object-relational_mapping),
 
 ## Install
 
-FAnsi Sql is a [nuget package](https://www.nuget.org/packages/HIC.FansiSql/).  You can install it using either using the package manager:
+FAnsi Sql is a [nuget package](https://www.nuget.org/packages/FAnsiSql/).  You can install it using either using the package manager:
 
 ```
-PM> Install-Package HIC.FansiSql
+PM> Install-Package FAnsiSql
 ```
 Or .NET CLI Console:
 
 ```
-> dotnet add package HIC.FansiSql
+> dotnet add package FAnsiSql
 ```
 
 ## Feature Completeness

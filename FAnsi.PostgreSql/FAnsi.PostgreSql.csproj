@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <PackageId>HIC.FAnsi.PostgreSql</PackageId>
+    <PackageId>FAnsi.PostgreSql</PackageId>
     <version>0.0.7</version>
     <title>HIC.FAnsi.PostgreSql</title>
     <authors>Health Informatics Centre - University of Dundee</authors>

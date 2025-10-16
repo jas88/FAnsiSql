@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <PackageId>HIC.FAnsi.MySql</PackageId>
+    <PackageId>FAnsi.MySql</PackageId>
     <version>0.0.7</version>
     <title>HIC.FAnsi.MySql</title>
     <authors>Health Informatics Centre - University of Dundee</authors>

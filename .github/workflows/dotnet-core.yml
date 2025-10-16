@@ -54,7 +54,7 @@ jobs:
         dotnet pack -c Release -p:DebugType=full -p:SymbolPackageFormat=snupkg --include-symbols --nologo -p:Version=$(fgrep AssemblyInformationalVersion SharedAssemblyInfo.cs|cut -d'"' -f2) -o .
     - name: Nuget push
       if: contains(github.ref,'refs/tags/')
-      run: dotnet nuget push HIC.FAnsiSql.*.nupkg -s https://api.nuget.org/v3/index.json -k ${{ secrets.NUGET_KEY }} --skip-duplicate
+      run: dotnet nuget push FAnsiSql.*.nupkg -s https://api.nuget.org/v3/index.json -k ${{ secrets.NUGET_KEY }} --skip-duplicate
     - name: Store created nupkg files
       uses: actions/upload-artifact@v4
       with:
