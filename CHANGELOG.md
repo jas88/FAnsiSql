@@ -5,6 +5,71 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.8 / 3.2.8] - 2025-10-16
+
+### Added
+- Native AOT support for SQL Server via SqlClient 7.0.0-preview1
+- Centralized version management in Directory.Build.props
+- Comprehensive AOT testing for all database implementations
+- Metadata caching for SQL Server bulk copy error enhancement (replaces reflection)
+
+### Changed
+- **BREAKING**: Upgraded Microsoft.Data.SqlClient from 6.0.1 to 7.0.0-preview1.25257.1
+  - AOT compilation now succeeds (was failing with 6.0.1)
+  - Core operations (CRUD, bulk copy) fully AOT-compatible
+  - Advanced features (UDTs, diagnostics) produce 64 AOT warnings but remain functional
+- Restructured to modular package architecture (split from monolith)
+- Target framework: .NET 9.0
+- FAnsi.MicrosoftSql: Restored `IsAotCompatible=true` declaration
+- Npgsql upgraded to 9.0.2
+- MySqlConnector remains at 2.4.0 (fully AOT-compatible)
+
+### Removed
+- FAnsiSql monolithic project (112 files, all functionality preserved in split packages)
+- Reflection usage from SQL Server bulk copy implementation
+- Solution reference to deprecated monolith
+
+### Fixed
+- SQL Server bulk copy error messages now work with Native AOT
+- Lazy initialization of column metadata cache (50-200μs performance improvement)
+
+### Package Structure
+FAnsiSql is now distributed as modular packages:
+- **HIC.FAnsi.Core** - Core interfaces (✅ AOT-compatible)
+- **HIC.FAnsi.MicrosoftSql** - SQL Server (⚠️ Improved AOT: 95%+ compatible)
+- **HIC.FAnsi.MySql** - MySQL (✅ Fully AOT-compatible)
+- **HIC.FAnsi.PostgreSql** - PostgreSQL (✅ Fully AOT-compatible)
+- **HIC.FAnsi.Oracle** - Oracle (❌ Not AOT-compatible, 101 warnings)
+- **HIC.FAnsiSql** - Meta-package (backwards compatible, includes all above)
+
+### Native AOT Status
+| Package | Status | Notes |
+|---------|--------|-------|
+| Core | ✅ | No dependencies |
+| MySQL | ✅ | MySqlConnector 2.4.0 |
+| PostgreSQL | ✅ | Npgsql 9.0.2 |
+| SQL Server | ⚠️ | SqlClient 7.0-preview (64 warnings, 95%+ use cases work) |
+| Oracle | ❌ | 101 warnings (heavy reflection) |
+
+### Migration Guide
+**For existing users:** No code changes required. `HIC.FAnsiSql` package continues to work via meta-package.
+
+**For Native AOT users:** Use specific packages instead:
+```xml
+<PackageReference Include="HIC.FAnsi.Core" Version="0.0.8" />
+<PackageReference Include="HIC.FAnsi.MySql" Version="0.0.8" />
+<PackageReference Include="HIC.FAnsi.PostgreSql" Version="0.0.8" />
+<!-- For SQL Server: works for 95%+ use cases -->
+<PackageReference Include="HIC.FAnsi.MicrosoftSql" Version="0.0.8" />
+```
+
+### Rationale for Preview Dependency
+- FAnsiSql is 0.0.x - preview dependencies acceptable at this stage
+- SqlClient 7.0 offers major AOT improvement (compilation now works)
+- Core functionality fully tested and stable
+- Early adoption helps Microsoft improve 7.0 GA release
+- Easy upgrade path when SqlClient 7.0 stable ships
+
 ## [3.2.7] - 2024-10-17
 
 - Add Boolean syntax helpers

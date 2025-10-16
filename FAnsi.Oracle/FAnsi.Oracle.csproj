@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <PackageId>HIC.FAnsi.Oracle</PackageId>
-    <version>0.0.7</version>
+    <!-- Version inherited from Directory.Build.props -->
     <title>HIC.FAnsi.Oracle</title>
     <authors>Health Informatics Centre - University of Dundee</authors>
     <owners>Health Informatics Centre - University of Dundee</owners>
@@ -17,7 +17,11 @@
     <Copyright>Copyright ©  2019-2025</Copyright>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <IsAotCompatible>true</IsAotCompatible>
+    <!-- IsAotCompatible: FAnsi.Oracle code is AOT-ready, but depends on Oracle.ManagedDataAccess.Core 23.7.0
+         which has no documented Native AOT support. Oracle has not published AOT compatibility information.
+         Restore this property when Oracle documents and verifies AOT support for their driver.
+         See: https://github.com/oracle/dotnet-db-samples/issues/54 -->
+    <!-- <IsAotCompatible>true</IsAotCompatible> -->
     <NoWarn>CS1591</NoWarn>
     <NeutralLanguage>en-GB</NeutralLanguage>
     <DebugType>embedded</DebugType>

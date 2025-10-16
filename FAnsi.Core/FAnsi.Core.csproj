@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <PackageId>HIC.FAnsi.Core</PackageId>
-    <version>0.0.7</version>
+    <!-- Version inherited from Directory.Build.props -->
     <title>HIC.FAnsi.Core</title>
     <authors>Health Informatics Centre - University of Dundee</authors>
     <owners>Health Informatics Centre - University of Dundee</owners>

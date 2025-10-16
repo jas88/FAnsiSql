@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <PackageId>HIC.FAnsiSql</PackageId>
-    <version>0.0.7</version>
+    <!-- Version inherited from Directory.Build.props -->
     <title>HIC.FAnsiSql</title>
     <authors>Health Informatics Centre - University of Dundee</authors>
     <owners>Health Informatics Centre - University of Dundee</owners>
