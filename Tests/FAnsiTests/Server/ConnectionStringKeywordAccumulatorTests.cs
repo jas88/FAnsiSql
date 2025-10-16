@@ -109,8 +109,16 @@ public sealed class ConnectionStringKeywordAccumulatorTests
     {
         var acc = new ConnectionStringKeywordAccumulator(databaseType);
 
-        var ex = Assert.Throws<ArgumentException>(()=>acc.AddOrUpdateKeyword("FLIBBLE", "false", ConnectionStringKeywordPriority.SystemDefaultLow));
+        // Oracle driver throws OracleException instead of ArgumentException for invalid keywords
+        // Accept either exception type since the behavior is inconsistent across drivers
+        var ex = Assert.Catch<Exception>(()=>acc.AddOrUpdateKeyword("FLIBBLE", "false", ConnectionStringKeywordPriority.SystemDefaultLow));
 
-        Assert.That(ex?.Message, Does.Contain("FLIBBLE"));
+        Assert.Multiple(() =>
+        {
+            Assert.That(ex, Is.InstanceOf<ArgumentException>().Or.InstanceOf<Oracle.ManagedDataAccess.Client.OracleException>(),
+                "Expected ArgumentException or OracleException for invalid connection string keyword");
+            Assert.That(ex?.Message, Does.Contain("FLIBBLE"),
+                "Exception message should contain the invalid keyword name");
+        });
     }
 }
