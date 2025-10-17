@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <PackageId>HIC.FAnsi.Oracle</PackageId>
+    <PackageId>FAnsi.Oracle</PackageId>
     <version>0.0.7</version>
     <title>HIC.FAnsi.Oracle</title>
     <authors>Health Informatics Centre - University of Dundee</authors>
