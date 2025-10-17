@@ -13,6 +13,9 @@ namespace FAnsi.Discovery;
 /// </summary>
 public interface IDiscoveredServerHelper
 {
+    /// <summary>
+    /// Creates a new DbCommand for the specified database type.
+    /// </summary>
     /// <include file='../../CommonMethods.doc.xml' path='Methods/Method[@name="GetCommand"]'/>
     DbCommand GetCommand(string s, DbConnection con, DbTransaction? transaction = null);
 

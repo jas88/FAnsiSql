@@ -13,6 +13,9 @@ namespace FAnsi.Discovery;
 /// </summary>
 public interface IDiscoveredTableHelper
 {
+    /// <summary>
+    /// Returns SQL query to fetch the top X rows from the specified table.
+    /// </summary>
     /// <include file='../../CommonMethods.doc.xml' path='Methods/Method[@name="GetTopXSql"]'/>
     /// <param name="table">The table to fetch records from</param>
     string GetTopXSqlForTable(IHasFullyQualifiedNameToo table, int topX);
