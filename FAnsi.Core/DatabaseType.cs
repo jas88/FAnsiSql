@@ -23,5 +23,10 @@ public enum DatabaseType
     /// <summary>
     /// PostgreSql database engine
     /// </summary>
-    PostgreSql
+    PostgreSql,
+
+    /// <summary>
+    /// SQLite database engine
+    /// </summary>
+    Sqlite
 }
