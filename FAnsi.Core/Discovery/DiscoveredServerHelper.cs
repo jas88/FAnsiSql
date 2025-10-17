@@ -33,15 +33,27 @@ public abstract partial class DiscoveredServerHelper(DatabaseType databaseType) 
         ConnectionStringKeywordAccumulators[databaseType].AddOrUpdateKeyword(keyword, value, priority);
     }
 
+    /// <summary>
+    /// Creates a new DbCommand for the specified database type.
+    /// </summary>
     /// <include file='../../CommonMethods.doc.xml' path='Methods/Method[@name="GetCommand"]'/>
     public abstract DbCommand GetCommand(string s, DbConnection con, DbTransaction? transaction = null);
 
+    /// <summary>
+    /// Creates a new DbDataAdapter for the specified database type.
+    /// </summary>
     /// <include file='../../CommonMethods.doc.xml' path='Methods/Method[@name="GetDataAdapter"]'/>
     public abstract DbDataAdapter GetDataAdapter(DbCommand cmd);
 
+    /// <summary>
+    /// Creates a new DbCommandBuilder for the specified database type.
+    /// </summary>
     /// <include file='../../CommonMethods.doc.xml' path='Methods/Method[@name="GetCommandBuilder"]'/>
     public abstract DbCommandBuilder GetCommandBuilder(DbCommand cmd);
 
+    /// <summary>
+    /// Creates a new DbParameter for the specified database type.
+    /// </summary>
     /// <include file='../../CommonMethods.doc.xml' path='Methods/Method[@name="GetParameter"]'/>
     public abstract DbParameter GetParameter(string parameterName);
 
