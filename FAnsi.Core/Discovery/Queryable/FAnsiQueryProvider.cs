@@ -141,14 +141,9 @@ namespace FAnsi.Discovery.QueryableAbstraction
 
             try
             {
-                if (_columnName != null)
-                {
-                    sql = _queryBuilder.BuildColumnQuery(_tableName, _columnName, components, out parameters);
-                }
-                else
-                {
-                    sql = _queryBuilder.BuildTableQuery(_tableName, components, out parameters);
-                }
+                sql = _columnName != null
+                    ? _queryBuilder.BuildColumnQuery(_tableName, _columnName, components, out parameters)
+                    : _queryBuilder.BuildTableQuery(_tableName, components, out parameters);
             }
             catch (NotSupportedException ex)
             {
