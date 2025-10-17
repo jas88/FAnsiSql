@@ -227,14 +227,12 @@ namespace FAnsi.Discovery.QueryableAbstraction
 
         protected override Expression VisitUnary(UnaryExpression node)
         {
-            if (node.NodeType == ExpressionType.Not && _isWhereClause)
+            // Handle negation: !p.IsActive => IsActive = false
+            if (node.NodeType == ExpressionType.Not && _isWhereClause &&
+                node.Operand is MemberExpression memberExpr && memberExpr.Type == typeof(bool))
             {
-                // Handle negation: !p.IsActive => IsActive = false
-                if (node.Operand is MemberExpression memberExpr && memberExpr.Type == typeof(bool))
-                {
-                    _components.AddWhereClause(memberExpr.Member.Name, WhereOperator.Equal, false);
-                    return node;
-                }
+                _components.AddWhereClause(memberExpr.Member.Name, WhereOperator.Equal, false);
+                return node;
             }
 
             return base.VisitUnary(node);
