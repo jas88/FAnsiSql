@@ -1,0 +1,36 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh pr edit:*)",
+      "Bash(git restore:*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(mate:*)",
+      "Bash(cat:*)",
+      "Bash(cut:*)",
+      "Bash(dotnet msbuild:*)",
+      "Bash(gh pr list:*)",
+      "Bash(gh pr view:*)",
+      "Bash(git fetch:*)",
+      "Bash(git checkout:*)",
+      "Bash(git stash push:*)",
+      "Bash(git merge-base:*)",
+      "Bash(git merge:*)",
+      "Bash(gh pr merge:*)",
+      "Bash(git rebase:*)",
+      "Bash(git add:*)",
+      "Bash(git branch:*)",
+      "Bash(gh pr close:*)",
+      "Bash(git push:*)",
+      "Bash(gh pr comment:*)",
+      "Bash(git stash:*)",
+      "Bash(git reset:*)",
+      "Bash(gh api:*)",
+      "Bash(dotnet build:*)",
+      "Bash(git commit:*)",
+      "Bash(gh pr create:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

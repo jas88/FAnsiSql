@@ -148,6 +148,9 @@ public class DiscoveredTable : IHasFullyQualifiedNameToo, IMightNotExist, IHasQu
         }
     }
 
+    /// <summary>
+    /// Returns SQL query to fetch the top X rows from this table.
+    /// </summary>
     /// <include file='../../CommonMethods.doc.xml' path='Methods/Method[@name="GetTopXSql"]'/>
     public string GetTopXSql(int topX) => Helper.GetTopXSqlForTable(this, topX);
 

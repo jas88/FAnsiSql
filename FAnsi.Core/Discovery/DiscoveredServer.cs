@@ -109,6 +109,9 @@ public sealed class DiscoveredServer : IMightNotExist
     /// <returns></returns>
     public DbConnection GetConnection(IManagedTransaction? transaction = null) => transaction != null ? transaction.Connection : Helper.GetConnection(Builder);
 
+    /// <summary>
+    /// Creates a new DbCommand for the specified database type.
+    /// </summary>
     /// <include file='../../CommonMethods.doc.xml' path='Methods/Method[@name="GetCommand"]'/>
     public DbCommand GetCommand(string sql, IManagedConnection managedConnection)
     {
