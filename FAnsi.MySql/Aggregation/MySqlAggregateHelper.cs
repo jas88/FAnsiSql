@@ -57,6 +57,13 @@ public sealed class MySqlAggregateHelper : AggregateHelper
         //1. in MSSQL you declare a table variable and then INSERT the dateAxis values into it before running the final query (and using SET to join on a variable)
         //2. in MySql there is no table variable only a temporary table and you have to reference the temporary table directly and cannot use SET to join on it as a variable
 
+        if (query.AxisSelect == null)
+            throw new InvalidOperationException("BuildAxisAggregate requires AxisSelect to be non-null");
+        if (query.CountSelect == null)
+            throw new InvalidOperationException("BuildAxisAggregate requires CountSelect to be non-null");
+        if (query.Axis == null)
+            throw new InvalidOperationException("BuildAxisAggregate requires Axis to be non-null");
+
         var axisColumnAlias = query.AxisSelect.GetAliasFromText(query.SyntaxHelper);
 
         if (string.IsNullOrWhiteSpace(axisColumnAlias))
@@ -105,6 +112,11 @@ public sealed class MySqlAggregateHelper : AggregateHelper
 
     protected override string BuildPivotAndAxisAggregate(AggregateCustomLineCollection query)
     {
+        if (query.AxisSelect == null)
+            throw new InvalidOperationException("BuildPivotAndAxisAggregate requires AxisSelect to be non-null");
+        if (query.Axis == null)
+            throw new InvalidOperationException("BuildPivotAndAxisAggregate requires Axis to be non-null");
+
         var axisColumnWithoutAlias = query.AxisSelect.GetTextWithoutAlias(query.SyntaxHelper);
         var part1 = GetPivotPart1(query, skipSessionSettings: true);
 
@@ -211,6 +223,11 @@ public sealed class MySqlAggregateHelper : AggregateHelper
     /// </summary>
     private static string GetPivotPart1(AggregateCustomLineCollection query, bool skipSessionSettings = false)
     {
+        if (query.PivotSelect == null)
+            throw new InvalidOperationException("GetPivotPart1 requires PivotSelect to be non-null");
+        if (query.CountSelect == null)
+            throw new InvalidOperationException("GetPivotPart1 requires CountSelect to be non-null");
+
         var pivotSqlWithoutAlias = query.PivotSelect.GetTextWithoutAlias(query.SyntaxHelper);
         var countSqlWithoutAlias = query.CountSelect.GetTextWithoutAlias(query.SyntaxHelper);
 
