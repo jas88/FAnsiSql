@@ -18,7 +18,7 @@ namespace FAnsiTests;
 
 [SingleThreaded]
 [NonParallelizable]
-public class DatabaseTests
+public abstract class DatabaseTests
 {
     protected readonly Dictionary<DatabaseType,string> TestConnectionStrings = [];
 

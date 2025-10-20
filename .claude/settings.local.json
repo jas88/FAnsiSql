@@ -28,7 +28,17 @@
       "Bash(gh api:*)",
       "Bash(dotnet build:*)",
       "Bash(git commit:*)",
-      "Bash(gh pr create:*)"
+      "Bash(gh pr create:*)",
+      "Bash(git cherry-pick:*)",
+      "Bash(gh run list:*)",
+      "Bash(gh run:*)",
+      "Bash(for i in {1..30})",
+      "Bash(if gh api repos/jas88/FAnsiSql/commits/main/check-runs --jq '.check_runs[] | .status')",
+      "Bash(then continue)",
+      "Bash(else break)",
+      "Bash(fi)",
+      "Bash(done)",
+      "Bash(git log:*)"
     ],
     "deny": [],
     "ask": []

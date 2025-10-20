@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using FAnsi.Discovery.QuerySyntax;
 using FAnsi.Discovery.QuerySyntax.Aggregation;
@@ -9,9 +9,11 @@ public sealed class MySqlAggregateHelper : AggregateHelper
 {
     public static readonly MySqlAggregateHelper Instance = new();
     private MySqlAggregateHelper() { }
+
     /// <summary>
     /// Generates a date axis CTE using MySQL 8.0+ recursive CTEs.
     /// Much simpler and more efficient than the legacy cross-join approach.
+    /// Sets recursion depth to 50000 to support large date ranges (up to ~137 years of daily data).
     /// </summary>
     private static string GetDateAxisTableDeclaration(IQueryAxis axis)
     {
@@ -30,7 +32,7 @@ public sealed class MySqlAggregateHelper : AggregateHelper
                     UNION ALL
                     SELECT DATE_ADD(dt, INTERVAL 1 {intervalUnit})
                     FROM dateAxis
-                    WHERE dt < {axis.EndDate}
+                    WHERE DATE_ADD(dt, INTERVAL 1 {intervalUnit}) <= {axis.EndDate}
                 )
                 """;
     }
@@ -43,41 +45,56 @@ public sealed class MySqlAggregateHelper : AggregateHelper
             AxisIncrement.Month => $"DATE_FORMAT({columnSql},'%Y-%m')",
             AxisIncrement.Year => $"YEAR({columnSql})",
             AxisIncrement.Quarter => $"CONCAT(YEAR({columnSql}),'Q',QUARTER({columnSql}))",
-            _ => throw new ArgumentOutOfRangeException(nameof(increment))
+            _ => throw new ArgumentOutOfRangeException(nameof(increment), increment, null)
         };
     }
 
-
-    protected override IQuerySyntaxHelper GetQuerySyntaxHelper() => MySqlQuerySyntaxHelper.Instance;
-
     protected override string BuildAxisAggregate(AggregateCustomLineCollection query)
     {
-        var countAlias = query.CountSelect.GetAliasFromText(query.SyntaxHelper);
-        var axisColumnAlias = query.AxisSelect.GetAliasFromText(query.SyntaxHelper) ?? "joinDt";
+        //this code is a bit different from the MSSQL implementation because:
+        //1. in MSSQL you declare a table variable and then INSERT the dateAxis values into it before running the final query (and using SET to join on a variable)
+        //2. in MySql there is no table variable only a temporary table and you have to reference the temporary table directly and cannot use SET to join on it as a variable
+
+        if (query.AxisSelect == null)
+            throw new InvalidOperationException("BuildAxisAggregate requires AxisSelect to be non-null");
+        if (query.CountSelect == null)
+            throw new InvalidOperationException("BuildAxisAggregate requires CountSelect to be non-null");
+        if (query.Axis == null)
+            throw new InvalidOperationException("BuildAxisAggregate requires Axis to be non-null");
+
+        var axisColumnAlias = query.AxisSelect.GetAliasFromText(query.SyntaxHelper);
+
+        if (string.IsNullOrWhiteSpace(axisColumnAlias))
+            axisColumnAlias = query.SyntaxHelper.GetRuntimeName(query.AxisSelect.GetTextWithoutAlias(query.SyntaxHelper));
 
         WrapAxisColumnWithDatePartFunction(query, axisColumnAlias);
 
+        var countAlias = query.CountSelect.GetAliasFromText(query.SyntaxHelper);
 
-        return string.Format(
-            """
+        if (string.IsNullOrWhiteSpace(countAlias))
+            countAlias = query.SyntaxHelper.GetRuntimeName(query.CountSelect.GetTextWithoutAlias(query.SyntaxHelper));
 
-            {0}
-            {1}
+        var sql = string.Format("""
 
-            SELECT
-            {2} AS joinDt,dataset.{3}
-            FROM
-            dateAxis
-            LEFT JOIN
-            (
-                {4}
-            ) dataset
-            ON dataset.{5} = {2}
-            ORDER BY
-            {2}
+                                 {0}
 
-            """
-            ,
+                                 SET SESSION cte_max_recursion_depth = 50000;
+
+                                 {1}
+                                 SELECT
+                                 {2} AS "joinDt",
+                                 dataset.{3} AS "{3}"
+                                 FROM
+                                 dateAxis
+                                 LEFT JOIN
+                                 (
+                                    {4}
+                                 ) dataset
+                                 ON dataset.{5} = {2}
+                                 ORDER BY
+                                 {2}
+
+                                 """,
             string.Join(Environment.NewLine, query.Lines.Where(static c => c.LocationToInsert < QueryComponent.SELECT)),
             GetDateAxisTableDeclaration(query.Axis),
 
@@ -89,25 +106,34 @@ public sealed class MySqlAggregateHelper : AggregateHelper
             axisColumnAlias
         ).Trim();
 
+        return sql;
     }
 
     protected override string BuildPivotAndAxisAggregate(AggregateCustomLineCollection query)
     {
+        if (query.AxisSelect == null)
+            throw new InvalidOperationException("BuildPivotAndAxisAggregate requires AxisSelect to be non-null");
+        if (query.Axis == null)
+            throw new InvalidOperationException("BuildPivotAndAxisAggregate requires Axis to be non-null");
+
         var axisColumnWithoutAlias = query.AxisSelect.GetTextWithoutAlias(query.SyntaxHelper);
         var part1 = GetPivotPart1(query);
 
+        // Get the dateAxis CTE to include in the dynamic SQL
+        var dateAxisCte = GetDateAxisTableDeclaration(query.Axis);
+
         return string.Format("""
+
+                             SET SESSION cte_max_recursion_depth = 50000, group_concat_max_len = 1000000;
 
                              {0}
 
                              {1}
 
-                             {2}
-
                              SET @sql =
 
                              CONCAT(
-                             '
+                             '{2}
                              SELECT
                              {3} as joinDt,',@columnsSelectFromDataset,'
                              FROM
@@ -133,8 +159,8 @@ public sealed class MySqlAggregateHelper : AggregateHelper
                              DEALLOCATE PREPARE stmt;
                              """,
             string.Join(Environment.NewLine, query.Lines.Where(static l => l.LocationToInsert < QueryComponent.SELECT)),
-            GetDateAxisTableDeclaration(query.Axis),
             part1,
+            query.SyntaxHelper.Escape(dateAxisCte),
             query.SyntaxHelper.Escape(GetDatePartOfColumn(query.Axis.AxisIncrement, "dateAxis.dt")),
             string.Join(Environment.NewLine, query.Lines.Where(static c => c.LocationToInsert == QueryComponent.SELECT)),
 
@@ -197,6 +223,11 @@ public sealed class MySqlAggregateHelper : AggregateHelper
     /// </summary>
     private static string GetPivotPart1(AggregateCustomLineCollection query)
     {
+        if (query.PivotSelect == null)
+            throw new InvalidOperationException("GetPivotPart1 requires PivotSelect to be non-null");
+        if (query.CountSelect == null)
+            throw new InvalidOperationException("GetPivotPart1 requires CountSelect to be non-null");
+
         var pivotSqlWithoutAlias = query.PivotSelect.GetTextWithoutAlias(query.SyntaxHelper);
         var countSqlWithoutAlias = query.CountSelect.GetTextWithoutAlias(query.SyntaxHelper);
 
@@ -232,29 +263,25 @@ public sealed class MySqlAggregateHelper : AggregateHelper
 
         return string.Format("""
 
-                             SET SESSION group_concat_max_len = 1000000;
-
                              /* Get unique pivot values and build both column lists in a single query */
                              WITH pivotValues AS (
                                  SELECT
-                                 {1} as piv
+                                 {1} as piv,
+                                 ROW_NUMBER() OVER (ORDER BY {6} {5}) as rn
                                  {3}
                                  {4}
                                  GROUP BY
                                  {1}
                                  {7}
-                                 ORDER BY
-                                 {6}
-                                 {5}
                              )
                              SELECT
                                GROUP_CONCAT(
                                  CONCAT(
                                    '{0}(CASE WHEN {1} = ', QUOTE(piv), ' THEN {2} ELSE NULL END) AS `', piv,'`'
-                                 ) ORDER BY piv
+                                 ) ORDER BY rn
                                ),
                                GROUP_CONCAT(
-                                 CONCAT('dataset.`', piv,'`') ORDER BY piv
+                                 CONCAT('dataset.`', piv,'`') ORDER BY rn
                                )
                              INTO @columnsSelectCases, @columnsSelectFromDataset
                              FROM pivotValues;
@@ -274,5 +301,5 @@ public sealed class MySqlAggregateHelper : AggregateHelper
         );
     }
 
-
+    protected override IQuerySyntaxHelper GetQuerySyntaxHelper() => MySqlQuerySyntaxHelper.Instance;
 }

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Linq.Expressions;
 using FAnsi.Connections;
@@ -38,6 +39,7 @@ public sealed class MySqlColumnQueryProvider : IQueryProvider
         return new FAnsiQueryable<TElement>(this, expression);
     }
 
+    [UnconditionalSuppressMessage("AOT", "IL3050:RequiresDynamicCode", Justification = "IQueryProvider inherently requires dynamic code for generic type creation")]
     public IQueryable CreateQuery(Expression expression)
     {
         var elementType = expression.Type.GetGenericArguments()[0];
