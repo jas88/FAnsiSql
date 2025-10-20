@@ -117,7 +117,7 @@ public sealed class GuesserTests
         t.AdjustToCompensateForValue(null);
         t.AdjustToCompensateForValue(DBNull.Value);
 
-        Assert.That(typeof(decimal), Is.EqualTo(t.Guess.CSharpType));
+        Assert.That(t.Guess.CSharpType, Is.EqualTo(typeof(decimal)));
         var sqlType = t.GetSqlDBType(_translater);
         Assert.That(sqlType, Is.EqualTo("decimal(4,1)")) ;
 
@@ -215,7 +215,7 @@ public sealed class GuesserTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(typeof(DateTime), Is.EqualTo(t.Guess.CSharpType));
+            Assert.That(t.Guess.CSharpType, Is.EqualTo(typeof(DateTime)));
             Assert.That(t.GetSqlDBType(_translater), Is.EqualTo("datetime2"));
         });
     }
@@ -238,7 +238,7 @@ public sealed class GuesserTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(typeof(DateTime), Is.EqualTo(t.Guess.CSharpType));
+            Assert.That(t.Guess.CSharpType, Is.EqualTo(typeof(DateTime)));
             Assert.That(t.GetSqlDBType(_translater), Is.EqualTo("datetime2"));
         });
     }
@@ -253,7 +253,7 @@ public sealed class GuesserTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(typeof(DateTime), Is.EqualTo(t.Guess.CSharpType));
+            Assert.That(t.Guess.CSharpType, Is.EqualTo(typeof(DateTime)));
             Assert.That(t.GetSqlDBType(_translater), Is.EqualTo("datetime2"));
         });
     }
@@ -280,7 +280,7 @@ public sealed class GuesserTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(typeof(DateTime), Is.EqualTo(t.Guess.CSharpType));
+            Assert.That(t.Guess.CSharpType, Is.EqualTo(typeof(DateTime)));
             Assert.That(t.GetSqlDBType(_translater), Is.EqualTo("datetime2"));
         });
     }
@@ -328,7 +328,7 @@ public sealed class GuesserTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(typeof(decimal), Is.EqualTo(t.Guess.CSharpType));
+            Assert.That(t.Guess.CSharpType, Is.EqualTo(typeof(decimal)));
             Assert.That(t.GetSqlDBType(_translater), Is.EqualTo("decimal(4,2)"));
         });
     }
