@@ -288,3 +288,7 @@ __pycache__/
 *.xsd.cs
 Visual Studio 2013/
 Visual Studio 2017/
+
+# Claude Code local settings
+.claude/
+CLAUDE.md
