@@ -94,9 +94,11 @@ public sealed class MySqlAggregateHelper : AggregateHelper
     protected override string BuildPivotAndAxisAggregate(AggregateCustomLineCollection query)
     {
         var axisColumnWithoutAlias = query.AxisSelect.GetTextWithoutAlias(query.SyntaxHelper);
-        var part1 = GetPivotPart1(query);
+        var part1 = GetPivotPart1(query, skipSessionSettings: true);
 
         return string.Format("""
+
+                             SET SESSION cte_max_recursion_depth = 50000, group_concat_max_len = 1000000;
 
                              {0}
 
@@ -133,7 +135,7 @@ public sealed class MySqlAggregateHelper : AggregateHelper
                              DEALLOCATE PREPARE stmt;
                              """,
             string.Join(Environment.NewLine, query.Lines.Where(static l => l.LocationToInsert < QueryComponent.SELECT)),
-            GetDateAxisTableDeclaration(query.Axis),
+            GetDateAxisTableDeclaration(query.Axis, skipSessionSettings: true),
             part1,
             query.SyntaxHelper.Escape(GetDatePartOfColumn(query.Axis.AxisIncrement, "dateAxis.dt")),
             string.Join(Environment.NewLine, query.Lines.Where(static c => c.LocationToInsert == QueryComponent.SELECT)),
@@ -195,7 +197,7 @@ public sealed class MySqlAggregateHelper : AggregateHelper
     /// Returns the section of the PIVOT which identifies unique values.
     /// For MySQL 8.0+ this uses a CTE instead of a temporary table and builds dynamic CASE statements.
     /// </summary>
-    private static string GetPivotPart1(AggregateCustomLineCollection query)
+    private static string GetPivotPart1(AggregateCustomLineCollection query, bool skipSessionSettings = false)
     {
         var pivotSqlWithoutAlias = query.PivotSelect.GetTextWithoutAlias(query.SyntaxHelper);
         var countSqlWithoutAlias = query.CountSelect.GetTextWithoutAlias(query.SyntaxHelper);
@@ -230,11 +232,11 @@ public sealed class MySqlAggregateHelper : AggregateHelper
         var havingSqlIfAny = string.Join(Environment.NewLine,
             query.Lines.Where(static l => l.LocationToInsert == QueryComponent.Having).Select(static l => l.Text));
 
+        var sessionSettings = skipSessionSettings ? "" : "SET SESSION group_concat_max_len = 1000000;\n\n                             ";
+
         return string.Format("""
 
-                             SET SESSION group_concat_max_len = 1000000;
-
-                             /* Get unique pivot values and build both column lists in a single query */
+                             {8}/* Get unique pivot values and build both column lists in a single query */
                              WITH pivotValues AS (
                                  SELECT
                                  {1} as piv
@@ -270,7 +272,8 @@ public sealed class MySqlAggregateHelper : AggregateHelper
             whereDateColumnNotNull,
             topXLimitSqlIfAny,
             orderBy,
-            havingSqlIfAny
+            havingSqlIfAny,
+            sessionSettings
         );
     }
 
