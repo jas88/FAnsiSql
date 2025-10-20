@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using FAnsi.Discovery.QuerySyntax;
 using FAnsi.Discovery.QuerySyntax.Aggregation;
@@ -9,12 +9,13 @@ public sealed class MySqlAggregateHelper : AggregateHelper
 {
     public static readonly MySqlAggregateHelper Instance = new();
     private MySqlAggregateHelper() { }
+
     /// <summary>
     /// Generates a date axis CTE using MySQL 8.0+ recursive CTEs.
     /// Much simpler and more efficient than the legacy cross-join approach.
     /// Sets recursion depth to 50000 to support large date ranges (up to ~137 years of daily data).
     /// </summary>
-    private static string GetDateAxisTableDeclaration(IQueryAxis axis)
+    private static string GetDateAxisTableDeclaration(IQueryAxis axis, bool skipSessionSettings = false)
     {
         var intervalUnit = axis.AxisIncrement switch
         {
@@ -25,10 +26,10 @@ public sealed class MySqlAggregateHelper : AggregateHelper
             _ => throw new ArgumentOutOfRangeException(nameof(axis))
         };
 
-        return $"""
-                SET SESSION cte_max_recursion_depth = 50000;
+        var sessionSettings = skipSessionSettings ? "" : "SET SESSION cte_max_recursion_depth = 50000;\n\n                ";
 
-                WITH RECURSIVE dateAxis AS (
+        return $"""
+                {sessionSettings}WITH RECURSIVE dateAxis AS (
                     SELECT {axis.StartDate} AS dt
                     UNION ALL
                     SELECT DATE_ADD(dt, INTERVAL 1 {intervalUnit})
@@ -46,41 +47,48 @@ public sealed class MySqlAggregateHelper : AggregateHelper
             AxisIncrement.Month => $"DATE_FORMAT({columnSql},'%Y-%m')",
             AxisIncrement.Year => $"YEAR({columnSql})",
             AxisIncrement.Quarter => $"CONCAT(YEAR({columnSql}),'Q',QUARTER({columnSql}))",
-            _ => throw new ArgumentOutOfRangeException(nameof(increment))
+            _ => throw new ArgumentOutOfRangeException(nameof(increment), increment, null)
         };
     }
 
-
-    protected override IQuerySyntaxHelper GetQuerySyntaxHelper() => MySqlQuerySyntaxHelper.Instance;
-
     protected override string BuildAxisAggregate(AggregateCustomLineCollection query)
     {
-        var countAlias = query.CountSelect.GetAliasFromText(query.SyntaxHelper);
-        var axisColumnAlias = query.AxisSelect.GetAliasFromText(query.SyntaxHelper) ?? "joinDt";
+        //this code is a bit different from the MSSQL implementation because:
+        //1. in MSSQL you declare a table variable and then INSERT the dateAxis values into it before running the final query (and using SET to join on a variable)
+        //2. in MySql there is no table variable only a temporary table and you have to reference the temporary table directly and cannot use SET to join on it as a variable
+
+        var axisColumnAlias = query.AxisSelect.GetAliasFromText(query.SyntaxHelper);
+
+        if (string.IsNullOrWhiteSpace(axisColumnAlias))
+            axisColumnAlias = query.SyntaxHelper.GetRuntimeName(query.AxisSelect.GetTextWithoutAlias(query.SyntaxHelper));
 
         WrapAxisColumnWithDatePartFunction(query, axisColumnAlias);
 
+        var countAlias = query.CountSelect.GetAliasFromText(query.SyntaxHelper);
 
-        return string.Format(
-            """
+        if (string.IsNullOrWhiteSpace(countAlias))
+            countAlias = query.SyntaxHelper.GetRuntimeName(query.CountSelect.GetTextWithoutAlias(query.SyntaxHelper));
 
-            {0}
-            {1}
+        var sql = string.Format("""
 
-            SELECT
-            {2} AS joinDt,dataset.{3}
-            FROM
-            dateAxis
-            LEFT JOIN
-            (
-                {4}
-            ) dataset
-            ON dataset.{5} = {2}
-            ORDER BY
-            {2}
+                                 {0}
 
-            """
-            ,
+                                 {1}
+
+                                 SELECT
+                                 {2} AS "joinDt",
+                                 {4} AS "{4}"
+                                 FROM
+                                 dateAxis
+                                 LEFT JOIN
+                                 (
+                                    {3}
+                                 ) dataset
+                                 ON dataset.{5} = {2}
+                                 ORDER BY
+                                 {2}
+
+                                 """,
             string.Join(Environment.NewLine, query.Lines.Where(static c => c.LocationToInsert < QueryComponent.SELECT)),
             GetDateAxisTableDeclaration(query.Axis),
 
@@ -92,6 +100,7 @@ public sealed class MySqlAggregateHelper : AggregateHelper
             axisColumnAlias
         ).Trim();
 
+        return sql;
     }
 
     protected override string BuildPivotAndAxisAggregate(AggregateCustomLineCollection query)
@@ -280,5 +289,5 @@ public sealed class MySqlAggregateHelper : AggregateHelper
         );
     }
 
-
+    protected override IQuerySyntaxHelper GetQuerySyntaxHelper() => MySqlQuerySyntaxHelper.Instance;
 }
