@@ -266,24 +266,22 @@ public sealed class MySqlAggregateHelper : AggregateHelper
                              /* Get unique pivot values and build both column lists in a single query */
                              WITH pivotValues AS (
                                  SELECT
-                                 {1} as piv
+                                 {1} as piv,
+                                 ROW_NUMBER() OVER (ORDER BY {6} {5}) as rn
                                  {3}
                                  {4}
                                  GROUP BY
                                  {1}
                                  {7}
-                                 ORDER BY
-                                 {6}
-                                 {5}
                              )
                              SELECT
                                GROUP_CONCAT(
                                  CONCAT(
                                    '{0}(CASE WHEN {1} = ', QUOTE(piv), ' THEN {2} ELSE NULL END) AS `', piv,'`'
-                                 ) ORDER BY piv
+                                 ) ORDER BY rn
                                ),
                                GROUP_CONCAT(
-                                 CONCAT('dataset.`', piv,'`') ORDER BY piv
+                                 CONCAT('dataset.`', piv,'`') ORDER BY rn
                                )
                              INTO @columnsSelectCases, @columnsSelectFromDataset
                              FROM pivotValues;
