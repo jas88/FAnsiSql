@@ -39,7 +39,7 @@ public sealed partial class MySqlBulkCopy(DiscoveredTable targetTable, IManagedC
 
         var sb = new StringBuilder(commandPrefix, 1 << 22);
 
-        var matches = matchedColumns.Keys.Select(column => (matchedColumns[column].DataType.SQLType, column.Ordinal)).ToArray();
+        var matches = matchedColumns.Keys.Select(column => (matchedColumns[column].DataType!.SQLType, column.Ordinal)).ToArray();
         foreach (DataRow dr in dt.Rows)
         {
             sb.Append('(');
@@ -90,7 +90,7 @@ public sealed partial class MySqlBulkCopy(DiscoveredTable targetTable, IManagedC
         if (value == null || value == DBNull.Value)
             return "NULL";
 
-        return ConstructIndividualValue(dataType, value.ToString());
+        return ConstructIndividualValue(dataType, value.ToString()!);
     }
 
     private string ConstructIndividualValue(string dataType, string value)

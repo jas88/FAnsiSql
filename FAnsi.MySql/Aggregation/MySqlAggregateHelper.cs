@@ -83,12 +83,12 @@ public sealed class MySqlAggregateHelper : AggregateHelper
                                  {1}
                                  SELECT
                                  {2} AS "joinDt",
-                                 {4} AS "{4}"
+                                 dataset.{3} AS "{3}"
                                  FROM
                                  dateAxis
                                  LEFT JOIN
                                  (
-                                    {3}
+                                    {4}
                                  ) dataset
                                  ON dataset.{5} = {2}
                                  ORDER BY
