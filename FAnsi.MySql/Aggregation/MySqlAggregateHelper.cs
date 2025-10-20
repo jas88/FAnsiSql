@@ -12,6 +12,7 @@ public sealed class MySqlAggregateHelper : AggregateHelper
     /// <summary>
     /// Generates a date axis CTE using MySQL 8.0+ recursive CTEs.
     /// Much simpler and more efficient than the legacy cross-join approach.
+    /// Sets recursion depth to 50000 to support large date ranges (up to ~137 years of daily data).
     /// </summary>
     private static string GetDateAxisTableDeclaration(IQueryAxis axis)
     {
@@ -25,12 +26,14 @@ public sealed class MySqlAggregateHelper : AggregateHelper
         };
 
         return $"""
+                SET SESSION cte_max_recursion_depth = 50000;
+
                 WITH RECURSIVE dateAxis AS (
                     SELECT {axis.StartDate} AS dt
                     UNION ALL
                     SELECT DATE_ADD(dt, INTERVAL 1 {intervalUnit})
                     FROM dateAxis
-                    WHERE dt < {axis.EndDate}
+                    WHERE DATE_ADD(dt, INTERVAL 1 {intervalUnit}) <= {axis.EndDate}
                 )
                 """;
     }
