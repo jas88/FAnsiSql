@@ -15,7 +15,7 @@ public sealed class MySqlAggregateHelper : AggregateHelper
     /// Much simpler and more efficient than the legacy cross-join approach.
     /// Sets recursion depth to 50000 to support large date ranges (up to ~137 years of daily data).
     /// </summary>
-    private static string GetDateAxisTableDeclaration(IQueryAxis axis, bool skipSessionSettings = false)
+    private static string GetDateAxisTableDeclaration(IQueryAxis axis)
     {
         var intervalUnit = axis.AxisIncrement switch
         {
@@ -26,10 +26,8 @@ public sealed class MySqlAggregateHelper : AggregateHelper
             _ => throw new ArgumentOutOfRangeException(nameof(axis))
         };
 
-        var sessionSettings = skipSessionSettings ? "" : "SET SESSION cte_max_recursion_depth = 50000;\n\n                ";
-
         return $"""
-                {sessionSettings}WITH RECURSIVE dateAxis AS (
+                WITH RECURSIVE dateAxis AS (
                     SELECT {axis.StartDate} AS dt
                     UNION ALL
                     SELECT DATE_ADD(dt, INTERVAL 1 {intervalUnit})
@@ -80,8 +78,9 @@ public sealed class MySqlAggregateHelper : AggregateHelper
 
                                  {0}
 
-                                 {1}
+                                 SET SESSION cte_max_recursion_depth = 50000;
 
+                                 {1}
                                  SELECT
                                  {2} AS "joinDt",
                                  {4} AS "{4}"
@@ -118,7 +117,7 @@ public sealed class MySqlAggregateHelper : AggregateHelper
             throw new InvalidOperationException("BuildPivotAndAxisAggregate requires Axis to be non-null");
 
         var axisColumnWithoutAlias = query.AxisSelect.GetTextWithoutAlias(query.SyntaxHelper);
-        var part1 = GetPivotPart1(query, skipSessionSettings: true);
+        var part1 = GetPivotPart1(query);
 
         return string.Format("""
 
@@ -159,7 +158,7 @@ public sealed class MySqlAggregateHelper : AggregateHelper
                              DEALLOCATE PREPARE stmt;
                              """,
             string.Join(Environment.NewLine, query.Lines.Where(static l => l.LocationToInsert < QueryComponent.SELECT)),
-            GetDateAxisTableDeclaration(query.Axis, skipSessionSettings: true),
+            GetDateAxisTableDeclaration(query.Axis),
             part1,
             query.SyntaxHelper.Escape(GetDatePartOfColumn(query.Axis.AxisIncrement, "dateAxis.dt")),
             string.Join(Environment.NewLine, query.Lines.Where(static c => c.LocationToInsert == QueryComponent.SELECT)),
@@ -221,7 +220,7 @@ public sealed class MySqlAggregateHelper : AggregateHelper
     /// Returns the section of the PIVOT which identifies unique values.
     /// For MySQL 8.0+ this uses a CTE instead of a temporary table and builds dynamic CASE statements.
     /// </summary>
-    private static string GetPivotPart1(AggregateCustomLineCollection query, bool skipSessionSettings = false)
+    private static string GetPivotPart1(AggregateCustomLineCollection query)
     {
         if (query.PivotSelect == null)
             throw new InvalidOperationException("GetPivotPart1 requires PivotSelect to be non-null");
@@ -261,11 +260,9 @@ public sealed class MySqlAggregateHelper : AggregateHelper
         var havingSqlIfAny = string.Join(Environment.NewLine,
             query.Lines.Where(static l => l.LocationToInsert == QueryComponent.Having).Select(static l => l.Text));
 
-        var sessionSettings = skipSessionSettings ? "" : "SET SESSION group_concat_max_len = 1000000;\n\n                             ";
-
         return string.Format("""
 
-                             {8}/* Get unique pivot values and build both column lists in a single query */
+                             /* Get unique pivot values and build both column lists in a single query */
                              WITH pivotValues AS (
                                  SELECT
                                  {1} as piv
@@ -301,8 +298,7 @@ public sealed class MySqlAggregateHelper : AggregateHelper
             whereDateColumnNotNull,
             topXLimitSqlIfAny,
             orderBy,
-            havingSqlIfAny,
-            sessionSettings
+            havingSqlIfAny
         );
     }
 
