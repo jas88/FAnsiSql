@@ -119,9 +119,8 @@ public sealed class MySqlAggregateHelper : AggregateHelper
         var axisColumnWithoutAlias = query.AxisSelect.GetTextWithoutAlias(query.SyntaxHelper);
         var part1 = GetPivotPart1(query);
 
-        // Combine dateAxis and pivotValues CTEs into a single WITH statement
+        // Get the dateAxis CTE to include in the dynamic SQL
         var dateAxisCte = GetDateAxisTableDeclaration(query.Axis);
-        var combinedCtes = dateAxisCte.TrimEnd() + ",\n" + part1.Replace("WITH pivotValues AS", "pivotValues AS");
 
         return string.Format("""
 
@@ -134,25 +133,25 @@ public sealed class MySqlAggregateHelper : AggregateHelper
                              SET @sql =
 
                              CONCAT(
-                             '
+                             '{2}
                              SELECT
-                             {2} as joinDt,',@columnsSelectFromDataset,'
+                             {3} as joinDt,',@columnsSelectFromDataset,'
                              FROM
                              dateAxis
                              LEFT JOIN
                              (
-                                 {3}
-                                 {4} AS joinDt,
+                                 {4}
+                                 {5} AS joinDt,
                              '
                                  ,@columnsSelectCases,
                              '
-                             {5}
+                             {6}
                              group by
-                             {4}
+                             {5}
                              ) dataset
-                             ON {2} = dataset.joinDt
+                             ON {3} = dataset.joinDt
                              ORDER BY
-                             {2}
+                             {3}
                              ');
 
                              PREPARE stmt FROM @sql;
@@ -160,7 +159,8 @@ public sealed class MySqlAggregateHelper : AggregateHelper
                              DEALLOCATE PREPARE stmt;
                              """,
             string.Join(Environment.NewLine, query.Lines.Where(static l => l.LocationToInsert < QueryComponent.SELECT)),
-            combinedCtes,
+            part1,
+            query.SyntaxHelper.Escape(dateAxisCte),
             query.SyntaxHelper.Escape(GetDatePartOfColumn(query.Axis.AxisIncrement, "dateAxis.dt")),
             string.Join(Environment.NewLine, query.Lines.Where(static c => c.LocationToInsert == QueryComponent.SELECT)),
 
