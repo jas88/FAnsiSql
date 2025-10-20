@@ -119,6 +119,10 @@ public sealed class MySqlAggregateHelper : AggregateHelper
         var axisColumnWithoutAlias = query.AxisSelect.GetTextWithoutAlias(query.SyntaxHelper);
         var part1 = GetPivotPart1(query);
 
+        // Combine dateAxis and pivotValues CTEs into a single WITH statement
+        var dateAxisCte = GetDateAxisTableDeclaration(query.Axis);
+        var combinedCtes = dateAxisCte.TrimEnd() + ",\n" + part1.Replace("WITH pivotValues AS", "pivotValues AS");
+
         return string.Format("""
 
                              SET SESSION cte_max_recursion_depth = 50000, group_concat_max_len = 1000000;
@@ -127,30 +131,28 @@ public sealed class MySqlAggregateHelper : AggregateHelper
 
                              {1}
 
-                             {2}
-
                              SET @sql =
 
                              CONCAT(
                              '
                              SELECT
-                             {3} as joinDt,',@columnsSelectFromDataset,'
+                             {2} as joinDt,',@columnsSelectFromDataset,'
                              FROM
                              dateAxis
                              LEFT JOIN
                              (
-                                 {4}
-                                 {5} AS joinDt,
+                                 {3}
+                                 {4} AS joinDt,
                              '
                                  ,@columnsSelectCases,
                              '
-                             {6}
-                             group by
                              {5}
+                             group by
+                             {4}
                              ) dataset
-                             ON {3} = dataset.joinDt
+                             ON {2} = dataset.joinDt
                              ORDER BY
-                             {3}
+                             {2}
                              ');
 
                              PREPARE stmt FROM @sql;
@@ -158,8 +160,7 @@ public sealed class MySqlAggregateHelper : AggregateHelper
                              DEALLOCATE PREPARE stmt;
                              """,
             string.Join(Environment.NewLine, query.Lines.Where(static l => l.LocationToInsert < QueryComponent.SELECT)),
-            GetDateAxisTableDeclaration(query.Axis),
-            part1,
+            combinedCtes,
             query.SyntaxHelper.Escape(GetDatePartOfColumn(query.Axis.AxisIncrement, "dateAxis.dt")),
             string.Join(Environment.NewLine, query.Lines.Where(static c => c.LocationToInsert == QueryComponent.SELECT)),
 
