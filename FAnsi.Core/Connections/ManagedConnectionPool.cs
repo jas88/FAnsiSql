@@ -88,7 +88,13 @@ internal static class ManagedConnectionPool
             // Try a simple command to verify connection is usable
             // This catches "connection terminated by administrator" and similar issues
             using var cmd = connection.CreateCommand();
-            cmd.CommandText = "SELECT 1";
+
+            // Use database-specific validation query
+            var typeName = connection.GetType().Name;
+            cmd.CommandText = typeName.Contains("Oracle", StringComparison.OrdinalIgnoreCase)
+                ? "SELECT 1 FROM DUAL"  // Oracle syntax
+                : "SELECT 1";           // Standard SQL
+
             cmd.CommandTimeout = 1; // Quick timeout for validation
             cmd.ExecuteScalar();
             return true;
