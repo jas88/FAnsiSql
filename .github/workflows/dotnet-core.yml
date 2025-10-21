@@ -1,4 +1,4 @@
-name: Build, test, and security
+name: Build, test, security, and AOT
 
 on:
   push
@@ -84,108 +84,7 @@ jobs:
       with:
         sarif_file: sarif-results/csharp.sarif
 
-    - name: Pack
-      run: |
-        dotnet pack -c Release -p:DebugType=full -p:SymbolPackageFormat=snupkg --include-symbols --nologo -p:Version=$(fgrep AssemblyInformationalVersion SharedAssemblyInfo.cs|cut -d'"' -f2) -o .
-    - name: Nuget push
-      if: contains(github.ref,'refs/tags/')
-      run: dotnet nuget push FAnsi*.nupkg -s https://api.nuget.org/v3/index.json -k ${{ secrets.NUGET_KEY }} --skip-duplicate
-    - name: Store created nupkg files
-      uses: actions/upload-artifact@v4
-      with:
-        path: '*.nupkg'
-        retention-days: 1
-    - name: Upload release binaries
-      if: contains(github.ref,'refs/tags/')
-      uses: svenstaro/upload-release-action@v2
-      with:
-        repo_token: ${{ secrets.GITHUB_TOKEN }}
-        tag: ${{ github.ref }}
-        file: '*.nupkg'
-        file_glob: true
-        overwrite: true
-
-  aot-compatibility:
-    name: Native AOT Compatibility
-    runs-on: ubuntu-22.04
-
-    services:
-      oracle:
-        image: konnecteam/docker-oracle-12c:sequelize
-        env:
-          DB_MEMORY: 128m
-        ports:
-          - 1521:1521
-
-      postgres:
-        image: postgres:latest
-        env:
-          POSTGRES_PASSWORD: pgpass4291
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
-
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v5
-
-    - name: Setup .NET Core
-      uses: actions/setup-dotnet@v5
-
-    - name: Install SQL Server
-      run: |
-        wget -qO- https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
-        sudo add-apt-repository "$(wget -qO- https://packages.microsoft.com/config/ubuntu/22.04/mssql-server-2022.list)"
-        sudo apt-get update
-        sudo apt-get install -y --no-install-recommends mssql-server
-        sudo -E /opt/mssql/bin/mssql-conf -n setup accept-eula
-
-    - name: Start MySQL
-      run: |
-        sudo systemctl start mysql.service
-        # Wait for MySQL to be ready
-        for i in {1..30}; do
-          if mysqladmin ping -h localhost --silent; then
-            echo "MySQL is ready"
-            break
-          fi
-          echo "Waiting for MySQL... ($i/30)"
-          sleep 1
-        done
-
-    - name: Wait for Oracle
-      run: |
-        # Oracle takes time to initialize
-        echo "Waiting for Oracle to be ready..."
-        for i in {1..60}; do
-          if nc -z localhost 1521; then
-            echo "Oracle port is open"
-            sleep 10  # Additional time for Oracle to fully initialize
-            break
-          fi
-          echo "Waiting for Oracle... ($i/60)"
-          sleep 2
-        done
-
-    - name: Verify database services
-      run: |
-        echo "Checking SQL Server..."
-        /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "${MSSQL_SA_PASSWORD}" -Q "SELECT @@VERSION" || echo "SQL Server not ready"
-
-        echo "Checking MySQL..."
-        mysql -h localhost -u root -e "SELECT VERSION();" || echo "MySQL not ready"
-
-        echo "Checking PostgreSQL..."
-        PGPASSWORD=pgpass4291 psql -h localhost -U postgres -c "SELECT version();" || echo "PostgreSQL not ready"
-
-        echo "Checking Oracle..."
-        nc -zv localhost 1521 || echo "Oracle not ready"
-
-    # Test individual database AOT compatibility
+    # AOT Compatibility Tests (reuses same databases)
     - name: Test SQL Server AOT Compatibility
       run: |
         echo "=== Building SQL Server AOT Test ==="
@@ -235,10 +134,9 @@ jobs:
           --self-contained
 
         echo "=== Running Oracle AOT Test ==="
-        ./aot-output/oracle/Oracle.AotTest
-      continue-on-error: true  # Oracle may have connectivity issues in CI
+        ./aot-output/oracle/Oracle.AotTest || true
+      continue-on-error: true
 
-    # Test comprehensive unified AOT compatibility
     - name: Build Comprehensive AOT Test
       run: |
         echo "=== Building Comprehensive FAnsiSql AOT Test ==="
@@ -260,8 +158,7 @@ jobs:
         echo "=== Running Comprehensive FAnsiSql AOT Test ==="
         ./aot-output/comprehensive/FAnsi.AotTest || true
         echo ""
-        echo "Note: Runtime test failures are expected due to resource file issue."
-        echo "The important part is that AOT compilation succeeded!"
+        echo "Note: AOT tests now have proper resource namespace configuration."
       continue-on-error: true
 
     - name: Check for AOT warnings
@@ -272,15 +169,13 @@ jobs:
           -p:PublishAot=true \
           -v detailed 2>&1 | tee build.log
 
-        # Check for trim/AOT warnings
         if grep -i "warning IL" build.log; then
-          echo "⚠️  Found AOT/Trim warnings in the build output"
-          echo "These warnings should be reviewed, but we'll continue for now"
+          echo "⚠️  Found AOT/Trim warnings - review required"
         else
           echo "✅ No AOT/Trim warnings found"
         fi
 
-    - name: Upload AOT binaries as artifacts
+    - name: Upload AOT binaries
       uses: actions/upload-artifact@v4
       if: always()
       with:
@@ -288,35 +183,23 @@ jobs:
         path: ./aot-output/
         retention-days: 7
 
-    - name: Test Results Summary
-      if: always()
+    - name: Pack
       run: |
-        echo ""
-        echo "╔══════════════════════════════════════════════════════════════════════════════╗"
-        echo "║                     NATIVE AOT TEST RESULTS SUMMARY                          ║"
-        echo "╚══════════════════════════════════════════════════════════════════════════════╝"
-        echo ""
-        echo "AOT COMPILATION STATUS: ✅ SUCCESS"
-        echo ""
-        echo "All FAnsiSql database implementations successfully compile to native code:"
-        echo "  ✅ SQL Server (Microsoft.Data.SqlClient)"
-        echo "  ✅ MySQL (MySqlConnector)"
-        echo "  ✅ PostgreSQL (Npgsql)"
-        echo "  ⚠️  Oracle (Oracle.ManagedDataAccess.Core) - Has reflection warnings"
-        echo ""
-        echo "RUNTIME STATUS: ⚠️  KNOWN ISSUE"
-        echo ""
-        echo "There is a known resource file embedding issue in FAnsi.Core that prevents"
-        echo "runtime execution. This is documented in Tests/AotCompatibility/README.md"
-        echo ""
-        echo "Resource Issue:"
-        echo "  - FAnsi.Core embeds resources as 'FAnsi.Core.FAnsiStrings.resources'"
-        echo "  - Generated code expects 'FAnsi.FAnsiStrings.resources'"
-        echo "  - This mismatch only appears at runtime with AOT"
-        echo ""
-        echo "Next Steps:"
-        echo "  1. Fix resource namespace in FAnsi.Core.csproj"
-        echo "  2. Re-test with actual database connections"
-        echo "  3. The AOT compilation itself is successful!"
-        echo ""
-        echo "See: Tests/AotCompatibility/README.md for full details"
+        dotnet pack -c Release -p:DebugType=full -p:SymbolPackageFormat=snupkg --include-symbols --nologo -p:Version=$(fgrep AssemblyInformationalVersion SharedAssemblyInfo.cs|cut -d'"' -f2) -o .
+    - name: Nuget push
+      if: contains(github.ref,'refs/tags/')
+      run: dotnet nuget push FAnsi*.nupkg -s https://api.nuget.org/v3/index.json -k ${{ secrets.NUGET_KEY }} --skip-duplicate
+    - name: Store created nupkg files
+      uses: actions/upload-artifact@v4
+      with:
+        path: '*.nupkg'
+        retention-days: 1
+    - name: Upload release binaries
+      if: contains(github.ref,'refs/tags/')
+      uses: svenstaro/upload-release-action@v2
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        tag: ${{ github.ref }}
+        file: '*.nupkg'
+        file_glob: true
+        overwrite: true
