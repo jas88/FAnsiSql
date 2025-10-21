@@ -38,7 +38,8 @@
       "Bash(else break)",
       "Bash(fi)",
       "Bash(done)",
-      "Bash(git log:*)"
+      "Bash(git log:*)",
+      "Bash(dotnet pack:*)"
     ],
     "deny": [],
     "ask": []

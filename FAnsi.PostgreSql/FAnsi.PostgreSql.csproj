@@ -1,18 +1,18 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <PackageId>FAnsi.PostgreSql</PackageId>
-    <version>0.0.7</version>
-    <title>HIC.FAnsi.PostgreSql</title>
+    <PackageId>FAnsiSql.PostgreSql</PackageId>
+    <version>0.1.0</version>
+    <title>FAnsiSql.PostgreSql</title>
     <authors>Health Informatics Centre - University of Dundee</authors>
     <owners>Health Informatics Centre - University of Dundee</owners>
-    <PackageProjectUrl>https://github.com/HicServices/FAnsiSql</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/jas88/FAnsiSql</PackageProjectUrl>
     <PackageLicenseExpression>GPL-3.0-or-later</PackageLicenseExpression>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <description>PostgreSQL implementation for FAnsiSql</description>
     <PackageTags>Ansi,SQL,PostgreSQL</PackageTags>
-    <AssemblyTitle>HIC.FAnsi.PostgreSql</AssemblyTitle>
+    <AssemblyTitle>FAnsiSql.PostgreSql</AssemblyTitle>
     <Company>Health Informatics Centre, University of Dundee</Company>
-    <Product>HIC.FAnsi.PostgreSql</Product>
+    <Product>FAnsiSql.PostgreSql</Product>
     <Description>PostgreSQL implementation for FAnsiSql</Description>
     <Copyright>Copyright ©  2019-2025</Copyright>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>

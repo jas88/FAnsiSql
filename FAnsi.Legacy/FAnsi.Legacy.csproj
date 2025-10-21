@@ -1,18 +1,18 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <PackageId>FAnsiSql</PackageId>
-    <version>0.0.7</version>
-    <title>HIC.FAnsiSql</title>
+    <PackageId>FAnsiSql.Legacy</PackageId>
+    <version>0.1.0</version>
+    <title>FAnsiSql.Legacy</title>
     <authors>Health Informatics Centre - University of Dundee</authors>
     <owners>Health Informatics Centre - University of Dundee</owners>
-    <PackageProjectUrl>https://github.com/HicServices/FAnsiSql</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/jas88/FAnsiSql</PackageProjectUrl>
     <PackageLicenseExpression>GPL-3.0-or-later</PackageLicenseExpression>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-    <description>FAnsiSql is a database management/ETL library that allows you to perform common SQL operations without having to know which Database Management System (DBMS) you are targetting (e.g. Sql Server, My Sql, Oracle). This legacy package includes all supported DBMS implementations.</description>
-    <PackageTags>Ansi,SQL</PackageTags>
-    <AssemblyTitle>HIC.FAnsiSql</AssemblyTitle>
+    <description>FAnsiSql is a database management/ETL library that allows you to perform common SQL operations without having to know which Database Management System (DBMS) you are targetting (e.g. Sql Server, My Sql, Oracle). This legacy meta-package includes all supported DBMS implementations for easy migration from HIC.FAnsiSql. New projects should use the modular packages (FAnsi.Core + specific DBMS packages).</description>
+    <PackageTags>Ansi,SQL,Legacy</PackageTags>
+    <AssemblyTitle>FAnsiSql.Legacy</AssemblyTitle>
     <Company>Health Informatics Centre, University of Dundee</Company>
-    <Product>HIC.FAnsiSql</Product>
+    <Product>FAnsiSql.Legacy</Product>
     <Description>FAnsiSql legacy package with all DBMS implementations included</Description>
     <Copyright>Copyright ©  2019-2025</Copyright>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>

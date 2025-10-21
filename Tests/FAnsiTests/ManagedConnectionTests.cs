@@ -19,8 +19,9 @@ internal sealed class ManagedConnectionTests:DatabaseTests
     }
 
     /// <summary>
-    /// Tests that a managed connection is automatically opened and closed in dispose when there
-    /// is no <see cref="IManagedTransaction"/> ongoing
+    /// Tests that a managed connection is automatically opened and reused via pooling when there
+    /// is no <see cref="IManagedTransaction"/> ongoing. Connection pooling keeps connections alive
+    /// to reduce ephemeral connection churn.
     /// </summary>
     /// <param name="dbType"></param>
     [TestCaseSource(typeof(All),nameof(All.DatabaseTypes))]
@@ -35,7 +36,11 @@ internal sealed class ManagedConnectionTests:DatabaseTests
             Assert.That(con.Connection.State, Is.EqualTo(ConnectionState.Open));
         }
 
-        //finally should close it
+        //Connection remains open due to pooling - this reduces connection churn
+        Assert.That(con.Connection.State, Is.EqualTo(ConnectionState.Open));
+
+        //Clearing the pool closes the connection
+        FAnsi.Discovery.DiscoveredServer.ClearCurrentThreadConnectionPool();
         Assert.That(con.Connection.State, Is.EqualTo(ConnectionState.Closed));
     }
 
