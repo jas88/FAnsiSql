@@ -59,11 +59,13 @@
     <EmbeddedResource Update="FAnsiStrings.resx">
       <Generator>PublicResXFileCodeGenerator</Generator>
       <LastGenOutput>FAnsiStrings.Designer.cs</LastGenOutput>
+      <LogicalName>FAnsi.FAnsiStrings.resources</LogicalName>
     </EmbeddedResource>
     <EmbeddedResource Update="SR.resx">
       <SubType>Designer</SubType>
       <LastGenOutput>SR.Designer.cs</LastGenOutput>
       <Generator>PublicResXFileCodeGenerator</Generator>
+      <LogicalName>FAnsi.SR.resources</LogicalName>
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>

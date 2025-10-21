@@ -81,7 +81,7 @@ namespace FAnsi.Discovery.QueryableAbstraction
         /// <summary>
         /// Creates a non-generic queryable instance.
         /// </summary>
-        [RequiresDynamicCode()]
+        [RequiresDynamicCode("Calls System.Linq.Expressions.Expression.Lambda(Expression, params ParameterExpression[]).")]
         public IQueryable CreateQuery(Expression expression)
         {
             if (expression == null)

@@ -66,7 +66,7 @@ public interface IDiscoveredDatabaseHelper
     /// <summary>
     /// Creates a new schema within the database if the DBMS supports it (Sql Server does, MySql doesn't) and it does not already exist.  Schema
     /// is a layer below server and database but above table it groups tables within a single database.
-    /// 
+    ///
     /// </summary>
     /// <param name="discoveredDatabase">Database to create schema in</param>
     /// <param name="name"></param>

@@ -48,7 +48,7 @@ public sealed class PostgreSqlTableQueryProvider : IQueryProvider
         return new FAnsiQueryable<TElement>(this, expression);
     }
 
-    [RequiresDynamicCode()]
+    [RequiresDynamicCode("Calls System.Type.MakeGenericType(params Type[]).")]
     public IQueryable CreateQuery(Expression expression)
     {
         var elementType = expression.Type.GetGenericArguments()[0];

@@ -239,7 +239,7 @@ public sealed partial class MicrosoftSQLTableHelper : DiscoveredTableHelper
 
                     /*
     https://docs.microsoft.com/en-us/sql/relational-databases/system-stored-procedures/sp-fkeys-transact-sql?view=sql-server-2017
-                         
+
     0=CASCADE changes to foreign key.
     1=NO ACTION changes if foreign key is present.
     2 = set null
@@ -278,7 +278,7 @@ public sealed partial class MicrosoftSQLTableHelper : DiscoveredTableHelper
                                        FROM (
                                        SELECT	ROW_NUMBER() OVER (PARTITION BY {0} ORDER BY {0}) AS RowNum
                                        FROM {1}
-                                       
+
                                        ) as f
                                        where RowNum > 1
                            """;

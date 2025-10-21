@@ -37,7 +37,7 @@ public abstract class BulkCopy : IBulkCopy
     /// When calling GetMapping if there are DataColumns in the input table that you are trying to bulk insert that are not matched
     /// in the destination table then the default behaviour is to throw a KeyNotFoundException.  Set this to false to ignore that
     /// behaviour.  This will result in loosing data from your DataTable.
-    /// 
+    ///
     /// <para>Defaults to false</para>
     /// </summary>
     public bool AllowUnmatchedInputColumns { get; private set; }
@@ -48,7 +48,7 @@ public abstract class BulkCopy : IBulkCopy
     /// <summary>
     /// Begins a new bulk copy operation in which one or more data tables are uploaded to the <paramref name="targetTable"/>.  The API entrypoint for this is
     /// <see cref="DiscoveredTable.BeginBulkInsert(IManagedTransaction)"/>.
-    /// 
+    ///
     /// </summary>
     /// <param name="targetTable"></param>
     /// <param name="connection"></param>
