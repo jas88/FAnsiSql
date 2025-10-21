@@ -38,8 +38,10 @@ internal static class ManagedConnectionPool
         // Try to get existing connection for this server on this thread
         if (threadConnections != null && threadConnections.TryGetValue(connectionKey, out var existingConnection))
         {
-            // Verify connection is still valid
-            if (existingConnection?.Connection.State == ConnectionState.Open)
+            // Verify connection is still valid and not in a transaction
+            // Cannot reuse connections with active transactions as they have uncommitted state
+            if (existingConnection?.Connection.State == ConnectionState.Open &&
+                existingConnection.Transaction == null)
             {
                 // Return a non-disposing wrapper
                 var wrapper = existingConnection.Clone();
@@ -47,7 +49,7 @@ internal static class ManagedConnectionPool
                 return wrapper;
             }
 
-            // Connection is dead, remove it
+            // Connection is dead or in transaction, remove it
             threadConnections.TryRemove(connectionKey, out _);
         }
 
