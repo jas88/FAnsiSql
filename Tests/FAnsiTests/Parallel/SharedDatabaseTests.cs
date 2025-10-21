@@ -100,12 +100,13 @@ public abstract class SharedDatabaseTests : DatabaseTests
     }
 
     /// <summary>
-    /// Helper to get the scratch database name from the base class.
+    /// Helper to get the scratch database name from TestDatabases.xml config.
     /// </summary>
     private string GetTestScratchDatabaseName()
     {
-        // Access via a temporary database instance
-        var temp = GetTestDatabase(DatabaseType, cleanDatabase: false);
-        return temp.GetRuntimeName();
+        // Read from the private field in base class using reflection
+        var testScratchDatabaseField = typeof(DatabaseTests).GetField("_testScratchDatabase",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        return (string)testScratchDatabaseField!.GetValue(this)!;
     }
 }
