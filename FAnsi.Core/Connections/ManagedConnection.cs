@@ -12,10 +12,10 @@ public sealed class ManagedConnection : IManagedConnection
     public DbConnection Connection { get; }
 
     /// <inheritdoc/>
-    public DbTransaction? Transaction { get; }
+    public DbTransaction? Transaction { get; private set; }
 
     /// <inheritdoc/>
-    public IManagedTransaction? ManagedTransaction { get; }
+    public IManagedTransaction? ManagedTransaction { get; private set; }
 
     /// <inheritdoc/>
     public bool CloseOnDispose { get; set; }
@@ -37,7 +37,15 @@ public sealed class ManagedConnection : IManagedConnection
         Connection.Open();
     }
 
-    public ManagedConnection Clone() => (ManagedConnection)MemberwiseClone();
+    public ManagedConnection Clone()
+    {
+        var clone = (ManagedConnection)MemberwiseClone();
+        // Clear transaction references to avoid stale transaction associations
+        // when reusing pooled connections
+        clone.Transaction = null;
+        clone.ManagedTransaction = null;
+        return clone;
+    }
 
     /// <summary>
     /// Closes and disposes the DbConnection unless this class is part of an <see cref="IManagedTransaction"/>
