@@ -39,7 +39,9 @@
       "Bash(fi)",
       "Bash(done)",
       "Bash(git log:*)",
-      "Bash(dotnet pack:*)"
+      "Bash(dotnet pack:*)",
+      "Bash(gh pr checks:*)",
+      "Bash(gh issue view:*)"
     ],
     "deny": [],
     "ask": []

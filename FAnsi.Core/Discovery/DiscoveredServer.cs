@@ -189,8 +189,8 @@ public sealed class DiscoveredServer : IMightNotExist
     {
         using var con = Helper.GetConnection(Builder);
         using (var tokenSource = new CancellationTokenSource(timeoutInMillis))
-        using (var openTask = con.OpenAsync(tokenSource.Token))
         {
+            var openTask = con.OpenAsync(tokenSource.Token);
             try
             {
                 openTask.Wait(timeoutInMillis, tokenSource.Token);
@@ -213,6 +213,12 @@ public sealed class DiscoveredServer : IMightNotExist
                             Name, timeoutInMillis), e);
 
                 throw;
+            }
+            finally
+            {
+                // Only dispose Task if it's in a completion state to avoid InvalidOperationException
+                if (openTask.IsCompleted || openTask.IsCanceled || openTask.IsFaulted)
+                    openTask.Dispose();
             }
         }
 
