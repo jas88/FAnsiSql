@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Data;
+using System.Data.Common;
 using System.Threading;
 using FAnsi.Discovery;
 
@@ -41,7 +42,8 @@ internal static class ManagedConnectionPool
             // Verify connection is still valid and not in a transaction
             // Cannot reuse connections with active transactions as they have uncommitted state
             if (existingConnection?.Connection.State == ConnectionState.Open &&
-                existingConnection.Transaction == null)
+                existingConnection.Transaction == null &&
+                IsConnectionAlive(existingConnection.Connection))
             {
                 // Return a non-disposing wrapper
                 var wrapper = existingConnection.Clone();
@@ -49,8 +51,16 @@ internal static class ManagedConnectionPool
                 return wrapper;
             }
 
-            // Connection is dead or in transaction, remove it
+            // Connection is dead or in transaction, remove it and dispose
             threadConnections.TryRemove(connectionKey, out _);
+            try
+            {
+                existingConnection?.Connection?.Dispose();
+            }
+            catch
+            {
+                // Swallow disposal errors
+            }
         }
 
         // Create new long-lived connection for this thread directly (bypassing GetManagedConnection to avoid recursion)
@@ -65,6 +75,29 @@ internal static class ManagedConnectionPool
         var returnWrapper = newConnection.Clone();
         returnWrapper.CloseOnDispose = false;
         return returnWrapper;
+    }
+
+    /// <summary>
+    /// Validates that a connection is still alive by checking if we can execute a simple query.
+    /// This catches cases where the database server has terminated the connection (timeout, admin command, etc.)
+    /// </summary>
+    private static bool IsConnectionAlive(DbConnection connection)
+    {
+        try
+        {
+            // Try a simple command to verify connection is usable
+            // This catches "connection terminated by administrator" and similar issues
+            using var cmd = connection.CreateCommand();
+            cmd.CommandText = "SELECT 1";
+            cmd.CommandTimeout = 1; // Quick timeout for validation
+            cmd.ExecuteScalar();
+            return true;
+        }
+        catch
+        {
+            // Any error means connection is not usable
+            return false;
+        }
     }
 
     /// <summary>
