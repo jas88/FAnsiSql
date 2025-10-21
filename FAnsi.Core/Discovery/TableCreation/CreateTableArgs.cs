@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Data;
 using System.Globalization;
 using TypeGuesser;
@@ -62,7 +62,7 @@ public sealed class CreateTableArgs(DiscoveredDatabase database, string tableNam
     /// <summary>
     /// When creating the table, do not upload any rows supplied in <see cref="DataTable"/>
     /// </summary>
-    public bool CreateEmpty { get;  set; }
+    public bool CreateEmpty { get; set; }
 
     /// <summary>
     /// True if the table has been created
@@ -111,8 +111,8 @@ public sealed class CreateTableArgs(DiscoveredDatabase database, string tableNam
     /// Create a table with the given name based on the columns and data in the provided <paramref name="dataTable"/>.  If you want to override the
     /// data type of a given column set <see cref="ExplicitColumnDefinitions"/>
     /// </summary>
-    public CreateTableArgs(DiscoveredDatabase database, string tableName, string schema,DataTable dataTable, bool createEmpty, Dictionary<DatabaseColumnRequest, DiscoveredColumn> foreignKeyPairs, bool cascadeDelete)
-        : this(database, tableName, schema,dataTable,createEmpty)
+    public CreateTableArgs(DiscoveredDatabase database, string tableName, string schema, DataTable dataTable, bool createEmpty, Dictionary<DatabaseColumnRequest, DiscoveredColumn> foreignKeyPairs, bool cascadeDelete)
+        : this(database, tableName, schema, dataTable, createEmpty)
     {
         ForeignKeyPairs = foreignKeyPairs;
         CascadeDelete = cascadeDelete;

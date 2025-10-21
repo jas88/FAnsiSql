@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using FAnsi.Discovery;
 using FAnsi.Naming;
 

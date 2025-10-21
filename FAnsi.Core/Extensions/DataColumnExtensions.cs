@@ -1,4 +1,4 @@
-﻿using System.Data;
+using System.Data;
 
 namespace FAnsi.Extensions;
 
@@ -21,7 +21,7 @@ public static class DataColumnExtensions
     /// <param name="value">True to prevent retyping, false to allow it</param>
     public static void SetDoNotReType(this DataColumn dc, bool value)
     {
-        if(!dc.ExtendedProperties.ContainsKey(DoNotReTypeExtendedProperty))
+        if (!dc.ExtendedProperties.ContainsKey(DoNotReTypeExtendedProperty))
             dc.ExtendedProperties.Add(DoNotReTypeExtendedProperty, value);
         else
             dc.ExtendedProperties[DoNotReTypeExtendedProperty] = value;

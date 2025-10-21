@@ -1,4 +1,4 @@
-﻿namespace FAnsi.Discovery.QuerySyntax;
+namespace FAnsi.Discovery.QuerySyntax;
 
 /// <summary>
 /// Describes how to achieve a 'Select Top X from Table' query (return only the first X matching records for the query).  It includes the SQL text required to

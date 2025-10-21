@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using FAnsi.Discovery.QuerySyntax;
 using FAnsi.Discovery.QuerySyntax.Aggregation;
@@ -14,27 +14,27 @@ public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
         var endDateSql = axis.EndDate;
 
         return $"""
-                
+
                     DECLARE	@startDate DATE
                     DECLARE	@endDate DATE
-                
+
                     SET @startDate = {startDateSql}
                     SET @endDate = {endDateSql}
-                
+
                     DECLARE @dateAxis TABLE
                     (
                 	    dt DATE
                     )
-                
+
                     DECLARE @currentDate DATE = @startDate
-                
+
                     WHILE @currentDate <= @endDate
                     BEGIN
                 	    INSERT INTO @dateAxis
                 		    SELECT @currentDate
-                
+
                 	    SET @currentDate = DATEADD({axis.AxisIncrement}, 1, @currentDate)
-                
+
                     END
 
                 """;
@@ -93,7 +93,7 @@ public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
         var countAlias = query.CountSelect.GetAliasFromText(query.SyntaxHelper);
         var axisColumnAlias = query.AxisSelect.GetAliasFromText(query.SyntaxHelper) ?? "joinDt";
 
-        WrapAxisColumnWithDatePartFunction(query,axisColumnAlias);
+        WrapAxisColumnWithDatePartFunction(query, axisColumnAlias);
 
 
         return string.Format(
@@ -182,7 +182,7 @@ public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
 
             syntaxHelper.Escape(countAlias),
             syntaxHelper.Escape(pivotAlias),
-            syntaxHelper.Escape(GetDatePartOfColumn(query.Axis.AxisIncrement,"axis.dt")),
+            syntaxHelper.Escape(GetDatePartOfColumn(query.Axis.AxisIncrement, "axis.dt")),
             axisColumnAlias
         );
 
@@ -266,7 +266,7 @@ public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
         axisColumnAlias = query.AxisSelect?.GetAliasFromText(query.SyntaxHelper) ?? "joinDt";
 
         //if there is an axis we don't want to pivot on values that are outside that axis restriction.
-        if(query.Axis != null)
+        if (query.Axis != null)
             WrapAxisColumnWithDatePartFunction(query, axisColumnAlias);
         else
         {
@@ -324,10 +324,10 @@ public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
             BEGIN
                 set @len = CHARINDEX('],[', @Columns +'],[', @pos+1) - @pos
                 set @value = SUBSTRING(@Columns, @pos+1, @len)
-                    
+
                 --We are constructing a version that turns: '[fish],[lama]' into 'ISNULL([fish],0) as [fish], ISNULL([lama],0) as [lama]'
                 SET @FinalSelectList = @FinalSelectList + ', ISNULL(' + @value  + ',0) as ' + @value
-            
+
                 set @pos = CHARINDEX('],[', @Columns +'],[', @pos+@len) +1
             END
 
@@ -349,9 +349,9 @@ public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
             string.Join(Environment.NewLine, query.Lines.Where(static l => l.LocationToInsert == QueryComponent.WHERE)),
             anyFilters ? "AND" : "WHERE",
             orderBy,
-            axisColumnWithoutAlias == null ? "": $"AND  {axisColumnWithoutAlias} is not null",
+            axisColumnWithoutAlias == null ? "" : $"AND  {axisColumnWithoutAlias} is not null",
             havingSqlIfAny,
-            query.Axis != null ? "'joinDt'":"''"
+            query.Axis != null ? "'joinDt'" : "''"
         );
         return part1;
     }

@@ -1,4 +1,4 @@
-﻿using FAnsi;
+using FAnsi;
 using NUnit.Framework;
 
 namespace FAnsiTests;

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -21,9 +21,9 @@ public sealed class RelationshipTopologicalSort
     /// <summary>
     /// <para>Connects to the database and discovers relationships between <paramref name="tables"/> then generates a sort order of dependency in which
     /// all primary key tables should appear before thier respective foreign key tables.</para>
-    /// 
+    ///
     /// <para>Calling this method will result in database queries being executed (to discover keys)</para>
-    /// 
+    ///
     ///  <para>Sort order is based on Khan's algorithm (https://en.wikipedia.org/wiki/Topological_sorting)</para>
     /// </summary>
     /// <param name="tables"></param>

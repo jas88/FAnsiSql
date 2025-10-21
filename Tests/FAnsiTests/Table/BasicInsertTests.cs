@@ -1,4 +1,4 @@
-﻿using FAnsi;
+using FAnsi;
 using FAnsi.Discovery;
 using NUnit.Framework;
 using System.Collections.Generic;
@@ -6,22 +6,22 @@ using TypeGuesser;
 
 namespace FAnsiTests.Table;
 
-internal sealed class BasicInsertTests:DatabaseTests
+internal sealed class BasicInsertTests : DatabaseTests
 {
-    [TestCase(DatabaseType.MicrosoftSQLServer,"Dave")]
-    [TestCase(DatabaseType.MySql,"Dave")]
+    [TestCase(DatabaseType.MicrosoftSQLServer, "Dave")]
+    [TestCase(DatabaseType.MySql, "Dave")]
     [TestCase(DatabaseType.Oracle, "Dave")]
     [TestCase(DatabaseType.PostgreSql, "Dave")]
 
-    [TestCase(DatabaseType.MicrosoftSQLServer, @"].;\""ffff 
+    [TestCase(DatabaseType.MicrosoftSQLServer, @"].;\""ffff
 [")]
 
-    [TestCase(DatabaseType.MySql, @"].;\""ffff 
+    [TestCase(DatabaseType.MySql, @"].;\""ffff
 [")]
 
-    [TestCase(DatabaseType.Oracle, @"].;\""ffff 
+    [TestCase(DatabaseType.Oracle, @"].;\""ffff
 [")]
-    [TestCase(DatabaseType.PostgreSql, @"].;\""ffff 
+    [TestCase(DatabaseType.PostgreSql, @"].;\""ffff
 [")]
     [TestCase(DatabaseType.MicrosoftSQLServer, 1.5)]
     [TestCase(DatabaseType.MySql, 1.5)]
@@ -73,7 +73,7 @@ internal sealed class BasicInsertTests:DatabaseTests
         tbl.Drop();
     }
 
-    [TestCaseSource(typeof(All),nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void CreateTableAndInsertAValue_ReturnsIdentity(DatabaseType type)
     {
         var db = GetTestDatabase(type);

@@ -1,18 +1,18 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <PackageId>FAnsi.Oracle</PackageId>
-    <version>0.0.7</version>
-    <title>HIC.FAnsi.Oracle</title>
+    <PackageId>FAnsiSql.Oracle</PackageId>
+    <version>0.1.0</version>
+    <title>FAnsiSql.Oracle</title>
     <authors>Health Informatics Centre - University of Dundee</authors>
     <owners>Health Informatics Centre - University of Dundee</owners>
-    <PackageProjectUrl>https://github.com/HicServices/FAnsiSql</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/jas88/FAnsiSql</PackageProjectUrl>
     <PackageLicenseExpression>GPL-3.0-or-later</PackageLicenseExpression>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <description>Oracle implementation for FAnsiSql</description>
     <PackageTags>Ansi,SQL,Oracle</PackageTags>
-    <AssemblyTitle>HIC.FAnsi.Oracle</AssemblyTitle>
+    <AssemblyTitle>FAnsiSql.Oracle</AssemblyTitle>
     <Company>Health Informatics Centre, University of Dundee</Company>
-    <Product>HIC.FAnsi.Oracle</Product>
+    <Product>FAnsiSql.Oracle</Product>
     <Description>Oracle implementation for FAnsiSql</Description>
     <Copyright>Copyright ©  2019-2025</Copyright>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>

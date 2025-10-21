@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Text.RegularExpressions;
 using FAnsi.Discovery.TypeTranslation;
 
@@ -47,7 +47,7 @@ public sealed partial class MySqlTypeTranslater : TypeTranslater
 
     protected override bool IsString(string sqlType)
     {
-        if (sqlType.Contains("binary",StringComparison.InvariantCultureIgnoreCase))
+        if (sqlType.Contains("binary", StringComparison.InvariantCultureIgnoreCase))
             return false;
 
         return base.IsString(sqlType) || AlsoStringRegex.IsMatch(sqlType);

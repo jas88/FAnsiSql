@@ -1,4 +1,4 @@
-﻿using FAnsi;
+using FAnsi;
 using FAnsi.Discovery;
 using NUnit.Framework;
 
@@ -11,7 +11,7 @@ internal sealed class EqualityTests_TableAndColumn
     {
     }
 
-    [TestCase("MyTable",null,"MyTable",null)]
+    [TestCase("MyTable", null, "MyTable", null)]
     [TestCase("MyTable", null, "myTable", null)]
     [TestCase("MyTable", null, "MyTable", "dbo")]
     [TestCase("MyTable", null, "MyTable", "dBo")]
@@ -30,8 +30,8 @@ internal sealed class EqualityTests_TableAndColumn
             Assert.That(db, Is.EqualTo(db2));
         });
 
-        var t1 = db.ExpectTable(table1,schema1);
-        var t2 = db2.ExpectTable(table2,schema2);
+        var t1 = db.ExpectTable(table1, schema1);
+        var t2 = db2.ExpectTable(table2, schema2);
 
         Assert.That(t2, Is.EqualTo(t1));
         Assert.That(t2.GetHashCode(), Is.EqualTo(t1.GetHashCode()));

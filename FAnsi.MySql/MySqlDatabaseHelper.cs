@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
@@ -22,15 +22,15 @@ public sealed class MySqlDatabaseHelper : DiscoveredDatabaseHelper
 
     public override void DropDatabase(DiscoveredDatabase database)
     {
-        using var con = (MySqlConnection) database.Server.GetConnection();
+        using var con = (MySqlConnection)database.Server.GetConnection();
         con.Open();
-        using var cmd = new MySqlCommand($"DROP DATABASE `{database.GetRuntimeName()}`",con);
+        using var cmd = new MySqlCommand($"DROP DATABASE `{database.GetRuntimeName()}`", con);
         cmd.ExecuteNonQuery();
     }
 
     public override Dictionary<string, string> DescribeDatabase(DbConnectionStringBuilder builder, string database)
     {
-        var mysqlBuilder = (MySqlConnectionStringBuilder) builder;
+        var mysqlBuilder = (MySqlConnectionStringBuilder)builder;
 
         return new Dictionary<string, string>
         {
@@ -65,24 +65,24 @@ public sealed class MySqlDatabaseHelper : DiscoveredDatabaseHelper
 
         var tables = new List<DiscoveredTable>();
 
-        using (var cmd = new MySqlCommand($"SHOW FULL TABLES in `{database}`", (MySqlConnection) connection))
+        using (var cmd = new MySqlCommand($"SHOW FULL TABLES in `{database}`", (MySqlConnection)connection))
         {
             cmd.Transaction = transaction as MySqlTransaction;
 
-            var r = cmd.ExecuteReader();
+            using var r = cmd.ExecuteReader();
             while (r.Read())
             {
                 var isView = (string)r[1] == "VIEW";
 
                 //if we are skipping views
-                if(isView && !includeViews)
+                if (isView && !includeViews)
                     continue;
 
                 //skip invalid table names
-                if(!querySyntaxHelper.IsValidTableName((string)r[0],out _))
+                if (!querySyntaxHelper.IsValidTableName((string)r[0], out _))
                     continue;
 
-                tables.Add(new DiscoveredTable(parent,(string)r[0],querySyntaxHelper,null,isView ? TableType.View : TableType.Table));//this table fieldname will be something like Tables_in_mydbwhatevernameitis
+                tables.Add(new DiscoveredTable(parent, (string)r[0], querySyntaxHelper, null, isView ? TableType.View : TableType.Table));//this table fieldname will be something like Tables_in_mydbwhatevernameitis
             }
         }
 

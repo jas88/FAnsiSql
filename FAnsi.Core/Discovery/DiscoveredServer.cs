@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
@@ -52,7 +52,7 @@ public sealed class DiscoveredServer : IMightNotExist
 
     /// <summary>
     /// <para>Creates a new server pointed at the <paramref name="builder"/> server. </para>
-    /// 
+    ///
     /// <para><see cref="ImplementationManager"/> must have a loaded implementation for the DBMS type</para>
     /// </summary>
     /// <param name="builder">Determines the connection string and <see cref="DatabaseType"/> e.g. MySqlConnectionStringBuilder = DatabaseType.MySql</param>
@@ -67,7 +67,7 @@ public sealed class DiscoveredServer : IMightNotExist
 
     /// <summary>
     /// <para>Creates a new server pointed at the <paramref name="connectionString"/> which should be a server of DBMS <paramref name="databaseType"/></para>
-    /// 
+    ///
     /// <para><see cref="ImplementationManager"/> must have a loaded implementation for the DBMS type</para>
     /// </summary>
     /// <param name="connectionString"></param>
@@ -81,7 +81,7 @@ public sealed class DiscoveredServer : IMightNotExist
 
     /// <summary>
     /// <para>Creates a new server pointed at the <paramref name="server"/> which should be a server of DBMS <paramref name="databaseType"/></para>
-    /// 
+    ///
     /// <para><see cref="ImplementationManager"/> must have a loaded implementation for the DBMS type</para>
     /// </summary>
     /// <param name="server">The server to connect to e.g. "localhost\sqlexpress"</param>
@@ -164,7 +164,7 @@ public sealed class DiscoveredServer : IMightNotExist
     /// <summary>
     /// <para>Creates an expectation (See <see cref="IMightNotExist"/>) that there is a database with the given name on the server.
     /// This method does not query the database or confirm it exists.</para>
-    /// 
+    ///
     /// <para>See also <see cref="DiscoveredDatabase.Exists"/>, <see cref="DiscoveredDatabase.Create"/> etc </para>
     /// </summary>
     /// <param name="database"></param>
@@ -189,8 +189,8 @@ public sealed class DiscoveredServer : IMightNotExist
     {
         using var con = Helper.GetConnection(Builder);
         using (var tokenSource = new CancellationTokenSource(timeoutInMillis))
-        using (var openTask = con.OpenAsync(tokenSource.Token))
         {
+            var openTask = con.OpenAsync(tokenSource.Token);
             try
             {
                 openTask.Wait(timeoutInMillis, tokenSource.Token);
@@ -214,6 +214,12 @@ public sealed class DiscoveredServer : IMightNotExist
 
                 throw;
             }
+            finally
+            {
+                // Only dispose Task if it's in a completion state to avoid InvalidOperationException
+                if (openTask.IsCompleted || openTask.IsCanceled || openTask.IsFaulted)
+                    openTask.Dispose();
+            }
         }
 
         con.Close();
@@ -221,7 +227,7 @@ public sealed class DiscoveredServer : IMightNotExist
 
     /// <summary>
     /// <para>Attempts to connect to the server giving up after <paramref name="timeoutInSeconds"/> (if supported by DBMS).</para>
-    /// 
+    ///
     /// <para> This differs from <see cref="TestConnection"/> in that it specifies the timeout in the connection string (if possible) and waits for the
     ///  server to shut down the connection rather than using a <see cref="CancellationToken"/>.
     /// </para>
@@ -240,7 +246,7 @@ public sealed class DiscoveredServer : IMightNotExist
 
     /// <summary>
     /// <para>Returns true/false based on <see cref="TestConnection"/>.  This method will use the default timeout of <see cref="TestConnection"/> (e.g. 3 seconds).</para>
-    /// 
+    ///
     /// <para>NOTE: Returns false if any Exception is thrown during <see cref="TestConnection"/></para>
     /// </summary>
     /// <param name="transaction">Optional - if provided this method returns true (existence cannot be checked mid transaction).</param>
@@ -307,7 +313,7 @@ public sealed class DiscoveredServer : IMightNotExist
 
     /// <summary>
     /// <para>Edits the connection string (See <see cref="Builder"/>) to open connections to the <paramref name="newDatabase"/>.</para>
-    /// 
+    ///
     /// <para>NOTE: Generally it is better to use <see cref="ExpectDatabase"/> instead and interact with the new object</para>
     /// </summary>
     /// <param name="newDatabase"></param>
@@ -328,7 +334,7 @@ public sealed class DiscoveredServer : IMightNotExist
 
     /// <summary>
     /// <para>Creates a new database with the given <paramref name="newDatabaseName"/>.</para>
-    /// 
+    ///
     /// <para>In the case of Oracle this is a user+schema (See https://stackoverflow.com/questions/880230/difference-between-a-user-and-a-schema-in-oracle) </para>
     /// </summary>
     /// <param name="newDatabaseName"></param>
@@ -354,13 +360,16 @@ public sealed class DiscoveredServer : IMightNotExist
     public IManagedConnection BeginNewTransactedConnection() => new ManagedConnection(this, Helper.BeginTransaction(Builder)) { CloseOnDispose = true };
 
     /// <summary>
-    /// <para>Opens a new <see cref="DbConnection"/> or reuses an existing one (if <paramref name="transaction"/> is provided).</para>
-    /// 
+    /// <para>Opens a new <see cref="DbConnection"/> or reuses a thread-local pooled connection.</para>
+    ///
+    /// <para>When <paramref name="transaction"/> is null, returns a pooled connection that is reused across calls on the same thread.
+    /// When <paramref name="transaction"/> is provided, bypasses pooling and returns a transacted connection.</para>
+    ///
     /// <para>The returned object should be used in a using statement since it is <see cref="IDisposable"/></para>
     /// </summary>
-    /// <param name="transaction"></param>
+    /// <param name="transaction">Optional transaction - when provided, bypasses connection pooling</param>
     /// <returns></returns>
-    public IManagedConnection GetManagedConnection(IManagedTransaction? transaction = null) => new ManagedConnection(this, transaction);
+    public IManagedConnection GetManagedConnection(IManagedTransaction? transaction = null) => ManagedConnectionPool.GetPooledConnection(this, transaction);
 
     /// <summary>
     /// Returns helper for generating queries compatible with the DBMS (See <see cref="DatabaseType"/>) e.g. TOP X, column qualifiers, what the parameter
@@ -414,4 +423,16 @@ public sealed class DiscoveredServer : IMightNotExist
     /// </summary>
     /// <returns></returns>
     public Version? GetVersion() => Helper.GetVersion(this);
+
+    /// <summary>
+    /// Clears all pooled connections for the current thread.
+    /// Useful for cleanup or when you want to force new connections.
+    /// </summary>
+    public static void ClearCurrentThreadConnectionPool() => ManagedConnectionPool.ClearCurrentThreadConnections();
+
+    /// <summary>
+    /// Clears all pooled connections across all threads.
+    /// Should be called during application shutdown.
+    /// </summary>
+    public static void ClearAllConnectionPools() => ManagedConnectionPool.ClearAllConnections();
 }

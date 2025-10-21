@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Data;
 using FAnsi;
 using FAnsi.Discovery;
@@ -7,9 +7,9 @@ using NUnit.Framework;
 
 namespace FAnsiTests.Server;
 
-internal sealed class ServerLevelTests:DatabaseTests
+internal sealed class ServerLevelTests : DatabaseTests
 {
-    [TestCaseSource(typeof(All),nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void Server_Exists(DatabaseType type)
     {
         var server = GetTestServer(type);
@@ -17,7 +17,7 @@ internal sealed class ServerLevelTests:DatabaseTests
     }
 
 
-    [TestCaseSource(typeof(All),nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void Server_Constructors(DatabaseType dbType)
     {
         var helper = ImplementationManager.GetImplementation(dbType).GetServerHelper();
@@ -28,19 +28,19 @@ internal sealed class ServerLevelTests:DatabaseTests
         Assert.That(server.Name, Is.EqualTo("localhost"));
     }
 
-    [TestCaseSource(typeof(All),nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void Server_RespondsWithinTime(DatabaseType type)
     {
         var server = GetTestServer(type);
 
-        Assert.That(server.RespondsWithinTime(3,out _));
+        Assert.That(server.RespondsWithinTime(3, out _));
     }
 
     /// <summary>
     /// Tests systems ability to deal with missing information in the connection string
     /// </summary>
     /// <param name="type"></param>
-    [TestCaseSource(typeof(All),nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void ServerHelper_GetCurrentDatabase_WhenNoneSpecified(DatabaseType type)
     {
         var helper = ImplementationManager.GetImplementation(type).GetServerHelper();
@@ -54,31 +54,31 @@ internal sealed class ServerLevelTests:DatabaseTests
         });
     }
 
-    [TestCaseSource(typeof(All),nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void ServerHelper_GetConnectionStringBuilder(DatabaseType type)
     {
         var helper = ImplementationManager.GetImplementation(type).GetServerHelper();
-        var builder = helper.GetConnectionStringBuilder("loco","bob","franko","wacky");
+        var builder = helper.GetConnectionStringBuilder("loco", "bob", "franko", "wacky");
 
         var server = new DiscoveredServer(builder);
 
         Assert.Multiple(() =>
         {
-            Assert.That(server.Name,Is.EqualTo("loco"));
+            Assert.That(server.Name, Is.EqualTo("loco"));
 
             //Oracle does not persist database in connection string
-            Assert.That(server.GetCurrentDatabase()?.GetRuntimeName(),type == DatabaseType.Oracle ? Is.Null : Is.EqualTo("bob"));
-            Assert.That(server.ExplicitUsernameIfAny,Is.EqualTo("franko"));
-            Assert.That(server.ExplicitPasswordIfAny,Is.EqualTo("wacky"));
+            Assert.That(server.GetCurrentDatabase()?.GetRuntimeName(), type == DatabaseType.Oracle ? Is.Null : Is.EqualTo("bob"));
+            Assert.That(server.ExplicitUsernameIfAny, Is.EqualTo("franko"));
+            Assert.That(server.ExplicitPasswordIfAny, Is.EqualTo("wacky"));
         });
     }
 
 
-    [TestCaseSource(typeof(All),nameof(All.DatabaseTypesWithBoolFlags))]
-    public void ServerHelper_GetConnectionStringBuilder_NoDatabase(DatabaseType type,bool useWhitespace)
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypesWithBoolFlags))]
+    public void ServerHelper_GetConnectionStringBuilder_NoDatabase(DatabaseType type, bool useWhitespace)
     {
         var helper = ImplementationManager.GetImplementation(type).GetServerHelper();
-        var builder = helper.GetConnectionStringBuilder("loco",useWhitespace? "  ":null,"franko","wacky");
+        var builder = helper.GetConnectionStringBuilder("loco", useWhitespace ? "  " : null, "franko", "wacky");
 
         var server = new DiscoveredServer(builder);
 
@@ -95,7 +95,7 @@ internal sealed class ServerLevelTests:DatabaseTests
             Assert.That(server.ExplicitPasswordIfAny, Is.EqualTo("wacky"));
         });
 
-        server = new DiscoveredServer("loco",useWhitespace?"  ":null,type,"frank","kangaro");
+        server = new DiscoveredServer("loco", useWhitespace ? "  " : null, type, "frank", "kangaro");
         Assert.Multiple(() =>
         {
             Assert.That(server.Name, Is.EqualTo("loco"));
@@ -106,13 +106,13 @@ internal sealed class ServerLevelTests:DatabaseTests
 
     }
 
-    [TestCase(DatabaseType.MySql,false)]
-    [TestCase(DatabaseType.MicrosoftSQLServer,false)]
-    [TestCase(DatabaseType.Oracle,true)]
-    [TestCase(DatabaseType.PostgreSql,false)]
-    public void ServerHelper_ChangeDatabase(DatabaseType type,bool expectCaps)
+    [TestCase(DatabaseType.MySql, false)]
+    [TestCase(DatabaseType.MicrosoftSQLServer, false)]
+    [TestCase(DatabaseType.Oracle, true)]
+    [TestCase(DatabaseType.PostgreSql, false)]
+    public void ServerHelper_ChangeDatabase(DatabaseType type, bool expectCaps)
     {
-        var server = new DiscoveredServer("loco","bob",type,"franko","wacky");
+        var server = new DiscoveredServer("loco", "bob", type, "franko", "wacky");
 
         Assert.Multiple(() =>
         {
@@ -144,15 +144,15 @@ internal sealed class ServerLevelTests:DatabaseTests
     /// </summary>
     /// <param name="type"></param>
     /// <param name="useApiFirst"></param>
-    [TestCaseSource(typeof(All),nameof(All.DatabaseTypesWithBoolFlags))]
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypesWithBoolFlags))]
     public void ServerHelper_ChangeDatabase_AdHoc(DatabaseType type, bool useApiFirst)
     {
-        if(type == DatabaseType.Oracle)
+        if (type == DatabaseType.Oracle)
             Assert.Inconclusive("FAnsiSql understanding of Database cannot be encoded in DbConnectionStringBuilder sadly so we can end up with DiscoveredServer with no GetCurrentDatabase");
 
         //create initial server reference
         var helper = ImplementationManager.GetImplementation(type).GetServerHelper();
-        var server = new DiscoveredServer(helper.GetConnectionStringBuilder("loco","bob","franko","wacky"));
+        var server = new DiscoveredServer(helper.GetConnectionStringBuilder("loco", "bob", "franko", "wacky"));
         Assert.Multiple(() =>
         {
             Assert.That(server.Name, Is.EqualTo("loco"));
@@ -186,9 +186,9 @@ internal sealed class ServerLevelTests:DatabaseTests
         });
     }
 
-    [TestCase(DatabaseType.MicrosoftSQLServer,DatabaseType.MySql)]
+    [TestCase(DatabaseType.MicrosoftSQLServer, DatabaseType.MySql)]
     [TestCase(DatabaseType.MySql, DatabaseType.MicrosoftSQLServer)]
-    [TestCase(DatabaseType.MicrosoftSQLServer,DatabaseType.PostgreSql)]
+    [TestCase(DatabaseType.MicrosoftSQLServer, DatabaseType.PostgreSql)]
     [TestCase(DatabaseType.PostgreSql, DatabaseType.MicrosoftSQLServer)]
 
     public void MoveData_BetweenServerTypes(DatabaseType from, DatabaseType to)
@@ -199,9 +199,9 @@ internal sealed class ServerLevelTests:DatabaseTests
         dtToMove.Columns.Add("DateOfBirth");
         dtToMove.Columns.Add("Sanity");
 
-        dtToMove.Rows.Add("Frank",new DateTime(2001,01,01),"0.50");
-        dtToMove.Rows.Add("Tony", null,"9.99");
-        dtToMove.Rows.Add("Jez", new DateTime(2001, 05, 01),"100.0");
+        dtToMove.Rows.Add("Frank", new DateTime(2001, 01, 01), "0.50");
+        dtToMove.Rows.Add("Tony", null, "9.99");
+        dtToMove.Rows.Add("Jez", new DateTime(2001, 05, 01), "100.0");
 
         dtToMove.PrimaryKey = [dtToMove.Columns["MyCol"] ?? throw new InvalidOperationException()];
 
@@ -219,7 +219,7 @@ internal sealed class ServerLevelTests:DatabaseTests
         var sql = tblFrom.ScriptTableCreation(false, false, false, toTable);
 
         //open connection and run the code to create the new table
-        using(var con = toDb.Server.GetConnection())
+        using (var con = toDb.Server.GetConnection())
         {
             con.Open();
             var cmd = toDb.Server.GetCommand(sql, con);

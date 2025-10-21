@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using FAnsi;
 using FAnsi.Discovery;
@@ -8,9 +8,9 @@ using TypeGuesser;
 
 namespace FAnsiTests.Table;
 
-internal sealed class ForeignKeyTests:DatabaseTests
+internal sealed class ForeignKeyTests : DatabaseTests
 {
-    [TestCaseSource(typeof(All),nameof(All.DatabaseTypesWithBoolFlags))]
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypesWithBoolFlags))]
     public void TestForeignKey_OneColumnKey(DatabaseType dbType, bool cascade)
     {
         var db = GetTestDatabase(dbType);
@@ -81,7 +81,7 @@ internal sealed class ForeignKeyTests:DatabaseTests
         parentTable.Drop();
     }
 
-    [TestCaseSource(typeof(All),nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void TestForeignKey_TwoColumnKey(DatabaseType dbType)
     {
         var db = GetTestDatabase(dbType);
@@ -113,7 +113,7 @@ internal sealed class ForeignKeyTests:DatabaseTests
         {
             {requested_fkCol1,discovered_pkCol1},
             {requested_fkCol2,discovered_pkCol2}
-        },true);
+        }, true);
 
 
         var discovered_fkCol1 = childTable.DiscoverColumn("Parent_Id1");
@@ -142,7 +142,7 @@ internal sealed class ForeignKeyTests:DatabaseTests
         parentTable.Drop();
     }
 
-    [TestCaseSource(typeof(All),nameof(All.DatabaseTypesWithBoolFlags))]
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypesWithBoolFlags))]
     public void Test_ThreeTables_OnePrimary(DatabaseType dbType, bool useTransaction)
     {
         /*       t2
@@ -179,14 +179,14 @@ internal sealed class ForeignKeyTests:DatabaseTests
         if (useTransaction)
         {
             using var con = t1.Database.Server.BeginNewTransactedConnection();
-            constraint1 = t1.AddForeignKey(c2,c1,true,null,new DatabaseOperationArgs {TransactionIfAny = con.ManagedTransaction});
-            constraint2 = t1.AddForeignKey(c3,c1,true,"FK_Lol",new DatabaseOperationArgs {TransactionIfAny = con.ManagedTransaction});
+            constraint1 = t1.AddForeignKey(c2, c1, true, null, new DatabaseOperationArgs { TransactionIfAny = con.ManagedTransaction });
+            constraint2 = t1.AddForeignKey(c3, c1, true, "FK_Lol", new DatabaseOperationArgs { TransactionIfAny = con.ManagedTransaction });
             con.ManagedTransaction?.CommitAndCloseConnection();
         }
         else
         {
-            constraint1 = t1.AddForeignKey(c2,c1,true);
-            constraint2 = t1.AddForeignKey(c3,c1,true,"FK_Lol");
+            constraint1 = t1.AddForeignKey(c2, c1, true);
+            constraint2 = t1.AddForeignKey(c3, c1, true, "FK_Lol");
         }
 
         Assert.Multiple(() =>
@@ -197,7 +197,7 @@ internal sealed class ForeignKeyTests:DatabaseTests
             Assert.That(constraint2.Name, Is.EqualTo("FK_Lol").IgnoreCase);
         });
 
-        var sort2 = new RelationshipTopologicalSort([t1,t2,t3]).Order.ToList();
+        var sort2 = new RelationshipTopologicalSort([t1, t2, t3]).Order.ToList();
 
 
         Assert.That(sort2, Does.Contain(t1));
@@ -205,7 +205,7 @@ internal sealed class ForeignKeyTests:DatabaseTests
         Assert.That(sort2, Does.Contain(t3));
     }
 
-    [TestCaseSource(typeof(All),nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void Test_ThreeTables_TwoPrimary(DatabaseType dbType)
     {
         /*  t1
@@ -236,8 +236,8 @@ internal sealed class ForeignKeyTests:DatabaseTests
         var c2 = t2.DiscoverColumns().Single();
         var c3 = t3.DiscoverColumns().Single();
 
-        var constraint1 = t1.AddForeignKey(c3,c1,true);
-        var constraint2 = t1.AddForeignKey(c3,c2,true);
+        var constraint1 = t1.AddForeignKey(c3, c1, true);
+        var constraint2 = t1.AddForeignKey(c3, c2, true);
 
         Assert.Multiple(() =>
         {
@@ -245,7 +245,7 @@ internal sealed class ForeignKeyTests:DatabaseTests
             Assert.That(constraint2, Is.Not.Null);
         });
 
-        var sort2 = new RelationshipTopologicalSort([t1,t2,t3]).Order.ToList();
+        var sort2 = new RelationshipTopologicalSort([t1, t2, t3]).Order.ToList();
 
         Assert.That(sort2, Does.Contain(t1));
         Assert.That(sort2, Does.Contain(t2));
@@ -257,14 +257,14 @@ internal sealed class ForeignKeyTests:DatabaseTests
     {
         var db = GetTestDatabase(DatabaseType.MicrosoftSQLServer);
 
-        var cops = db.CreateTable("Cops", [new DatabaseColumnRequest("Name", new DatabaseTypeRequest(typeof(string),100))]);
+        var cops = db.CreateTable("Cops", [new DatabaseColumnRequest("Name", new DatabaseTypeRequest(typeof(string), 100))]);
         var robbers = db.CreateTable("Robbers", [new DatabaseColumnRequest("Name", new DatabaseTypeRequest(typeof(string), 100))]);
         var lawyers = db.CreateTable("Lawyers", [new DatabaseColumnRequest("Name", new DatabaseTypeRequest(typeof(string), 100))]);
 
         var sort = new RelationshipTopologicalSort([cops]);
         Assert.That(sort.Order.Single(), Is.EqualTo(cops));
 
-        var sort2 = new RelationshipTopologicalSort([cops,robbers,lawyers]);
+        var sort2 = new RelationshipTopologicalSort([cops, robbers, lawyers]);
         Assert.Multiple(() =>
         {
             Assert.That(sort2.Order[0], Is.EqualTo(cops));

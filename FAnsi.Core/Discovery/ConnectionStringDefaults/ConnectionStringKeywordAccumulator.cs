@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using FAnsi.Implementation;
@@ -8,7 +8,7 @@ namespace FAnsi.Discovery.ConnectionStringDefaults;
 /// <summary>
 /// <para>Gathers keywords for use in building connection strings for a given <see cref="DatabaseType"/>.  Once created you can add keywords and then apply the template
 /// to new novel connection strings (see <see cref="EnforceOptions"/>).</para>
-/// 
+///
 /// <para>Also handles connection string keyword aliases (where two words mean the same thing)</para>
 /// </summary>
 /// <remarks>
@@ -33,7 +33,7 @@ public sealed class ConnectionStringKeywordAccumulator(DatabaseType databaseType
     /// <param name="priority"></param>
     public void AddOrUpdateKeyword(string keyword, string value, ConnectionStringKeywordPriority priority)
     {
-        var collision = GetCollisionWithKeyword(keyword,value);
+        var collision = GetCollisionWithKeyword(keyword, value);
 
         if (collision != null)
         {
@@ -48,7 +48,7 @@ public sealed class ConnectionStringKeywordAccumulator(DatabaseType databaseType
         }
 
         //if we have not got that keyword yet
-        if(!_keywords.TryAdd(keyword, Tuple.Create(value, priority)) && _keywords[keyword].Item2 <= priority)
+        if (!_keywords.TryAdd(keyword, Tuple.Create(value, priority)) && _keywords[keyword].Item2 <= priority)
             //or the keyword that was previously specified had a lower priority
             _keywords[keyword] = Tuple.Create(value, priority); //update it with the new value
     }
@@ -76,7 +76,7 @@ public sealed class ConnectionStringKeywordAccumulator(DatabaseType databaseType
         catch (NotSupportedException ex)
         {
             //don't output the value since that could be a password
-            throw new ArgumentException(string.Format(FAnsiStrings.ConnectionStringKeyword_ValueNotSupported, keyword),ex);
+            throw new ArgumentException(string.Format(FAnsiStrings.ConnectionStringKeyword_ValueNotSupported, keyword), ex);
         }
 
         //now iterate all the keys we had before and add those too, if the key count doesn't change for any of them we know it's a duplicate semantically

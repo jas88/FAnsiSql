@@ -23,5 +23,5 @@ public enum AxisIncrement
     /// <summary>
     /// field should contain values expressed down to the individual quarter
     /// </summary>
-    Quarter=4
+    Quarter = 4
 }

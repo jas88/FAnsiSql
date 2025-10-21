@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using FAnsi.Discovery;
@@ -10,7 +10,7 @@ namespace FAnsi.Implementations.PostgreSql.Update;
 public sealed class PostgreSqlUpdateHelper : UpdateHelper
 {
     public static readonly PostgreSqlUpdateHelper Instance = new();
-    private PostgreSqlUpdateHelper(){}
+    private PostgreSqlUpdateHelper() { }
 
     protected override string BuildUpdateImpl(DiscoveredTable table1, DiscoveredTable table2, List<CustomLine> lines)
     {
@@ -35,15 +35,15 @@ public sealed class PostgreSqlUpdateHelper : UpdateHelper
 
             """,
 
-            string.Join($", {Environment.NewLine}",lines.Where(static l=>l.LocationToInsert == QueryComponent.SET)
+            string.Join($", {Environment.NewLine}", lines.Where(static l => l.LocationToInsert == QueryComponent.SET)
                 .Select(static c =>
                     //seems like you cant specify the table alias in the SET section of the query
-                    c.Text.Replace("t1.",""))),
+                    c.Text.Replace("t1.", ""))),
             table1.GetFullyQualifiedName(),
             table2.GetFullyQualifiedName(),
             joinSql,
-            !string.IsNullOrWhiteSpace(whereSql) ? "AND" :"",
-            !string.IsNullOrWhiteSpace(whereSql) ? $"({whereSql})" :""
+            !string.IsNullOrWhiteSpace(whereSql) ? "AND" : "",
+            !string.IsNullOrWhiteSpace(whereSql) ? $"({whereSql})" : ""
         );
 
     }

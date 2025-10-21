@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Data;
 using System.Globalization;
 using System.Linq;
@@ -9,11 +9,11 @@ using Npgsql;
 
 namespace FAnsi.Implementations.PostgreSql;
 
-public sealed class PostgreSqlBulkCopy(DiscoveredTable discoveredTable, IManagedConnection connection, CultureInfo culture) : BulkCopy(discoveredTable,connection,culture)
+public sealed class PostgreSqlBulkCopy(DiscoveredTable discoveredTable, IManagedConnection connection, CultureInfo culture) : BulkCopy(discoveredTable, connection, culture)
 {
     public override int UploadImpl(DataTable dt)
     {
-        var con = (NpgsqlConnection) Connection.Connection;
+        var con = (NpgsqlConnection)Connection.Connection;
 
         var matchedColumns = GetMapping(dt.Columns.Cast<DataColumn>());
 
@@ -44,7 +44,7 @@ public sealed class PostgreSqlBulkCopy(DiscoveredTable discoveredTable, IManaged
                     if (r[dc] == DBNull.Value)
                         import.WriteNull();
                     else
-                        import.Write(r[dc],types[index]);
+                        import.Write(r[dc], types[index]);
                 }
             }
 

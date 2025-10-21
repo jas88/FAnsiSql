@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
@@ -16,7 +16,7 @@ public sealed partial class MySqlTableHelper : DiscoveredTableHelper
 {
     public static readonly MySqlTableHelper Instance = new();
 
-    private MySqlTableHelper() {}
+    private MySqlTableHelper() { }
 
     private static readonly Regex IntParentheses = IntParenthesesRe();
     private static readonly Regex SmallintParentheses = SmallintParenthesesRe();
@@ -53,7 +53,7 @@ public sealed partial class MySqlTableHelper : DiscoveredTableHelper
 
         while (r.Read())
         {
-            var toAdd = new DiscoveredColumn(discoveredTable, (string) r["COLUMN_NAME"],YesNoToBool(r["IS_NULLABLE"]));
+            var toAdd = new DiscoveredColumn(discoveredTable, (string)r["COLUMN_NAME"], YesNoToBool(r["IS_NULLABLE"]));
 
             if (r["COLUMN_KEY"].Equals("PRI"))
                 toAdd.IsPrimaryKey = true;
@@ -125,7 +125,7 @@ public sealed partial class MySqlTableHelper : DiscoveredTableHelper
     public override IBulkCopy BeginBulkInsert(DiscoveredTable discoveredTable, IManagedConnection connection,
         CultureInfo culture) => new MySqlBulkCopy(discoveredTable, connection, culture);
 
-    public override DiscoveredRelationship[] DiscoverRelationships(DiscoveredTable table, DbConnection connection,IManagedTransaction? transaction = null)
+    public override DiscoveredRelationship[] DiscoverRelationships(DiscoveredTable table, DbConnection connection, IManagedTransaction? transaction = null)
     {
         var toReturn = new Dictionary<string, DiscoveredRelationship>();
 

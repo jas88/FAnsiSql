@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using FAnsi.Discovery;
 using FAnsi.Naming;
 
@@ -7,7 +7,7 @@ namespace FAnsi.Implementations.Oracle;
 public sealed class OracleColumnHelper : IDiscoveredColumnHelper
 {
     public static readonly OracleColumnHelper Instance = new();
-    private OracleColumnHelper() {}
+    private OracleColumnHelper() { }
     public string GetTopXSqlForColumn(IHasRuntimeName database, IHasFullyQualifiedNameToo table, IHasRuntimeName column, int topX, bool discardNulls)
     {
         var syntax = OracleQuerySyntaxHelper.Instance;
@@ -32,6 +32,6 @@ public sealed class OracleColumnHelper : IDiscoveredColumnHelper
         if (allowNulls != column.AllowNulls)
             sb.Append(allowNulls ? "NULL" : "NOT NULL");
 
-        return  sb.ToString();
+        return sb.ToString();
     }
 }

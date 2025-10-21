@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using FAnsi.Discovery;
@@ -7,7 +7,7 @@ using FAnsi.Discovery.QuerySyntax.Update;
 
 namespace FAnsi.Implementations.MicrosoftSQL.Update;
 
-public sealed class MicrosoftSQLUpdateHelper:UpdateHelper
+public sealed class MicrosoftSQLUpdateHelper : UpdateHelper
 {
     protected override string BuildUpdateImpl(DiscoveredTable table1, DiscoveredTable table2, List<CustomLine> lines)
     {

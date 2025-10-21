@@ -1,18 +1,18 @@
-﻿using FAnsi;
+using FAnsi;
 using FAnsi.Discovery;
 using NUnit.Framework;
 using TypeGuesser;
 
 namespace FAnsiTests.Table;
 
-internal sealed class TestRename:DatabaseTests
+internal sealed class TestRename : DatabaseTests
 {
-    [TestCaseSource(typeof(All),nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void TestRenamingTable(DatabaseType type)
     {
         var db = GetTestDatabase(type);
 
-        var tbl = db.CreateTable("MyTable",[new DatabaseColumnRequest("Age",new DatabaseTypeRequest(typeof(int)) )]);
+        var tbl = db.CreateTable("MyTable", [new DatabaseColumnRequest("Age", new DatabaseTypeRequest(typeof(int)))]);
 
         Assert.That(tbl.Exists());
 
