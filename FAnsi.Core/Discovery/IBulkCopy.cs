@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Data;
 using TypeGuesser.Deciders;
 
@@ -33,6 +33,6 @@ public interface IBulkCopy : IDisposable
     /// Determines how strings are parsed into <see cref="DateTime"/> objects (including culture).  This is used whenever the target database column
     /// is a date type and the data in the <see cref="DataTable"/> column is of string type.
     /// </summary>
-    DateTimeTypeDecider DateTimeDecider{get;}
+    DateTimeTypeDecider DateTimeDecider { get; }
 
 }

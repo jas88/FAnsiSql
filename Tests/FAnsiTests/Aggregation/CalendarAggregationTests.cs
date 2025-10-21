@@ -1,4 +1,4 @@
-﻿using FAnsi;
+using FAnsi;
 using FAnsi.Discovery.QuerySyntax;
 using FAnsi.Discovery.QuerySyntax.Aggregation;
 using NUnit.Framework;
@@ -8,9 +8,9 @@ using System.Data;
 
 namespace FAnsiTests.Aggregation;
 
-internal sealed class CalendarAggregationTests:AggregationTests
+internal sealed class CalendarAggregationTests : AggregationTests
 {
-    [TestCaseSource(typeof(All),nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void Test_Calendar_Year(DatabaseType type)
     {
         var tbl = GetTestTable(type);
@@ -73,7 +73,7 @@ internal sealed class CalendarAggregationTests:AggregationTests
         });
     }
 
-    [TestCaseSource(typeof(All),nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void Test_Calendar_Quarter(DatabaseType type)
     {
         var tbl = GetTestTable(type);
@@ -116,7 +116,7 @@ internal sealed class CalendarAggregationTests:AggregationTests
         AssertHasRow(dt, "2001Q2", null);
     }
 
-    [TestCaseSource(typeof(All),nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void Test_Calendar_Month(DatabaseType type)
     {
         var tbl = GetTestTable(type);
@@ -157,11 +157,11 @@ internal sealed class CalendarAggregationTests:AggregationTests
 
         Assert.That(dt.Rows, Has.Count.EqualTo(109)); // 109 months between 2001 and 2010 (inclusive)
 
-        AssertHasRow(dt,"2001-01",5);
+        AssertHasRow(dt, "2001-01", 5);
         AssertHasRow(dt, "2001-02", null);
     }
 
-    [TestCaseSource(typeof(All),nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void Test_Calendar_Day(DatabaseType type)
     {
         var tbl = GetTestTable(type);
@@ -199,13 +199,13 @@ internal sealed class CalendarAggregationTests:AggregationTests
 
         Assert.That(dt.Rows, Has.Count.EqualTo(3288)); // 109 months between 2001 and 2010 (inclusive)
 
-        AssertHasRow(dt, new DateTime(2001,1,1), 4);
+        AssertHasRow(dt, new DateTime(2001, 1, 1), 4);
         AssertHasRow(dt, new DateTime(2001, 1, 2), 1);
         AssertHasRow(dt, new DateTime(2001, 1, 3), null);
     }
 
 
-    [TestCaseSource(typeof(All),nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void Test_Calendar_ToToday(DatabaseType type)
     {
         var tbl = GetTestTable(type);
@@ -275,7 +275,7 @@ internal sealed class CalendarAggregationTests:AggregationTests
     /// Tests to ensure that the order of the count(*) and EventDate columns don't matter
     /// </summary>
     /// <param name="type"></param>
-    [TestCaseSource(typeof(All),nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void Test_Calendar_SELECTColumnOrder_CountAfterAxisColumn(DatabaseType type)
     {
         var tbl = GetTestTable(type);

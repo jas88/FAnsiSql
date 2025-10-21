@@ -1,4 +1,4 @@
-﻿namespace FAnsi;
+namespace FAnsi;
 
 /// <summary>
 /// Describes a specific DBMS implementation you are talking to

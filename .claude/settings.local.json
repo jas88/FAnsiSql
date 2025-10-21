@@ -42,7 +42,9 @@
       "Bash(dotnet pack:*)",
       "Bash(gh pr checks:*)",
       "Bash(gh issue view:*)",
-      "Bash(dotnet test:*)"
+      "Bash(dotnet test:*)",
+      "Bash(git check-ignore:*)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []

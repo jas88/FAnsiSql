@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Data;
 using FAnsi;
 using FAnsi.Discovery;
@@ -16,8 +16,8 @@ internal sealed class TestExamples : DatabaseTests
         var dt = new DataTable();
         dt.Columns.Add("Name");
         dt.Columns.Add("Date of Birth");
-        dt.Rows.Add("Frank \"The Boss\" Spagetti","1920-01-01");
-        dt.Rows.Add("Pete Mudarillo","22-May-1910");
+        dt.Rows.Add("Frank \"The Boss\" Spagetti", "1920-01-01");
+        dt.Rows.Add("Pete Mudarillo", "22-May-1910");
 
         //Get Management object for the database
         var server = new DiscoveredServer(
@@ -26,11 +26,11 @@ internal sealed class TestExamples : DatabaseTests
         var table = database.ExpectTable("MyTable");
 
         //Throw out whatever was there before
-        if(table.Exists())
+        if (table.Exists())
             table.Drop();
 
         //Create the table
-        database.CreateTable("MyTable",dt);
+        database.CreateTable("MyTable", dt);
 
         Assert.Multiple(() =>
         {
@@ -54,7 +54,7 @@ internal sealed class TestExamples : DatabaseTests
         dt.Columns.Add("Name");
         dt.Columns.Add("DateOfBirth");
 
-        dt.Rows.Add("Frank","2001-01-01");
+        dt.Rows.Add("Frank", "2001-01-01");
         dt.Rows.Add("Dave", "2001-01-01");
 
         //Create a server object
@@ -65,14 +65,14 @@ internal sealed class TestExamples : DatabaseTests
         var database = server.ExpectDatabase("FAnsiTests");
 
         //Or create it
-        if(!database.Exists())
+        if (!database.Exists())
             database.Create();
 
         //Create a table that can store the data in dt
         var table = database.CreateTable("MyTable", dt);
 
         //Table has 2 rows in it
-        TestContext.Out.WriteLine("Table {0} has {1} rows" ,table.GetFullyQualifiedName(), table.GetRowCount());
+        TestContext.Out.WriteLine("Table {0} has {1} rows", table.GetFullyQualifiedName(), table.GetRowCount());
         TestContext.Out.WriteLine("Column Name is of type {0}", table.DiscoverColumn("Name").DataType?.SQLType);
         TestContext.Out.WriteLine("Column DateOfBirth is of type {0}", table.DiscoverColumn("DateOfBirth").DataType?.SQLType);
 
@@ -81,7 +81,7 @@ internal sealed class TestExamples : DatabaseTests
         using var cmd = server.GetCommand($"Select * from {table.GetFullyQualifiedName()}", con);
         using var r = cmd.ExecuteReader();
         while (r.Read())
-            TestContext.Out.WriteLine(string.Join(",", r["Name"],r["DateOfBirth"]));
+            TestContext.Out.WriteLine(string.Join(",", r["Name"], r["DateOfBirth"]));
 
         //Drop the table afterwards
         table.Drop();

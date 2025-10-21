@@ -1,4 +1,4 @@
-﻿using FAnsi.Implementation;
+using FAnsi.Implementation;
 
 namespace FAnsi.Discovery.QuerySyntax;
 

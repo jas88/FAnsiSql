@@ -1,4 +1,4 @@
-﻿using FAnsi;
+using FAnsi;
 using FAnsi.Discovery;
 using FAnsi.Discovery.QuerySyntax;
 using FAnsi.Discovery.TableCreation;
@@ -28,14 +28,14 @@ internal sealed class BadNamesTests : DatabaseTests
             colName1 = colName1.Replace("\"", "");
             colName2 = colName2.Replace("\"", "");
         }
-        return new Tuple<string, string, string>(tblName,colName1,colName2);
+        return new Tuple<string, string, string>(tblName, colName1, colName2);
     }
 
     private DiscoveredTable SetupBadNamesTable(DatabaseType dbType)
     {
         var db = GetTestDatabase(dbType);
 
-        var (badTableName,badColumnName,badColumnName2) = GetBadNames(dbType);
+        var (badTableName, badColumnName, badColumnName2) = GetBadNames(dbType);
         return db.CreateTable(badTableName,
         [
             new DatabaseColumnRequest(badColumnName,new DatabaseTypeRequest(typeof(string),100)),
@@ -72,7 +72,7 @@ internal sealed class BadNamesTests : DatabaseTests
         });
     }
 
-    [TestCaseSource(typeof(All),nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void BadNames_DiscoverColumns(DatabaseType dbType)
     {
         var tbl = SetupBadNamesTable(dbType);
@@ -82,7 +82,7 @@ internal sealed class BadNamesTests : DatabaseTests
         tbl.Drop();
     }
 
-    [TestCaseSource(typeof(All),nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void BadNames_AlterType(DatabaseType dbType)
     {
         var tbl = SetupBadNamesTable(dbType);
@@ -91,7 +91,7 @@ internal sealed class BadNamesTests : DatabaseTests
         var col = tbl.DiscoverColumn(badColumnName);
         Assert.That(col.DataType?.GetLengthIfString(), Is.EqualTo(100));
 
-        var varcharType = tbl.Database.Server.GetQuerySyntaxHelper().TypeTranslater.GetSQLDBTypeForCSharpType(new DatabaseTypeRequest(typeof(string),10));
+        var varcharType = tbl.Database.Server.GetQuerySyntaxHelper().TypeTranslater.GetSQLDBTypeForCSharpType(new DatabaseTypeRequest(typeof(string), 10));
 
         // Can we ALTER its datatype
         Assert.That(col.DataType.GetLengthIfString(), Is.EqualTo(100));
@@ -102,8 +102,8 @@ internal sealed class BadNamesTests : DatabaseTests
 
     }
 
-    [TestCaseSource(typeof(All),nameof(All.DatabaseTypesWithBoolFlags))]
-    public void BadNames_TopXColumn(DatabaseType dbType,bool noNulls)
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypesWithBoolFlags))]
+    public void BadNames_TopXColumn(DatabaseType dbType, bool noNulls)
     {
         var (_, badColumnName, _) = GetBadNames(dbType);
         var tbl = SetupBadNamesTable(dbType);
@@ -111,20 +111,20 @@ internal sealed class BadNamesTests : DatabaseTests
 
         Assert.That(tbl.GetRowCount(), Is.EqualTo(0));
 
-        tbl.Insert(new Dictionary<DiscoveredColumn, object>{{col,"ff" } });
-        tbl.Insert(new Dictionary<DiscoveredColumn, object>{{col,"ff" } });
-        tbl.Insert(new Dictionary<DiscoveredColumn, object>{{col,DBNull.Value } });
+        tbl.Insert(new Dictionary<DiscoveredColumn, object> { { col, "ff" } });
+        tbl.Insert(new Dictionary<DiscoveredColumn, object> { { col, "ff" } });
+        tbl.Insert(new Dictionary<DiscoveredColumn, object> { { col, DBNull.Value } });
 
         Assert.That(tbl.GetRowCount(), Is.EqualTo(3));
 
-        var topx = col.GetTopXSql(5,noNulls);
+        var topx = col.GetTopXSql(5, noNulls);
 
         var svr = tbl.Database.Server;
-        using(var con = svr.GetConnection())
+        using (var con = svr.GetConnection())
         {
             con.Open();
-            var cmd = svr.GetCommand(topx,con);
-            var r= cmd.ExecuteReader();
+            var cmd = svr.GetCommand(topx, con);
+            var r = cmd.ExecuteReader();
 
             Assert.That(r.Read());
             Assert.That(r.Read());
@@ -138,7 +138,7 @@ internal sealed class BadNamesTests : DatabaseTests
 
     }
 
-    [TestCaseSource(typeof(All),nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void BadNames_DropColumn(DatabaseType dbType)
     {
         var (_, badColumnName, _) = GetBadNames(dbType);
@@ -157,7 +157,7 @@ internal sealed class BadNamesTests : DatabaseTests
 
     /////////// Table tests ///////////////////
 
-    [TestCaseSource(typeof(All),nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void BadNames_TopXTable(DatabaseType dbType)
     {
         var (_, badColumnName, _) = GetBadNames(dbType);
@@ -166,18 +166,18 @@ internal sealed class BadNamesTests : DatabaseTests
 
         Assert.That(tbl.GetRowCount(), Is.EqualTo(0));
 
-        tbl.Insert(new Dictionary<DiscoveredColumn, object>{{col,"ff" } });
-        tbl.Insert(new Dictionary<DiscoveredColumn, object>{{col,"ff" } });
-        tbl.Insert(new Dictionary<DiscoveredColumn, object>{{col,DBNull.Value } });
+        tbl.Insert(new Dictionary<DiscoveredColumn, object> { { col, "ff" } });
+        tbl.Insert(new Dictionary<DiscoveredColumn, object> { { col, "ff" } });
+        tbl.Insert(new Dictionary<DiscoveredColumn, object> { { col, DBNull.Value } });
 
         var topx = tbl.GetTopXSql(2);
 
         var svr = tbl.Database.Server;
-        using(var con = svr.GetConnection())
+        using (var con = svr.GetConnection())
         {
             con.Open();
-            var cmd = svr.GetCommand(topx,con);
-            var r= cmd.ExecuteReader();
+            var cmd = svr.GetCommand(topx, con);
+            var r = cmd.ExecuteReader();
 
             Assert.That(r.Read());
             Assert.That(r.Read());
@@ -187,7 +187,7 @@ internal sealed class BadNamesTests : DatabaseTests
         tbl.Drop();
     }
 
-    [TestCaseSource(typeof(All),nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void BadNames_DiscoverRelationships(DatabaseType dbType)
     {
         var (badTableName, badColumnName, _) = GetBadNames(dbType);
@@ -200,13 +200,13 @@ internal sealed class BadNamesTests : DatabaseTests
             new DatabaseColumnRequest("Frrrrr ##' ank",new DatabaseTypeRequest(typeof(int)))
         ]);
 
-        var pk = tbl1.DiscoverColumns().Single(static c=>c.IsPrimaryKey);
+        var pk = tbl1.DiscoverColumns().Single(static c => c.IsPrimaryKey);
         DatabaseColumnRequest fk;
 
-        var tbl2 = db.CreateTable(new CreateTableArgs(db, $"{badTableName}2",null)
+        var tbl2 = db.CreateTable(new CreateTableArgs(db, $"{badTableName}2", null)
         {
-            ExplicitColumnDefinitions = [fk = new DatabaseColumnRequest($"{badColumnName}2",new DatabaseTypeRequest(typeof(string),100))],
-            ForeignKeyPairs = new Dictionary<DatabaseColumnRequest, DiscoveredColumn> {{fk, pk} }
+            ExplicitColumnDefinitions = [fk = new DatabaseColumnRequest($"{badColumnName}2", new DatabaseTypeRequest(typeof(string), 100))],
+            ForeignKeyPairs = new Dictionary<DatabaseColumnRequest, DiscoveredColumn> { { fk, pk } }
         });
 
         var r = tbl1.DiscoverRelationships().Single();
@@ -224,7 +224,7 @@ internal sealed class BadNamesTests : DatabaseTests
         tbl1.Drop();
     }
 
-    [TestCaseSource(typeof(All),nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void BadNames_BulkInsert(DatabaseType dbType)
     {
         var (_, badColumnName, badColumnName2) = GetBadNames(dbType);
@@ -234,9 +234,9 @@ internal sealed class BadNamesTests : DatabaseTests
         dt.Columns.Add(badColumnName);
         dt.Columns.Add(badColumnName2);
 
-        dt.Rows.Add ("fff", 5);
+        dt.Rows.Add("fff", 5);
 
-        using(var insert = tbl.BeginBulkInsert())
+        using (var insert = tbl.BeginBulkInsert())
         {
             insert.Upload(dt);
         }
@@ -246,7 +246,7 @@ internal sealed class BadNamesTests : DatabaseTests
     }
 
 
-    [TestCaseSource(typeof(All),nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void BadNames_Rename(DatabaseType dbType)
     {
         var (badTableName, _, _) = GetBadNames(dbType);
@@ -254,7 +254,7 @@ internal sealed class BadNamesTests : DatabaseTests
 
         var nameBefore = tbl.GetFullyQualifiedName();
 
-        tbl.Rename(badTableName.Replace('F','A'));
+        tbl.Rename(badTableName.Replace('F', 'A'));
 
         Assert.That(tbl.GetFullyQualifiedName(), Is.Not.EqualTo(nameBefore));
 

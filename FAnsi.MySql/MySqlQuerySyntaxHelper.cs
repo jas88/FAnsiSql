@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using FAnsi.Discovery;
@@ -21,7 +21,7 @@ public sealed class MySqlQuerySyntaxHelper : QuerySyntaxHelper
 
     public override string CloseQualifier => "`";
 
-    private MySqlQuerySyntaxHelper() : base(MySqlTypeTranslater.Instance, MySqlAggregateHelper.Instance,MySqlUpdateHelper.Instance,DatabaseType.MySql)//no specific type translation required
+    private MySqlQuerySyntaxHelper() : base(MySqlTypeTranslater.Instance, MySqlAggregateHelper.Instance, MySqlUpdateHelper.Instance, DatabaseType.MySql)//no specific type translation required
     {
     }
 
@@ -47,7 +47,7 @@ public sealed class MySqlQuerySyntaxHelper : QuerySyntaxHelper
         return $"{EnsureWrapped(databaseName)}{DatabaseTableSeparator}{EnsureWrapped(tableName)}";
     }
 
-    public override TopXResponse HowDoWeAchieveTopX(int x) => new($"LIMIT {x}",QueryComponent.Postfix);
+    public override TopXResponse HowDoWeAchieveTopX(int x) => new($"LIMIT {x}", QueryComponent.Postfix);
 
     public override string GetParameterDeclaration(string proposedNewParameterName, string sqlType) =>
         //MySql doesn't require parameter declaration you just start using it like javascript
@@ -60,19 +60,19 @@ public sealed class MySqlQuerySyntaxHelper : QuerySyntaxHelper
         foreach (var c in sql)
             r.Append(c switch
             {
-                '\0'    => "\\0",
+                '\0' => "\\0",
                 '\'' => "\\'",
                 '"' => "\"",
-                '\b'    => "\\b",
-                '\n'    => "\\n",
-                '\r'    => "\\r",
-                '\t'    => "\\t",
-                '\u001a'    => "\\Z",
+                '\b' => "\\b",
+                '\n' => "\\n",
+                '\r' => "\\r",
+                '\t' => "\\t",
+                '\u001a' => "\\Z",
                 '\\' => "\\",
                 // Pattern matching only:
                 // '%' => "\\%",
                 // '_' => "\\_",
-                _   => $"{c}"
+                _ => $"{c}"
             });
         return r.ToString();
     }

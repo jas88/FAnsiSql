@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using FAnsi;
 using FAnsi.Discovery;
 using FAnsi.Discovery.TableCreation;
@@ -7,9 +7,9 @@ using TypeGuesser;
 
 namespace FAnsiTests.Table;
 
-internal sealed class DataTypeAdjusterTests:DatabaseTests
+internal sealed class DataTypeAdjusterTests : DatabaseTests
 {
-    [TestCaseSource(typeof(All),nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void CreateTable_WithAdjuster(DatabaseType type)
     {
         var tbl = GetTestDatabase(type).CreateTable("MyTable",

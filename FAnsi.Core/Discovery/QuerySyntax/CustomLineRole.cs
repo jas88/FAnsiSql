@@ -1,4 +1,4 @@
-﻿namespace FAnsi.Discovery.QuerySyntax;
+namespace FAnsi.Discovery.QuerySyntax;
 
 public enum CustomLineRole
 {

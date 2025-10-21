@@ -1,4 +1,4 @@
-﻿namespace FAnsi.Discovery;
+namespace FAnsi.Discovery;
 
 /// <summary>
 /// Interface for all objects which describe a column e.g. <see cref="DiscoveredColumn"/> and record/request relevant DDL level flags

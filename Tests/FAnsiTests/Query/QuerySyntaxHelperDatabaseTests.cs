@@ -1,4 +1,4 @@
-﻿using System.Data;
+using System.Data;
 using FAnsi;
 using FAnsi.Discovery.QuerySyntax;
 using NUnit.Framework;
@@ -8,10 +8,10 @@ namespace FAnsiTests.Query;
 internal sealed class QuerySyntaxHelperDatabaseTests : DatabaseTests
 {
 
-    [TestCaseSource(typeof(All),nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void Test_HowDoWeAchieveMd5(DatabaseType dbType)
     {
-        var db = GetTestDatabase(dbType,false);
+        var db = GetTestDatabase(dbType, false);
 
         var sql = $"SELECT {db.Server.GetQuerySyntaxHelper().HowDoWeAchieveMd5("'fish'")}";
 
@@ -28,10 +28,10 @@ internal sealed class QuerySyntaxHelperDatabaseTests : DatabaseTests
         Assert.That(result?.ToString(), Is.EqualTo("83E4A96AED96436C621B9809E258B309").IgnoreCase);
     }
 
-    [TestCaseSource(typeof(All),nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void Test_LenFunc(DatabaseType dbType)
     {
-        var db = GetTestDatabase(dbType,false);
+        var db = GetTestDatabase(dbType, false);
 
         using var dt = new DataTable();
         dt.Columns.Add("f");

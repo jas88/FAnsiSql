@@ -1,4 +1,4 @@
-﻿namespace FAnsi.Discovery;
+namespace FAnsi.Discovery;
 
 /// <summary>
 /// Cross database type reference to a Parameter (e.g. of a Table valued function / stored procedure).

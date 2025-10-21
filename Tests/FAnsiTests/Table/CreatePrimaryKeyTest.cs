@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Data;
 using System.Data.Common;
 using FAnsi;
@@ -9,15 +9,15 @@ using NUnit.Framework;
 
 namespace FAnsiTests.Table;
 
-internal sealed class CreatePrimaryKeyTest: DatabaseTests
+internal sealed class CreatePrimaryKeyTest : DatabaseTests
 {
-    [TestCaseSource(typeof(All),nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void TestBasicCase_KeysCreated(DatabaseType databaseType)
     {
         // Force columns B and C to be strings otherwise Oracle gets upset by TypeGuesser mis-guessing the nulls as boolean
-        var b=new DataColumn("B", typeof(string));
+        var b = new DataColumn("B", typeof(string));
         b.SetDoNotReType(true);
-        var c=new DataColumn("C", typeof(string));
+        var c = new DataColumn("C", typeof(string));
         c.SetDoNotReType(true);
         DiscoveredTable tbl;
         using (var dt = new DataTable("Fish"))
@@ -54,7 +54,7 @@ internal sealed class CreatePrimaryKeyTest: DatabaseTests
         });
     }
 
-    [TestCaseSource(typeof(All),nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void TestBasicCase_FailHalfWay_SchemaUnchanged(DatabaseType databaseType)
     {
         DiscoveredTable tbl;
@@ -88,7 +88,7 @@ internal sealed class CreatePrimaryKeyTest: DatabaseTests
             Assert.That(colB.IsPrimaryKey, Is.False);
         });
 
-        var ex = Assert.Throws<AlterFailedException>(()=>tbl.CreatePrimaryKey(colA, colB));
+        var ex = Assert.Throws<AlterFailedException>(() => tbl.CreatePrimaryKey(colA, colB));
         Assert.Multiple(() =>
         {
             Assert.That(ex?.Message.Contains("Failed to create primary key on table") ?? false);

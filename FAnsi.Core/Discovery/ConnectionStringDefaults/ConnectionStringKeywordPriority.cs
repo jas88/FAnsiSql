@@ -1,4 +1,4 @@
-﻿namespace FAnsi.Discovery.ConnectionStringDefaults;
+namespace FAnsi.Discovery.ConnectionStringDefaults;
 
 /// <summary>
 /// For use with <see cref="ConnectionStringKeywordAccumulator"/>, allows different parts of of your codebase to specify different values

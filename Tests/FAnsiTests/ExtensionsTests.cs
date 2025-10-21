@@ -1,4 +1,4 @@
-﻿using System.Data;
+using System.Data;
 using FAnsi.Extensions;
 using NUnit.Framework;
 

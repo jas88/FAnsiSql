@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
@@ -9,7 +9,7 @@ using Microsoft.Data.SqlClient;
 
 namespace FAnsi.Implementations.MicrosoftSQL;
 
-public sealed class MicrosoftSQLDatabaseHelper: DiscoveredDatabaseHelper
+public sealed class MicrosoftSQLDatabaseHelper : DiscoveredDatabaseHelper
 {
     /// <summary>
     /// True to attempt sending "ALTER DATABASE MyDatabase SET SINGLE_USER WITH ROLLBACK IMMEDIATE"
@@ -24,7 +24,7 @@ public sealed class MicrosoftSQLDatabaseHelper: DiscoveredDatabaseHelper
         if (connection.State == ConnectionState.Closed)
             throw new InvalidOperationException("Expected connection to be open");
 
-        using var cmd = new SqlCommand($"use {querySyntaxHelper.EnsureWrapped(database)}; EXEC sp_tables", (SqlConnection) connection);
+        using var cmd = new SqlCommand($"use {querySyntaxHelper.EnsureWrapped(database)}; EXEC sp_tables", (SqlConnection)connection);
         cmd.Transaction = transaction as SqlTransaction;
 
         using var r = cmd.ExecuteReader();
@@ -79,7 +79,7 @@ public sealed class MicrosoftSQLDatabaseHelper: DiscoveredDatabaseHelper
         con.Open();
         using var cmdFindStoredprocedure =
             new SqlCommand($"use {querySyntaxHelper.EnsureWrapped(database)};  SELECT * FROM sys.procedures", con);
-        var result = cmdFindStoredprocedure.ExecuteReader();
+        using var result = cmdFindStoredprocedure.ExecuteReader();
 
         while (result.Read())
             yield return new DiscoveredStoredprocedure((string)result["name"]);
@@ -194,17 +194,17 @@ public sealed class MicrosoftSQLDatabaseHelper: DiscoveredDatabaseHelper
 
         // detach!
         sql = $@"EXEC sys.sp_detach_db '{dbLiteralName}';";
-        using(var cmd = new SqlCommand(sql, con))
+        using (var cmd = new SqlCommand(sql, con))
             cmd.ExecuteNonQuery();
 
         // get data-files path from SQL Server
-        using(var cmd = new SqlCommand(getDefaultSqlServerDatabaseDirectory, con))
+        using (var cmd = new SqlCommand(getDefaultSqlServerDatabaseDirectory, con))
             dataFolder = (string)cmd.ExecuteScalar();
 
         return dataFolder == null ? null : new DirectoryInfo(dataFolder);
     }
 
-    public override void CreateBackup(DiscoveredDatabase discoveredDatabase,string backupName)
+    public override void CreateBackup(DiscoveredDatabase discoveredDatabase, string backupName)
     {
         var server = discoveredDatabase.Server;
         using var con = server.GetConnection();
@@ -212,9 +212,9 @@ public sealed class MicrosoftSQLDatabaseHelper: DiscoveredDatabaseHelper
 
         var sql = string.Format(
             "BACKUP DATABASE {0} TO  DISK = '{0}.bak' WITH  INIT ,  NOUNLOAD ,  NAME = N'{1}',  NOSKIP ,  STATS = 10,  NOFORMAT",
-            discoveredDatabase.GetWrappedName(),backupName);
+            discoveredDatabase.GetWrappedName(), backupName);
 
-        using var cmd = server.GetCommand(sql,con);
+        using var cmd = server.GetCommand(sql, con);
         cmd.ExecuteNonQuery();
     }
 

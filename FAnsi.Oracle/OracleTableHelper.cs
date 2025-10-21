@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
@@ -15,8 +15,8 @@ namespace FAnsi.Implementations.Oracle;
 
 public sealed class OracleTableHelper : DiscoveredTableHelper
 {
-    public static readonly OracleTableHelper Instance=new();
-    private OracleTableHelper() {}
+    public static readonly OracleTableHelper Instance = new();
+    private OracleTableHelper() { }
 
     public override string GetTopXSqlForTable(IHasFullyQualifiedNameToo table, int topX) => $"SELECT * FROM {table.GetFullyQualifiedName()} OFFSET 0 ROWS FETCH NEXT {topX} ROWS ONLY";
 
@@ -62,7 +62,7 @@ public sealed class OracleTableHelper : DiscoveredTableHelper
         using (var cmd =
                new OracleCommand(
                    "select table_name,column_name from ALL_TAB_IDENTITY_COLS WHERE table_name = :table_name AND owner =:owner",
-                   (OracleConnection) connection.Connection))
+                   (OracleConnection)connection.Connection))
         {
             cmd.Transaction = (OracleTransaction?)connection.Transaction;
             cmd.Parameters.Add(new OracleParameter("table_name", OracleDbType.Varchar2)
@@ -85,7 +85,7 @@ public sealed class OracleTableHelper : DiscoveredTableHelper
 
 
         //get primary key information
-        using(var cmd = new OracleCommand("""
+        using (var cmd = new OracleCommand("""
                                           SELECT cols.table_name, cols.column_name, cols.position, cons.status, cons.owner
                                           FROM all_constraints cons, all_cons_columns cols
                                           WHERE cols.table_name = :table_name AND cols.owner = :owner
@@ -93,7 +93,7 @@ public sealed class OracleTableHelper : DiscoveredTableHelper
                                           AND cons.constraint_name = cols.constraint_name
                                           AND cons.owner = cols.owner
                                           ORDER BY cols.table_name, cols.position
-                                          """, (OracleConnection) connection.Connection))
+                                          """, (OracleConnection)connection.Connection))
         {
             cmd.Transaction = (OracleTransaction?)connection.Transaction;
             cmd.Parameters.Add(new OracleParameter("table_name", OracleDbType.Varchar2)
@@ -151,7 +151,7 @@ public sealed class OracleTableHelper : DiscoveredTableHelper
             scale = Convert.ToInt32(r["DATA_SCALE"]);
         if (r["DATA_PRECISION"] != DBNull.Value)
             precision = Convert.ToInt32(r["DATA_PRECISION"]);
-        if(r["DATA_LENGTH"] != DBNull.Value)
+        if (r["DATA_LENGTH"] != DBNull.Value)
             dataLength = Convert.ToInt32(r["DATA_LENGTH"]);
 
         switch (r["DATA_TYPE"] as string)
@@ -199,7 +199,7 @@ public sealed class OracleTableHelper : DiscoveredTableHelper
         DiscoveredTableValuedFunction discoveredTableValuedFunction, DbTransaction? transaction) =>
         throw new NotImplementedException();
 
-    public override IBulkCopy BeginBulkInsert(DiscoveredTable discoveredTable, IManagedConnection connection,CultureInfo culture) => new OracleBulkCopy(discoveredTable,connection,culture);
+    public override IBulkCopy BeginBulkInsert(DiscoveredTable discoveredTable, IManagedConnection connection, CultureInfo culture) => new OracleBulkCopy(discoveredTable, connection, culture);
 
     public override int ExecuteInsertReturningIdentity(DiscoveredTable discoveredTable, DbCommand cmd, IManagedTransaction? transaction = null)
     {
@@ -251,7 +251,7 @@ public sealed class OracleTableHelper : DiscoveredTableHelper
                            """;
 
 
-        using (var cmd = new OracleCommand(sql, (OracleConnection) connection))
+        using (var cmd = new OracleCommand(sql, (OracleConnection)connection))
         {
             cmd.Parameters.Add(new OracleParameter(":DatabaseName", OracleDbType.Varchar2)
             {
@@ -309,7 +309,7 @@ public sealed class OracleTableHelper : DiscoveredTableHelper
         return [.. toReturn.Values];
     }
 
-    public override void FillDataTableWithTopX(DatabaseOperationArgs args,DiscoveredTable table, int topX, DataTable dt)
+    public override void FillDataTableWithTopX(DatabaseOperationArgs args, DiscoveredTable table, int topX, DataTable dt)
     {
         using var con = args.GetManagedConnection(table);
         ((OracleConnection)con.Connection).PurgeStatementCache();
@@ -322,7 +322,7 @@ public sealed class OracleTableHelper : DiscoveredTableHelper
 
         using var cmd = table.Database.Server.GetCommand(sql, con);
         using var da = table.Database.Server.GetDataAdapter(cmd);
-        args.Fill(da,cmd, dt);
+        args.Fill(da, cmd, dt);
     }
 
 

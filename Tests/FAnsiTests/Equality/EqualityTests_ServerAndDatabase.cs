@@ -1,4 +1,4 @@
-﻿using FAnsi;
+using FAnsi;
 using FAnsi.Discovery;
 using NUnit.Framework;
 
@@ -11,7 +11,7 @@ internal sealed class EqualityTests_ServerAndDatabase
     {
     }
 
-    [TestCase("Server=fish fish fish", DatabaseType.MicrosoftSQLServer,"Server=fish fish fish", DatabaseType.MicrosoftSQLServer)]
+    [TestCase("Server=fish fish fish", DatabaseType.MicrosoftSQLServer, "Server=fish fish fish", DatabaseType.MicrosoftSQLServer)]
     [TestCase(null, DatabaseType.MicrosoftSQLServer, null, DatabaseType.MicrosoftSQLServer)]
     [TestCase(null, DatabaseType.MicrosoftSQLServer, "", DatabaseType.MicrosoftSQLServer)]
     public void EqualityTest_DiscoveredServer_AreEqual(string? constr1, DatabaseType type1, string? constr2, DatabaseType type2)

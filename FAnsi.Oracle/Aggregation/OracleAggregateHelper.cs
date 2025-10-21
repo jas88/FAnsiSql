@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using FAnsi.Discovery.QuerySyntax;
 using FAnsi.Discovery.QuerySyntax.Aggregation;
@@ -7,8 +7,8 @@ namespace FAnsi.Implementations.Oracle.Aggregation;
 
 public sealed class OracleAggregateHelper : AggregateHelper
 {
-    public static readonly OracleAggregateHelper Instance=new();
-    private OracleAggregateHelper() {}
+    public static readonly OracleAggregateHelper Instance = new();
+    private OracleAggregateHelper() { }
     protected override IQuerySyntaxHelper GetQuerySyntaxHelper() => OracleQuerySyntaxHelper.Instance;
 
     public override string GetDatePartOfColumn(AxisIncrement increment, string columnSql) =>
@@ -93,10 +93,10 @@ select
 to_char(dt ,'YYYY') dt,
 count(*) NumRecords
 from calendar
-join 
-"TEST"."HOSPITALADMISSIONS" on 
-to_char(dt ,'YYYY') = to_char("TEST"."HOSPITALADMISSIONS"."ADMISSION_DATE" ,'YYYY') 
-group by 
+join
+"TEST"."HOSPITALADMISSIONS" on
+to_char(dt ,'YYYY') = to_char("TEST"."HOSPITALADMISSIONS"."ADMISSION_DATE" ,'YYYY')
+group by
 dt
 order by dt*/
 

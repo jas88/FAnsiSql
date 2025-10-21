@@ -1,4 +1,4 @@
-﻿namespace FAnsi.Discovery.Constraints;
+namespace FAnsi.Discovery.Constraints;
 
 /// <summary>
 /// Describes the action performed when a DELETE or UPDATE command is executed on a field tied to a foreign key constraint

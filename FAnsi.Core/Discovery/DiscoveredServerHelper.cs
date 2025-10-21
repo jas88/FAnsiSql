@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Runtime.CompilerServices;
@@ -183,7 +183,7 @@ public abstract partial class DiscoveredServerHelper(DatabaseType databaseType) 
     /// Number of seconds to allow <see cref="CreateDatabase(DbConnectionStringBuilder, IHasRuntimeName)"/> to run for before timing out.
     /// Defaults to 30.
     /// </summary>
-    public static int CreateDatabaseTimeoutInSeconds { get; set;} = 30;
+    public static int CreateDatabaseTimeoutInSeconds { get; set; } = 30;
 
     /// <summary>
     /// Returns a new <see cref="Version"/> by parsing the <paramref name="versionString"/>.  If the string

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -28,7 +28,7 @@ public sealed class AggregateCustomLineCollection
         //if we have any axis bits
         if (Axis == null && AxisSelect == null && AxisGroupBy == null) return;
         //we must have all the axis bits
-        if(AxisSelect == null || AxisGroupBy is null or null)
+        if (AxisSelect == null || AxisGroupBy is null or null)
             throw new AggregateCustomLineCollectionException(FAnsiStrings.AggregateCustomLineCollection_Validate_AggregateCustomLineCollection_is_missing_some__but_not_all__Axis_components);
     }
 

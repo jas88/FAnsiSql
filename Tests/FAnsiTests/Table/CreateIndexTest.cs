@@ -1,4 +1,4 @@
-﻿using System.Data;
+using System.Data;
 using FAnsi;
 using FAnsi.Discovery;
 using FAnsi.Exceptions;
@@ -40,7 +40,7 @@ internal sealed class CreateIndexTest : DatabaseTests
         var colA = tbl.DiscoverColumn("A");
         var colB = tbl.DiscoverColumn("B");
 
-        Assert.DoesNotThrow(() => tbl.CreateIndex("my_index", multiColumn ? [colA,colB] : [colA], unique));
+        Assert.DoesNotThrow(() => tbl.CreateIndex("my_index", multiColumn ? [colA, colB] : [colA], unique));
         Assert.DoesNotThrow(() => tbl.DropIndex("my_index"));
     }
 

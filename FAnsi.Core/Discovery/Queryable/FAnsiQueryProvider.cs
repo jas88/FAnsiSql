@@ -5,6 +5,7 @@ using System.Linq.Expressions;
 using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Diagnostics.CodeAnalysis;
 
 namespace FAnsi.Discovery.QueryableAbstraction
 {
@@ -80,6 +81,7 @@ namespace FAnsi.Discovery.QueryableAbstraction
         /// <summary>
         /// Creates a non-generic queryable instance.
         /// </summary>
+        [RequiresDynamicCode()]
         public IQueryable CreateQuery(Expression expression)
         {
             if (expression == null)
@@ -159,6 +161,7 @@ namespace FAnsi.Discovery.QueryableAbstraction
             return ExecuteQuery(sql, parameters, elementType);
         }
 
+        [RequiresDynamicCode("Calls System.Type.MakeGenericType(params Type[])")]
         private object ExecuteQuery(string sql, DbParameter[] parameters, Type elementType)
         {
             if (_connection.State != System.Data.ConnectionState.Open)

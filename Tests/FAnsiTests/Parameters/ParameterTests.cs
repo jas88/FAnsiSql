@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using FAnsi;
 using FAnsi.Implementation;
 using NUnit.Framework;
@@ -8,17 +8,17 @@ using TypeGuesser;
 
 namespace FAnsiTests.Parameters;
 
-internal sealed class ParameterTests:DatabaseTests
+internal sealed class ParameterTests : DatabaseTests
 {
-    [TestCaseSource(typeof(All),nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void Test_SupportsEmbeddedParameters_DeclarationOrThrow(DatabaseType type)
     {
         var syntax = ImplementationManager.GetImplementation(type).GetQuerySyntaxHelper();
 
-        if(syntax.SupportsEmbeddedParameters())
-            Assert.That(syntax.GetParameterDeclaration("@bob",new DatabaseTypeRequest(typeof(string),10)), Is.Not.Empty);
+        if (syntax.SupportsEmbeddedParameters())
+            Assert.That(syntax.GetParameterDeclaration("@bob", new DatabaseTypeRequest(typeof(string), 10)), Is.Not.Empty);
         else
-            Assert.Throws<NotSupportedException>(() =>syntax.GetParameterDeclaration("@bob", new DatabaseTypeRequest(typeof(string), 10)));
+            Assert.Throws<NotSupportedException>(() => syntax.GetParameterDeclaration("@bob", new DatabaseTypeRequest(typeof(string), 10)));
     }
 
     [TestCase(DatabaseType.MicrosoftSQLServer)]
@@ -28,7 +28,7 @@ internal sealed class ParameterTests:DatabaseTests
     {
         var syntax = ImplementationManager.GetImplementation(type).GetQuerySyntaxHelper();
 
-        var declaration = syntax.GetParameterDeclaration("@bob",new DatabaseTypeRequest(typeof(string),10));
+        var declaration = syntax.GetParameterDeclaration("@bob", new DatabaseTypeRequest(typeof(string), 10));
 
         Assert.That(declaration, Does.Contain("@bob"));
     }
@@ -46,12 +46,12 @@ internal sealed class ParameterTests:DatabaseTests
         dt.Rows.Add("armag");
         dt.Rows.Add("geddon");
 
-        var tbl = db.CreateTable("ParameterUseTest",dt);
+        var tbl = db.CreateTable("ParameterUseTest", dt);
 
         var sb = new StringBuilder();
 
         //declare the variable
-        sb.AppendLine(tbl.GetQuerySyntaxHelper().GetParameterDeclaration("@bob",new DatabaseTypeRequest(typeof(string),10)));
+        sb.AppendLine(tbl.GetQuerySyntaxHelper().GetParameterDeclaration("@bob", new DatabaseTypeRequest(typeof(string), 10)));
 
         sb.AppendLine("SET @bob='armag';");
         //set the variable
@@ -60,7 +60,7 @@ internal sealed class ParameterTests:DatabaseTests
 
         using var con = db.Server.GetConnection();
         con.Open();
-        var r = db.Server.GetCommand(sb.ToString(),con).ExecuteReader();
+        var r = db.Server.GetCommand(sb.ToString(), con).ExecuteReader();
 
         Assert.That(r.Read());
         Assert.That(r.Read(), Is.False);

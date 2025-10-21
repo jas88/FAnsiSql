@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
@@ -12,15 +12,15 @@ namespace FAnsi.Implementations.Oracle;
 
 public sealed class OracleDatabaseHelper : DiscoveredDatabaseHelper
 {
-    public static readonly OracleDatabaseHelper Instance=new();
-    private OracleDatabaseHelper(){}
+    public static readonly OracleDatabaseHelper Instance = new();
+    private OracleDatabaseHelper() { }
     public override IDiscoveredTableHelper GetTableHelper() => OracleTableHelper.Instance;
 
     public override void DropDatabase(DiscoveredDatabase database)
     {
         using var con = (OracleConnection)database.Server.GetConnection();
         con.Open();
-        using var cmd = new OracleCommand($"DROP USER \"{database.GetRuntimeName()}\" CASCADE ",con);
+        using var cmd = new OracleCommand($"DROP USER \"{database.GetRuntimeName()}\" CASCADE ", con);
         cmd.ExecuteNonQuery();
     }
 
@@ -50,7 +50,7 @@ public sealed class OracleDatabaseHelper : DiscoveredDatabaseHelper
         {
             cmd.Transaction = transaction as OracleTransaction;
 
-            var r = cmd.ExecuteReader();
+            using var r = cmd.ExecuteReader();
 
             while (r.Read())
                 //skip invalid table names
@@ -65,7 +65,7 @@ public sealed class OracleDatabaseHelper : DiscoveredDatabaseHelper
                    (OracleConnection)connection))
         {
             cmd.Transaction = transaction as OracleTransaction;
-            var r = cmd.ExecuteReader();
+            using var r = cmd.ExecuteReader();
 
             while (r.Read())
             {
@@ -85,12 +85,12 @@ public sealed class OracleDatabaseHelper : DiscoveredDatabaseHelper
 
     protected override Guesser GetGuesser(DatabaseTypeRequest request) =>
         new(request)
-            {ExtraLengthPerNonAsciiCharacter = OracleTypeTranslater.ExtraLengthPerNonAsciiCharacter};
+        { ExtraLengthPerNonAsciiCharacter = OracleTypeTranslater.ExtraLengthPerNonAsciiCharacter };
 
     public override void CreateSchema(DiscoveredDatabase discoveredDatabase, string name)
     {
         //Oracle doesn't really have schemas especially since a User is a Database
     }
 
-    protected override Guesser GetGuesser(DataColumn column) => new() {ExtraLengthPerNonAsciiCharacter = OracleTypeTranslater.ExtraLengthPerNonAsciiCharacter};
+    protected override Guesser GetGuesser(DataColumn column) => new() { ExtraLengthPerNonAsciiCharacter = OracleTypeTranslater.ExtraLengthPerNonAsciiCharacter };
 }

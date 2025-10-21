@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using FAnsi.Discovery.QuerySyntax;
 using FAnsi.Discovery.QuerySyntax.Aggregation;
@@ -8,7 +8,7 @@ namespace FAnsi.Implementations.PostgreSql.Aggregation;
 public sealed class PostgreSqlAggregateHelper : AggregateHelper
 {
     public static readonly PostgreSqlAggregateHelper Instance = new();
-    private PostgreSqlAggregateHelper(){}
+    private PostgreSqlAggregateHelper() { }
     protected override IQuerySyntaxHelper GetQuerySyntaxHelper() => PostgreSqlSyntaxHelper.Instance;
 
     protected override string BuildAxisAggregate(AggregateCustomLineCollection query)
@@ -19,13 +19,13 @@ public sealed class PostgreSqlAggregateHelper : AggregateHelper
             AxisIncrement.Month => "1 month",
             AxisIncrement.Year => "1 year",
             AxisIncrement.Quarter => "3 months",
-            _ => throw new ArgumentOutOfRangeException(nameof(query),$"Invalid AxisIncrement {query.Axis?.AxisIncrement}")
+            _ => throw new ArgumentOutOfRangeException(nameof(query), $"Invalid AxisIncrement {query.Axis?.AxisIncrement}")
         };
 
         var countAlias = query.CountSelect.GetAliasFromText(query.SyntaxHelper);
         var axisColumnAlias = query.AxisSelect.GetAliasFromText(query.SyntaxHelper) ?? "joinDt";
 
-        WrapAxisColumnWithDatePartFunction(query,axisColumnAlias);
+        WrapAxisColumnWithDatePartFunction(query, axisColumnAlias);
 
         var sql =
             string.Format("""

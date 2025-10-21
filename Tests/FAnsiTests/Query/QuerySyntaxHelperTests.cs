@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using FAnsi;
 using FAnsi.Discovery;
@@ -13,35 +13,35 @@ internal sealed class QuerySyntaxHelperTests
 
 
     //Oracle always uppers everything because... Oracle
-    [TestCase(DatabaseType.Oracle,"CHI","\"TEST_ScratchArea\".public.\"Biochemistry\".\"chi\"")]
-    [TestCase(DatabaseType.PostgreSql,"chi","\"TEST_ScratchArea\".public.\"Biochemistry\".\"chi\"")]
+    [TestCase(DatabaseType.Oracle, "CHI", "\"TEST_ScratchArea\".public.\"Biochemistry\".\"chi\"")]
+    [TestCase(DatabaseType.PostgreSql, "chi", "\"TEST_ScratchArea\".public.\"Biochemistry\".\"chi\"")]
 
-    [TestCase(DatabaseType.Oracle,"FRANK","count(*) as Frank")]
-    [TestCase(DatabaseType.PostgreSql,"Frank","count(*) as Frank")]
+    [TestCase(DatabaseType.Oracle, "FRANK", "count(*) as Frank")]
+    [TestCase(DatabaseType.PostgreSql, "Frank", "count(*) as Frank")]
 
-    [TestCase(DatabaseType.Oracle,"FRANK","count(cast(1 as int)) as Frank")]
-    [TestCase(DatabaseType.PostgreSql,"Frank","count(cast(1 as int)) as Frank")]
+    [TestCase(DatabaseType.Oracle, "FRANK", "count(cast(1 as int)) as Frank")]
+    [TestCase(DatabaseType.PostgreSql, "Frank", "count(cast(1 as int)) as Frank")]
 
-    [TestCase(DatabaseType.Oracle,"FRANK","count(cast(1 as int)) as \"Frank\"")]
-    [TestCase(DatabaseType.PostgreSql,"Frank","count(cast(1 as int)) as \"Frank\"")]
-    [TestCase(DatabaseType.MySql,"Frank","count(cast(1 as int)) as `Frank`")]
-    [TestCase(DatabaseType.MicrosoftSQLServer,"Frank","count(cast(1 as int)) as [Frank]")]
+    [TestCase(DatabaseType.Oracle, "FRANK", "count(cast(1 as int)) as \"Frank\"")]
+    [TestCase(DatabaseType.PostgreSql, "Frank", "count(cast(1 as int)) as \"Frank\"")]
+    [TestCase(DatabaseType.MySql, "Frank", "count(cast(1 as int)) as `Frank`")]
+    [TestCase(DatabaseType.MicrosoftSQLServer, "Frank", "count(cast(1 as int)) as [Frank]")]
 
-    [TestCase(DatabaseType.Oracle,"FRANK","[mydb].[mytbl].[mycol] as Frank")]
-    [TestCase(DatabaseType.PostgreSql,"Frank","[mydb].[mytbl].[mycol] as Frank")]
-    [TestCase(DatabaseType.MicrosoftSQLServer,"Frank","[mydb].[mytbl].[mycol] as Frank")]
-    [TestCase(DatabaseType.MySql,"Frank","[mydb].[mytbl].[mycol] as Frank")]
+    [TestCase(DatabaseType.Oracle, "FRANK", "[mydb].[mytbl].[mycol] as Frank")]
+    [TestCase(DatabaseType.PostgreSql, "Frank", "[mydb].[mytbl].[mycol] as Frank")]
+    [TestCase(DatabaseType.MicrosoftSQLServer, "Frank", "[mydb].[mytbl].[mycol] as Frank")]
+    [TestCase(DatabaseType.MySql, "Frank", "[mydb].[mytbl].[mycol] as Frank")]
 
-    [TestCase(DatabaseType.Oracle,"ZOMBIE","dbo.GetMyCoolThing(\"Magic Fun Times\") as zombie")]
-    [TestCase(DatabaseType.MicrosoftSQLServer,"zombie","dbo.GetMyCoolThing(\"Magic Fun Times\") as zombie")]
-    [TestCase(DatabaseType.MySql,"zombie","dbo.GetMyCoolThing(\"Magic Fun Times\") as zombie")]
-    [TestCase(DatabaseType.PostgreSql,"zombie","dbo.GetMyCoolThing(\"Magic Fun Times\") as zombie")]
+    [TestCase(DatabaseType.Oracle, "ZOMBIE", "dbo.GetMyCoolThing(\"Magic Fun Times\") as zombie")]
+    [TestCase(DatabaseType.MicrosoftSQLServer, "zombie", "dbo.GetMyCoolThing(\"Magic Fun Times\") as zombie")]
+    [TestCase(DatabaseType.MySql, "zombie", "dbo.GetMyCoolThing(\"Magic Fun Times\") as zombie")]
+    [TestCase(DatabaseType.PostgreSql, "zombie", "dbo.GetMyCoolThing(\"Magic Fun Times\") as zombie")]
 
-    [TestCase(DatabaseType.Oracle,"MYCOL","\"mydb\".\"mytbl\".\"mycol\"")]
-    [TestCase(DatabaseType.MicrosoftSQLServer,"mycol","[mydb].[mytbl].[mycol]")]
-    [TestCase(DatabaseType.MySql,"mycol","`mydb`.`mytbl`.`mycol`")]
-    [TestCase(DatabaseType.PostgreSql,"mycol","\"mydb\".\"mytbl\".\"mycol\"")]
-    public void SyntaxHelperTest_GetRuntimeName(DatabaseType dbType,  string expected, string forInput)
+    [TestCase(DatabaseType.Oracle, "MYCOL", "\"mydb\".\"mytbl\".\"mycol\"")]
+    [TestCase(DatabaseType.MicrosoftSQLServer, "mycol", "[mydb].[mytbl].[mycol]")]
+    [TestCase(DatabaseType.MySql, "mycol", "`mydb`.`mytbl`.`mycol`")]
+    [TestCase(DatabaseType.PostgreSql, "mycol", "\"mydb\".\"mytbl\".\"mycol\"")]
+    public void SyntaxHelperTest_GetRuntimeName(DatabaseType dbType, string expected, string forInput)
     {
         var syntaxHelper = ImplementationManager.GetImplementation(dbType).GetQuerySyntaxHelper();
         Assert.That(syntaxHelper.GetRuntimeName(forInput), Is.EqualTo(expected));
@@ -53,13 +53,13 @@ internal sealed class QuerySyntaxHelperTests
     /// <param name="dbType"></param>
     /// <param name="runtime"></param>
     /// <param name="wrapped"></param>
-    [TestCase(DatabaseType.MySql,"Fra`nk","`Fra``nk`")]
-    [TestCase(DatabaseType.MySql,"Fra``nk`","`Fra````nk```")]
-    [TestCase(DatabaseType.MicrosoftSQLServer,"Fra]nk","[Fra]]nk]")]
-    [TestCase(DatabaseType.MicrosoftSQLServer,"Fra]]nk]","[Fra]]]]nk]]]")]
-    [TestCase(DatabaseType.PostgreSql,"Fra\"nk","\"Fra\"\"nk\"")]
-    [TestCase(DatabaseType.PostgreSql,"Fra\"\"nk\"","\"Fra\"\"\"\"nk\"\"\"")]
-    public void SyntaxHelperTest_GetRuntimeName_MultipleCalls(DatabaseType dbType,  string runtime, string wrapped)
+    [TestCase(DatabaseType.MySql, "Fra`nk", "`Fra``nk`")]
+    [TestCase(DatabaseType.MySql, "Fra``nk`", "`Fra````nk```")]
+    [TestCase(DatabaseType.MicrosoftSQLServer, "Fra]nk", "[Fra]]nk]")]
+    [TestCase(DatabaseType.MicrosoftSQLServer, "Fra]]nk]", "[Fra]]]]nk]]]")]
+    [TestCase(DatabaseType.PostgreSql, "Fra\"nk", "\"Fra\"\"nk\"")]
+    [TestCase(DatabaseType.PostgreSql, "Fra\"\"nk\"", "\"Fra\"\"\"\"nk\"\"\"")]
+    public void SyntaxHelperTest_GetRuntimeName_MultipleCalls(DatabaseType dbType, string runtime, string wrapped)
     {
         // NOTE: Oracle does not support such shenanigans https://docs.oracle.com/cd/B19306_01/server.102/b14200/sql_elements008.htm
         // "neither quoted nor unquoted identifiers can contain double quotation marks or the null character (\0)."
@@ -68,8 +68,8 @@ internal sealed class QuerySyntaxHelperTests
 
         var currentName = runtime;
 
-        for(var i=0;i<10;i++)
-            if(i%2 ==0 )
+        for (var i = 0; i < 10; i++)
+            if (i % 2 == 0)
             {
                 Assert.That(currentName, Is.EqualTo(runtime));
                 currentName = syntaxHelper.EnsureWrapped(currentName);
@@ -85,7 +85,7 @@ internal sealed class QuerySyntaxHelperTests
             }
     }
 
-    [TestCaseSource(typeof(All),nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void EnsureWrapped_MultipleCalls(DatabaseType dbType)
     {
         var syntax = QuerySyntaxHelperFactory.Create(dbType);
@@ -96,14 +96,14 @@ internal sealed class QuerySyntaxHelperTests
         Assert.That(twice, Is.EqualTo(once));
     }
 
-    [TestCaseSource(typeof(All),nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void SyntaxHelperTest_GetRuntimeName_Impossible(DatabaseType t)
     {
         var syntaxHelper = ImplementationManager.GetImplementation(t).GetQuerySyntaxHelper();
-        var ex = Assert.Throws<RuntimeNameException>(()=>syntaxHelper.GetRuntimeName("count(*)"));
+        var ex = Assert.Throws<RuntimeNameException>(() => syntaxHelper.GetRuntimeName("count(*)"));
         Assert.That(ex?.Message, Does.Contain("Could not determine runtime name for Sql:'count(*)'.  It had brackets and no alias."));
 
-        Assert.Throws<RuntimeNameException>(()=>syntaxHelper.GetRuntimeName("dbo.GetMyCoolThing(\"Magic Fun Times\")"));
+        Assert.Throws<RuntimeNameException>(() => syntaxHelper.GetRuntimeName("dbo.GetMyCoolThing(\"Magic Fun Times\")"));
 
         Assert.Multiple(() =>
         {
@@ -127,19 +127,19 @@ internal sealed class QuerySyntaxHelperTests
     }
 
 
-    [TestCase("count(*) as Frank","count(*)","Frank")]
-    [TestCase("count(cast(1 as int)) as Frank","count(cast(1 as int))","Frank")]
-    [TestCase("[mydb].[mytbl].[mycol] as Frank","[mydb].[mytbl].[mycol]","Frank")]
-    [TestCase("[mydb].[mytbl].[mycol] as [Frank]","[mydb].[mytbl].[mycol]","Frank")]
-    [TestCase("[mydb].[mytbl].[mycol] as [Frank],","[mydb].[mytbl].[mycol]","Frank")]
-    [TestCase("[mytbl].[mycol] AS `Frank`","[mytbl].[mycol]","Frank")]
-    [TestCase("[mytbl].[mycol] AS [omg its full of spaces]","[mytbl].[mycol]","omg its full of spaces")]
-    [TestCase("[mydb].[mytbl].[mycol]","[mydb].[mytbl].[mycol]",null)]
-    [TestCase("[mydb].[mytbl].[mycol],","[mydb].[mytbl].[mycol]",null)]
-    [TestCase("count(*) as Frank","count(*)","Frank")]
-    [TestCase("count(*) as Frank32","count(*)","Frank32")]
-    [TestCase("CAST([dave] as int) as [number]","CAST([dave] as int)","number")]
-    [TestCase("CAST([dave] as int)","CAST([dave] as int)",null)]
+    [TestCase("count(*) as Frank", "count(*)", "Frank")]
+    [TestCase("count(cast(1 as int)) as Frank", "count(cast(1 as int))", "Frank")]
+    [TestCase("[mydb].[mytbl].[mycol] as Frank", "[mydb].[mytbl].[mycol]", "Frank")]
+    [TestCase("[mydb].[mytbl].[mycol] as [Frank]", "[mydb].[mytbl].[mycol]", "Frank")]
+    [TestCase("[mydb].[mytbl].[mycol] as [Frank],", "[mydb].[mytbl].[mycol]", "Frank")]
+    [TestCase("[mytbl].[mycol] AS `Frank`", "[mytbl].[mycol]", "Frank")]
+    [TestCase("[mytbl].[mycol] AS [omg its full of spaces]", "[mytbl].[mycol]", "omg its full of spaces")]
+    [TestCase("[mydb].[mytbl].[mycol]", "[mydb].[mytbl].[mycol]", null)]
+    [TestCase("[mydb].[mytbl].[mycol],", "[mydb].[mytbl].[mycol]", null)]
+    [TestCase("count(*) as Frank", "count(*)", "Frank")]
+    [TestCase("count(*) as Frank32", "count(*)", "Frank32")]
+    [TestCase("CAST([dave] as int) as [number]", "CAST([dave] as int)", "number")]
+    [TestCase("CAST([dave] as int)", "CAST([dave] as int)", null)]
     public void SyntaxHelperTest_SplitLineIntoSelectSQLAndAlias(string line, string expectedSelectSql, string? expectedAlias)
     {
         foreach (var syntaxHelper in new[] { DatabaseType.Oracle, DatabaseType.MySql, DatabaseType.MicrosoftSQLServer }
@@ -152,7 +152,7 @@ internal sealed class QuerySyntaxHelperTests
             });
     }
 
-    [TestCaseSource(typeof(All),nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void Test_GetAlias(DatabaseType t)
     {
         var syntaxHelper = ImplementationManager.GetImplementation(t).GetQuerySyntaxHelper();
@@ -184,7 +184,7 @@ internal sealed class QuerySyntaxHelperTests
         });
     }
 
-    [TestCaseSource(typeof(All),nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void Test_NameValidation(DatabaseType dbType)
     {
         var syntaxHelper = ImplementationManager.GetImplementation(dbType).GetQuerySyntaxHelper();
@@ -193,10 +193,10 @@ internal sealed class QuerySyntaxHelperTests
         Assert.Throws<RuntimeNameException>(() => syntaxHelper.ValidateDatabaseName("  "));
         Assert.Throws<RuntimeNameException>(() => syntaxHelper.ValidateDatabaseName("db.table"));
         Assert.Throws<RuntimeNameException>(() => syntaxHelper.ValidateDatabaseName("db(lol)"));
-        Assert.Throws<RuntimeNameException>(() => syntaxHelper.ValidateDatabaseName(new string('A', syntaxHelper.MaximumDatabaseLength+1)));
+        Assert.Throws<RuntimeNameException>(() => syntaxHelper.ValidateDatabaseName(new string('A', syntaxHelper.MaximumDatabaseLength + 1)));
 
-        Assert.DoesNotThrow(() =>syntaxHelper.ValidateDatabaseName("A"));
-        Assert.DoesNotThrow(() =>syntaxHelper.ValidateDatabaseName(new string('A', syntaxHelper.MaximumDatabaseLength)));
+        Assert.DoesNotThrow(() => syntaxHelper.ValidateDatabaseName("A"));
+        Assert.DoesNotThrow(() => syntaxHelper.ValidateDatabaseName(new string('A', syntaxHelper.MaximumDatabaseLength)));
     }
 
     [Test]
@@ -210,7 +210,7 @@ internal sealed class QuerySyntaxHelperTests
         });
     }
 
-    [TestCaseSource(typeof(All),nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void Test_GetFullyQualifiedName(DatabaseType dbType)
     {
         var syntaxHelper = ImplementationManager.GetImplementation(dbType).GetQuerySyntaxHelper();
@@ -242,9 +242,9 @@ internal sealed class QuerySyntaxHelperTests
     {
         var syntaxHelper = ImplementationManager.GetImplementation(dbType).GetQuerySyntaxHelper();
 
-        foreach (var name in new [] { null,"", " ", "\t"}.Select(emptySchemaExpression => syntaxHelper.EnsureFullyQualified("mydb", emptySchemaExpression, "Troll", "MyCol")))
+        foreach (var name in new[] { null, "", " ", "\t" }.Select(emptySchemaExpression => syntaxHelper.EnsureFullyQualified("mydb", emptySchemaExpression, "Troll", "MyCol")))
         {
-            Assert.That(string.Equals("MyCol", syntaxHelper.GetRuntimeName(name),StringComparison.InvariantCultureIgnoreCase));
+            Assert.That(string.Equals("MyCol", syntaxHelper.GetRuntimeName(name), StringComparison.InvariantCultureIgnoreCase));
 
             switch (dbType)
             {

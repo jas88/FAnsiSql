@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using FAnsi;
 using FAnsi.Discovery;
 using NUnit.Framework;

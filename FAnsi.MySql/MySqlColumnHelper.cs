@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using FAnsi.Discovery;
 using FAnsi.Naming;
 
@@ -7,7 +7,7 @@ namespace FAnsi.Implementations.MySql;
 public sealed class MySqlColumnHelper : IDiscoveredColumnHelper
 {
     public static readonly MySqlColumnHelper Instance = new();
-    private MySqlColumnHelper() {}
+    private MySqlColumnHelper() { }
 
     public string GetTopXSqlForColumn(IHasRuntimeName database, IHasFullyQualifiedNameToo table, IHasRuntimeName column, int topX, bool discardNulls)
     {

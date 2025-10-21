@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Data;
 
 namespace FAnsi.Discovery;
@@ -9,12 +9,12 @@ namespace FAnsi.Discovery;
 /// </summary>
 public sealed class ColumnMappingException : Exception
 {
-    public ColumnMappingException(string msg):base(msg)
+    public ColumnMappingException(string msg) : base(msg)
     {
 
     }
 
-    public ColumnMappingException(string msg, Exception innerException):base(msg,innerException)
+    public ColumnMappingException(string msg, Exception innerException) : base(msg, innerException)
     {
 
     }

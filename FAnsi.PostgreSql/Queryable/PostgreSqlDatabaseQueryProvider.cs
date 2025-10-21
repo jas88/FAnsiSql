@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Linq.Expressions;
 using FAnsi.Discovery.QueryableAbstraction;
@@ -30,6 +31,7 @@ public sealed class PostgreSqlDatabaseQueryProvider : IQueryProvider
         return new FAnsiQueryable<TElement>(this, expression);
     }
 
+    [RequiresDynamicCode()]
     public IQueryable CreateQuery(Expression expression)
     {
         var elementType = expression.Type.GetGenericArguments()[0];

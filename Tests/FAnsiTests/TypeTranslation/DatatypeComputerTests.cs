@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Globalization;
 using FAnsi.Discovery.TypeTranslation;
 using FAnsi.Implementations.MicrosoftSQL;
@@ -9,7 +9,7 @@ namespace FAnsiTests.TypeTranslation;
 
 /// <summary>
 /// <para>These tests cover the systems ability to compute a final <see cref="DatabaseTypeRequest"/> from a set of mixed data types.</para>
-/// 
+///
 /// <para>Critically it covers fallback from one data type estimate to another based on new data e.g. if you see a "100" then a "1" then a "1.1"
 /// the final estimate should be decimal(4,1) to allow for both 100.0f and 1.1f.
 /// </para>
@@ -119,7 +119,7 @@ public sealed class GuesserTests
 
         Assert.That(t.Guess.CSharpType, Is.EqualTo(typeof(decimal)));
         var sqlType = t.GetSqlDBType(_translater);
-        Assert.That(sqlType, Is.EqualTo("decimal(4,1)")) ;
+        Assert.That(sqlType, Is.EqualTo("decimal(4,1)"));
 
         var orig = t.Guess;
         var reverseEngineered = _translater.GetDataTypeRequestForSQLDBType(sqlType);
@@ -142,7 +142,7 @@ public sealed class GuesserTests
 
     //Tests system being happy to sign off in the orders bool=>int=>decimal but nothing else
     [TestCase("true", typeof(bool), "11", typeof(int))]
-    [TestCase("1", typeof(bool), "1.1",typeof(decimal))]
+    [TestCase("1", typeof(bool), "1.1", typeof(decimal))]
     [TestCase("true", typeof(bool), "1.1", typeof(decimal))]
     public void TestGuesser_FallbackCompatible(string input1, Type expectedTypeAfterFirstInput, string input2, Type expectedTypeAfterSecondInput)
     {
@@ -157,7 +157,7 @@ public sealed class GuesserTests
 
     //Tests system being angry at having signed off on a bool=>int=>decimal then seeing a valid non string type (e.g. DateTime)
     //under these circumstances it should go directly to System.String
-    [TestCase("1",typeof(bool),"2001-01-01")]
+    [TestCase("1", typeof(bool), "2001-01-01")]
     [TestCase("true", typeof(bool), "2001-01-01")]
     [TestCase("1.1", typeof(decimal), "2001-01-01")]
     [TestCase("1.1", typeof(decimal), "10:00am")]
@@ -188,9 +188,9 @@ public sealed class GuesserTests
         Assert.That(t.Guess.CSharpType, Is.EqualTo(typeof(string)));
     }
 
-    [TestCase("fish",32)]
+    [TestCase("fish", 32)]
     [TestCase(32, "fish")]
-    [TestCase("2001-01-01",2001)]
+    [TestCase("2001-01-01", 2001)]
     [TestCase(2001, "2001-01-01")]
     [TestCase("2001", 2001)]
     [TestCase(2001, "2001")]
@@ -285,7 +285,7 @@ public sealed class GuesserTests
         });
     }
 
-    [TestCase("01",2)]
+    [TestCase("01", 2)]
     [TestCase("01.1", 4)]
     [TestCase("01.10", 5)]
     [TestCase("-01", 3)]
@@ -352,7 +352,7 @@ public sealed class GuesserTests
     [TestCase(" 1.01", typeof(decimal))]
     [TestCase(" 1.01 ", typeof(decimal))]
     [TestCase(" 1", typeof(int))]
-    [TestCase(" true ",typeof(bool))]
+    [TestCase(" true ", typeof(bool))]
     public void TestGuesser_Whitespace(string input, Type expectedType)
     {
         var t = new Guesser();
@@ -400,7 +400,7 @@ public sealed class GuesserTests
     {
         var t = new Guesser();
         t.AdjustToCompensateForValue((short)5);
-        var ex = Assert.Throws<MixedTypingException>(()=>t.AdjustToCompensateForValue(1000));
+        var ex = Assert.Throws<MixedTypingException>(() => t.AdjustToCompensateForValue(1000));
 
         Assert.That(ex?.Message, Does.Contain("We were adjusting to compensate for object '1000' which is of Type 'System.Int32', we were previously passed a 'System.Int16' type"));
     }
@@ -576,7 +576,7 @@ public sealed class GuesserTests
     public void TestGuesser_TimeObject()
     {
         var t = new Guesser();
-        t.AdjustToCompensateForValue(new TimeSpan(10,1,1));
+        t.AdjustToCompensateForValue(new TimeSpan(10, 1, 1));
 
         Assert.Multiple(() =>
         {
@@ -662,11 +662,11 @@ public sealed class GuesserTests
     }
 
 
-    [TestCase("0.01",typeof(decimal),"A",4)]
-    [TestCase("1234",typeof(int),"FF",4)]
-    [TestCase("false",typeof(bool), "FF", 5)]
-    [TestCase("2001-01-01",typeof(DateTime), "FF", 27)]
-    [TestCase("2001-01-01",typeof(DateTime), "FingersMcNultyFishBonesdlsiea", 29)]
+    [TestCase("0.01", typeof(decimal), "A", 4)]
+    [TestCase("1234", typeof(int), "FF", 4)]
+    [TestCase("false", typeof(bool), "FF", 5)]
+    [TestCase("2001-01-01", typeof(DateTime), "FF", 27)]
+    [TestCase("2001-01-01", typeof(DateTime), "FingersMcNultyFishBonesdlsiea", 29)]
     public void TestGuesser_FallbackOntoStringLength(string legitType, Type expectedLegitType, string str, int expectedLength)
     {
         var t = new Guesser();
@@ -733,7 +733,7 @@ public sealed class GuesserTests
         });
 
         //in the world of Oracle where you need varchar2(6) to store "It’s"
-        t = new Guesser {ExtraLengthPerNonAsciiCharacter = 3};
+        t = new Guesser { ExtraLengthPerNonAsciiCharacter = 3 };
         t.AdjustToCompensateForValue(word);
 
         Assert.That(t.Guess.Width, Is.EqualTo(word.Length + 3));

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Data;
 using System.Diagnostics.Contracts;
 using System.Globalization;
@@ -92,7 +92,7 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
     /// <summary>
     /// Creates a new transaction and does one line at a time bulk insertions of the <paramref name="insert"/> to determine which line (and value)
     /// is causing the problem.  Transaction is always rolled back.
-    /// 
+    ///
     /// </summary>
     /// <param name="e"></param>
     /// <param name="insert"></param>
@@ -196,7 +196,7 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
                 .SingleOrDefault(m => string.Equals(m.DestinationColumn, destinationColumn, StringComparison.CurrentCultureIgnoreCase));
 
             newMessage = ex.Message.Insert(match.Index + match.Length,
-                $"(Source Column <<{badMapping?.SourceColumn??"unknown"}>> Dest Column <<{destinationColumn}>> which has MaxLength of {length})");
+                $"(Source Column <<{badMapping?.SourceColumn ?? "unknown"}>> Dest Column <<{destinationColumn}>> which has MaxLength of {length})");
 
             return true;
         }
@@ -247,7 +247,7 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
     {
         //are there any float or float? columns
         var floatColumnNames = dt.Columns.Cast<DataColumn>().Where(static c => c.DataType == typeof(float) || c.DataType == typeof(float?)).Select(static c => c.ColumnName).ToArray();
-        if (floatColumnNames.Length!=0)
+        if (floatColumnNames.Length != 0)
             throw new NotSupportedException(
                 $"Found float column(s) in data table, SQLServer does not support floats in bulk insert, instead you should use doubles otherwise you will end up with the value 0.85 turning into :0.850000023841858 in your database.  Float column(s) were:{string.Join(",", floatColumnNames)}");
 
@@ -255,7 +255,7 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
         var objectColumns = dt.Columns.Cast<DataColumn>().Where(static c => c.DataType == typeof(object)).Select(static col => col.Ordinal).ToArray();
 
         //do any of the object columns have floats or float? in them?
-        for (var i = 0;i < Math.Min(100, dt.Rows.Count);i++)
+        for (var i = 0; i < Math.Min(100, dt.Rows.Count); i++)
         {
             var bad = objectColumns.Select(c => dt.Rows[i][c])
                 .FirstOrDefault(static t => t is float);

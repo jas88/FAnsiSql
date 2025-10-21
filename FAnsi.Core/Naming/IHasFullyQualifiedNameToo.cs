@@ -5,7 +5,7 @@ namespace FAnsi.Naming;
 /// For example a 'Fully Qualified Name' for a table in Microsoft Sql Server could be '[MyDatabase]..[MyTable]'.  A 'Fully Qualified Name' for a column could
 /// be '[MyDatabase]..[MyTable].[MyColumn]'.  The 'Runtime Name' for the previous 2 examples would be 'MyTable' and 'MyColumn' respectively.
 /// </summary>
-public interface IHasFullyQualifiedNameToo:IHasRuntimeName
+public interface IHasFullyQualifiedNameToo : IHasRuntimeName
 {
     /// <summary>
     /// Returns the fully qualified name of the object including both the database, table and (if applicable) column name e.g. "[MyDatabase]..[MyTable].[MyColumn]".

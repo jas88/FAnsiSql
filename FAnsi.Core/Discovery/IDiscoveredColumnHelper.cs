@@ -1,4 +1,4 @@
-﻿using FAnsi.Naming;
+using FAnsi.Naming;
 
 namespace FAnsi.Discovery;
 
