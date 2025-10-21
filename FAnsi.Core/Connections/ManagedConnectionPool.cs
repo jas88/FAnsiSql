@@ -28,9 +28,9 @@ internal static class ManagedConnectionPool
     /// <returns>A managed connection that should not be disposed (CloseOnDispose = false)</returns>
     internal static IManagedConnection GetPooledConnection(DiscoveredServer server, IManagedTransaction? transaction = null)
     {
-        // If we have a transaction, use the standard non-pooled connection
+        // If we have a transaction, create a standard non-pooled connection directly (bypassing pool to avoid recursion)
         if (transaction != null)
-            return server.GetManagedConnection(transaction);
+            return new ManagedConnection(server, transaction);
 
         var connectionKey = server.Builder.ConnectionString;
         var threadConnections = _threadLocalConnections.Value;
@@ -51,8 +51,8 @@ internal static class ManagedConnectionPool
             threadConnections.TryRemove(connectionKey, out _);
         }
 
-        // Create new long-lived connection for this thread
-        var newConnection = server.GetManagedConnection(null);
+        // Create new long-lived connection for this thread directly (bypassing GetManagedConnection to avoid recursion)
+        var newConnection = new ManagedConnection(server, null);
         newConnection.CloseOnDispose = false; // Don't close on dispose - we manage the lifetime
 
         // Store it
