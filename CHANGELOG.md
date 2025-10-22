@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Oracle: Added NOCACHE to IDENTITY columns to fix sequence allocation issues when mixing array-bound bulk inserts with regular inserts
 
-## [0.1.0] - 2025-01-21
+## [3.3.0] - 2025-10-21
 
 ### Breaking Changes
 - **Package Rename**: Packages no longer use the `HIC.` prefix
