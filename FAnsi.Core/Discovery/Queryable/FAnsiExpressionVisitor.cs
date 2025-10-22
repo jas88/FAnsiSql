@@ -178,6 +178,7 @@ namespace FAnsi.Discovery.QueryableAbstraction
             return node;
         }
 
+        [RequiresDynamicCode("Calls FAnsi.Discovery.QueryableAbstraction.FAnsiExpressionVisitor.GetConstantValue(Expression)")]
         private void VisitStartsWith(MethodCallExpression node)
         {
             var propertyName = GetPropertyName(node.Object);
@@ -185,6 +186,7 @@ namespace FAnsi.Discovery.QueryableAbstraction
             _components.AddWhereClause(propertyName, WhereOperator.Like, $"{value}%");
         }
 
+        [RequiresDynamicCode("Calls FAnsi.Discovery.QueryableAbstraction.FAnsiExpressionVisitor.GetConstantValue(Expression)")]
         private void VisitEndsWith(MethodCallExpression node)
         {
             var propertyName = GetPropertyName(node.Object);
@@ -192,6 +194,7 @@ namespace FAnsi.Discovery.QueryableAbstraction
             _components.AddWhereClause(propertyName, WhereOperator.Like, $"%{value}");
         }
 
+        [RequiresDynamicCode("Calls FAnsi.Discovery.QueryableAbstraction.FAnsiExpressionVisitor.GetConstantValue(Expression)")]
         private void VisitContains(MethodCallExpression node)
         {
             var propertyName = GetPropertyName(node.Object);
@@ -199,6 +202,7 @@ namespace FAnsi.Discovery.QueryableAbstraction
             _components.AddWhereClause(propertyName, WhereOperator.Like, $"%{value}%");
         }
 
+        [RequiresDynamicCode()]
         protected override Expression VisitBinary(BinaryExpression node)
         {
             if (!_isWhereClause)

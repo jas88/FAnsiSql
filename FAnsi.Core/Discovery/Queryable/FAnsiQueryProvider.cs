@@ -113,6 +113,7 @@ namespace FAnsi.Discovery.QueryableAbstraction
         /// Executes a query and returns the result.
         /// This is where expression trees are translated to SQL and executed.
         /// </summary>
+        [RequiresDynamicCode()]
         public object Execute(Expression expression)
         {
             if (expression == null)
