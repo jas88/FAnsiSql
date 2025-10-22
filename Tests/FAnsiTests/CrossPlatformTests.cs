@@ -955,6 +955,9 @@ public sealed class CrossPlatformTests : DatabaseTests
     [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void CreateTable_AutoIncrementColumnTest(DatabaseType type)
     {
+        // Clear connection pool to ensure Oracle sequences start fresh
+        DiscoveredServer.ClearCurrentThreadConnectionPool();
+
         var database = GetTestDatabase(type);
 
         var tbl = database.CreateTable("MyTable",
