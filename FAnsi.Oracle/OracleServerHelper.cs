@@ -163,8 +163,9 @@ public sealed class OracleServerHelper : DiscoveredServerHelper
 
     public override bool DatabaseExists(DiscoveredDatabase database)
     {
-        // In Oracle, databases are schemas/users
-        using var con = database.Server.GetManagedConnection();
+        // In Oracle, databases are schemas/users - can query ALL_USERS from any connection
+        var oracleServer = new DiscoveredServer(database.Server.Builder.ConnectionString, DatabaseType.Oracle);
+        using var con = oracleServer.GetManagedConnection();
         using var cmd = new OracleCommand("SELECT CASE WHEN EXISTS(SELECT 1 FROM ALL_USERS WHERE USERNAME = UPPER(:name)) THEN 1 ELSE 0 END FROM DUAL", (OracleConnection)con.Connection);
         cmd.Parameters.Add(new OracleParameter("name", database.GetRuntimeName()));
         return Convert.ToInt32(cmd.ExecuteScalar()) == 1;

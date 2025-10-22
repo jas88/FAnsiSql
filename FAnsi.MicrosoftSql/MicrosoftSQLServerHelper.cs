@@ -197,7 +197,13 @@ public sealed class MicrosoftSQLServerHelper : DiscoveredServerHelper
 
     public override bool DatabaseExists(DiscoveredDatabase database)
     {
-        using var con = database.Server.GetManagedConnection();
+        // Connect to master database to query sys.databases (can't connect to target DB if it doesn't exist!)
+        var builder = new SqlConnectionStringBuilder(database.Server.Builder.ConnectionString)
+        {
+            InitialCatalog = "master"
+        };
+        var masterServer = new DiscoveredServer(builder.ConnectionString, DatabaseType.MicrosoftSQLServer);
+        using var con = masterServer.GetManagedConnection();
         using var cmd = new SqlCommand("SELECT CASE WHEN EXISTS(SELECT 1 FROM sys.databases WHERE name = @name) THEN 1 ELSE 0 END", (SqlConnection)con.Connection);
         cmd.Parameters.AddWithValue("@name", database.GetRuntimeName());
         return Convert.ToInt32(cmd.ExecuteScalar()) == 1;

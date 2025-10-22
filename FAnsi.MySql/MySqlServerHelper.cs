@@ -146,7 +146,13 @@ public sealed class MySqlServerHelper : DiscoveredServerHelper
 
     public override bool DatabaseExists(DiscoveredDatabase database)
     {
-        using var con = database.Server.GetManagedConnection();
+        // Remove database from connection string - INFORMATION_SCHEMA is accessible from any connection
+        var builder = new MySqlConnectionStringBuilder(database.Server.Builder.ConnectionString)
+        {
+            Database = "" // Don't specify a database
+        };
+        var serverOnly = new DiscoveredServer(builder.ConnectionString, DatabaseType.MySql);
+        using var con = serverOnly.GetManagedConnection();
         using var cmd = new MySqlCommand("SELECT CASE WHEN EXISTS(SELECT 1 FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = @name) THEN 1 ELSE 0 END", (MySqlConnection)con.Connection);
         cmd.Parameters.AddWithValue("@name", database.GetRuntimeName());
         return Convert.ToInt32(cmd.ExecuteScalar()) == 1;
