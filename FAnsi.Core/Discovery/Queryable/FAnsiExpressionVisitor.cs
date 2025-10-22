@@ -202,7 +202,7 @@ namespace FAnsi.Discovery.QueryableAbstraction
             _components.AddWhereClause(propertyName, WhereOperator.Like, $"%{value}%");
         }
 
-        [RequiresDynamicCode()]
+        [RequiresDynamicCode("Calls FAnsi.Discovery.QueryableAbstraction.FAnsiExpressionVisitor.GetConstantValue(Expression)")]
         protected override Expression VisitBinary(BinaryExpression node)
         {
             if (!_isWhereClause)

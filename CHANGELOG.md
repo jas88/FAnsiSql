@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Performance
+- **Server-level connection pooling for SQL Server and MySQL** (up to 90% connection count reduction)
+  - One connection per server per thread instead of per database
+  - Automatic database switching using `USE` (SQL Server) or `ChangeDatabase()` (MySQL)
+  - Dramatically reduces connection count in multi-database scenarios (e.g., 20 databases → 1 connection)
+  - PostgreSQL continues using database-level pooling (cannot switch databases)
+  - Oracle continues using ADO.NET native pooling (no thread-local pooling)
+  - New `ServerPooledConnection` class tracks current database context
+  - Maintains all existing safety features: dangling transaction detection, connection validation
 - **Optimized table and view existence checks** (80-99% faster)
   - Added `DiscoveredTableHelper.Exists()` override in all database implementations
   - Changed from listing all tables and filtering in memory to direct SQL EXISTS queries
