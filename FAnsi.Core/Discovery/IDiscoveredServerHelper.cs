@@ -77,4 +77,11 @@ public interface IDiscoveredServerHelper
     /// <param name="connection">The connection to check</param>
     /// <returns>True if the connection has an uncommitted transaction</returns>
     bool HasDanglingTransaction(DbConnection connection);
+
+    /// <summary>
+    /// Efficiently checks if a database exists using a direct SQL query instead of listing all databases.
+    /// </summary>
+    /// <param name="database">The database to check for existence</param>
+    /// <returns>True if the database exists, false otherwise</returns>
+    bool DatabaseExists(DiscoveredDatabase database);
 }

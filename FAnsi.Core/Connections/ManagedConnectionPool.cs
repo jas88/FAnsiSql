@@ -35,12 +35,9 @@ internal static class ManagedConnectionPool
 
         // Oracle: Skip thread-local pooling and rely on ADO.NET's native Oracle pooling
         // We can't reliably detect dangling transactions at the SQL level for Oracle
+        // Return a normal connection (CloseOnDispose=true) so it's properly returned to ADO.NET's pool
         if (server.DatabaseType == DatabaseType.Oracle)
-        {
-            var oracleConnection = new ManagedConnection(server, null);
-            oracleConnection.CloseOnDispose = false; // Let ADO.NET's pooling handle lifecycle
-            return oracleConnection;
-        }
+            return new ManagedConnection(server, null);
 
         var connectionKey = server.Builder.ConnectionString;
         var threadConnections = _threadLocalConnections.Value;

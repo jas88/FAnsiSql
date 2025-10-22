@@ -194,4 +194,12 @@ public sealed class MicrosoftSQLServerHelper : DiscoveredServerHelper
         }
         return false;
     }
+
+    public override bool DatabaseExists(DiscoveredDatabase database)
+    {
+        using var con = database.Server.GetManagedConnection();
+        using var cmd = new SqlCommand("SELECT CASE WHEN EXISTS(SELECT 1 FROM sys.databases WHERE name = @name) THEN 1 ELSE 0 END", (SqlConnection)con.Connection);
+        cmd.Parameters.AddWithValue("@name", database.GetRuntimeName());
+        return Convert.ToInt32(cmd.ExecuteScalar()) == 1;
+    }
 }

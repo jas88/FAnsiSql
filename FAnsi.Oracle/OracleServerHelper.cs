@@ -160,4 +160,13 @@ public sealed class OracleServerHelper : DiscoveredServerHelper
         // For now, rely on ADO.NET's internal tracking
         return false;
     }
+
+    public override bool DatabaseExists(DiscoveredDatabase database)
+    {
+        // In Oracle, databases are schemas/users
+        using var con = database.Server.GetManagedConnection();
+        using var cmd = new OracleCommand("SELECT CASE WHEN EXISTS(SELECT 1 FROM ALL_USERS WHERE USERNAME = UPPER(:name)) THEN 1 ELSE 0 END FROM DUAL", (OracleConnection)con.Connection);
+        cmd.Parameters.Add(new OracleParameter("name", database.GetRuntimeName()));
+        return Convert.ToInt32(cmd.ExecuteScalar()) == 1;
+    }
 }

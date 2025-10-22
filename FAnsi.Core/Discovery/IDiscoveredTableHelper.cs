@@ -65,4 +65,13 @@ public interface IDiscoveredTableHelper
     /// <param name="args">Options for timeout, transaction etc</param>
     /// <returns></returns>
     DiscoveredRelationship AddForeignKey(DatabaseOperationArgs args, Dictionary<DiscoveredColumn, DiscoveredColumn> foreignKeyPairs, bool cascadeDeletes, string? constraintName = null);
+
+    /// <summary>
+    /// Checks if the table exists on the database server using a direct SQL query.
+    /// This is more efficient than fetching all tables and filtering.
+    /// </summary>
+    /// <param name="table">The table to check for existence</param>
+    /// <param name="transaction">Optional - if set the query will be sent on the connection on which the current transaction is open</param>
+    /// <returns>True if the table exists, false otherwise</returns>
+    bool Exists(DiscoveredTable table, IManagedTransaction? transaction = null);
 }

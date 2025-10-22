@@ -143,4 +143,12 @@ public sealed class MySqlServerHelper : DiscoveredServerHelper
         }
         return false;
     }
+
+    public override bool DatabaseExists(DiscoveredDatabase database)
+    {
+        using var con = database.Server.GetManagedConnection();
+        using var cmd = new MySqlCommand("SELECT CASE WHEN EXISTS(SELECT 1 FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = @name) THEN 1 ELSE 0 END", (MySqlConnection)con.Connection);
+        cmd.Parameters.AddWithValue("@name", database.GetRuntimeName());
+        return Convert.ToInt32(cmd.ExecuteScalar()) == 1;
+    }
 }

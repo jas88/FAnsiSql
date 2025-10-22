@@ -121,13 +121,13 @@ public sealed class DiscoveredDatabase : IHasRuntimeName, IMightNotExist
     public override string ToString() => _database;
 
     /// <summary>
-    /// Connects to the server and enumerates the databases to see whether the currently described database exists.
+    /// Efficiently checks if the database exists using a direct SQL query instead of listing all databases.
     /// </summary>
     /// <param name="transaction">Database level operations are usually not transaction bound so be very careful about setting a parameter for this</param>
     /// <returns></returns>
     public bool Exists(IManagedTransaction? transaction = null)
     {
-        return Server.DiscoverDatabases().Any(db => db.GetRuntimeName()?.Equals(GetRuntimeName(), StringComparison.InvariantCultureIgnoreCase) == true);
+        return Server.Helper.DatabaseExists(this);
     }
 
     /// <summary>

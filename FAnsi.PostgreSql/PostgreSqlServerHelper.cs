@@ -124,4 +124,12 @@ public sealed class PostgreSqlServerHelper : DiscoveredServerHelper
         }
         return false;
     }
+
+    public override bool DatabaseExists(DiscoveredDatabase database)
+    {
+        using var con = database.Server.GetManagedConnection();
+        using var cmd = new NpgsqlCommand("SELECT CASE WHEN EXISTS(SELECT 1 FROM pg_database WHERE datname = @name) THEN 1 ELSE 0 END", (NpgsqlConnection)con.Connection);
+        cmd.Parameters.AddWithValue("@name", database.GetRuntimeName());
+        return Convert.ToInt32(cmd.ExecuteScalar()) == 1;
+    }
 }
