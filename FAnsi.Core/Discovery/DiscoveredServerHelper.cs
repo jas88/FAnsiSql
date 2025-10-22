@@ -247,4 +247,13 @@ public abstract partial class DiscoveredServerHelper(DatabaseType databaseType) 
     /// <param name="database">The database to check for existence</param>
     /// <returns>True if the database exists, false otherwise</returns>
     public abstract bool DatabaseExists(DiscoveredDatabase database);
+
+    /// <summary>
+    /// Gets a server-level connection string key by removing database-specific information.
+    /// Default implementation returns the original connection string (no server-level pooling).
+    /// Override in database-specific implementations to enable server-level pooling.
+    /// </summary>
+    /// <param name="connectionString">The full connection string</param>
+    /// <returns>Connection string with database name removed, or original if not supported</returns>
+    public virtual string GetServerLevelConnectionKey(string connectionString) => connectionString;
 }

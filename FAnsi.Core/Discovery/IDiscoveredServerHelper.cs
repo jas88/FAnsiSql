@@ -84,4 +84,12 @@ public interface IDiscoveredServerHelper
     /// <param name="database">The database to check for existence</param>
     /// <returns>True if the database exists, false otherwise</returns>
     bool DatabaseExists(DiscoveredDatabase database);
+
+    /// <summary>
+    /// Gets a server-level connection string key by removing database-specific information.
+    /// Used for server-level connection pooling where one connection is reused across databases.
+    /// </summary>
+    /// <param name="connectionString">The full connection string</param>
+    /// <returns>Connection string with database name removed, or original if not supported</returns>
+    string GetServerLevelConnectionKey(string connectionString);
 }

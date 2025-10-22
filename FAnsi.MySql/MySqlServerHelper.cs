@@ -157,4 +157,14 @@ public sealed class MySqlServerHelper : DiscoveredServerHelper
         cmd.Parameters.AddWithValue("@name", database.GetRuntimeName());
         return Convert.ToInt32(cmd.ExecuteScalar()) == 1;
     }
+
+    public override string GetServerLevelConnectionKey(string connectionString)
+    {
+        // Remove database name for server-level pooling
+        var builder = new MySqlConnectionStringBuilder(connectionString)
+        {
+            Database = "" // Remove database
+        };
+        return builder.ConnectionString;
+    }
 }
