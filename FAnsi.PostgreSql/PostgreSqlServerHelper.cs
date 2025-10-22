@@ -138,4 +138,7 @@ public sealed class PostgreSqlServerHelper : DiscoveredServerHelper
         cmd.Parameters.AddWithValue("@name", database.GetRuntimeName());
         return Convert.ToInt32(cmd.ExecuteScalar()) == 1;
     }
+
+    public override Discovery.QueryableAbstraction.ISqlQueryBuilder GetQueryBuilder() =>
+        new Queryable.PostgreSqlQueryBuilder();
 }

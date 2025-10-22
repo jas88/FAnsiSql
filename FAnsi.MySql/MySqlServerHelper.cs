@@ -167,4 +167,7 @@ public sealed class MySqlServerHelper : DiscoveredServerHelper
         };
         return builder.ConnectionString;
     }
+
+    public override Discovery.QueryableAbstraction.ISqlQueryBuilder GetQueryBuilder() =>
+        new Queryable.MySqlQueryBuilder();
 }

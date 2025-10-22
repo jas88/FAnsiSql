@@ -256,4 +256,10 @@ public abstract partial class DiscoveredServerHelper(DatabaseType databaseType) 
     /// <param name="connectionString">The full connection string</param>
     /// <returns>Connection string with database name removed, or original if not supported</returns>
     public virtual string GetServerLevelConnectionKey(string connectionString) => connectionString;
+
+    /// <summary>
+    /// Default implementation throws NotSupportedException. Database-specific helpers must override.
+    /// </summary>
+    public virtual QueryableAbstraction.ISqlQueryBuilder GetQueryBuilder() =>
+        throw new NotSupportedException($"IQueryable support not implemented for {GetType().Name}");
 }

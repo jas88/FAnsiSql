@@ -218,4 +218,7 @@ public sealed class MicrosoftSQLServerHelper : DiscoveredServerHelper
         };
         return builder.ConnectionString;
     }
+
+    public override Discovery.QueryableAbstraction.ISqlQueryBuilder GetQueryBuilder() =>
+        new Queryable.SqlServerQueryBuilder();
 }

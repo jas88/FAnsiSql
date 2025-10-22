@@ -92,4 +92,10 @@ public interface IDiscoveredServerHelper
     /// <param name="connectionString">The full connection string</param>
     /// <returns>Connection string with database name removed, or original if not supported</returns>
     string GetServerLevelConnectionKey(string connectionString);
+
+    /// <summary>
+    /// Creates a database-specific SQL query builder for LINQ-to-SQL translation.
+    /// </summary>
+    /// <returns>A query builder instance for this database type</returns>
+    QueryableAbstraction.ISqlQueryBuilder GetQueryBuilder();
 }

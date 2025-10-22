@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Features
+- **Read-only IQueryable support for LINQ-to-SQL translation**
+  - Added `DiscoveredTable.GetQueryable<T>()` for efficient server-side query execution
+  - Translates LINQ expressions (Where, OrderBy, Take) to SQL automatically
+  - No change tracking or update functionality - purely for read-only queries
+  - Supports all database types: SQL Server, MySQL, PostgreSQL, Oracle
+  - Uses existing connection pooling infrastructure
+  - Example: `table.GetQueryable<Patient>().Where(p => p.Age > 18).OrderBy(p => p.Name).Take(100).ToList()`
+  - Dramatically reduces data transfer for filtered queries
+
 ### Performance
 - **Server-level connection pooling for SQL Server and MySQL** (up to 90% connection count reduction)
   - One connection per server per thread instead of per database
