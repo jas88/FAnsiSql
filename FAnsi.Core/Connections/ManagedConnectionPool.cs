@@ -33,6 +33,12 @@ internal static class ManagedConnectionPool
         if (transaction != null)
             return new ManagedConnection(server, transaction);
 
+        // Oracle: Skip thread-local pooling and rely on ADO.NET's native Oracle pooling
+        // We can't reliably detect dangling transactions at the SQL level for Oracle
+        // Return a normal connection (CloseOnDispose=true) so it's properly returned to ADO.NET's pool
+        if (server.DatabaseType == DatabaseType.Oracle)
+            return new ManagedConnection(server, null);
+
         var connectionKey = server.Builder.ConnectionString;
         var threadConnections = _threadLocalConnections.Value;
 
@@ -43,7 +49,7 @@ internal static class ManagedConnectionPool
             // Cannot reuse connections with active transactions as they have uncommitted state
             if (existingConnection?.Connection.State == ConnectionState.Open &&
                 existingConnection.Transaction == null &&
-                IsConnectionAlive(existingConnection.Connection))
+                server.Helper.IsConnectionAlive(existingConnection.Connection))
             {
                 // Return a non-disposing wrapper
                 var wrapper = existingConnection.Clone();
@@ -75,35 +81,6 @@ internal static class ManagedConnectionPool
         var returnWrapper = newConnection.Clone();
         returnWrapper.CloseOnDispose = false;
         return returnWrapper;
-    }
-
-    /// <summary>
-    /// Validates that a connection is still alive by checking if we can execute a simple query.
-    /// This catches cases where the database server has terminated the connection (timeout, admin command, etc.)
-    /// </summary>
-    private static bool IsConnectionAlive(DbConnection connection)
-    {
-        try
-        {
-            // Try a simple command to verify connection is usable
-            // This catches "connection terminated by administrator" and similar issues
-            using var cmd = connection.CreateCommand();
-
-            // Use database-specific validation query
-            var typeName = connection.GetType().Name;
-            cmd.CommandText = typeName.Contains("Oracle", StringComparison.OrdinalIgnoreCase)
-                ? "SELECT 1 FROM DUAL"  // Oracle syntax
-                : "SELECT 1";           // Standard SQL
-
-            cmd.CommandTimeout = 1; // Quick timeout for validation
-            cmd.ExecuteScalar();
-            return true;
-        }
-        catch
-        {
-            // Any error means connection is not usable
-            return false;
-        }
     }
 
     /// <summary>

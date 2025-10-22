@@ -171,4 +171,51 @@ public sealed class MicrosoftSQLServerHelper : DiscoveredServerHelper
 
         return null;
     }
+
+    public override bool HasDanglingTransaction(DbConnection connection)
+    {
+        if (connection is SqlConnection sqlConn && sqlConn.State == ConnectionState.Open)
+        {
+            try
+            {
+                // Check for dangling transactions (fixes #30)
+                using var cmd = sqlConn.CreateCommand();
+                cmd.CommandText = "SELECT @@TRANCOUNT";
+                cmd.CommandTimeout = 1;
+                var result = cmd.ExecuteScalar();
+                return result != null && Convert.ToInt32(result) > 0;
+            }
+            catch
+            {
+                // If we can't check, assume no dangling transaction and let IsConnectionAlive's
+                // "SELECT 1" test determine if the connection is actually usable
+                return false;
+            }
+        }
+        return false;
+    }
+
+    public override bool DatabaseExists(DiscoveredDatabase database)
+    {
+        // Connect to master database to query sys.databases (can't connect to target DB if it doesn't exist!)
+        var builder = new SqlConnectionStringBuilder(database.Server.Builder.ConnectionString)
+        {
+            InitialCatalog = "master"
+        };
+        var masterServer = new DiscoveredServer(builder.ConnectionString, DatabaseType.MicrosoftSQLServer);
+        using var con = masterServer.GetManagedConnection();
+        using var cmd = new SqlCommand("SELECT CASE WHEN EXISTS(SELECT 1 FROM sys.databases WHERE name = @name) THEN 1 ELSE 0 END", (SqlConnection)con.Connection);
+        cmd.Parameters.AddWithValue("@name", database.GetRuntimeName());
+        return Convert.ToInt32(cmd.ExecuteScalar()) == 1;
+    }
+
+    public override string GetServerLevelConnectionKey(string connectionString)
+    {
+        // Remove database name for server-level pooling
+        var builder = new SqlConnectionStringBuilder(connectionString)
+        {
+            InitialCatalog = "" // Remove database
+        };
+        return builder.ConnectionString;
+    }
 }

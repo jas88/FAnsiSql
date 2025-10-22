@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Data.Common;
 using FAnsi.Discovery;
 using FAnsi.Discovery.ConnectionStringDefaults;
@@ -118,5 +119,52 @@ public sealed class MySqlServerHelper : DiscoveredServerHelper
         using var r = cmd.ExecuteReader();
         while (r.Read())
             yield return (string)r["Database"];
+    }
+
+    public override bool HasDanglingTransaction(DbConnection connection)
+    {
+        // MySQL connections in a transaction have @@in_transaction set
+        if (connection is MySqlConnection && connection.State == ConnectionState.Open)
+        {
+            try
+            {
+                using var cmd = connection.CreateCommand();
+                cmd.CommandText = "SELECT @@in_transaction";
+                cmd.CommandTimeout = 1;
+                var result = cmd.ExecuteScalar();
+                return result != null && Convert.ToInt32(result) > 0;
+            }
+            catch
+            {
+                // If we can't check, assume no dangling transaction and let IsConnectionAlive's
+                // "SELECT 1" test determine if the connection is actually usable
+                return false;
+            }
+        }
+        return false;
+    }
+
+    public override bool DatabaseExists(DiscoveredDatabase database)
+    {
+        // Remove database from connection string - INFORMATION_SCHEMA is accessible from any connection
+        var builder = new MySqlConnectionStringBuilder(database.Server.Builder.ConnectionString)
+        {
+            Database = "" // Don't specify a database
+        };
+        var serverOnly = new DiscoveredServer(builder.ConnectionString, DatabaseType.MySql);
+        using var con = serverOnly.GetManagedConnection();
+        using var cmd = new MySqlCommand("SELECT CASE WHEN EXISTS(SELECT 1 FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = @name) THEN 1 ELSE 0 END", (MySqlConnection)con.Connection);
+        cmd.Parameters.AddWithValue("@name", database.GetRuntimeName());
+        return Convert.ToInt32(cmd.ExecuteScalar()) == 1;
+    }
+
+    public override string GetServerLevelConnectionKey(string connectionString)
+    {
+        // Remove database name for server-level pooling
+        var builder = new MySqlConnectionStringBuilder(connectionString)
+        {
+            Database = "" // Remove database
+        };
+        return builder.ConnectionString;
     }
 }
