@@ -68,11 +68,11 @@ public sealed class OracleQuerySyntaxHelper : QuerySyntaxHelper
 
     /// <summary>
     /// Works in Oracle 12c+ only https://oracle-base.com/articles/12c/identity-columns-in-oracle-12cr1
+    /// NOCACHE prevents sequence cache issues when mixing array-bound bulk inserts with regular inserts
     /// </summary>
     /// <returns></returns>
     public override string GetAutoIncrementKeywordIfAny() =>
-        //this is handled in
-        " GENERATED ALWAYS AS IDENTITY";
+        " GENERATED ALWAYS AS IDENTITY (NOCACHE)";
 
     public override Dictionary<string, string> GetSQLFunctionsDictionary() => [];
 
