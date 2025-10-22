@@ -74,4 +74,13 @@ public interface IDiscoveredTableHelper
     /// <param name="transaction">Optional - if set the query will be sent on the connection on which the current transaction is open</param>
     /// <returns>True if the table exists, false otherwise</returns>
     bool Exists(DiscoveredTable table, IManagedTransaction? transaction = null);
+
+    /// <summary>
+    /// Checks if the table has a primary key using a direct SQL query.
+    /// This is more efficient than discovering all columns and checking IsPrimaryKey.
+    /// </summary>
+    /// <param name="table">The table to check for primary key</param>
+    /// <param name="transaction">Optional - if set the query will be sent on the connection on which the current transaction is open</param>
+    /// <returns>True if the table has a primary key, false otherwise</returns>
+    bool HasPrimaryKey(DiscoveredTable table, IManagedTransaction? transaction = null);
 }
