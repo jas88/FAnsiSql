@@ -113,14 +113,34 @@ internal static class ManagedConnectionPool
         }
 
         // Create new server-level connection
-        var newConnection = new ManagedConnection(server, null);
+        // Connect to a system database initially, then switch to target
+        var systemDatabase = server.DatabaseType switch
+        {
+            DatabaseType.MicrosoftSQLServer => "master",
+            DatabaseType.MySql => "mysql",
+            _ => targetDatabase // Fallback to target database
+        };
+
+        var serverLevelBuilder = server.Helper.GetConnectionStringBuilder(serverKey);
+        if (!string.IsNullOrWhiteSpace(systemDatabase))
+            serverLevelBuilder = server.Helper.ChangeDatabase(serverLevelBuilder, systemDatabase);
+
+        var serverLevelServer = new DiscoveredServer(serverLevelBuilder.ConnectionString, server.DatabaseType);
+        var newConnection = new ManagedConnection(serverLevelServer, null);
         newConnection.CloseOnDispose = false;  // Don't close - we manage the lifetime
 
         var serverPooledConn = new ServerPooledConnection(
             newConnection,
             server.DatabaseType,
             server.Helper,
-            targetDatabase);
+            systemDatabase);
+
+        // Switch to target database if different from system database
+        if (!string.IsNullOrWhiteSpace(targetDatabase) &&
+            !string.Equals(targetDatabase, systemDatabase, StringComparison.OrdinalIgnoreCase))
+        {
+            serverPooledConn.SwitchDatabase(targetDatabase);
+        }
 
         // Store it
         if (threadServerConnections != null)
