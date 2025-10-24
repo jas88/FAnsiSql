@@ -152,6 +152,7 @@ namespace FAnsi.Discovery.QueryableAbstraction
             }
         }
 
+        [RequiresDynamicCode("Calls FAnsi.Discovery.QueryableAbstraction.FAnsiExpressionVisitor.VisitStartsWith(MethodCallExpression)")]
         private Expression VisitStringMethod(MethodCallExpression node)
         {
             if (!_isWhereClause)

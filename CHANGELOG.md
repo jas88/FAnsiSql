@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **SQL Server dangling transaction detection**
+  - Fixed bug where `HasDanglingTransaction()` incorrectly returned `false` when the validation query itself failed due to a pending transaction
+  - When `@@TRANCOUNT > 0`, SQL Server requires all commands to have the `.Transaction` property set, causing the validation query to throw an exception
+  - Now correctly interprets this exception as proof of a dangling transaction and rejects the connection from the pool
+  - Prevents "ExecuteReader requires the command to have a transaction when the connection assigned to the command is in a pending local transaction" errors from propagating to user code
+  - Added test `Test_DanglingTransaction_IsDetectedAndRejected` to verify proper detection and rejection
+
 ### Features
 - **Read-only IQueryable support for LINQ-to-SQL translation**
   - Added `DiscoveredTable.GetQueryable<T>()` for efficient server-side query execution
