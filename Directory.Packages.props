@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <!-- Enable parallel test project execution (requires .NET 9+) -->
+    <TestTfmsInParallel>true</TestTfmsInParallel>
+  </PropertyGroup>
+</Project>

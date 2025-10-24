@@ -22,8 +22,8 @@ public sealed class PostgreSqlAggregateHelper : AggregateHelper
             _ => throw new ArgumentOutOfRangeException(nameof(query), $"Invalid AxisIncrement {query.Axis?.AxisIncrement}")
         };
 
-        var countAlias = query.CountSelect.GetAliasFromText(query.SyntaxHelper);
-        var axisColumnAlias = query.AxisSelect.GetAliasFromText(query.SyntaxHelper) ?? "joinDt";
+        var countAlias = query.CountSelect!.GetAliasFromText(query.SyntaxHelper);
+        var axisColumnAlias = query.AxisSelect!.GetAliasFromText(query.SyntaxHelper) ?? "joinDt";
 
         WrapAxisColumnWithDatePartFunction(query, axisColumnAlias);
 
@@ -61,8 +61,8 @@ public sealed class PostgreSqlAggregateHelper : AggregateHelper
 
     protected override string BuildPivotOnlyAggregate(AggregateCustomLineCollection query, CustomLine nonPivotColumn)
     {
-        var pivotSqlWithoutAlias = query.PivotSelect.GetTextWithoutAlias(query.SyntaxHelper);
-        var countSqlWithoutAlias = query.CountSelect.GetTextWithoutAlias(query.SyntaxHelper);
+        var pivotSqlWithoutAlias = query.PivotSelect!.GetTextWithoutAlias(query.SyntaxHelper);
+        var countSqlWithoutAlias = query.CountSelect!.GetTextWithoutAlias(query.SyntaxHelper);
 
         query.SyntaxHelper.SplitLineIntoOuterMostMethodAndContents(countSqlWithoutAlias, out var aggregateMethod,
             out var aggregateParameter);
@@ -127,9 +127,9 @@ public sealed class PostgreSqlAggregateHelper : AggregateHelper
             _ => throw new ArgumentOutOfRangeException(nameof(query), $"Invalid AxisIncrement {query.Axis?.AxisIncrement}")
         };
 
-        var pivotSqlWithoutAlias = query.PivotSelect.GetTextWithoutAlias(query.SyntaxHelper);
-        var countSqlWithoutAlias = query.CountSelect.GetTextWithoutAlias(query.SyntaxHelper);
-        var axisColumnAlias = query.AxisSelect.GetAliasFromText(query.SyntaxHelper) ?? "joinDt";
+        var pivotSqlWithoutAlias = query.PivotSelect!.GetTextWithoutAlias(query.SyntaxHelper);
+        var countSqlWithoutAlias = query.CountSelect!.GetTextWithoutAlias(query.SyntaxHelper);
+        var axisColumnAlias = query.AxisSelect!.GetAliasFromText(query.SyntaxHelper) ?? "joinDt";
 
         query.SyntaxHelper.SplitLineIntoOuterMostMethodAndContents(countSqlWithoutAlias, out var aggregateMethod,
             out var aggregateParameter);

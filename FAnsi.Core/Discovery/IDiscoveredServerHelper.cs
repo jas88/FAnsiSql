@@ -92,4 +92,5 @@ public interface IDiscoveredServerHelper
     /// <param name="connectionString">The full connection string</param>
     /// <returns>Connection string with database name removed, or original if not supported</returns>
     string GetServerLevelConnectionKey(string connectionString);
+
 }

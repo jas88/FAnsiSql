@@ -38,7 +38,7 @@ public sealed partial class MicrosoftSQLTableHelper : DiscoveredTableHelper
             //if it is a table valued function prefix the column name with the table valued function name
             var columnName = discoveredTable is DiscoveredTableValuedFunction
                 ? $"{discoveredTable.GetRuntimeName()}.{r["COLUMN_NAME"]}"
-                : r["COLUMN_NAME"].ToString();
+                : r["COLUMN_NAME"].ToString()!;
 
             var toAdd = new DiscoveredColumn(discoveredTable, columnName, isNullable)
             {
@@ -110,6 +110,78 @@ public sealed partial class MicrosoftSQLTableHelper : DiscoveredTableHelper
         cmd.ExecuteNonQuery();
     }
 
+    public override bool Exists(DiscoveredTable table, IManagedTransaction? transaction = null)
+    {
+        if (!table.Database.Exists())
+            return false;
+
+        using var connection = table.Database.Server.GetManagedConnection(transaction);
+
+        // Use sys.objects to check for table/view existence with a single targeted query
+        var objectType = table.TableType switch
+        {
+            TableType.Table => "'U'", // U = user table
+            TableType.View => "'V'",  // V = view
+            _ => "'U', 'V'" // For TableValuedFunction or unknown, check both
+        };
+
+        var sql = $"""
+            SELECT CASE WHEN EXISTS (
+                SELECT 1 FROM sys.objects o
+                INNER JOIN sys.schemas s ON o.schema_id = s.schema_id
+                WHERE o.name = @tableName
+                AND s.name = @schemaName
+                AND o.type IN ({objectType})
+            ) THEN 1 ELSE 0 END
+            """;
+
+        using var cmd = table.GetCommand(sql, connection.Connection, connection.Transaction);
+
+        var p = cmd.CreateParameter();
+        p.ParameterName = "@tableName";
+        p.Value = table.GetRuntimeName();
+        cmd.Parameters.Add(p);
+
+        var p2 = cmd.CreateParameter();
+        p2.ParameterName = "@schemaName";
+        p2.Value = table.Schema ?? "dbo";
+        cmd.Parameters.Add(p2);
+
+        var result = cmd.ExecuteScalar();
+        return Convert.ToInt32(result) == 1;
+    }
+
+    public override bool HasPrimaryKey(DiscoveredTable table, IManagedTransaction? transaction = null)
+    {
+        using var connection = table.Database.Server.GetManagedConnection(transaction);
+
+        const string sql = """
+            SELECT CASE WHEN EXISTS (
+                SELECT 1 FROM sys.indexes i
+                INNER JOIN sys.objects o ON i.object_id = o.object_id
+                INNER JOIN sys.schemas s ON o.schema_id = s.schema_id
+                WHERE i.is_primary_key = 1
+                AND o.name = @tableName
+                AND s.name = @schemaName
+            ) THEN 1 ELSE 0 END
+            """;
+
+        using var cmd = table.GetCommand(sql, connection.Connection, connection.Transaction);
+
+        var p = cmd.CreateParameter();
+        p.ParameterName = "@tableName";
+        p.Value = table.GetRuntimeName();
+        cmd.Parameters.Add(p);
+
+        var p2 = cmd.CreateParameter();
+        p2.ParameterName = "@schemaName";
+        p2.Value = table.Schema ?? "dbo";
+        cmd.Parameters.Add(p2);
+
+        var result = cmd.ExecuteScalar();
+        return Convert.ToInt32(result) == 1;
+    }
+
 
     public override IEnumerable<DiscoveredParameter> DiscoverTableValuedFunctionParameters(DbConnection connection,
         DiscoveredTableValuedFunction discoveredTableValuedFunction, DbTransaction? transaction)
@@ -160,7 +232,7 @@ public sealed partial class MicrosoftSQLTableHelper : DiscoveredTableHelper
         {
             using var connection = args.GetManagedConnection(table);
             var columnHelper = GetColumnHelper();
-            foreach (var alterSql in discoverColumns.Where(static dc => dc.AllowNulls).Select(col => columnHelper.GetAlterColumnToSql(col, col.DataType.SQLType, false)))
+            foreach (var alterSql in discoverColumns.Where(static dc => dc.AllowNulls).Select(col => columnHelper.GetAlterColumnToSql(col, col.DataType!.SQLType!, false)))
             {
                 using var alterCmd = table.GetCommand(alterSql, connection.Connection, connection.Transaction);
                 args.ExecuteNonQuery(alterCmd);
@@ -249,7 +321,7 @@ public sealed partial class MicrosoftSQLTableHelper : DiscoveredTableHelper
                     toReturn.Add(current.Name, current);
                 }
 
-                current.AddKeys(r["PKCOLUMN_NAME"].ToString(), r["FKCOLUMN_NAME"].ToString(), transaction);
+                current.AddKeys(r["PKCOLUMN_NAME"].ToString()!, r["FKCOLUMN_NAME"].ToString()!, transaction);
             }
         }
 

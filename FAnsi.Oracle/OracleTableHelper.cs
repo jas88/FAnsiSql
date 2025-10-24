@@ -114,6 +114,77 @@ public sealed class OracleTableHelper : DiscoveredTableHelper
         return [.. columns];
     }
 
+    public override bool Exists(DiscoveredTable table, IManagedTransaction? transaction = null)
+    {
+        if (!table.Database.Exists())
+            return false;
+
+        using var connection = table.Database.Server.GetManagedConnection(transaction);
+
+        // Use ALL_TABLES/ALL_VIEWS to check existence with a single targeted query
+        // In Oracle, the "database" is actually the owner/schema
+        string sql;
+        sql = table.TableType == TableType.View
+            ? """
+                SELECT CASE WHEN EXISTS (
+                    SELECT 1 FROM ALL_VIEWS
+                    WHERE UPPER(view_name) = UPPER(:tableName)
+                    AND UPPER(owner) = UPPER(:owner)
+                ) THEN 1 ELSE 0 END FROM DUAL
+                """
+            : """
+                SELECT CASE WHEN EXISTS (
+                    SELECT 1 FROM ALL_TABLES
+                    WHERE UPPER(table_name) = UPPER(:tableName)
+                    AND UPPER(owner) = UPPER(:owner)
+                ) THEN 1 ELSE 0 END FROM DUAL
+                """;
+
+        using var cmd = new OracleCommand(sql, (OracleConnection)connection.Connection);
+        cmd.Transaction = (OracleTransaction?)connection.Transaction;
+
+        cmd.Parameters.Add(new OracleParameter(":tableName", OracleDbType.Varchar2)
+        {
+            Value = table.GetRuntimeName()
+        });
+        cmd.Parameters.Add(new OracleParameter(":owner", OracleDbType.Varchar2)
+        {
+            Value = table.Database.GetRuntimeName()
+        });
+
+        var result = cmd.ExecuteScalar();
+        return Convert.ToInt32(result) == 1;
+    }
+
+    public override bool HasPrimaryKey(DiscoveredTable table, IManagedTransaction? transaction = null)
+    {
+        using var connection = table.Database.Server.GetManagedConnection(transaction);
+
+        const string sql = """
+            SELECT CASE WHEN EXISTS (
+                SELECT 1 FROM ALL_CONSTRAINTS
+                WHERE UPPER(table_name) = UPPER(:tableName)
+                AND UPPER(owner) = UPPER(:owner)
+                AND constraint_type = 'P'
+            ) THEN 1 ELSE 0 END FROM DUAL
+            """;
+
+        using var cmd = new OracleCommand(sql, (OracleConnection)connection.Connection);
+        cmd.Transaction = (OracleTransaction?)connection.Transaction;
+
+        cmd.Parameters.Add(new OracleParameter(":tableName", OracleDbType.Varchar2)
+        {
+            Value = table.GetRuntimeName()
+        });
+        cmd.Parameters.Add(new OracleParameter(":owner", OracleDbType.Varchar2)
+        {
+            Value = table.Database.GetRuntimeName()
+        });
+
+        var result = cmd.ExecuteScalar();
+        return Convert.ToInt32(result) == 1;
+    }
+
     public override void DropIndex(DatabaseOperationArgs args, DiscoveredTable table, string indexName)
     {
         using var connection = args.GetManagedConnection(table);

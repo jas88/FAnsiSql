@@ -5,6 +5,75 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [3.3.2] - 2025-10-24
+
+### Fixed
+- Fixed BulkCopy colid mapping to use table column order instead of alphabetical sorting
+  - SQL Server assigns colid based on physical table order, not alphabetical
+  - Added colid value to error messages for debugging clarity
+  - Fixes TestBulkInsert_MultipleColumns_SortingWorks
+- Temporarily disabled thread-local connection pooling
+  - All database types now use ADO.NET native pooling
+  - Prevents connection pool issues with dropped databases
+- Updated ManagedConnection tests for disabled pooling
+- Fixed 37 nullable reference warnings across all projects
+
+### Removed
+- Removed unused LINQ query provider implementation (~3000 lines)
+  - Eliminates all IL2067, IL2072, IL3051 AOT warnings
+  - Users should use Entity Framework Core for LINQ support
+  - Build now has zero warnings
+
+### Changed
+- Build enforces zero warnings (TreatWarningsAsErrors=true)
+- Fixed CRLF line endings in git hooks
+
+### Fixed
+- **SQL Server dangling transaction detection**
+  - Fixed bug where `HasDanglingTransaction()` incorrectly returned `false` when the validation query itself failed due to a pending transaction
+  - When `@@TRANCOUNT > 0`, SQL Server requires all commands to have the `.Transaction` property set, causing the validation query to throw an exception
+  - Now correctly interprets this exception as proof of a dangling transaction and rejects the connection from the pool
+  - Prevents "ExecuteReader requires the command to have a transaction when the connection assigned to the command is in a pending local transaction" errors from propagating to user code
+  - Added test `Test_DanglingTransaction_IsDetectedAndRejected` to verify proper detection and rejection
+
+### Features
+- **Read-only IQueryable support for LINQ-to-SQL translation**
+  - Added `DiscoveredTable.GetQueryable<T>()` for efficient server-side query execution
+  - Translates LINQ expressions (Where, OrderBy, Take) to SQL automatically
+  - No change tracking or update functionality - purely for read-only queries
+  - Supports all database types: SQL Server, MySQL, PostgreSQL, Oracle
+  - Uses existing connection pooling infrastructure
+  - Example: `table.GetQueryable<Patient>().Where(p => p.Age > 18).OrderBy(p => p.Name).Take(100).ToList()`
+  - Dramatically reduces data transfer for filtered queries
+
+### Performance
+- **Server-level connection pooling for SQL Server and MySQL** (up to 90% connection count reduction)
+  - One connection per server per thread instead of per database
+  - Automatic database switching using `USE` (SQL Server) or `ChangeDatabase()` (MySQL)
+  - Dramatically reduces connection count in multi-database scenarios (e.g., 20 databases → 1 connection)
+  - PostgreSQL continues using database-level pooling (cannot switch databases)
+  - Oracle continues using ADO.NET native pooling (no thread-local pooling)
+  - New `ServerPooledConnection` class tracks current database context
+  - Maintains all existing safety features: dangling transaction detection, connection validation
+- **Optimized table and view existence checks** (80-99% faster)
+  - Added `DiscoveredTableHelper.Exists()` override in all database implementations
+  - Changed from listing all tables and filtering in memory to direct SQL EXISTS queries
+  - SQL Server: Uses `sys.objects` with schema awareness
+  - MySQL: Uses `INFORMATION_SCHEMA.TABLES` with table_type filtering
+  - PostgreSQL: Uses `pg_catalog.pg_class` with relkind filtering
+  - Oracle: Uses `ALL_TABLES` and `ALL_VIEWS` with case-insensitive comparison
+  - For databases with 1000+ tables: reduces check time from ~500ms to ~5ms
+- **Optimized primary key existence checks** (90-99% faster)
+  - Added `DiscoveredTableHelper.HasPrimaryKey()` method
+  - Avoids discovering all columns just to check for primary key
+  - Used in `MakeDistinct()` to skip processing tables that already have primary keys
+  - SQL Server: Queries `sys.indexes` for primary key constraints
+  - MySQL: Queries `INFORMATION_SCHEMA.TABLE_CONSTRAINTS`
+  - PostgreSQL: Queries `pg_catalog.pg_constraint`
+  - Oracle: Queries `ALL_CONSTRAINTS` for constraint_type = 'P'
+
 ## [3.3.1] - 2025-10-22
 
 ### Fixed

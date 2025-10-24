@@ -185,11 +185,18 @@ public sealed class MicrosoftSQLServerHelper : DiscoveredServerHelper
                 var result = cmd.ExecuteScalar();
                 return result != null && Convert.ToInt32(result) > 0;
             }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("pending local transaction"))
+            {
+                // If we can't execute because of a pending transaction requirement,
+                // that's definitive proof there IS a dangling transaction
+                return true;
+            }
             catch
             {
-                // If we can't check, assume no dangling transaction and let IsConnectionAlive's
-                // "SELECT 1" test determine if the connection is actually usable
-                return false;
+                // Other errors (timeout, connection closed, dropped database, etc.) mean
+                // the connection is unusable/invalid. Return true to indicate it should
+                // be removed from the pool (treat as "dirty").
+                return true;
             }
         }
         return false;
@@ -211,10 +218,10 @@ public sealed class MicrosoftSQLServerHelper : DiscoveredServerHelper
 
     public override string GetServerLevelConnectionKey(string connectionString)
     {
-        // Remove database name for server-level pooling
+        // Use master database for server-level pooling to avoid default database issues
         var builder = new SqlConnectionStringBuilder(connectionString)
         {
-            InitialCatalog = "" // Remove database
+            InitialCatalog = "master" // Always use master for server-level connections
         };
         return builder.ConnectionString;
     }

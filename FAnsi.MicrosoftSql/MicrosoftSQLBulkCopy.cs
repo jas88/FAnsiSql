@@ -1,4 +1,5 @@
-using System;
+﻿using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics.Contracts;
 using System.Globalization;
@@ -17,6 +18,18 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
 {
     private readonly SqlBulkCopy _bulkCopy;
     private static readonly Regex ColumnLevelComplaint = ColumnLevelComplaintRe();
+    private Dictionary<int, ColumnMappingMetadata>? _columnMetadataCache;
+
+    /// <summary>
+    /// Metadata for a column mapping, cached to avoid reflection when enhancing error messages.
+    /// </summary>
+    private sealed class ColumnMappingMetadata
+    {
+        public required string SourceColumn { get; init; }
+        public required string DestinationColumn { get; init; }
+        public int? MaxLength { get; init; }
+        public string? DataType { get; init; }
+    }
 
 
     public MicrosoftSQLBulkCopy(DiscoveredTable targetTable, IManagedConnection connection, CultureInfo culture) : base(targetTable, connection,
@@ -37,10 +50,51 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
         _bulkCopy.BulkCopyTimeout = Timeout;
 
         _bulkCopy.ColumnMappings.Clear();
+
+        // Simple column mapping setup (metadata cache built lazily on first error)
         foreach (var (key, value) in GetMapping(dt.Columns.Cast<DataColumn>()))
             _bulkCopy.ColumnMappings.Add(key.ColumnName, value.GetRuntimeName());
 
         return BulkInsertWithBetterErrorMessages(_bulkCopy, dt, TargetTable.Database.Server);
+    }
+
+    /// <summary>
+    /// Builds the column metadata cache from current SqlBulkCopy column mappings.
+    /// This is called lazily when error enhancement is needed (AOT-compatible approach).
+    /// </summary>
+    /// <param name="insert">The SqlBulkCopy instance with configured column mappings</param>
+    /// <returns>Dictionary mapping colid (1-based) to column metadata</returns>
+    private Dictionary<int, ColumnMappingMetadata> BuildColumnMetadataCache(SqlBulkCopy insert)
+    {
+        // Build mapping dictionary for fast lookup by destination column name
+        var mappingByDestColumn = new Dictionary<string, SqlBulkCopyColumnMapping>(StringComparer.OrdinalIgnoreCase);
+        foreach (SqlBulkCopyColumnMapping mapping in insert.ColumnMappings)
+            mappingByDestColumn[mapping.DestinationColumn] = mapping;
+
+        // Iterate through TargetTableColumns in physical table order
+        // SQL Server assigns colid based on table column order (NOT alphabetical)
+        var cache = new Dictionary<int, ColumnMappingMetadata>();
+        var colid = 1; // 1-based
+
+        foreach (var destColumn in TargetTableColumns)
+        {
+            var destColumnName = destColumn.GetRuntimeName();
+
+            // Only include columns that are actually mapped
+            if (mappingByDestColumn.TryGetValue(destColumnName, out var mapping))
+            {
+                cache[colid] = new ColumnMappingMetadata
+                {
+                    SourceColumn = mapping.SourceColumn,
+                    DestinationColumn = destColumnName,
+                    MaxLength = destColumn.DataType?.GetLengthIfString(),
+                    DataType = destColumn.DataType?.SQLType
+                };
+                colid++;
+            }
+        }
+
+        return cache;
     }
 
     private int BulkInsertWithBetterErrorMessages(SqlBulkCopy insert, DataTable dt, DiscoveredServer serverForLineByLineInvestigation)
@@ -160,13 +214,14 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
 
     /// <summary>
     /// Inspects exception message <paramref name="ex"/> for references to bcp client colid and displays the user recognizable name of the column.
+    /// Uses cached metadata to avoid reflection (AOT-compatible). Cache is built lazily on first error.
     /// </summary>
     /// <param name="insert"></param>
     /// <param name="ex">The Exception you caught.  If null method returns false and output variables are null.</param>
     /// <param name="newMessage"></param>
     /// <param name="badMapping"></param>
     /// <returns></returns>
-    private static bool BcpColIdToString(SqlBulkCopy insert, SqlException? ex, out string? newMessage, out SqlBulkCopyColumnMapping? badMapping)
+    private bool BcpColIdToString(SqlBulkCopy insert, SqlException? ex, out string? newMessage, out SqlBulkCopyColumnMapping? badMapping)
     {
         var match = ColumnLevelComplaint.Match(ex?.Message ?? "");
         if (ex == null || !match.Success)
@@ -176,37 +231,30 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
             return false;
         }
 
-        //it counts from 1 not 0.  Also it isn't an index into insert.ColumnMappings.  It's an index into a private field!
-        var columnItHates = Convert.ToInt32(match.Groups[1].Value) - 1;
+        // Lazy initialization: build cache on first error (instance is not shared across threads)
+        _columnMetadataCache ??= BuildColumnMetadataCache(insert);
 
-        try
+        // Get colid from error message (1-based)
+        var colId = Convert.ToInt32(match.Groups[1].Value);
+
+        // Look up in our cache
+        if (!_columnMetadataCache.TryGetValue(colId, out var metadata))
         {
-            var fi = typeof(SqlBulkCopy).GetField("_sortedColumnMappings", BindingFlags.NonPublic | BindingFlags.Instance) ?? throw new NullReferenceException();
-            var sortedColumns = fi.GetValue(insert);
-            var items = (object[])(sortedColumns?.GetType().GetField("_items", BindingFlags.NonPublic | BindingFlags.Instance)?.GetValue(sortedColumns) ?? throw new NullReferenceException());
-
-            var itemData = items[columnItHates].GetType().GetField("_metadata", BindingFlags.NonPublic | BindingFlags.Instance) ?? throw new NullReferenceException();
-            var metadata = itemData.GetValue(items[columnItHates]) ?? throw new NullReferenceException();
-
-            var destinationColumn = (string?)metadata.GetType().GetField("column", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)?.GetValue(metadata) ?? throw new NullReferenceException();
-
-            var length = metadata.GetType().GetField("length", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)?.GetValue(metadata);
-
-            badMapping = insert.ColumnMappings.Cast<SqlBulkCopyColumnMapping>()
-                .SingleOrDefault(m => string.Equals(m.DestinationColumn, destinationColumn, StringComparison.CurrentCultureIgnoreCase));
-
-            newMessage = ex.Message.Insert(match.Index + match.Length,
-                $"(Source Column <<{badMapping?.SourceColumn ?? "unknown"}>> Dest Column <<{destinationColumn}>> which has MaxLength of {length})");
-
-            return true;
-        }
-        catch (NullReferenceException)
-        {
-            //private fields in SqlBulkCopy have changed name?
             newMessage = ex.Message;
             badMapping = null;
             return false;
         }
+
+        // Find the actual SqlBulkCopyColumnMapping object
+        badMapping = insert.ColumnMappings.Cast<SqlBulkCopyColumnMapping>()
+            .FirstOrDefault(m => string.Equals(m.DestinationColumn, metadata.DestinationColumn,
+                StringComparison.OrdinalIgnoreCase));
+
+        // Build enhanced error message (matching original format)
+        newMessage = ex.Message.Insert(match.Index + match.Length,
+            $"(colid {colId}: Source Column <<{metadata.SourceColumn}>> Dest Column <<{metadata.DestinationColumn}>> which has MaxLength of {metadata.MaxLength?.ToString() ?? "unknown"})");
+
+        return true;
     }
 
     private static void EmptyStringsToNulls(DataTable dt)

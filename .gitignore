@@ -303,3 +303,4 @@ claude-*.json
 **/.claude.*
 **/CLAUDE.*
 **/claude.*
+packages.lock.json

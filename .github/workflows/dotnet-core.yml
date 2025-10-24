@@ -19,29 +19,30 @@ jobs:
       security-events: write
     services:
       oracle:
-        image: konnecteam/docker-oracle-12c:sequelize
+        image: ghcr.io/gvenzl/oracle-xe:21-slim
         env:
-          DB_MEMORY: 128m
+          ORACLE_PASSWORD: oracle
         ports:
           - 1521:1521
-      postgres:
-        image: postgres:latest
-        env:
-          POSTGRES_PASSWORD: pgpass4291
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
 
     steps:
-    - name: Disable write flush for CI runs
-      run: sudo apt-get install -y libeatmydata1 apt-transport-https curl
     - uses: actions/checkout@v5
     - name: Setup .NET Core
       uses: actions/setup-dotnet@v5
+      with:
+        cache: true
+        cache-dependency-path: Directory.Packages.props
+    - name: MS repo
+      run: |
+        curl -sL https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
+        sudo add-apt-repository "deb [arch=amd64] https://packages.microsoft.com/ubuntu/22.04/mssql-server-2022 jammy main"
+
+    - name: Cache and install database packages
+      uses: awalsh128/cache-apt-pkgs-action@v1.6.0
+      with:
+        packages: libeatmydata1 apt-transport-https curl postgresql postgresql-contrib mssql-tools mssql-server
+        version: 1.0
+        execute_install_scripts: true
 
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v4
@@ -49,18 +50,20 @@ jobs:
         languages: csharp
         queries: +security-and-quality
 
-    - name: Install Sql Server
+    - name: Configure and start databases
       run: |
-        wget -qO- https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
-        sudo add-apt-repository "$(wget -qO- https://packages.microsoft.com/config/ubuntu/22.04/mssql-server-2022.list)"
-        sudo apt-get install -y --no-install-recommends postgresql mssql-tools mssql-server
+        # Configure SQL Server
         sudo -E /opt/mssql/bin/mssql-conf -n setup accept-eula
-    - name: MySQL
-      run: |
-        mv Tests/FAnsiTests/TestDatabases{-github,}.xml
+
+        # Start databases
+        sudo systemctl start postgresql
+        sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'pgpass4291';"
         sudo systemctl start mysql.service
+
+        # Replace test configuration for CI
+        mv Tests/FAnsiTests/TestDatabases{-github,}.xml
     - name: Test
-      run: dotnet test --logger "console;verbosity=minimal" --nologo
+      run: dotnet test --logger "console;verbosity=minimal" --nologo -p:TestTfmsInParallel=true
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v4
@@ -175,14 +178,6 @@ jobs:
           echo "✅ No AOT/Trim warnings found"
         fi
 
-    - name: Upload AOT binaries
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: aot-test-binaries
-        path: ./aot-output/
-        retention-days: 7
-
     - name: Pack
       run: |
         dotnet pack -c Release -p:DebugType=full -p:SymbolPackageFormat=snupkg --include-symbols --nologo -p:Version=$(fgrep AssemblyInformationalVersion SharedAssemblyInfo.cs|cut -d'"' -f2) -o .
@@ -190,7 +185,7 @@ jobs:
       if: contains(github.ref,'refs/tags/')
       run: dotnet nuget push FAnsi*.nupkg -s https://api.nuget.org/v3/index.json -k ${{ secrets.NUGET_API_KEY }} --skip-duplicate
     - name: Store created nupkg files
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         path: '*.nupkg'
         retention-days: 1

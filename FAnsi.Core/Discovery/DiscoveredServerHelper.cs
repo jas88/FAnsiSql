@@ -256,4 +256,5 @@ public abstract partial class DiscoveredServerHelper(DatabaseType databaseType) 
     /// <param name="connectionString">The full connection string</param>
     /// <returns>Connection string with database name removed, or original if not supported</returns>
     public virtual string GetServerLevelConnectionKey(string connectionString) => connectionString;
+
 }

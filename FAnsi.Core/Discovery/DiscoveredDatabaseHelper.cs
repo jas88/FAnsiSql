@@ -273,7 +273,7 @@ public abstract class DiscoveredDatabaseHelper : IDiscoveredDatabaseHelper
         ExecuteBatchNonQuery(sql, conn, transaction, out _, timeout);
     }
 
-    private static readonly string[] separator = ["\n", "\r"];
+    private static readonly string[] Separator = ["\n", "\r"];
 
     /// <summary>
     /// Executes the given SQL against the database + sends GO delimited statements as separate batches
@@ -306,7 +306,7 @@ public abstract class DiscoveredDatabaseHelper : IDiscoveredDatabaseHelper
         sql += "\nGO";   // make sure last batch is executed.
         try
         {
-            foreach (var line in sql.Split(separator, StringSplitOptions.RemoveEmptyEntries))
+            foreach (var line in sql.Split(Separator, StringSplitOptions.RemoveEmptyEntries))
             {
                 lineNumber++;
 

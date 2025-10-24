@@ -66,14 +66,14 @@ public abstract class AggregateHelper : IAggregateHelper
             throw new ArgumentNullException(nameof(axisColumnAlias));
 
         var axisGroupBy = query.AxisGroupBy;
-        var axisColumnWithoutAlias = query.AxisSelect.GetTextWithoutAlias(query.SyntaxHelper);
+        var axisColumnWithoutAlias = query.AxisSelect!.GetTextWithoutAlias(query.SyntaxHelper!);
 
         var axisColumnEndedWithComma = query.AxisSelect.Text.EndsWith(',');
         query.AxisSelect.Text =
             $"{GetDatePartOfColumn(query.Axis?.AxisIncrement ?? throw new InvalidOperationException("No axis in query"), axisColumnWithoutAlias)} AS {axisColumnAlias}{(axisColumnEndedWithComma ? "," : "")}";
 
-        var groupByEndedWithComma = axisGroupBy.Text.EndsWith(',');
-        axisGroupBy.Text = GetDatePartOfColumn(query.Axis.AxisIncrement, axisColumnWithoutAlias) + (groupByEndedWithComma ? "," : "");
+        var groupByEndedWithComma = axisGroupBy!.Text.EndsWith(',');
+        axisGroupBy.Text = GetDatePartOfColumn(query.Axis!.AxisIncrement, axisColumnWithoutAlias) + (groupByEndedWithComma ? "," : "");
     }
 
     public abstract string GetDatePartOfColumn(AxisIncrement increment, string columnSql);
