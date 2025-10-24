@@ -104,6 +104,7 @@ namespace FAnsi.Discovery.QueryableAbstraction
         /// <summary>
         /// Executes a query and returns a strongly-typed result.
         /// </summary>
+        [RequiresDynamicCode()]
         public TResult Execute<TResult>(Expression expression)
         {
             return (TResult)Execute(expression);
