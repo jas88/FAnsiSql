@@ -193,8 +193,10 @@ public sealed class MicrosoftSQLServerHelper : DiscoveredServerHelper
             }
             catch
             {
-                // Other errors (timeout, connection closed, etc.) - connection is unusable
-                return false;
+                // Other errors (timeout, connection closed, dropped database, etc.) mean
+                // the connection is unusable/invalid. Return true to indicate it should
+                // be removed from the pool (treat as "dirty").
+                return true;
             }
         }
         return false;
