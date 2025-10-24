@@ -31,24 +31,25 @@ jobs:
       uses: actions/setup-dotnet@v5
       with:
         cache: true
+        cache-dependency-path: Directory.Packages.props
+
+    - name: Cache and install Ubuntu packages
+      uses: awalsh128/cache-apt-pkgs-action@v1.6.0
+      with:
+        packages: libeatmydata1 apt-transport-https curl postgresql postgresql-contrib
+        version: 1.0
+
+    - name: Install SQL Server
+      run: |
+        wget -qO- https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
+        sudo add-apt-repository "$(wget -qO- https://packages.microsoft.com/config/ubuntu/22.04/mssql-server-2022.list)"
+        sudo apt-get install -y --no-install-recommends mssql-tools mssql-server
 
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v4
       with:
         languages: csharp
         queries: +security-and-quality
-
-    - name: Cache and install database packages
-      uses: awalsh128/cache-apt-pkgs-action@v1
-      with:
-        packages: libeatmydata1 apt-transport-https curl postgresql postgresql-contrib mssql-tools mssql-server
-        version: 1.0
-        execute_install_scripts: true
-
-    - name: Add Microsoft SQL Server repository
-      run: |
-        wget -qO- https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
-        echo "deb [arch=amd64] https://packages.microsoft.com/ubuntu/22.04/mssql-server-2022 jammy main" | sudo tee /etc/apt/sources.list.d/mssql-server.list
 
     - name: Configure and start databases
       run: |
@@ -177,14 +178,6 @@ jobs:
         else
           echo "✅ No AOT/Trim warnings found"
         fi
-
-    - name: Upload AOT binaries
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: aot-test-binaries
-        path: ./aot-output/
-        retention-days: 7
 
     - name: Pack
       run: |
