@@ -26,8 +26,6 @@ jobs:
           - 1521:1521
 
     steps:
-    - name: Disable write flush for CI runs
-      run: sudo apt-get install -y libeatmydata1 apt-transport-https curl
     - uses: actions/checkout@v5
     - name: Setup .NET Core
       uses: actions/setup-dotnet@v5
@@ -38,20 +36,27 @@ jobs:
         languages: csharp
         queries: +security-and-quality
 
-    - name: Install SQL Server, MySQL, and PostgreSQL
+    - name: Install and configure databases
       run: |
-        # SQL Server
+        # Add Microsoft repository for SQL Server
         wget -qO- https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
         sudo add-apt-repository "$(wget -qO- https://packages.microsoft.com/config/ubuntu/22.04/mssql-server-2022.list)"
-        sudo apt-get install -y --no-install-recommends mssql-tools mssql-server
-        sudo -E /opt/mssql/bin/mssql-conf -n setup accept-eula
 
-        # PostgreSQL (apt is faster than Docker container)
-        sudo apt-get install -y --no-install-recommends postgresql postgresql-contrib
+        # Install all packages in one apt-get call (faster, fewer metadata updates)
+        sudo apt-get update -qq
+        sudo apt-get install -y --no-install-recommends \
+          libeatmydata1 \
+          apt-transport-https \
+          curl \
+          postgresql \
+          postgresql-contrib \
+          mssql-tools \
+          mssql-server
+
+        # Configure and start databases
+        sudo -E /opt/mssql/bin/mssql-conf -n setup accept-eula
         sudo systemctl start postgresql
         sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'pgpass4291';"
-
-        # MySQL (already installed, just start it)
         sudo systemctl start mysql.service
 
         # Replace test configuration for CI
