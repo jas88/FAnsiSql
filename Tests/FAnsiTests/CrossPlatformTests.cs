@@ -34,6 +34,8 @@ public sealed class CrossPlatformTests:DatabaseTests
     [TestCase(DatabaseType.Oracle,"2007-01-01 00:00:00")]
     [TestCase(DatabaseType.PostgreSql,"01/01/2007 00:00:00")]
     [TestCase(DatabaseType.PostgreSql,"2007-01-01 00:00:00")]
+    [TestCase(DatabaseType.SQLite,"01/01/2007 00:00:00")]
+    [TestCase(DatabaseType.SQLite,"2007-01-01 00:00:00")]
     public void DateColumnTests_NoTime(DatabaseType type,object input)
     {
         var db = GetTestDatabase(type);
@@ -67,6 +69,8 @@ public sealed class CrossPlatformTests:DatabaseTests
     [TestCase(DatabaseType.Oracle,"28/2/1993 5:36:27 AM","en-GB")]
     [TestCase(DatabaseType.PostgreSql,"2/28/1993 5:36:27 AM","en-US")]
     [TestCase(DatabaseType.PostgreSql,"28/2/1993 5:36:27 AM","en-GB")]
+    [TestCase(DatabaseType.SQLite,"2/28/1993 5:36:27 AM","en-US")]
+    [TestCase(DatabaseType.SQLite,"28/2/1993 5:36:27 AM","en-GB")]
     public void DateColumnTests_UkUsFormat_Explicit(DatabaseType type,object input,string culture)
     {
         var db = GetTestDatabase(type);
@@ -108,6 +112,7 @@ public sealed class CrossPlatformTests:DatabaseTests
     [TestCase(DatabaseType.MySql,"2/28/1993 5:36:27 AM","en-US")]
     [TestCase(DatabaseType.Oracle,"2/28/1993 5:36:27 AM","en-US")]
     [TestCase(DatabaseType.PostgreSql,"2/28/1993 5:36:27 AM","en-US")]
+    [TestCase(DatabaseType.SQLite,"2/28/1993 5:36:27 AM","en-US")]
     public void DateColumnTests_PrimaryKeyColumn(DatabaseType type,object input,string culture)
     {
         var db = GetTestDatabase(type);
@@ -145,6 +150,8 @@ public sealed class CrossPlatformTests:DatabaseTests
     [TestCase(DatabaseType.Oracle,"00:00")]
     [TestCase(DatabaseType.PostgreSql,"00:00:00")]
     [TestCase(DatabaseType.PostgreSql,"00:00")]
+    [TestCase(DatabaseType.SQLite,"00:00:00")]
+    [TestCase(DatabaseType.SQLite,"00:00")]
     public void DateColumnTests_TimeOnly_Midnight(DatabaseType type,object input)
     {
         var db = GetTestDatabase(type);
