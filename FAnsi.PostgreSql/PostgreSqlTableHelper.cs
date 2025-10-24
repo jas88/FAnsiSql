@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Configuration.Internal;
 using System.Data;
@@ -53,7 +53,7 @@ public sealed class PostgreSqlTableHelper : DiscoveredTableHelper
         using var r = cmd.ExecuteReader();
         while (r.Read())
         {
-            var isNullable = Equals(r["is_nullable"] , "YES");
+            var isNullable = Equals(r["is_nullable"], "YES");
 
             //if it is a table valued function prefix the column name with the table valued function name
             var columnName = discoveredTable is DiscoveredTableValuedFunction
@@ -64,7 +64,7 @@ public sealed class PostgreSqlTableHelper : DiscoveredTableHelper
 
             var toAdd = new DiscoveredColumn(discoveredTable, columnName, isNullable)
             {
-                IsAutoIncrement = Equals(r["is_identity"],"YES"),
+                IsAutoIncrement = Equals(r["is_identity"], "YES"),
                 Collation = r["collation_name"] as string
             };
             toAdd.DataType = new DiscoveredDataType(r, GetSQLType_FromSpColumnsResult(r), toAdd);
@@ -98,7 +98,7 @@ public sealed class PostgreSqlTableHelper : DiscoveredTableHelper
         cmd.Parameters.Add(p);
 
         using var r = cmd.ExecuteReader();
-        while(r.Read())
+        while (r.Read())
             yield return (string)r["attname"];
 
         r.Close();
@@ -145,7 +145,7 @@ public sealed class PostgreSqlTableHelper : DiscoveredTableHelper
             $"""
              ALTER TABLE {columnToDrop.Table.GetFullyQualifiedName()}
              DROP COLUMN {columnToDrop.GetWrappedName()};
-             """,(NpgsqlConnection) connection);
+             """, (NpgsqlConnection)connection);
         cmd.ExecuteNonQuery();
     }
 
@@ -153,14 +153,14 @@ public sealed class PostgreSqlTableHelper : DiscoveredTableHelper
         DiscoveredTableValuedFunction discoveredTableValuedFunction, DbTransaction? transaction) =>
         throw new NotImplementedException();
 
-    public override IBulkCopy BeginBulkInsert(DiscoveredTable discoveredTable, IManagedConnection connection, CultureInfo culture) => new PostgreSqlBulkCopy(discoveredTable, connection,culture);
+    public override IBulkCopy BeginBulkInsert(DiscoveredTable discoveredTable, IManagedConnection connection, CultureInfo culture) => new PostgreSqlBulkCopy(discoveredTable, connection, culture);
 
     public override int ExecuteInsertReturningIdentity(DiscoveredTable discoveredTable, DbCommand cmd,
         IManagedTransaction? transaction = null)
     {
         var autoIncrement = discoveredTable.DiscoverColumns(transaction).SingleOrDefault(static c => c.IsAutoIncrement);
 
-        if(autoIncrement != null)
+        if (autoIncrement != null)
             cmd.CommandText += $" RETURNING {autoIncrement.GetFullyQualifiedName()};";
 
         var result = cmd.ExecuteScalar();
@@ -207,7 +207,7 @@ public sealed class PostgreSqlTableHelper : DiscoveredTableHelper
 
             var p2 = cmd.CreateParameter();
             p2.ParameterName = "@schema";
-            p2.Value = string.IsNullOrWhiteSpace(table.Schema)? PostgreSqlSyntaxHelper.DefaultPostgresSchema : table.Schema;
+            p2.Value = string.IsNullOrWhiteSpace(table.Schema) ? PostgreSqlSyntaxHelper.DefaultPostgresSchema : table.Schema;
             cmd.Parameters.Add(p2);
 
             //fill data table to avoid multiple active readers

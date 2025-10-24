@@ -1,18 +1,18 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <PackageId>FAnsi.Core</PackageId>
-    <version>0.0.7</version>
-    <title>HIC.FAnsi.Core</title>
+    <PackageId>FAnsiSql.Core</PackageId>
+    <version>0.1.0</version>
+    <title>FAnsiSql.Core</title>
     <authors>Health Informatics Centre - University of Dundee</authors>
     <owners>Health Informatics Centre - University of Dundee</owners>
-    <PackageProjectUrl>https://github.com/HicServices/FAnsiSql</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/jas88/FAnsiSql</PackageProjectUrl>
     <PackageLicenseExpression>GPL-3.0-or-later</PackageLicenseExpression>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <description>Core interfaces and base functionality for FAnsiSql - a database management/ETL library that allows you to perform common SQL operations without having to know which Database Management System (DBMS) you are targetting.</description>
     <PackageTags>Ansi,SQL,Core</PackageTags>
-    <AssemblyTitle>HIC.FAnsi.Core</AssemblyTitle>
+    <AssemblyTitle>FAnsiSql.Core</AssemblyTitle>
     <Company>Health Informatics Centre, University of Dundee</Company>
-    <Product>HIC.FAnsi.Core</Product>
+    <Product>FAnsiSql.Core</Product>
     <Description>Core interfaces and base functionality for FAnsiSql</Description>
     <Copyright>Copyright ©  2019-2025</Copyright>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
@@ -59,11 +59,13 @@
     <EmbeddedResource Update="FAnsiStrings.resx">
       <Generator>PublicResXFileCodeGenerator</Generator>
       <LastGenOutput>FAnsiStrings.Designer.cs</LastGenOutput>
+      <LogicalName>FAnsi.FAnsiStrings.resources</LogicalName>
     </EmbeddedResource>
     <EmbeddedResource Update="SR.resx">
       <SubType>Designer</SubType>
       <LastGenOutput>SR.Designer.cs</LastGenOutput>
       <Generator>PublicResXFileCodeGenerator</Generator>
+      <LogicalName>FAnsi.SR.resources</LogicalName>
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>

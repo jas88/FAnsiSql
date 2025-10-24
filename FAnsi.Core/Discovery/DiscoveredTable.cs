@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
@@ -38,7 +38,7 @@ public class DiscoveredTable : IHasFullyQualifiedNameToo, IMightNotExist, IHasQu
 
     /// <summary>
     /// <para>Schema of the <see cref="Database"/> the table exists in (or null).  This is NOT the database e.g. in [MyDb].[dbo].[MyTable] the schema is "dbo".</para>
-    /// 
+    ///
     /// <para>Null if not supported by the DBMS (e.g. MySql)</para>
     /// </summary>
     public readonly string? Schema;
@@ -319,7 +319,7 @@ public class DiscoveredTable : IHasFullyQualifiedNameToo, IMightNotExist, IHasQu
     /// <summary>
     /// <para>Scripts the table columns, optionally adjusting for nullability / identity etc.  Optionally translates the SQL to run and create a table in a different
     /// database / database language / table name</para>
-    /// 
+    ///
     /// <para>Does not include foreign key constraints, dependant tables, CHECK constraints etc</para>
     /// </summary>
     /// <param name="dropPrimaryKeys">True if the resulting script should exclude any primary keys</param>
@@ -562,7 +562,7 @@ public class DiscoveredTable : IHasFullyQualifiedNameToo, IMightNotExist, IHasQu
     public DiscoveredRelationship AddForeignKey(DiscoveredColumn foreignKey, DiscoveredColumn primaryKey, bool cascadeDeletes, string? constraintName = null, DatabaseOperationArgs? args = null) => AddForeignKey(new Dictionary<DiscoveredColumn, DiscoveredColumn> { { foreignKey, primaryKey } }, cascadeDeletes, constraintName, args);
 
     /// <summary>
-    /// 
+    ///
     /// </summary>
     /// <param name="foreignKeyPairs">
     /// Key is the foreign key column (and the table the constraint will be put on).

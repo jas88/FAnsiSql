@@ -288,3 +288,18 @@ __pycache__/
 *.xsd.cs
 Visual Studio 2013/
 Visual Studio 2017/
+
+# Claude Code - ignore all Claude-related files and directories
+.claude/
+.claude-flow/
+.claude.json
+CLAUDE.md
+claude.md
+.clauderc
+claude-*.json
+**/claude_*
+**/.claude/
+**/.claude-flow/
+**/.claude.*
+**/CLAUDE.*
+**/claude.*

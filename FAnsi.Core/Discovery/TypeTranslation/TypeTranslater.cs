@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Data;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
@@ -41,7 +41,7 @@ public abstract partial class TypeTranslater : ITypeTranslater
     private readonly int StringWidthWhenNotSupplied;
 
     /// <summary>
-    /// 
+    ///
     /// </summary>
     /// <param name="dateRegex"><see cref="DateRegex"/></param>
     /// <param name="maxStringWidthBeforeMax"><see cref="MaxStringWidthBeforeMax"/></param>
@@ -62,7 +62,7 @@ public abstract partial class TypeTranslater : ITypeTranslater
 
         if (t == typeof(byte))
             return GetByteDataType();
-            
+
         if (t == typeof(short) || t == typeof(short) || t == typeof(ushort) || t == typeof(short?) || t == typeof(ushort?))
             return GetSmallIntDataType();
 
@@ -115,7 +115,7 @@ public abstract partial class TypeTranslater : ITypeTranslater
 
         if (maxExpectedStringWidth > MaxStringWidthBeforeMax)
             return GetStringDataTypeWithUnlimitedWidth();
-            
+
         return GetStringDataTypeImpl(maxExpectedStringWidth.Value);
     }
 
@@ -131,7 +131,7 @@ public abstract partial class TypeTranslater : ITypeTranslater
 
         if (maxExpectedStringWidth > MaxStringWidthBeforeMax)
             return GetUnicodeStringDataTypeWithUnlimitedWidth();
-            
+
         return GetUnicodeStringDataTypeImpl(maxExpectedStringWidth.Value);
     }
 
@@ -233,13 +233,13 @@ public abstract partial class TypeTranslater : ITypeTranslater
 
         if (IsString(sqlType))
             return DbType.String;
-            
+
         if (IsDate(sqlType))
             return DbType.DateTime;
 
         if (IsTime(sqlType))
             return DbType.Time;
-            
+
         if (IsByteArray(sqlType))
             return DbType.Object;
 
@@ -269,7 +269,7 @@ public abstract partial class TypeTranslater : ITypeTranslater
 
         if (cSharpType == typeof(TimeSpan))
             lengthIfString = GetStringLengthForTimeSpan();
-            
+
         var request = new DatabaseTypeRequest(cSharpType, lengthIfString, digits);
 
         if (cSharpType == typeof(string))
@@ -347,11 +347,11 @@ public abstract partial class TypeTranslater : ITypeTranslater
     /// <returns></returns>
     private static int GetStringLengthForTimeSpan() =>
         /*
-         * 
+         *
          * To determine this you can run the following SQL:
-          
+
          create table omgTimes (
-dt time 
+dt time
 )
 
 insert into omgTimes values (CONVERT(TIME, GETDATE()))
@@ -361,9 +361,9 @@ select * from omgTimes
 alter table omgTimes alter column dt varchar(100)
 
 select LEN(dt) from omgTimes
-         
 
-         * 
+
+         *
          * */
         16; //e.g. "13:10:58.2300000"
 
@@ -379,7 +379,7 @@ select LEN(dt) from omgTimes
          To determine this you can run the following SQL:
 
 create table omgdates (
-dt datetime2 
+dt datetime2
 )
 
 insert into omgdates values (getdate())

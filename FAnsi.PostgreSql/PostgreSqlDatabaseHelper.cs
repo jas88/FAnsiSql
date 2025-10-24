@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.IO;
@@ -12,7 +12,7 @@ namespace FAnsi.Implementations.PostgreSql;
 public sealed class PostgreSqlDatabaseHelper : DiscoveredDatabaseHelper
 {
     public static readonly PostgreSqlDatabaseHelper Instance = new();
-    private PostgreSqlDatabaseHelper(){}
+    private PostgreSqlDatabaseHelper() { }
 
     public override IEnumerable<DiscoveredTable> ListTables(DiscoveredDatabase parent, IQuerySyntaxHelper querySyntaxHelper, DbConnection connection,
         string database, bool includeViews, DbTransaction? transaction = null)
@@ -41,7 +41,7 @@ public sealed class PostgreSqlDatabaseHelper : DiscoveredDatabaseHelper
 
         var tables = new List<DiscoveredTable>();
 
-        using (var cmd = new NpgsqlCommand(sqlTables, (NpgsqlConnection) connection))
+        using (var cmd = new NpgsqlCommand(sqlTables, (NpgsqlConnection)connection))
         {
             cmd.Transaction = transaction as NpgsqlTransaction;
 
@@ -51,7 +51,7 @@ public sealed class PostgreSqlDatabaseHelper : DiscoveredDatabaseHelper
                 //its a system table
                 var schema = r["schemaname"] as string;
 
-                if(querySyntaxHelper.IsValidTableName((string)r["tablename"], out _))
+                if (querySyntaxHelper.IsValidTableName((string)r["tablename"], out _))
                     tables.Add(new DiscoveredTable(parent, (string)r["tablename"], querySyntaxHelper, schema));
             }
         }
@@ -67,7 +67,7 @@ public sealed class PostgreSqlDatabaseHelper : DiscoveredDatabaseHelper
                 //it's a system table
                 var schema = r["schemaname"] as string;
 
-                if(querySyntaxHelper.IsValidTableName((string)r["viewname"], out _))
+                if (querySyntaxHelper.IsValidTableName((string)r["viewname"], out _))
                     tables.Add(new DiscoveredTable(parent, (string)r["viewname"], querySyntaxHelper, schema, TableType.View));
             }
         }
@@ -91,24 +91,24 @@ public sealed class PostgreSqlDatabaseHelper : DiscoveredDatabaseHelper
 
         NpgsqlConnection.ClearAllPools();
 
-        using (var con = (NpgsqlConnection) master.Server.GetConnection())
+        using (var con = (NpgsqlConnection)master.Server.GetConnection())
         {
             con.Open();
 
             // https://dba.stackexchange.com/a/11895
 
-            using(var cmd = new NpgsqlCommand($"UPDATE pg_database SET datallowconn = 'false' WHERE datname = '{database.GetRuntimeName()}';",con))
+            using (var cmd = new NpgsqlCommand($"UPDATE pg_database SET datallowconn = 'false' WHERE datname = '{database.GetRuntimeName()}';", con))
                 cmd.ExecuteNonQuery();
 
-            using(var cmd = new NpgsqlCommand($"""
+            using (var cmd = new NpgsqlCommand($"""
                                                SELECT pg_terminate_backend(pid)
                                                                FROM pg_stat_activity
                                                                WHERE datname = '{database.GetRuntimeName()}';
                                                """
-                      ,con))
+                      , con))
                 cmd.ExecuteNonQuery();
 
-            using(var cmd = new NpgsqlCommand($"DROP DATABASE \"{database.GetRuntimeName()}\"",con))
+            using (var cmd = new NpgsqlCommand($"DROP DATABASE \"{database.GetRuntimeName()}\"", con))
                 cmd.ExecuteNonQuery();
         }
 

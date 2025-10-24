@@ -1,13 +1,13 @@
-﻿using System.Data;
+using System.Data;
 using FAnsi;
 using FAnsi.Connections;
 using NUnit.Framework;
 
 namespace FAnsiTests;
 
-internal sealed class ManagedConnectionTests:DatabaseTests
+internal sealed class ManagedConnectionTests : DatabaseTests
 {
-    [TestCaseSource(typeof(All),nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void Test_GetConnection_NotOpenAtStart(DatabaseType dbType)
     {
         var db = GetTestDatabase(dbType);
@@ -19,11 +19,15 @@ internal sealed class ManagedConnectionTests:DatabaseTests
     }
 
     /// <summary>
-    /// Tests that a managed connection is automatically opened and closed in dispose when there
-    /// is no <see cref="IManagedTransaction"/> ongoing
+    /// Tests that a managed connection is automatically opened and reused via pooling when there
+    /// is no <see cref="IManagedTransaction"/> ongoing. Connection pooling keeps connections alive
+    /// to reduce ephemeral connection churn.
+    ///
+    /// Note: Oracle uses ADO.NET's native pooling instead of thread-local pooling (see issue #30)
+    /// so it has different behavior - connections close on disposal and return to ADO.NET's pool.
     /// </summary>
     /// <param name="dbType"></param>
-    [TestCaseSource(typeof(All),nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void Test_GetManagedConnection_AutoOpenClose(DatabaseType dbType)
     {
         var db = GetTestDatabase(dbType);
@@ -35,8 +39,21 @@ internal sealed class ManagedConnectionTests:DatabaseTests
             Assert.That(con.Connection.State, Is.EqualTo(ConnectionState.Open));
         }
 
-        //finally should close it
-        Assert.That(con.Connection.State, Is.EqualTo(ConnectionState.Closed));
+        if (dbType == DatabaseType.Oracle)
+        {
+            // Oracle uses ADO.NET pooling (not thread-local) - connection closes and returns to ADO.NET pool
+            // Changed in v3.3.1 to fix issue #30 - we can't detect dangling transactions in Oracle
+            Assert.That(con.Connection.State, Is.EqualTo(ConnectionState.Closed));
+        }
+        else
+        {
+            // SQL Server/MySQL/PostgreSQL use thread-local pooling - connection remains open
+            Assert.That(con.Connection.State, Is.EqualTo(ConnectionState.Open));
+
+            //Clearing the thread-local pool closes the connection
+            FAnsi.Discovery.DiscoveredServer.ClearCurrentThreadConnectionPool();
+            Assert.That(con.Connection.State, Is.EqualTo(ConnectionState.Closed));
+        }
     }
 
 
@@ -45,7 +62,7 @@ internal sealed class ManagedConnectionTests:DatabaseTests
     /// a new transaction
     /// </summary>
     /// <param name="dbType"></param>
-    [TestCaseSource(typeof(All),nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void Test_BeginNewTransactedConnection_AutoOpenClose(DatabaseType dbType)
     {
         var db = GetTestDatabase(dbType);
@@ -70,7 +87,7 @@ internal sealed class ManagedConnectionTests:DatabaseTests
     /// opening and closing their own connections or do have a <see cref="IManagedTransaction"/> and ignore open/dispose step</para>
     /// </summary>
     /// <param name="dbType"></param>
-    [TestCaseSource(typeof(All),nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void Test_GetManagedConnection_OngoingTransaction(DatabaseType dbType)
     {
         var db = GetTestDatabase(dbType);
@@ -115,8 +132,8 @@ internal sealed class ManagedConnectionTests:DatabaseTests
     /// </summary>
     /// <param name="dbType"></param>
     /// <param name="commit">Whether to commit</param>
-    [TestCaseSource(typeof(All),nameof(All.DatabaseTypesWithBoolFlags))]
-    public void Test_GetManagedConnection_OngoingTransaction_WithCommitRollback(DatabaseType dbType,bool commit)
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypesWithBoolFlags))]
+    public void Test_GetManagedConnection_OngoingTransaction_WithCommitRollback(DatabaseType dbType, bool commit)
     {
         var db = GetTestDatabase(dbType);
 
@@ -148,7 +165,7 @@ internal sealed class ManagedConnectionTests:DatabaseTests
             //it should still be open after this finally block
             Assert.That(con.Connection.State, Is.EqualTo(ConnectionState.Open));
 
-            if(commit)
+            if (commit)
                 ongoingCon.ManagedTransaction?.CommitAndCloseConnection();
             else
                 ongoingCon.ManagedTransaction?.AbandonAndCloseConnection();
@@ -162,7 +179,7 @@ internal sealed class ManagedConnectionTests:DatabaseTests
     }
 
 
-    [TestCaseSource(typeof(All),nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void Test_ManagedTransaction_MultipleCancel(DatabaseType dbType)
     {
         var db = GetTestDatabase(dbType);
@@ -183,7 +200,7 @@ internal sealed class ManagedConnectionTests:DatabaseTests
     /// a new transaction
     /// </summary>
     /// <param name="dbType"></param>
-    [TestCaseSource(typeof(All),nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void Test_Clone_AutoOpenClose(DatabaseType dbType)
     {
         var db = GetTestDatabase(dbType);

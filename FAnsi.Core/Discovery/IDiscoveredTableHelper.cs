@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Globalization;
@@ -28,16 +28,16 @@ public interface IDiscoveredTableHelper
     void DropFunction(DbConnection connection, DiscoveredTableValuedFunction functionToDrop);
     void DropColumn(DbConnection connection, DiscoveredColumn columnToDrop);
 
-    void AddColumn(DatabaseOperationArgs args,DiscoveredTable table, string name, string dataType, bool allowNulls);
+    void AddColumn(DatabaseOperationArgs args, DiscoveredTable table, string name, string dataType, bool allowNulls);
 
     int GetRowCount(DatabaseOperationArgs args, DiscoveredTable table);
 
     IEnumerable<DiscoveredParameter> DiscoverTableValuedFunctionParameters(DbConnection connection, DiscoveredTableValuedFunction discoveredTableValuedFunction, DbTransaction? transaction);
 
-    IBulkCopy BeginBulkInsert(DiscoveredTable discoveredTable, IManagedConnection connection,CultureInfo culture);
+    IBulkCopy BeginBulkInsert(DiscoveredTable discoveredTable, IManagedConnection connection, CultureInfo culture);
 
     void TruncateTable(DiscoveredTable discoveredTable);
-    void MakeDistinct(DatabaseOperationArgs args,DiscoveredTable discoveredTable);
+    void MakeDistinct(DatabaseOperationArgs args, DiscoveredTable discoveredTable);
 
     /// <inheritdoc cref="DiscoveredTable.ScriptTableCreation"/>
     string ScriptTableCreation(DiscoveredTable constraints, bool dropPrimaryKeys, bool dropNullability, bool convertIdentityToInt, DiscoveredTable? toCreateTable = null);
@@ -47,9 +47,9 @@ public interface IDiscoveredTableHelper
     void CreateIndex(DatabaseOperationArgs args, DiscoveredTable table, string indexName, DiscoveredColumn[] columns, bool unique = false);
     void DropIndex(DatabaseOperationArgs args, DiscoveredTable table, string indexName);
     void CreatePrimaryKey(DatabaseOperationArgs args, DiscoveredTable columns, DiscoveredColumn[] discoverColumns);
-    int ExecuteInsertReturningIdentity(DiscoveredTable discoveredTable, DbCommand cmd, IManagedTransaction? transaction=null);
-    IEnumerable<DiscoveredRelationship> DiscoverRelationships(DiscoveredTable discoveredTable,DbConnection connection, IManagedTransaction? transaction = null);
-    void FillDataTableWithTopX(DatabaseOperationArgs args,DiscoveredTable table, int topX, DataTable dt);
+    int ExecuteInsertReturningIdentity(DiscoveredTable discoveredTable, DbCommand cmd, IManagedTransaction? transaction = null);
+    IEnumerable<DiscoveredRelationship> DiscoverRelationships(DiscoveredTable discoveredTable, DbConnection connection, IManagedTransaction? transaction = null);
+    void FillDataTableWithTopX(DatabaseOperationArgs args, DiscoveredTable table, int topX, DataTable dt);
 
 
     /// <summary>
@@ -64,5 +64,14 @@ public interface IDiscoveredTableHelper
     /// <param name="constraintName">The name to give the foreign key constraint created, if null then a default name will be picked e.g. FK_Tbl1_Tbl2</param>
     /// <param name="args">Options for timeout, transaction etc</param>
     /// <returns></returns>
-    DiscoveredRelationship AddForeignKey(DatabaseOperationArgs args, Dictionary<DiscoveredColumn, DiscoveredColumn> foreignKeyPairs, bool cascadeDeletes,string? constraintName =null);
+    DiscoveredRelationship AddForeignKey(DatabaseOperationArgs args, Dictionary<DiscoveredColumn, DiscoveredColumn> foreignKeyPairs, bool cascadeDeletes, string? constraintName = null);
+
+    /// <summary>
+    /// Checks if the table exists on the database server using a direct SQL query.
+    /// This is more efficient than fetching all tables and filtering.
+    /// </summary>
+    /// <param name="table">The table to check for existence</param>
+    /// <param name="transaction">Optional - if set the query will be sent on the connection on which the current transaction is open</param>
+    /// <returns>True if the table exists, false otherwise</returns>
+    bool Exists(DiscoveredTable table, IManagedTransaction? transaction = null);
 }

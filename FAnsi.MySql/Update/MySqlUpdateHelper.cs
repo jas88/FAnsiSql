@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using FAnsi.Discovery;
@@ -9,8 +9,8 @@ namespace FAnsi.Implementations.MySql.Update;
 
 public sealed class MySqlUpdateHelper : UpdateHelper
 {
-    public static readonly MySqlUpdateHelper Instance=new();
-    private MySqlUpdateHelper() {}
+    public static readonly MySqlUpdateHelper Instance = new();
+    private MySqlUpdateHelper() { }
     protected override string BuildUpdateImpl(DiscoveredTable table1, DiscoveredTable table2, List<CustomLine> lines) =>
         $"""
          UPDATE {table1.GetFullyQualifiedName()} t1

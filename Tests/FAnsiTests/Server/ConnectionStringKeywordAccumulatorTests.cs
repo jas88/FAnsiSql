@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using FAnsi;
 using FAnsi.Discovery;
@@ -27,7 +27,7 @@ public sealed class ConnectionStringKeywordAccumulatorTests
         var acc = new ConnectionStringKeywordAccumulator(DatabaseType.MySql);
         acc.AddOrUpdateKeyword("Auto Enlist", "false", ConnectionStringKeywordPriority.SystemDefaultLow);
 
-        var connectionStringBuilder = _helpers[DatabaseType.MySql].GetConnectionStringBuilder("localhost","mydb","frank","kangaro");
+        var connectionStringBuilder = _helpers[DatabaseType.MySql].GetConnectionStringBuilder("localhost", "mydb", "frank", "kangaro");
 
         Assert.That(connectionStringBuilder.ConnectionString, Does.Not.Contain("auto enlist"));
 
@@ -43,7 +43,7 @@ public sealed class ConnectionStringKeywordAccumulatorTests
         var acc = new ConnectionStringKeywordAccumulator(DatabaseType.MicrosoftSQLServer);
         acc.AddOrUpdateKeyword("Pooling", "false", ConnectionStringKeywordPriority.SystemDefaultHigh);
 
-        var connectionStringBuilder = _helpers[DatabaseType.MicrosoftSQLServer].GetConnectionStringBuilder("localhost", "mydb", "frank","kangaro");
+        var connectionStringBuilder = _helpers[DatabaseType.MicrosoftSQLServer].GetConnectionStringBuilder("localhost", "mydb", "frank", "kangaro");
 
         Assert.That(connectionStringBuilder.ConnectionString, Does.Not.Contain("pooling"));
 
@@ -52,7 +52,7 @@ public sealed class ConnectionStringKeywordAccumulatorTests
         Assert.That(connectionStringBuilder.ConnectionString, Does.Contain("Pooling=False"));
 
         //attempt override with low priority setting it to true (note we flipped case of P just to be a curve ball)
-        acc.AddOrUpdateKeyword("pooling","true",ConnectionStringKeywordPriority.SystemDefaultLow);
+        acc.AddOrUpdateKeyword("pooling", "true", ConnectionStringKeywordPriority.SystemDefaultLow);
 
         acc.EnforceOptions(connectionStringBuilder);
 
@@ -65,16 +65,16 @@ public sealed class ConnectionStringKeywordAccumulatorTests
     public void TestKeywords_OverrideWithNovelButEquivalentKeyword_Ignored(DatabaseType databaseType, string key1, string value1, string equivalentKey, string value2)
     {
         var acc = new ConnectionStringKeywordAccumulator(databaseType);
-        acc.AddOrUpdateKeyword(key1,value1, ConnectionStringKeywordPriority.SystemDefaultHigh);
+        acc.AddOrUpdateKeyword(key1, value1, ConnectionStringKeywordPriority.SystemDefaultHigh);
 
-        var connectionStringBuilder = _helpers[databaseType].GetConnectionStringBuilder("localhost", "mydb", "frank","kangaro");
+        var connectionStringBuilder = _helpers[databaseType].GetConnectionStringBuilder("localhost", "mydb", "frank", "kangaro");
 
         acc.EnforceOptions(connectionStringBuilder);
 
         Assert.That(connectionStringBuilder.ConnectionString, Does.Contain($"{key1}={value1}"));
 
         //attempt override with low priority setting it to true but also use the alias
-        acc.AddOrUpdateKeyword(equivalentKey,value2,ConnectionStringKeywordPriority.SystemDefaultLow);
+        acc.AddOrUpdateKeyword(equivalentKey, value2, ConnectionStringKeywordPriority.SystemDefaultLow);
 
         acc.EnforceOptions(connectionStringBuilder);
 
@@ -87,7 +87,7 @@ public sealed class ConnectionStringKeywordAccumulatorTests
         var acc = new ConnectionStringKeywordAccumulator(DatabaseType.MicrosoftSQLServer);
         acc.AddOrUpdateKeyword("Pooling", "false", ConnectionStringKeywordPriority.SystemDefaultHigh);
 
-        var connectionStringBuilder = _helpers[DatabaseType.MicrosoftSQLServer].GetConnectionStringBuilder("localhost", "mydb", "frank","kangaro");
+        var connectionStringBuilder = _helpers[DatabaseType.MicrosoftSQLServer].GetConnectionStringBuilder("localhost", "mydb", "frank", "kangaro");
 
         Assert.That(connectionStringBuilder.ConnectionString, Does.Not.Contain("pooling"));
 
@@ -104,14 +104,14 @@ public sealed class ConnectionStringKeywordAccumulatorTests
     }
 
 
-    [TestCaseSource(typeof(All),nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void TestKeywords_Invalid(DatabaseType databaseType)
     {
         var acc = new ConnectionStringKeywordAccumulator(databaseType);
 
         // Oracle driver throws OracleException instead of ArgumentException for invalid keywords
         // Accept either exception type since the behavior is inconsistent across drivers
-        var ex = Assert.Catch<Exception>(()=>acc.AddOrUpdateKeyword("FLIBBLE", "false", ConnectionStringKeywordPriority.SystemDefaultLow));
+        var ex = Assert.Catch<Exception>(() => acc.AddOrUpdateKeyword("FLIBBLE", "false", ConnectionStringKeywordPriority.SystemDefaultLow));
 
         Assert.Multiple(() =>
         {

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
@@ -135,7 +135,7 @@ public abstract partial class QuerySyntaxHelper(
 
     /// <summary>
     /// <para>Removes qualifiers/escape sequences in the suplied <paramref name="name"/>.  This should for example convert MySql double backtick escape sequences fi``sh into singles (fi`sh).</para>
-    /// 
+    ///
     /// <para>Method is only called after a successful detection and stripping of <see cref="OpenQualifier"/> and <see cref="CloseQualifier"/></para>
     /// </summary>
     /// <param name="name">A wrapped name after it has had the opening and closing qualifiers stripped off e.g. "Fi``sh"</param>
@@ -312,7 +312,7 @@ public abstract partial class QuerySyntaxHelper(
 
     public virtual bool IsTimeout(Exception exception) =>
         /*
-        //todo doesn't work with .net standard 
+        //todo doesn't work with .net standard
         var oleE = exception as OleDbException;
 
         if (oleE != null && oleE.ErrorCode == -2147217871)

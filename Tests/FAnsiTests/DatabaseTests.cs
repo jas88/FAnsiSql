@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.IO;
@@ -18,9 +18,9 @@ namespace FAnsiTests;
 
 [SingleThreaded]
 [NonParallelizable]
-public class DatabaseTests
+public abstract class DatabaseTests
 {
-    protected readonly Dictionary<DatabaseType,string> TestConnectionStrings = [];
+    protected readonly Dictionary<DatabaseType, string> TestConnectionStrings = [];
 
     private bool _allowDatabaseCreation;
     private string _testScratchDatabase;
@@ -35,7 +35,7 @@ public class DatabaseTests
         ImplementationManager.Load<MySqlImplementation>();
         ImplementationManager.Load<PostgreSqlImplementation>();
 
-        var file = Path.Combine(TestContext.CurrentContext.TestDirectory,TestFilename);
+        var file = Path.Combine(TestContext.CurrentContext.TestDirectory, TestFilename);
 
         Assert.That(File.Exists(file), $"Could not find {TestFilename}");
 
@@ -60,7 +60,7 @@ public class DatabaseTests
         {
             var type = element.Element("DatabaseType")?.Value;
 
-            if (!Enum.TryParse(type,out DatabaseType databaseType))
+            if (!Enum.TryParse(type, out DatabaseType databaseType))
                 throw new Exception($"Could not parse DatabaseType {type}");
 
 
@@ -85,7 +85,7 @@ public class DatabaseTests
         return new DiscoveredServer(connString, type);
     }
 
-    protected DiscoveredDatabase GetTestDatabase(DatabaseType type,bool cleanDatabase = true)
+    protected DiscoveredDatabase GetTestDatabase(DatabaseType type, bool cleanDatabase = true)
     {
         var server = GetTestServer(type);
         var db = server.ExpectDatabase(_testScratchDatabase);
@@ -129,10 +129,10 @@ public class DatabaseTests
             Assert.Inconclusive("Test cannot run when AllowDatabaseCreation is false");
     }
 
-    private static bool AreBasicallyEquals(object? o,object? o2,bool handleSlashRSlashN = true)
+    private static bool AreBasicallyEquals(object? o, object? o2, bool handleSlashRSlashN = true)
     {
         //if they are legit equals
-        if (Equals(o,o2))
+        if (Equals(o, o2))
             return true;
 
         //if they are null but basically the same
@@ -144,23 +144,23 @@ public class DatabaseTests
 
         //they are not null so tostring them deals with int vs long etc that DbDataAdapters can be a bit flaky on
         if (handleSlashRSlashN)
-            return string.Equals(o?.ToString()?.Replace("\r","").Replace("\n",""),o2?.ToString()?.Replace("\r","").Replace("\n",""));
+            return string.Equals(o?.ToString()?.Replace("\r", "").Replace("\n", ""), o2?.ToString()?.Replace("\r", "").Replace("\n", ""));
 
-        return string.Equals(o?.ToString(),o2?.ToString());
+        return string.Equals(o?.ToString(), o2?.ToString());
     }
 
-    protected static void AssertAreEqual(DataTable dt1,DataTable dt2)
+    protected static void AssertAreEqual(DataTable dt1, DataTable dt2)
     {
         Assert.Multiple(() =>
         {
-            Assert.That(dt2.Columns,Has.Count.EqualTo(dt1.Columns.Count),"DataTables had a column count mismatch");
-            Assert.That(dt2.Rows,Has.Count.EqualTo(dt1.Rows.Count),"DataTables had a row count mismatch");
+            Assert.That(dt2.Columns, Has.Count.EqualTo(dt1.Columns.Count), "DataTables had a column count mismatch");
+            Assert.That(dt2.Rows, Has.Count.EqualTo(dt1.Rows.Count), "DataTables had a row count mismatch");
         });
 
         foreach (DataRow row1 in dt1.Rows)
         {
-            var match = dt2.Rows.Cast<DataRow>().Any(row2 => dt1.Columns.Cast<DataColumn>().All(c => AreBasicallyEquals(row1[c.ColumnName],row2[c.ColumnName])));
-            Assert.That(match,$"Couldn't find match for row:{string.Join(",",row1.ItemArray)}");
+            var match = dt2.Rows.Cast<DataRow>().Any(row2 => dt1.Columns.Cast<DataColumn>().All(c => AreBasicallyEquals(row1[c.ColumnName], row2[c.ColumnName])));
+            Assert.That(match, $"Couldn't find match for row:{string.Join(",", row1.ItemArray)}");
         }
 
     }

@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -261,6 +262,7 @@ namespace FAnsi.Discovery.QueryableAbstraction
             throw new NotSupportedException("Expected a property access expression.");
         }
 
+        [RequiresDynamicCode("Calls System.Linq.Expressions.Expression.Lambda(Expression, params ParameterExpression[])")]
         private static object? GetConstantValue(Expression expression)
         {
             // Direct constant

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Data;
 using System.Data.Common;
 using System.Threading;
@@ -43,24 +43,24 @@ public sealed class DatabaseOperationArgs
     /// <summary>
     /// Sets the timeout and cancellation on <paramref name="cmd"/> then runs <see cref="DbCommand.ExecuteNonQueryAsync()"/> with the
     /// <see cref="CancellationToken"/> (if any) and blocks till the call completes.
-    /// 
+    ///
     /// </summary>
     /// <param name="cmd"></param>
     /// <exception cref="OperationCanceledException"></exception>
     public int ExecuteNonQuery(DbCommand cmd)
     {
-        return Execute(cmd, ()=>cmd.ExecuteNonQueryAsync(CancellationToken));
+        return Execute(cmd, () => cmd.ExecuteNonQueryAsync(CancellationToken));
     }
     /// <summary>
     /// Sets the timeout and cancellation on <paramref name="cmd"/> then runs <see cref="DbCommand.ExecuteScalar()"/> with the
     /// <see cref="CancellationToken"/> (if any) and blocks till the call completes.
-    /// 
+    ///
     /// </summary>
     /// <param name="cmd"></param>
     /// <exception cref="OperationCanceledException"></exception>
     public object? ExecuteScalar(DbCommand cmd)
     {
-        return Execute(cmd, ()=>cmd.ExecuteScalarAsync(CancellationToken));
+        return Execute(cmd, () => cmd.ExecuteScalarAsync(CancellationToken));
     }
 
     private T Execute<T>(DbCommand cmd, Func<Task<T>> method)
@@ -73,7 +73,7 @@ public sealed class DatabaseOperationArgs
             switch (t.Status)
             {
                 case TaskStatus.Faulted:
-                    throw t.Exception?? new Exception("Task crashed without Exception!");
+                    throw t.Exception ?? new Exception("Task crashed without Exception!");
                 case TaskStatus.Canceled:
                     throw new OperationCanceledException();
                 default:
@@ -106,7 +106,7 @@ public sealed class DatabaseOperationArgs
 
         CancellationToken.ThrowIfCancellationRequested();
 
-        if(CancellationToken.CanBeCanceled)
+        if (CancellationToken.CanBeCanceled)
             dt.RowChanged += ThrowIfCancelled;
 
         da.Fill(dt);

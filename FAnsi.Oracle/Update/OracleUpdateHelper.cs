@@ -10,7 +10,7 @@ namespace FAnsi.Implementations.Oracle.Update;
 public sealed class OracleUpdateHelper : UpdateHelper
 {
     public static readonly OracleUpdateHelper Instance = new();
-    private OracleUpdateHelper() {}
+    private OracleUpdateHelper() { }
     protected override string BuildUpdateImpl(DiscoveredTable table1, DiscoveredTable table2, List<CustomLine> lines)
     {
 

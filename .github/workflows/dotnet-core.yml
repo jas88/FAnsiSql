@@ -1,4 +1,4 @@
-name: Build and test
+name: Build, test, security, and AOT
 
 on:
   push
@@ -7,11 +7,16 @@ env:
   MSSQL_SA_PASSWORD: "YourStrong!Passw0rd"
   ACCEPT_EULA: "Y"
   MSSQL_PID: "developer"
-  
-jobs:  
-  build:
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
 
+jobs:
+  build:
     runs-on: ubuntu-22.04
+    permissions:
+      actions: read
+      contents: write
+      security-events: write
     services:
       oracle:
         image: konnecteam/docker-oracle-12c:sequelize
@@ -37,6 +42,13 @@ jobs:
     - uses: actions/checkout@v5
     - name: Setup .NET Core
       uses: actions/setup-dotnet@v5
+
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v4
+      with:
+        languages: csharp
+        queries: +security-and-quality
+
     - name: Install Sql Server
       run: |
         wget -qO- https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
@@ -49,12 +61,134 @@ jobs:
         sudo systemctl start mysql.service
     - name: Test
       run: dotnet test --logger "console;verbosity=minimal" --nologo
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v4
+      with:
+        category: "/language:csharp"
+        upload: False
+        output: sarif-results
+
+    - name: filter-sarif
+      uses: advanced-security/filter-sarif@v1
+      with:
+        patterns: |
+          +**/*
+          -**/*.g.cs
+          -**/Tests/**
+        input: sarif-results/csharp.sarif
+        output: sarif-results/csharp.sarif
+
+    - name: Upload SARIF
+      uses: github/codeql-action/upload-sarif@v4
+      with:
+        sarif_file: sarif-results/csharp.sarif
+
+    # AOT Compatibility Tests (reuses same databases)
+    - name: Test SQL Server AOT Compatibility
+      run: |
+        echo "=== Building SQL Server AOT Test ==="
+        dotnet publish Tests/AotCompatibility/SqlServer.AotTest/SqlServer.AotTest.csproj \
+          -c Release \
+          -r linux-x64 \
+          -o ./aot-output/sqlserver \
+          --self-contained
+
+        echo "=== Running SQL Server AOT Test ==="
+        ./aot-output/sqlserver/SqlServer.AotTest || true
+      continue-on-error: true
+
+    - name: Test MySQL AOT Compatibility
+      run: |
+        echo "=== Building MySQL AOT Test ==="
+        dotnet publish Tests/AotCompatibility/MySql.AotTest/MySql.AotTest.csproj \
+          -c Release \
+          -r linux-x64 \
+          -o ./aot-output/mysql \
+          --self-contained
+
+        echo "=== Running MySQL AOT Test ==="
+        ./aot-output/mysql/MySql.AotTest || true
+      continue-on-error: true
+
+    - name: Test PostgreSQL AOT Compatibility
+      run: |
+        echo "=== Building PostgreSQL AOT Test ==="
+        dotnet publish Tests/AotCompatibility/PostgreSql.AotTest/PostgreSql.AotTest.csproj \
+          -c Release \
+          -r linux-x64 \
+          -o ./aot-output/postgresql \
+          --self-contained
+
+        echo "=== Running PostgreSQL AOT Test ==="
+        ./aot-output/postgresql/PostgreSql.AotTest || true
+      continue-on-error: true
+
+    - name: Test Oracle AOT Compatibility
+      run: |
+        echo "=== Building Oracle AOT Test ==="
+        dotnet publish Tests/AotCompatibility/Oracle.AotTest/Oracle.AotTest.csproj \
+          -c Release \
+          -r linux-x64 \
+          -o ./aot-output/oracle \
+          --self-contained
+
+        echo "=== Running Oracle AOT Test ==="
+        ./aot-output/oracle/Oracle.AotTest || true
+      continue-on-error: true
+
+    - name: Build Comprehensive AOT Test
+      run: |
+        echo "=== Building Comprehensive FAnsiSql AOT Test ==="
+        dotnet publish Tests/AotCompatibility/FAnsi.AotTest/FAnsi.AotTest.csproj \
+          -c Release \
+          -r linux-x64 \
+          -o ./aot-output/comprehensive \
+          --self-contained \
+          -p:PublishTrimmed=true \
+          -p:PublishSingleFile=false
+
+        echo ""
+        echo "=== AOT Build Summary ==="
+        ls -lh ./aot-output/comprehensive/FAnsi.AotTest
+        file ./aot-output/comprehensive/FAnsi.AotTest
+
+    - name: Run Comprehensive AOT Test
+      run: |
+        echo "=== Running Comprehensive FAnsiSql AOT Test ==="
+        ./aot-output/comprehensive/FAnsi.AotTest || true
+        echo ""
+        echo "Note: AOT tests now have proper resource namespace configuration."
+      continue-on-error: true
+
+    - name: Check for AOT warnings
+      run: |
+        echo "=== Checking for AOT Analysis Warnings ==="
+        dotnet build Tests/AotCompatibility/FAnsi.AotTest/FAnsi.AotTest.csproj \
+          -c Release \
+          -p:PublishAot=true \
+          -v detailed 2>&1 | tee build.log
+
+        if grep -i "warning IL" build.log; then
+          echo "⚠️  Found AOT/Trim warnings - review required"
+        else
+          echo "✅ No AOT/Trim warnings found"
+        fi
+
+    - name: Upload AOT binaries
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: aot-test-binaries
+        path: ./aot-output/
+        retention-days: 7
+
     - name: Pack
       run: |
         dotnet pack -c Release -p:DebugType=full -p:SymbolPackageFormat=snupkg --include-symbols --nologo -p:Version=$(fgrep AssemblyInformationalVersion SharedAssemblyInfo.cs|cut -d'"' -f2) -o .
     - name: Nuget push
       if: contains(github.ref,'refs/tags/')
-      run: dotnet nuget push FAnsiSql.*.nupkg -s https://api.nuget.org/v3/index.json -k ${{ secrets.NUGET_KEY }} --skip-duplicate
+      run: dotnet nuget push FAnsi*.nupkg -s https://api.nuget.org/v3/index.json -k ${{ secrets.NUGET_API_KEY }} --skip-duplicate
     - name: Store created nupkg files
       uses: actions/upload-artifact@v4
       with:

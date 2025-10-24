@@ -1,10 +1,10 @@
-﻿using System.Linq;
+using System.Linq;
 using FAnsi;
 using NUnit.Framework;
 
 namespace FAnsiTests.Table;
 
-internal sealed class TableValuedFunctionTests:DatabaseTests
+internal sealed class TableValuedFunctionTests : DatabaseTests
 {
     [TestCase("dbo")]
     [TestCase("Omg")]
@@ -17,26 +17,26 @@ internal sealed class TableValuedFunctionTests:DatabaseTests
             con.Open();
 
             //create the schema if it doesn't exist yet
-            if(schema != null)
+            if (schema != null)
                 db.Server.GetCommand($@"
 IF NOT EXISTS ( SELECT  *
                 FROM    sys.schemas
-                WHERE   name = N'{schema}' ) 
+                WHERE   name = N'{schema}' )
 EXEC('CREATE SCHEMA  {schema}')", con).ExecuteNonQuery();
 
 
             var sql = $@"CREATE FUNCTION {schema}.MyAwesomeFunction
-(	
+(
 	-- Add the parameters for the function here
 	@startNumber int ,
 	@stopNumber int,
 	@name varchar(50)
 )
 RETURNS
-@ReturnTable TABLE 
+@ReturnTable TABLE
 (
 	-- Add the column definitions for the TABLE variable here
-	Number int, 
+	Number int,
 	Name varchar(50)
 )
 AS
@@ -51,9 +51,9 @@ BEGIN
 		set @i = @i + 1;
 		end
 
-	RETURN 
+	RETURN
 END";
-            db.Server.GetCommand(sql,con).ExecuteNonQuery();
+            db.Server.GetCommand(sql, con).ExecuteNonQuery();
         }
 
         var tvf = db.DiscoverTableValuedFunctions().Single();

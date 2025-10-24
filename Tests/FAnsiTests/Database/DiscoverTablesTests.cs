@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using FAnsi;
 using FAnsi.Discovery;
@@ -8,9 +8,9 @@ using TypeGuesser;
 
 namespace FAnsiTests.Database;
 
-internal sealed class DiscoverTablesTests:DatabaseTests
+internal sealed class DiscoverTablesTests : DatabaseTests
 {
-    [TestCaseSource(typeof(All),nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void Test_DiscoverTables_Normal(DatabaseType dbType)
     {
         var db = GetTestDatabase(dbType);
@@ -41,7 +41,7 @@ internal sealed class DiscoverTablesTests:DatabaseTests
     ///
     /// Correct behaviour is for DiscoverTables to not return any tables that have invalid names
     /// </summary>
-    [TestCaseSource(typeof(All),nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void Test_DiscoverTables_WithInvalidNames_Skipped(DatabaseType dbType)
     {
         var db = GetTestDatabase(dbType);
@@ -66,16 +66,16 @@ internal sealed class DiscoverTablesTests:DatabaseTests
         var tbls = db.DiscoverTables(false);
 
         Assert.That(tbls, Has.Length.EqualTo(1));
-        Assert.That(tbls.Count(static t => t.GetRuntimeName().Equals("FF",StringComparison.CurrentCultureIgnoreCase)), Is.EqualTo(1));
+        Assert.That(tbls.Count(static t => t.GetRuntimeName().Equals("FF", StringComparison.CurrentCultureIgnoreCase)), Is.EqualTo(1));
 
-        DropBadTable(db,false);
+        DropBadTable(db, false);
     }
 
     /// <summary>
     /// As above test <see cref="Test_DiscoverTables_WithInvalidNames_Skipped"/> but creates a view with a bad name instead of a table
     /// </summary>
     /// <param name="dbType"></param>
-    [TestCaseSource(typeof(All),nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void Test_DiscoverViews_WithInvalidNames_Skipped(DatabaseType dbType)
     {
         var db = GetTestDatabase(dbType);
@@ -109,14 +109,14 @@ internal sealed class DiscoverTablesTests:DatabaseTests
             Assert.That(tbls.Count(static t => t.GetRuntimeName().Equals("FF", StringComparison.CurrentCultureIgnoreCase)), Is.EqualTo(1));
         });
 
-        DropBadView(db,false);
+        DropBadView(db, false);
     }
 
-    private static void DropBadTable(DiscoveredDatabase db,bool ignoreFailure)
+    private static void DropBadTable(DiscoveredDatabase db, bool ignoreFailure)
     {
         using var con = db.Server.GetConnection();
         con.Open();
-        var cmd = db.Server.GetCommand($"DROP TABLE {GetBadTableName(db)}",con);
+        var cmd = db.Server.GetCommand($"DROP TABLE {GetBadTableName(db)}", con);
         try
         {
             cmd.ExecuteNonQuery();
@@ -143,11 +143,11 @@ internal sealed class DiscoverTablesTests:DatabaseTests
     private static void CreateBadTable(DiscoveredDatabase db)
     {
         //drop it if it exists
-        DropBadTable(db,true);
+        DropBadTable(db, true);
 
         using var con = db.Server.GetConnection();
         con.Open();
-        var cmd = db.Server.GetCommand($"CREATE TABLE {GetBadTableName(db)} (A int not null)",con);
+        var cmd = db.Server.GetCommand($"CREATE TABLE {GetBadTableName(db)} (A int not null)", con);
         cmd.ExecuteNonQuery();
     }
 
@@ -155,10 +155,10 @@ internal sealed class DiscoverTablesTests:DatabaseTests
     private static void DropBadView(DiscoveredDatabase db, bool ignoreFailure)
     {
 
-        using(var con = db.Server.GetConnection())
+        using (var con = db.Server.GetConnection())
         {
             con.Open();
-            var cmd = db.Server.GetCommand($"DROP VIEW {GetBadTableName(db)}",con);
+            var cmd = db.Server.GetCommand($"DROP VIEW {GetBadTableName(db)}", con);
             try
             {
                 cmd.ExecuteNonQuery();
@@ -174,7 +174,7 @@ internal sealed class DiscoverTablesTests:DatabaseTests
 
         //the table that the view reads from
         var abc = db.ExpectTable("ABC");
-        if(abc.Exists())
+        if (abc.Exists())
             abc.Drop();
 
     }
@@ -183,16 +183,16 @@ internal sealed class DiscoverTablesTests:DatabaseTests
     private static void CreateBadView(DiscoveredDatabase db)
     {
         //drop it if it exists
-        DropBadView(db,true);
+        DropBadView(db, true);
 
-        db.CreateTable("ABC",[new DatabaseColumnRequest("A",new DatabaseTypeRequest(typeof(int)))]);
+        db.CreateTable("ABC", [new DatabaseColumnRequest("A", new DatabaseTypeRequest(typeof(int)))]);
 
         using var con = db.Server.GetConnection();
         con.Open();
 
         var viewname = db.Server.GetQuerySyntaxHelper().EnsureWrapped("ABC");
 
-        var cmd = db.Server.GetCommand($"CREATE VIEW {GetBadTableName(db)} as select * from {viewname}",con);
+        var cmd = db.Server.GetCommand($"CREATE VIEW {GetBadTableName(db)} as select * from {viewname}", con);
         cmd.ExecuteNonQuery();
     }
 }

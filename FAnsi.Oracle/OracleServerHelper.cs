@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using FAnsi.Discovery;
@@ -10,7 +10,7 @@ namespace FAnsi.Implementations.Oracle;
 
 public sealed class OracleServerHelper : DiscoveredServerHelper
 {
-    public static readonly OracleServerHelper Instance=new();
+    public static readonly OracleServerHelper Instance = new();
     private OracleServerHelper() : base(DatabaseType.Oracle)
     {
     }
@@ -19,16 +19,16 @@ public sealed class OracleServerHelper : DiscoveredServerHelper
     protected override string DatabaseKeyName => "USER ID"; //ok is this really what oracle does?
 
 
-    protected override string  ConnectionTimeoutKeyName => "Connection Timeout";
+    protected override string ConnectionTimeoutKeyName => "Connection Timeout";
 
     #region Up Typing
-    public override DbCommand GetCommand(string s, DbConnection con, DbTransaction? transaction = null) => new OracleCommand(s, con as OracleConnection) {Transaction = transaction as OracleTransaction};
+    public override DbCommand GetCommand(string s, DbConnection con, DbTransaction? transaction = null) => new OracleCommand(s, con as OracleConnection) { Transaction = transaction as OracleTransaction };
 
-    public override DbDataAdapter GetDataAdapter(DbCommand cmd) => new OracleDataAdapter((OracleCommand) cmd);
+    public override DbDataAdapter GetDataAdapter(DbCommand cmd) => new OracleDataAdapter((OracleCommand)cmd);
 
-    public override DbCommandBuilder GetCommandBuilder(DbCommand cmd) => new OracleCommandBuilder((OracleDataAdapter) GetDataAdapter(cmd));
+    public override DbCommandBuilder GetCommandBuilder(DbCommand cmd) => new OracleCommandBuilder((OracleDataAdapter)GetDataAdapter(cmd));
 
-    public override DbParameter GetParameter(string parameterName) => new OracleParameter(parameterName,null);
+    public override DbParameter GetParameter(string parameterName) => new OracleParameter(parameterName, null);
 
     public override DbConnection GetConnection(DbConnectionStringBuilder builder) => new OracleConnection(builder.ConnectionString);
 
@@ -72,7 +72,7 @@ public sealed class OracleServerHelper : DiscoveredServerHelper
         con.UseHourOffsetForUnsupportedTimezone = true;
         con.Open();
         //create a new user with a random password!!! - go oracle this makes perfect sense database=user!
-        using(var cmd = new OracleCommand(
+        using (var cmd = new OracleCommand(
                   $"CREATE USER \"{newDatabaseName.GetRuntimeName()}\" IDENTIFIED BY pwd{Guid.NewGuid().ToString().Replace("-", "")[..27]}" //oracle only allows 30 character passwords
                   , con))
         {
@@ -81,7 +81,7 @@ public sealed class OracleServerHelper : DiscoveredServerHelper
         }
 
 
-        using(var cmd = new OracleCommand(
+        using (var cmd = new OracleCommand(
                   $"ALTER USER \"{newDatabaseName.GetRuntimeName()}\" quota unlimited on system", con))
         {
             cmd.CommandTimeout = CreateDatabaseTimeoutInSeconds;
@@ -89,7 +89,7 @@ public sealed class OracleServerHelper : DiscoveredServerHelper
         }
 
 
-        using(var cmd = new OracleCommand(
+        using (var cmd = new OracleCommand(
                   $"ALTER USER \"{newDatabaseName.GetRuntimeName()}\" quota unlimited on users", con))
         {
             cmd.CommandTimeout = CreateDatabaseTimeoutInSeconds;
@@ -99,20 +99,20 @@ public sealed class OracleServerHelper : DiscoveredServerHelper
 
     public override Dictionary<string, string> DescribeServer(DbConnectionStringBuilder builder) => throw new NotImplementedException();
 
-    public override string GetExplicitUsernameIfAny(DbConnectionStringBuilder builder) => ((OracleConnectionStringBuilder) builder).UserID;
+    public override string GetExplicitUsernameIfAny(DbConnectionStringBuilder builder) => ((OracleConnectionStringBuilder)builder).UserID;
 
     public override string GetExplicitPasswordIfAny(DbConnectionStringBuilder builder) => ((OracleConnectionStringBuilder)builder).Password;
 
     public override Version? GetVersion(DiscoveredServer server)
     {
         using var tcon = server.GetConnection();
-        if (tcon is not OracleConnection con) throw new ArgumentException("Oracle helper called on non-Oracle server",nameof(server));
+        if (tcon is not OracleConnection con) throw new ArgumentException("Oracle helper called on non-Oracle server", nameof(server));
 
         con.UseHourOffsetForUnsupportedTimezone = true;
         con.Open();
-        using var cmd = server.GetCommand("SELECT * FROM v$version WHERE BANNER like 'Oracle Database%'",con);
+        using var cmd = server.GetCommand("SELECT * FROM v$version WHERE BANNER like 'Oracle Database%'", con);
         using var r = cmd.ExecuteReader();
-        return !r.Read() || r[0] == DBNull.Value ? null: CreateVersionFromString((string)r[0]);
+        return !r.Read() || r[0] == DBNull.Value ? null : CreateVersionFromString((string)r[0]);
     }
 
     public override IEnumerable<string> ListDatabases(DbConnectionStringBuilder builder)
@@ -130,5 +130,44 @@ public sealed class OracleServerHelper : DiscoveredServerHelper
         using var r = cmd.ExecuteReader();
         while (r.Read())
             yield return (string)r["username"];
+    }
+
+    public override bool IsConnectionAlive(DbConnection connection)
+    {
+        try
+        {
+            // Check for dangling transactions (fixes #30)
+            if (HasDanglingTransaction(connection))
+                return false;
+
+            // Try a simple command to verify connection is usable
+            using var cmd = connection.CreateCommand();
+            cmd.CommandText = "SELECT 1 FROM DUAL";  // Oracle syntax
+            cmd.CommandTimeout = 1;
+            cmd.ExecuteScalar();
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    public override bool HasDanglingTransaction(DbConnection connection)
+    {
+        // Oracle doesn't have an easy way to detect uncommitted transactions at the session level
+        // OracleConnection does track transactions internally but property isn't public
+        // For now, rely on ADO.NET's internal tracking
+        return false;
+    }
+
+    public override bool DatabaseExists(DiscoveredDatabase database)
+    {
+        // In Oracle, databases are schemas/users - can query ALL_USERS from any connection
+        var oracleServer = new DiscoveredServer(database.Server.Builder.ConnectionString, DatabaseType.Oracle);
+        using var con = oracleServer.GetManagedConnection();
+        using var cmd = new OracleCommand("SELECT CASE WHEN EXISTS(SELECT 1 FROM ALL_USERS WHERE USERNAME = UPPER(:name)) THEN 1 ELSE 0 END FROM DUAL", (OracleConnection)con.Connection);
+        cmd.Parameters.Add(new OracleParameter("name", database.GetRuntimeName()));
+        return Convert.ToInt32(cmd.ExecuteScalar()) == 1;
     }
 }

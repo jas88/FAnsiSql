@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Text.RegularExpressions;
 using FAnsi.Discovery.TypeTranslation;
 using NpgsqlTypes;
@@ -34,10 +34,10 @@ public sealed partial class PostgreSqlTypeTranslater : TypeTranslater
         if (t == typeof(short) || t == typeof(short) || t == typeof(ushort) || t == typeof(short?) || t == typeof(ushort?))
             return NpgsqlDbType.Smallint;
 
-        if (t == typeof(int) || t == typeof(int)  || t == typeof(uint) || t == typeof(int?) || t == typeof(uint?))
+        if (t == typeof(int) || t == typeof(int) || t == typeof(uint) || t == typeof(int?) || t == typeof(uint?))
             return NpgsqlDbType.Integer;
 
-        if (t == typeof (long) || t == typeof(ulong) || t == typeof(long?) || t == typeof(ulong?))
+        if (t == typeof(long) || t == typeof(ulong) || t == typeof(long?) || t == typeof(ulong?))
             return NpgsqlDbType.Bigint;
 
         if (t == typeof(float) || t == typeof(float?) || t == typeof(double) ||

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Data.Common;
@@ -13,7 +13,7 @@ namespace FAnsi.Implementation;
 /// </summary>
 public sealed class ImplementationManager
 {
-    private static readonly ImplementationManager Instance=new();
+    private static readonly ImplementationManager Instance = new();
 
     /// <summary>
     /// Collection of all the currently loaded API <see cref="IImplementation"/>.  Normally you only want 1 implementation per DBMS.
@@ -29,7 +29,7 @@ public sealed class ImplementationManager
     /// loads all implementations in the assembly hosting the <typeparamref name="T"/>
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public static void Load<T>() where T:IImplementation,new()
+    public static void Load<T>() where T : IImplementation, new()
     {
         var loading = new T();
         if (!Instance._implementations.Contains(loading))
@@ -62,7 +62,7 @@ public sealed class ImplementationManager
                     .ImplementationManager_GetImplementation_No_implementation_found_for_ADO_Net_object_of_Type__0_,
                 connection.GetType()));
     }
-    private static IImplementation GetImplementation(Func<IImplementation,bool> condition, string errorIfNotFound) => Instance?._implementations.FirstOrDefault(condition)??throw new ImplementationNotFoundException(errorIfNotFound);
+    private static IImplementation GetImplementation(Func<IImplementation, bool> condition, string errorIfNotFound) => Instance?._implementations.FirstOrDefault(condition) ?? throw new ImplementationNotFoundException(errorIfNotFound);
 
     /// <summary>
     /// Returns all currently loaded implementations or null if no implementations have been loaded

@@ -7,7 +7,7 @@ public delegate string UpdateStatementSqlGetter(string table2Alias);
 /// <summary>
 /// Cross Database Type class for turning a collection of arbitrary sql lines (CustomLine) into an UPDATE query where no suitable ANSI solution exists.  For example
 /// updating a table using a join to another table where the relationship is n..n.
-/// 
+///
 /// <para>Look at UpdateHelper.permissableLocations to determine which CustomLines you are allowed to pass in.</para>
 /// </summary>
 public interface IUpdateHelper
@@ -23,6 +23,6 @@ public interface IUpdateHelper
     ///  table1/table2.  if you have multiple WHERE lines then they will be ANDed.  To avoid this you can concatenate your CustomLines together yourself and serve only one to this
     /// method(e.g. to use OR) </param>
     /// <returns></returns>
-    string BuildUpdate(DiscoveredTable table1, DiscoveredTable table2,List<CustomLine> lines);
+    string BuildUpdate(DiscoveredTable table1, DiscoveredTable table2, List<CustomLine> lines);
 
 }

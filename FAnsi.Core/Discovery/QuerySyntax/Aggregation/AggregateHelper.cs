@@ -1,17 +1,17 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace FAnsi.Discovery.QuerySyntax.Aggregation;
 
-public abstract class AggregateHelper:IAggregateHelper
+public abstract class AggregateHelper : IAggregateHelper
 {
     public string BuildAggregate(List<CustomLine> queryLines, IQueryAxis? axisIfAny)
     {
         var lines = new AggregateCustomLineCollection(queryLines, axisIfAny, GetQuerySyntaxHelper());
 
         //no axis no pivot
-        if (lines.AxisSelect == null  && lines.PivotSelect == null)
+        if (lines.AxisSelect == null && lines.PivotSelect == null)
             return BuildBasicAggregate(lines);
 
         //axis (no pivot)
@@ -20,7 +20,7 @@ public abstract class AggregateHelper:IAggregateHelper
 
         //pivot (no axis)
         if (lines.AxisSelect == null)
-            return BuildPivotOnlyAggregate(lines,GetPivotOnlyNonPivotColumn(lines));
+            return BuildPivotOnlyAggregate(lines, GetPivotOnlyNonPivotColumn(lines));
 
         //pivot and axis
         return BuildPivotAndAxisAggregate(lines);
@@ -29,7 +29,7 @@ public abstract class AggregateHelper:IAggregateHelper
     private static CustomLine GetPivotOnlyNonPivotColumn(AggregateCustomLineCollection query)
     {
         var nonPivotColumn = query.Lines.Where(static l => l.LocationToInsert == QueryComponent.QueryTimeColumn && l.Role == CustomLineRole.None).ToArray();
-        if(nonPivotColumn.Length != 1)
+        if (nonPivotColumn.Length != 1)
             throw new Exception("Pivot is only valid when there are 3 SELECT columns, an aggregate (e.g. count(*)), a pivot and a final column");
 
         return nonPivotColumn[0];
@@ -48,7 +48,7 @@ public abstract class AggregateHelper:IAggregateHelper
     /// <returns></returns>
     protected abstract string BuildAxisAggregate(AggregateCustomLineCollection query);
 
-    protected abstract string BuildPivotOnlyAggregate(AggregateCustomLineCollection query,CustomLine nonPivotColumn);
+    protected abstract string BuildPivotOnlyAggregate(AggregateCustomLineCollection query, CustomLine nonPivotColumn);
 
     protected abstract string BuildPivotAndAxisAggregate(AggregateCustomLineCollection query);
 
@@ -62,7 +62,7 @@ public abstract class AggregateHelper:IAggregateHelper
     /// <param name="axisColumnAlias"></param>
     protected void WrapAxisColumnWithDatePartFunction(AggregateCustomLineCollection query, string axisColumnAlias)
     {
-        if(string.IsNullOrWhiteSpace(axisColumnAlias))
+        if (string.IsNullOrWhiteSpace(axisColumnAlias))
             throw new ArgumentNullException(nameof(axisColumnAlias));
 
         var axisGroupBy = query.AxisGroupBy;

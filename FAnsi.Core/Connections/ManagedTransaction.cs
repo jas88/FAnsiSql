@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Data.Common;
 using System.Diagnostics;
 
@@ -26,7 +26,7 @@ public sealed class ManagedTransaction : IManagedTransaction
     /// </summary>
     public void AbandonAndCloseConnection()
     {
-        if(_closed)
+        if (_closed)
             return;
 
         _closed = true;
@@ -51,7 +51,7 @@ public sealed class ManagedTransaction : IManagedTransaction
     /// </summary>
     public void CommitAndCloseConnection()
     {
-        if(_closed)
+        if (_closed)
             return;
 
         _closed = true;

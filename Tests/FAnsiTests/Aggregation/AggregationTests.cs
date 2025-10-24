@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using FAnsi;
@@ -8,7 +8,7 @@ using System.Linq;
 
 namespace FAnsiTests.Aggregation;
 
-internal class AggregationTests:DatabaseTests
+internal abstract class AggregationTests : DatabaseTests
 {
     private readonly Dictionary<DatabaseType, DiscoveredTable> _easyTables = [];
     private readonly Dictionary<DatabaseType, DiscoveredTable> _hardTables = [];

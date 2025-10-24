@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using FAnsi.Discovery;
 using FAnsi.Naming;
 
@@ -7,7 +7,7 @@ namespace FAnsi.Implementations.PostgreSql;
 public sealed class PostgreSqlColumnHelper : IDiscoveredColumnHelper
 {
     public static readonly PostgreSqlColumnHelper Instance = new();
-    private PostgreSqlColumnHelper(){}
+    private PostgreSqlColumnHelper() { }
     public string GetTopXSqlForColumn(IHasRuntimeName database, IHasFullyQualifiedNameToo table,
         IHasRuntimeName column, int topX,
         bool discardNulls)

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using FAnsi.Discovery.QuerySyntax;
 using FAnsi.Discovery.QuerySyntax.Aggregation;
@@ -7,8 +7,8 @@ namespace FAnsi.Implementations.Oracle.Aggregation;
 
 public sealed class OracleAggregateHelper : AggregateHelper
 {
-    public static readonly OracleAggregateHelper Instance=new();
-    private OracleAggregateHelper() {}
+    public static readonly OracleAggregateHelper Instance = new();
+    private OracleAggregateHelper() { }
     protected override IQuerySyntaxHelper GetQuerySyntaxHelper() => OracleQuerySyntaxHelper.Instance;
 
     public override string GetDatePartOfColumn(AxisIncrement increment, string columnSql) =>
@@ -93,10 +93,10 @@ select
 to_char(dt ,'YYYY') dt,
 count(*) NumRecords
 from calendar
-join 
-"TEST"."HOSPITALADMISSIONS" on 
-to_char(dt ,'YYYY') = to_char("TEST"."HOSPITALADMISSIONS"."ADMISSION_DATE" ,'YYYY') 
-group by 
+join
+"TEST"."HOSPITALADMISSIONS" on
+to_char(dt ,'YYYY') = to_char("TEST"."HOSPITALADMISSIONS"."ADMISSION_DATE" ,'YYYY')
+group by
 dt
 order by dt*/
 
@@ -139,7 +139,112 @@ order by dt*/
 
     }
 
-    protected override string BuildPivotOnlyAggregate(AggregateCustomLineCollection query, CustomLine nonPivotColumn) => throw new NotImplementedException();
+    protected override string BuildPivotOnlyAggregate(AggregateCustomLineCollection query, CustomLine nonPivotColumn)
+    {
+        var pivotSqlWithoutAlias = query.PivotSelect.GetTextWithoutAlias(query.SyntaxHelper);
+        var countSqlWithoutAlias = query.CountSelect.GetTextWithoutAlias(query.SyntaxHelper);
 
-    protected override string BuildPivotAndAxisAggregate(AggregateCustomLineCollection query) => throw new NotImplementedException();
+        query.SyntaxHelper.SplitLineIntoOuterMostMethodAndContents(countSqlWithoutAlias, out var aggregateMethod,
+            out var aggregateParameter);
+
+        if (aggregateParameter.Equals("*"))
+            aggregateParameter = "1";
+
+        var pivotAlias = query.PivotSelect.GetAliasFromText(query.SyntaxHelper);
+        if (string.IsNullOrWhiteSpace(pivotAlias))
+            pivotAlias = query.SyntaxHelper.GetRuntimeName(pivotSqlWithoutAlias);
+
+        var nonPivotColumnAlias = nonPivotColumn.GetAliasFromText(query.SyntaxHelper);
+        if (string.IsNullOrWhiteSpace(nonPivotColumnAlias))
+            nonPivotColumnAlias = query.SyntaxHelper.GetRuntimeName(nonPivotColumn.GetTextWithoutAlias(query.SyntaxHelper));
+
+        var havingSqlIfAny = string.Join(Environment.NewLine,
+            query.Lines.Where(static l => l.LocationToInsert == QueryComponent.Having).Select(static l => l.Text));
+
+        // Oracle has native PIVOT syntax but requires knowing the pivot values in advance
+        // We'll use a two-step approach: first get distinct values, then use dynamic SQL or CASE statements
+        // For now, using CASE statements similar to MySQL approach
+        return string.Format("""
+
+                             {0}
+                             /* Oracle pivot implementation using subquery */
+                             with source_data as (
+                                 {1}
+                             ),
+                             pivot_values as (
+                                 select distinct {2} as piv
+                                 from source_data
+                                 where {2} is not null
+                                 order by {2}
+                             )
+                             select
+                                 s.{3},
+                                 {4}
+                             from source_data s
+                             cross join pivot_values pv
+                             group by s.{3}
+                             order by s.{3}
+                             {5}
+
+                             """,
+            string.Join(Environment.NewLine, query.Lines.Where(static l => l.LocationToInsert < QueryComponent.SELECT)),
+            string.Join(Environment.NewLine,
+                query.Lines.Where(static c => c.LocationToInsert is >= QueryComponent.SELECT and < QueryComponent.GroupBy)),
+            pivotSqlWithoutAlias,
+            nonPivotColumnAlias,
+            $"{aggregateMethod}(case when {pivotSqlWithoutAlias} = pv.piv then {aggregateParameter} else null end)",
+            havingSqlIfAny
+        );
+    }
+
+    protected override string BuildPivotAndAxisAggregate(AggregateCustomLineCollection query)
+    {
+        var pivotSqlWithoutAlias = query.PivotSelect.GetTextWithoutAlias(query.SyntaxHelper);
+        var countSqlWithoutAlias = query.CountSelect.GetTextWithoutAlias(query.SyntaxHelper);
+        var axisColumnAlias = query.AxisSelect.GetAliasFromText(query.SyntaxHelper) ?? "joinDt";
+
+        query.SyntaxHelper.SplitLineIntoOuterMostMethodAndContents(countSqlWithoutAlias, out var aggregateMethod,
+            out var aggregateParameter);
+
+        if (aggregateParameter.Equals("*"))
+            aggregateParameter = "1";
+
+        WrapAxisColumnWithDatePartFunction(query, axisColumnAlias);
+
+        var calendar = GetDateAxisTableDeclaration(query.Axis);
+
+        // Oracle pivot with date axis
+        return string.Format("""
+
+                             {0}
+                             {1},
+                             source_data as (
+                                 {2}
+                             ),
+                             pivot_values as (
+                                 select distinct {3} as piv
+                                 from source_data
+                                 where {3} is not null
+                                 order by {3}
+                             )
+                             select
+                                 {4} as "joinDt",
+                                 {5}
+                             from calendar
+                             cross join pivot_values
+                             left join source_data ds on ds.{6} = {4}
+                             group by calendar.dt, pivot_values.piv
+                             order by calendar.dt
+
+                             """,
+            string.Join(Environment.NewLine, query.Lines.Where(static c => c.LocationToInsert < QueryComponent.SELECT)),
+            calendar,
+            string.Join(Environment.NewLine,
+                query.Lines.Where(static c => c.LocationToInsert is >= QueryComponent.SELECT and <= QueryComponent.Having)),
+            pivotSqlWithoutAlias,
+            GetDatePartOfColumn(query.Axis.AxisIncrement, "calendar.dt"),
+            $"{aggregateMethod}(case when {pivotSqlWithoutAlias} = pivot_values.piv then {aggregateParameter} else null end)",
+            axisColumnAlias
+        );
+    }
 }

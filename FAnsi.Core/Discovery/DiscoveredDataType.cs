@@ -50,7 +50,7 @@ public sealed class DiscoveredDataType
 
     /// <summary>
     /// <para>Returns the Scale/Precision of the data type.  Only applies to decimal(x,y) types not basic types e.g. int.</para>
-    /// 
+    ///
     /// <para>Returns null if the datatype is not floating point</para>
     /// </summary>
     /// <returns></returns>
@@ -71,7 +71,7 @@ public sealed class DiscoveredDataType
 
     /// <summary>
     /// <para>Creates and runs an ALTER TABLE statement which will increase the size of a char column to support longer string values than it currently does.</para>
-    /// 
+    ///
     /// <para>Throws <see cref="InvalidResizeException"/> if the column is not a char type or the <paramref name="newSize"/> is smaller than the current column size</para>
     /// </summary>
     /// <param name="newSize"></param>
@@ -81,11 +81,11 @@ public sealed class DiscoveredDataType
     public void Resize(int newSize, IManagedTransaction? managedTransaction = null)
     {
         var toReplace = GetLengthIfString();
-            
-        if(newSize == toReplace)
+
+        if (newSize == toReplace)
             return;
 
-        if(newSize < toReplace)
+        if (newSize < toReplace)
             throw new InvalidResizeException(string.Format(FAnsiStrings.DiscoveredDataType_Resize_CannotResizeSmaller, SQLType, newSize));
 
         var newType = SQLType.Replace(toReplace.ToString(), newSize.ToString());
@@ -96,7 +96,7 @@ public sealed class DiscoveredDataType
     /// <summary>
     /// <para>Creates and runs an ALTER TABLE statement which will increase the size of a decimal column to support larger Precision/Scale values than it currently does.
     /// If you want decimal(4,2) then pass <paramref name="numberOfDigitsBeforeDecimalPoint"/>=2 and <paramref name="numberOfDigitsAfterDecimalPoint"/>=2</para>
-    /// 
+    ///
     /// <para>Throws <see cref="InvalidResizeException"/> if the column is not a decimal type or the new size is smaller than the current column size</para>
     /// </summary>
     /// <param name="numberOfDigitsBeforeDecimalPoint">The number of decimal places before the . you want represented e.g. for decimal(5,3) specify 2</param>
@@ -114,7 +114,7 @@ public sealed class DiscoveredDataType
         if (toReplace.NumbersBeforeDecimalPlace > numberOfDigitsBeforeDecimalPoint)
             throw new InvalidResizeException(string.Format(FAnsiStrings.DiscoveredDataType_Resize_Cannot_shrink_column__number_of_digits_before_the_decimal_point_is_currently__0__and_you_asked_to_set_it_to__1___Current_SQLType_is__2__, toReplace.NumbersBeforeDecimalPlace, numberOfDigitsBeforeDecimalPoint, SQLType));
 
-        if (toReplace.NumbersAfterDecimalPlace> numberOfDigitsAfterDecimalPoint)
+        if (toReplace.NumbersAfterDecimalPlace > numberOfDigitsAfterDecimalPoint)
             throw new InvalidResizeException(string.Format(FAnsiStrings.DiscoveredDataType_Resize_Cannot_shrink_column__number_of_digits_after_the_decimal_point_is_currently__0__and_you_asked_to_set_it_to__1___Current_SQLType_is__2__, toReplace.NumbersAfterDecimalPlace, numberOfDigitsAfterDecimalPoint, SQLType));
 
         var newDataType = _column?.Table.GetQuerySyntaxHelper()
@@ -127,16 +127,16 @@ public sealed class DiscoveredDataType
 
     /// <summary>
     /// <para>Creates and runs an ALTER TABLE statement to change the data type to the <paramref name="newType"/></para>
-    /// 
+    ///
     /// <para>Consider using <see cref="Resize(int,FAnsi.Connections.IManagedTransaction)"/> instead</para>
     /// </summary>
     /// <param name="newType">The data type you want to change to e.g. "varchar(max)"</param>
     /// <param name="managedTransaction"></param>
     /// <param name="alterTimeoutInSeconds">The time to wait before giving up on the command (See <see cref="DbCommand.CommandTimeout"/></param>
     /// <exception cref="AlterFailedException"></exception>
-    public void AlterTypeTo(string newType, IManagedTransaction? managedTransaction = null,int alterTimeoutInSeconds = 500)
+    public void AlterTypeTo(string newType, IManagedTransaction? managedTransaction = null, int alterTimeoutInSeconds = 500)
     {
-        if(_column == null)
+        if (_column == null)
             throw new NotSupportedException(FAnsiStrings.DiscoveredDataType_AlterTypeTo_Cannot_resize_DataType_because_it_does_not_have_a_reference_to_a_Column_to_which_it_belongs);
 
         var server = _column.Table.Database.Server;
@@ -155,7 +155,7 @@ public sealed class DiscoveredDataType
             }
         }
 
-        SQLType = newType; 
+        SQLType = newType;
     }
 
     /// <summary>

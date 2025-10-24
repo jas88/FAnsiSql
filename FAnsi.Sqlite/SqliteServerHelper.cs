@@ -32,17 +32,17 @@ public sealed class SqliteServerHelper : DiscoveredServerHelper
 
     public override DbConnection GetConnection(DbConnectionStringBuilder builder) => new SqliteConnection(builder.ConnectionString);
 
-    protected override DbConnectionStringBuilder GetConnectionStringBuilderImpl(string? connectionString) => 
+    protected override DbConnectionStringBuilder GetConnectionStringBuilderImpl(string? connectionString) =>
         connectionString != null ? new SqliteConnectionStringBuilder(connectionString) : new SqliteConnectionStringBuilder();
 
     protected override DbConnectionStringBuilder GetConnectionStringBuilderImpl(string server, string? database, string username, string password)
     {
         var builder = new SqliteConnectionStringBuilder();
-        
+
         // For SQLite, server and database are the same (file path)
         var dataSource = database ?? server;
         builder.DataSource = dataSource;
-        
+
         // SQLite doesn't use username/password authentication, but we accept them
         return builder;
     }
@@ -74,10 +74,16 @@ public sealed class SqliteServerHelper : DiscoveredServerHelper
         return ListDatabases(builder);
     }
 
+    public override bool DatabaseExists(DiscoveredDatabase database)
+    {
+        var filePath = database.GetRuntimeName();
+        return !string.IsNullOrEmpty(filePath) && System.IO.File.Exists(filePath);
+    }
+
     public override void CreateDatabase(DbConnectionStringBuilder builder, IHasRuntimeName newDatabaseName)
     {
         var filePath = newDatabaseName.GetRuntimeName();
-        
+
         // Ensure directory exists
         var directory = System.IO.Path.GetDirectoryName(filePath);
         if (!string.IsNullOrEmpty(directory) && !System.IO.Directory.Exists(directory))
@@ -95,7 +101,7 @@ public sealed class SqliteServerHelper : DiscoveredServerHelper
     public override Dictionary<string, string> DescribeServer(DbConnectionStringBuilder builder)
     {
         var toReturn = new Dictionary<string, string>();
-        
+
         var filePath = builder.TryGetValue("Data Source", out var dataSource) ? dataSource?.ToString() : null;
         if (!string.IsNullOrEmpty(filePath) && System.IO.File.Exists(filePath))
         {
@@ -105,12 +111,12 @@ public sealed class SqliteServerHelper : DiscoveredServerHelper
             toReturn.Add("Created", fileInfo.CreationTime.ToString());
             toReturn.Add("Modified", fileInfo.LastWriteTime.ToString());
         }
-        
+
         try
         {
             using var connection = GetConnection(builder);
             connection.Open();
-            
+
             using var cmd = GetCommand("SELECT sqlite_version()", connection);
             var version = cmd.ExecuteScalar()?.ToString();
             if (!string.IsNullOrEmpty(version))
@@ -122,7 +128,7 @@ public sealed class SqliteServerHelper : DiscoveredServerHelper
         {
             toReturn.Add("Connection Error", ex.Message);
         }
-        
+
         return toReturn;
     }
 
@@ -144,10 +150,10 @@ public sealed class SqliteServerHelper : DiscoveredServerHelper
         {
             using var connection = server.GetConnection();
             connection.Open();
-            
+
             using var cmd = GetCommand("SELECT sqlite_version()", connection);
             var versionString = cmd.ExecuteScalar()?.ToString();
-            
+
             return CreateVersionFromString(versionString ?? "");
         }
         catch

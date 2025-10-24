@@ -5,6 +5,51 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.1] - 2025-10-22
+
+### Fixed
+- Oracle: Added NOCACHE to IDENTITY columns to fix sequence allocation issues when mixing array-bound bulk inserts with regular inserts
+- Connection pooling: Detect and reject pooled connections with dangling transactions (#30)
+  - Fixes "ExecuteReader requires the command to have a transaction" errors when connections with uncommitted transactions are reused
+  - Added database-specific transaction detection (SQL Server, MySQL, PostgreSQL)
+  - Oracle connections now use ADO.NET's native pooling instead of thread-local pooling (no SQL-level transaction detection available)
+  - Added developer warning when disposing pooled connections with dangling transactions
+
+## [3.3.0] - 2025-10-21
+
+### Breaking Changes
+- **Package Rename**: Packages no longer use the `HIC.` prefix
+  - Old: `HIC.FAnsiSql` → New: `FAnsiSql.Legacy` (transitional meta-package, see below)
+  - Package IDs changed from `HIC.FAnsi.*` to `FAnsiSql.*` for modular packages
+  - Assembly and product names updated to remove `HIC.` prefix
+- **Repository Move**: Project moved from `HicServices/FAnsiSql` to `jas88/FAnsiSql`
+
+### Added
+- Thread-local connection pooling for `DiscoveredServer.GetManagedConnection()`
+  - Eliminates ephemeral connection churn by maintaining one long-lived connection per thread per server
+  - `DiscoveredServer.ClearCurrentThreadConnectionPool()` - Clear connections for current thread
+  - `DiscoveredServer.ClearAllConnectionPools()` - Clear all pooled connections across all threads
+- Pre-commit hooks and git configuration for improved development workflow
+- Modernized aggregate helpers with improved pivot support
+
+### Fixed
+- MySQL aggregation issues with SET SESSION conflicts and pivot ordering (#23)
+
+### Infrastructure
+- Migrated to modular package structure with separate packages per DBMS (FAnsiSql.Core, FAnsiSql.MySql, FAnsiSql.MicrosoftSql, FAnsiSql.Oracle, FAnsiSql.PostgreSql)
+- Added transitional meta-package `FAnsiSql.Legacy` that references all 4 DBMS implementations for easy migration from HIC.FAnsiSql
+- Updated to .NET 9.0
+- **AOT Compatibility**: Added AOT compatibility markers (`IsAotCompatible=true`)
+  - Note: Oracle.ManagedDataAccess.Core is closed-source and has AOT limitations
+  - Microsoft.Data.SqlClient has some reflection-based operations that may require runtime code generation
+- Bump Microsoft.Data.SqlClient from 5.2.2 to 6.1.2
+- Bump Npgsql from 8.0.5 to 9.0.4
+- Bump Oracle.ManagedDataAccess.Core from 23.6.0 to 23.26.0
+- Bump MySqlConnector from 2.4.0 to 2.4.0
+- Bump System.Linq.Async from 6.0.1 to 6.0.3
+- Bump actions/checkout from 4 to 5 (GitHub Actions)
+- Bump actions/setup-dotnet from 4 to 5 (GitHub Actions)
+
 ## [3.2.7] - 2024-10-17
 
 - Add Boolean syntax helpers

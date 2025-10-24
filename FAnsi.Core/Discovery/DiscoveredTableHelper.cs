@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
@@ -17,6 +17,14 @@ namespace FAnsi.Discovery;
 /// </summary>
 public abstract class DiscoveredTableHelper : IDiscoveredTableHelper
 {
+    /// <summary>
+    /// Default implementation checks existence by listing all tables. Override in database-specific helpers for better performance.
+    /// </summary>
+    public virtual bool Exists(DiscoveredTable table, IManagedTransaction? transaction = null)
+    {
+        return table.Database.DiscoverTables(includeViews: false, transaction).Any(t => t.GetRuntimeName() == table.GetRuntimeName());
+    }
+
     public abstract string GetTopXSqlForTable(IHasFullyQualifiedNameToo table, int topX);
 
     public abstract IEnumerable<DiscoveredColumn> DiscoverColumns(DiscoveredTable discoveredTable, IManagedConnection connection, string database);

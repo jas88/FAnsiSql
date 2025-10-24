@@ -1,4 +1,4 @@
-﻿using FAnsi.Discovery.TypeTranslation;
+using FAnsi.Discovery.TypeTranslation;
 using TypeGuesser;
 
 namespace FAnsiTests.TypeTranslation;

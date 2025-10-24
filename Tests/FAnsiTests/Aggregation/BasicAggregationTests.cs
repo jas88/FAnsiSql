@@ -1,4 +1,4 @@
-﻿using FAnsi;
+using FAnsi;
 using FAnsi.Discovery.QuerySyntax;
 using NUnit.Framework;
 using System;
@@ -9,7 +9,7 @@ namespace FAnsiTests.Aggregation;
 
 internal sealed class BasicAggregationTests : AggregationTests
 {
-    [TestCaseSource(typeof(All),nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void Test_BasicCount(DatabaseType type)
     {
         var tbl = GetTestTable(type);
@@ -32,7 +32,7 @@ internal sealed class BasicAggregationTests : AggregationTests
     }
 
 
-    [TestCaseSource(typeof(All),nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void Test_GroupByCount(DatabaseType type)
     {
         var tbl = GetTestTable(type);

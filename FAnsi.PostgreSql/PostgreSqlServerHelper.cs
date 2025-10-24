@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Data.Common;
 using FAnsi.Discovery;
 using FAnsi.Discovery.QuerySyntax;
@@ -99,5 +100,42 @@ public sealed class PostgreSqlServerHelper : DiscoveredServerHelper
             toReturn.Database = database;
 
         return toReturn;
+    }
+
+    public override bool HasDanglingTransaction(DbConnection connection)
+    {
+        // PostgreSQL: check transaction status
+        if (connection is NpgsqlConnection && connection.State == ConnectionState.Open)
+        {
+            try
+            {
+                using var cmd = connection.CreateCommand();
+                cmd.CommandText = "SELECT CASE WHEN current_setting('transaction_isolation') IS NOT NULL AND txid_current_if_assigned() IS NOT NULL THEN 1 ELSE 0 END";
+                cmd.CommandTimeout = 1;
+                var result = cmd.ExecuteScalar();
+                return result != null && Convert.ToInt32(result) > 0;
+            }
+            catch
+            {
+                // If we can't check, assume no dangling transaction and let IsConnectionAlive's
+                // "SELECT 1" test determine if the connection is actually usable
+                return false;
+            }
+        }
+        return false;
+    }
+
+    public override bool DatabaseExists(DiscoveredDatabase database)
+    {
+        // Connect to postgres database to query pg_database (can't connect to target DB if it doesn't exist!)
+        var builder = new NpgsqlConnectionStringBuilder(database.Server.Builder.ConnectionString)
+        {
+            Database = "postgres" // System database
+        };
+        var postgresServer = new DiscoveredServer(builder.ConnectionString, DatabaseType.PostgreSql);
+        using var con = postgresServer.GetManagedConnection();
+        using var cmd = new NpgsqlCommand("SELECT CASE WHEN EXISTS(SELECT 1 FROM pg_database WHERE datname = @name) THEN 1 ELSE 0 END", (NpgsqlConnection)con.Connection);
+        cmd.Parameters.AddWithValue("@name", database.GetRuntimeName());
+        return Convert.ToInt32(cmd.ExecuteScalar()) == 1;
     }
 }

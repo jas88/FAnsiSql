@@ -3,11 +3,11 @@ using System.Resources;
 
 [assembly: AssemblyCompany("Health Informatics Centre, University of Dundee")]
 [assembly: AssemblyProduct("FAnsiSql")]
-[assembly: AssemblyCopyright("Copyright (c) 2018 - 2024")]
+[assembly: AssemblyCopyright("Copyright (c) 2018 - 2025")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 [assembly: NeutralResourcesLanguage("en-GB")]
 
-[assembly: AssemblyVersion("3.2.7")]
-[assembly: AssemblyFileVersion("3.2.7")]
-[assembly: AssemblyInformationalVersion("3.2.7")]
+[assembly: AssemblyVersion("3.3.1")]
+[assembly: AssemblyFileVersion("3.3.1")]
+[assembly: AssemblyInformationalVersion("3.3.1")]

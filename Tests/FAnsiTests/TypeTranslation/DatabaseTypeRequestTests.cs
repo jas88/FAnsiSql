@@ -1,4 +1,4 @@
-﻿using NUnit.Framework;
+using NUnit.Framework;
 using TypeGuesser;
 
 namespace FAnsiTests.TypeTranslation;
@@ -10,7 +10,7 @@ internal sealed class DatabaseTypeRequestTests
     {
 
         var max = DatabaseTypeRequest.Max(
-            new DatabaseTypeRequest(typeof(string), 1){Unicode = true},
+            new DatabaseTypeRequest(typeof(string), 1) { Unicode = true },
             new DatabaseTypeRequest(typeof(string), 2)
         );
 
