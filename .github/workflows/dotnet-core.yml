@@ -63,7 +63,7 @@ jobs:
         # Replace test configuration for CI
         mv Tests/FAnsiTests/TestDatabases{-github,}.xml
     - name: Test
-      run: dotnet test --logger "console;verbosity=minimal" --nologo -p:TestTfmsInParallel=true -p:ParallelizeTestCollections=true
+      run: dotnet test --logger "console;verbosity=minimal" --nologo -p:TestTfmsInParallel=true
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v4
