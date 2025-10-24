@@ -33,17 +33,13 @@ jobs:
         cache: true
         cache-dependency-path: Directory.Packages.props
 
-    - name: Cache and install Ubuntu packages
+    - name: Cache and install database packages
       uses: awalsh128/cache-apt-pkgs-action@v1.6.0
       with:
-        packages: libeatmydata1 apt-transport-https curl postgresql postgresql-contrib
+        packages: libeatmydata1 apt-transport-https curl postgresql postgresql-contrib mssql-tools mssql-server
         version: 1.0
-
-    - name: Install SQL Server
-      run: |
-        wget -qO- https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
-        sudo add-apt-repository "$(wget -qO- https://packages.microsoft.com/config/ubuntu/22.04/mssql-server-2022.list)"
-        sudo apt-get install -y --no-install-recommends mssql-tools mssql-server
+        execute_install_scripts: true
+        add-repository: '"https://packages.microsoft.com/ubuntu/22.04/mssql-server-2022 jammy main"'
 
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v4
