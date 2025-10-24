@@ -39,7 +39,7 @@ jobs:
         packages: libeatmydata1 apt-transport-https curl postgresql postgresql-contrib mssql-tools mssql-server
         version: 1.0
         execute_install_scripts: true
-        add-repository: '"https://packages.microsoft.com/ubuntu/22.04/mssql-server-2022 jammy main"'
+        add-repository: '"deb [arch=amd64] https://packages.microsoft.com/ubuntu/22.04/mssql-server-2022 jammy main"'
 
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v4
