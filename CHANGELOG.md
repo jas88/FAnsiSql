@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.3.2] - 2025-10-24
+
+### Fixed
+- Fixed BulkCopy colid mapping to use table column order instead of alphabetical sorting
+  - SQL Server assigns colid based on physical table order, not alphabetical
+  - Added colid value to error messages for debugging clarity
+  - Fixes TestBulkInsert_MultipleColumns_SortingWorks
+- Temporarily disabled thread-local connection pooling
+  - All database types now use ADO.NET native pooling
+  - Prevents connection pool issues with dropped databases
+- Updated ManagedConnection tests for disabled pooling
+- Fixed 37 nullable reference warnings across all projects
+
+### Removed
+- Removed unused LINQ query provider implementation (~3000 lines)
+  - Eliminates all IL2067, IL2072, IL3051 AOT warnings
+  - Users should use Entity Framework Core for LINQ support
+  - Build now has zero warnings
+
+### Changed
+- Build enforces zero warnings (TreatWarningsAsErrors=true)
+- Fixed CRLF line endings in git hooks
+
 ### Fixed
 - **SQL Server dangling transaction detection**
   - Fixed bug where `HasDanglingTransaction()` incorrectly returned `false` when the validation query itself failed due to a pending transaction
