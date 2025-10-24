@@ -33,7 +33,9 @@ jobs:
         cache: true
         cache-dependency-path: Directory.Packages.props
     - name: MS repo
-      run: curl -sL https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
+      run: |
+        curl -sL https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
+        sudo add-apt-repository "deb [arch=amd64] https://packages.microsoft.com/ubuntu/22.04/mssql-server-2022 jammy main"
 
     - name: Cache and install database packages
       uses: awalsh128/cache-apt-pkgs-action@v1.6.0
@@ -41,7 +43,6 @@ jobs:
         packages: libeatmydata1 apt-transport-https curl postgresql postgresql-contrib mssql-tools mssql-server
         version: 1.0
         execute_install_scripts: true
-        add-repository: '"deb [arch=amd64] https://packages.microsoft.com/ubuntu/22.04/mssql-server-2022 jammy main"'
 
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v4
