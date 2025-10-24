@@ -31,11 +31,15 @@ public abstract class DatabaseTests
     [OneTimeSetUp]
     public void CheckFiles()
     {
-        ImplementationManager.Load<OracleImplementation>();
+        // Explicitly load implementations for testing
+        // (Production code using FAnsi.Legacy gets auto-loading via ModuleInitializer)
+#pragma warning disable CS0618 // Type or member is obsolete
         ImplementationManager.Load<MicrosoftSQLImplementation>();
         ImplementationManager.Load<MySqlImplementation>();
+        ImplementationManager.Load<OracleImplementation>();
         ImplementationManager.Load<PostgreSqlImplementation>();
         ImplementationManager.Load<SqliteImplementation>();
+#pragma warning restore CS0618 // Type or member is obsolete
 
         var file = Path.Combine(TestContext.CurrentContext.TestDirectory, TestFilename);
 
