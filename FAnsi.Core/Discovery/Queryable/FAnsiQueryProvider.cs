@@ -82,6 +82,7 @@ namespace FAnsi.Discovery.QueryableAbstraction
         /// Creates a non-generic queryable instance.
         /// </summary>
         [RequiresDynamicCode("Calls System.Linq.Expressions.Expression.Lambda(Expression, params ParameterExpression[]).")]
+        [UnconditionalSuppressMessage("AOT", "IL3051", Justification = "LINQ query providers require dynamic code and cannot work with Native AOT.")]
         public IQueryable CreateQuery(Expression expression)
         {
             if (expression == null)
@@ -105,6 +106,7 @@ namespace FAnsi.Discovery.QueryableAbstraction
         /// Executes a query and returns a strongly-typed result.
         /// </summary>
         [RequiresDynamicCode("Calls System.Type.MakeGenericType(params Type[])")]
+        [UnconditionalSuppressMessage("AOT", "IL3051", Justification = "LINQ query providers require dynamic code and cannot work with Native AOT.")]
         public TResult Execute<TResult>(Expression expression)
         {
             return (TResult)Execute(expression);
@@ -115,6 +117,7 @@ namespace FAnsi.Discovery.QueryableAbstraction
         /// This is where expression trees are translated to SQL and executed.
         /// </summary>
         [RequiresDynamicCode("Calls System.Type.MakeGenericType(params Type[])")]
+        [UnconditionalSuppressMessage("AOT", "IL3051", Justification = "LINQ query providers require dynamic code and cannot work with Native AOT.")]
         public object Execute(Expression expression)
         {
             if (expression == null)
@@ -157,14 +160,16 @@ namespace FAnsi.Discovery.QueryableAbstraction
             }
 
             // Determine result type
-            Type elementType = GetElementType(expression.Type);
+            [UnconditionalSuppressMessage("AOT", "IL2072", Justification = "Expression.Type doesn't carry required annotations, but GetElementType extracts element type safely.")]
+            static Type GetTypeFromExpression(Type exprType) => GetElementType(exprType);
+            Type elementType = GetTypeFromExpression(expression.Type);
 
             // Execute query and materialize results
             return ExecuteQuery(sql, parameters, elementType);
         }
 
         [RequiresDynamicCode("Calls System.Type.MakeGenericType(params Type[])")]
-        private object ExecuteQuery(string sql, DbParameter[] parameters, Type elementType)
+        private object ExecuteQuery(string sql, DbParameter[] parameters, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties | DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] Type elementType)
         {
             if (_connection.State != System.Data.ConnectionState.Open)
             {
@@ -197,7 +202,7 @@ namespace FAnsi.Discovery.QueryableAbstraction
             return results;
         }
 
-        private object MaterializeRow(DbDataReader reader, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] Type elementType)
+        private object MaterializeRow(DbDataReader reader, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties | DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] Type elementType)
         {
             // For primitive types and strings, just read the first column
             if (elementType.IsPrimitive || elementType == typeof(string) || elementType == typeof(decimal) ||
@@ -276,7 +281,7 @@ namespace FAnsi.Discovery.QueryableAbstraction
             return type;
         }
 
-        private static object? GetDefault(Type type)
+        private static object? GetDefault([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] Type type)
         {
             return type.IsValueType ? Activator.CreateInstance(type) : null;
         }

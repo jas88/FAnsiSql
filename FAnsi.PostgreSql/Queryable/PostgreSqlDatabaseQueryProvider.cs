@@ -32,6 +32,7 @@ public sealed class PostgreSqlDatabaseQueryProvider : IQueryProvider
     }
 
     [RequiresDynamicCode("Calls System.Type.MakeGenericType(params Type[]).")]
+    [UnconditionalSuppressMessage("AOT", "IL3051", Justification = "LINQ query providers require dynamic code and cannot work with Native AOT.")]
     public IQueryable CreateQuery(Expression expression)
     {
         var elementType = expression.Type.GetGenericArguments()[0];

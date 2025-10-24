@@ -40,6 +40,7 @@ namespace FAnsi.Discovery.QueryableAbstraction
         }
 
         [RequiresDynamicCode("LINQ expression trees may require dynamic code generation")]
+        [UnconditionalSuppressMessage("AOT", "IL3051", Justification = "LINQ expression visitors require dynamic code and cannot work with Native AOT.")]
         protected override Expression VisitMethodCall(MethodCallExpression node)
         {
             if (node.Method.DeclaringType == typeof(Queryable) || node.Method.DeclaringType == typeof(Enumerable))
@@ -205,6 +206,7 @@ namespace FAnsi.Discovery.QueryableAbstraction
         }
 
         [RequiresDynamicCode("Calls FAnsi.Discovery.QueryableAbstraction.FAnsiExpressionVisitor.GetConstantValue(Expression)")]
+        [UnconditionalSuppressMessage("AOT", "IL3051", Justification = "LINQ expression visitors require dynamic code and cannot work with Native AOT.")]
         protected override Expression VisitBinary(BinaryExpression node)
         {
             if (!_isWhereClause)

@@ -121,7 +121,7 @@ internal static class ManagedConnectionPool
             _ => targetDatabase // Fallback to target database
         };
 
-        var serverLevelBuilder = server.Helper.GetConnectionStringBuilder(serverKey);
+        var serverLevelBuilder = server.Helper.GetConnectionStringBuilder(server.Builder.ConnectionString);
         if (!string.IsNullOrWhiteSpace(systemDatabase))
             serverLevelBuilder = server.Helper.ChangeDatabase(serverLevelBuilder, systemDatabase);
 
