@@ -575,33 +575,4 @@ public class DiscoveredTable : IHasFullyQualifiedNameToo, IMightNotExist, IHasQu
         bool cascadeDeletes, string? constraintName = null, DatabaseOperationArgs? args = null) =>
         Helper.AddForeignKey(args ?? new DatabaseOperationArgs(), foreignKeyPairs, cascadeDeletes, constraintName);
 
-    /// <summary>
-    /// Creates an IQueryable&lt;T&gt; for this table that translates LINQ expressions to SQL for efficient server-side filtering and ordering.
-    /// This is a read-only API - no change tracking or update functionality is provided.
-    /// </summary>
-    /// <typeparam name="T">The entity type that represents rows in this table. Property names should match column names.</typeparam>
-    /// <param name="transaction">Optional transaction to execute the query within</param>
-    /// <returns>An IQueryable that executes queries against this table using server-side WHERE, ORDER BY, and LIMIT clauses</returns>
-    /// <example>
-    /// <code>
-    /// // Efficient server-side filtering and ordering
-    /// var adults = table.GetQueryable&lt;Patient&gt;()
-    ///     .Where(p => p.Age >= 18)
-    ///     .OrderBy(p => p.LastName)
-    ///     .Take(100)
-    ///     .ToList();
-    /// // Generates: SELECT TOP 100 * FROM dbo.Patients WHERE Age >= @p0 ORDER BY LastName ASC
-    /// </code>
-    /// </example>
-    /// <exception cref="NotSupportedException">Thrown if IQueryable support is not implemented for this database type</exception>
-    public IQueryable<T> GetQueryable<T>(IManagedTransaction? transaction = null)
-    {
-        var connection = Database.Server.GetManagedConnection(transaction);
-        var queryBuilder = Database.Server.Helper.GetQueryBuilder();
-        var tableName = GetFullyQualifiedName();
-
-        var provider = new QueryableAbstraction.FAnsiQueryProvider(connection.Connection, queryBuilder, tableName);
-        return new QueryableAbstraction.FAnsiQueryable<T>(provider);
-    }
-
 }

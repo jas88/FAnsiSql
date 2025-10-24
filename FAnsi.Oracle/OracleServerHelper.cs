@@ -170,7 +170,4 @@ public sealed class OracleServerHelper : DiscoveredServerHelper
         cmd.Parameters.Add(new OracleParameter("name", database.GetRuntimeName()));
         return Convert.ToInt32(cmd.ExecuteScalar()) == 1;
     }
-
-    public override Discovery.QueryableAbstraction.ISqlQueryBuilder GetQueryBuilder() =>
-        new Queryable.OracleQueryBuilder();
 }
