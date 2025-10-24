@@ -37,7 +37,8 @@ public abstract class DatabaseTests
 
         var file = Path.Combine(TestContext.CurrentContext.TestDirectory, TestFilename);
 
-        Assert.That(File.Exists(file), $"Could not find {TestFilename}");
+        if (!File.Exists(file))
+            Assert.Ignore($"Could not find {TestFilename} - database not configured for testing");
 
         var doc = XDocument.Load(file);
 
@@ -80,7 +81,7 @@ public abstract class DatabaseTests
     protected DiscoveredServer GetTestServer(DatabaseType type)
     {
         if (!TestConnectionStrings.TryGetValue(type, out var connString))
-            Assert.Inconclusive("No connection string configured for that server");
+            Assert.Ignore($"No connection string configured for {type} - skipping tests");
 
         return new DiscoveredServer(connString, type);
     }
@@ -94,8 +95,8 @@ public abstract class DatabaseTests
             if (_allowDatabaseCreation)
                 db.Create();
             else
-                Assert.Inconclusive(
-                    $"Database {_testScratchDatabase} did not exist on server {server} and AllowDatabaseCreation was false in {TestFilename}");
+                Assert.Ignore(
+                    $"Database {_testScratchDatabase} does not exist and AllowDatabaseCreation is false - skipping tests");
         else
         {
             if (!cleanDatabase) return db;
@@ -126,7 +127,7 @@ public abstract class DatabaseTests
     protected void AssertCanCreateDatabases()
     {
         if (!_allowDatabaseCreation)
-            Assert.Inconclusive("Test cannot run when AllowDatabaseCreation is false");
+            Assert.Ignore("AllowDatabaseCreation is false - skipping database creation tests");
     }
 
     private static bool AreBasicallyEquals(object? o, object? o2, bool handleSlashRSlashN = true)
