@@ -39,7 +39,7 @@ namespace FAnsi.Discovery.QueryableAbstraction
             return _components;
         }
 
-        [RequiresDynamicCode()]
+        [RequiresDynamicCode("LINQ expression trees may require dynamic code generation")]
         protected override Expression VisitMethodCall(MethodCallExpression node)
         {
             if (node.Method.DeclaringType == typeof(Queryable) || node.Method.DeclaringType == typeof(Enumerable))
