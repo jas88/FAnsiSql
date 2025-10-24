@@ -64,17 +64,31 @@ public abstract class DatabaseTests
             if (!Enum.TryParse(type, out DatabaseType databaseType))
                 throw new Exception($"Could not parse DatabaseType {type}");
 
-
             var constr = element.Element("ConnectionString")?.Value ??
                          throw new Exception($"Invalid connection string for {type}");
 
-            TestConnectionStrings.Add(databaseType, constr);
+            // Test database connectivity - if it fails, ignore all tests for this database type
+            try
+            {
+                var server = new DiscoveredServer(constr, databaseType);
+                using var testCon = server.GetConnection();
+                testCon.Open();
+                testCon.Close();
 
-            // Make sure our scratch db exists for PostgreSQL
-            if (databaseType != DatabaseType.PostgreSql) continue;
+                TestConnectionStrings.Add(databaseType, constr);
 
-            var server = GetTestServer(DatabaseType.PostgreSql);
-            if (server.DiscoverDatabases().All(db => db.GetWrappedName()?.Contains(_testScratchDatabase) != true)) server.CreateDatabase(_testScratchDatabase);
+                // Make sure our scratch db exists for PostgreSQL
+                if (databaseType == DatabaseType.PostgreSql)
+                {
+                    if (server.DiscoverDatabases().All(db => db.GetWrappedName()?.Contains(_testScratchDatabase) != true))
+                        server.CreateDatabase(_testScratchDatabase);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Database not available - ignore all tests for this type
+                Assert.Ignore($"Cannot connect to {databaseType} ({ex.GetType().Name}: {ex.Message}) - skipping all tests for this database type");
+            }
         }
     }
 
