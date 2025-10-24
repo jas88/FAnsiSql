@@ -7,7 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Parallel test infrastructure (WIP)**
+  - Added parallel test fixtures for all database types (SQL Server, MySQL, Oracle, PostgreSQL)
+  - Tests can now run in parallel across different database types for faster CI
+  - Each fixture runs sequentially on its own connection to avoid conflicts
+  - New test files in Tests/FAnsiTests/Parallel/:
+    - SqlServerParallelTests.cs
+    - MySqlParallelTests.cs
+    - OracleParallelTests.cs
+    - PostgreSqlParallelTests.cs
+    - SharedDatabaseTests.cs (base class)
+  - Uses NUnit [Parallelizable(ParallelScope.Self)] attribute
+  - Proof-of-concept for future parallel test execution
+
 ### Fixed
+- Fixed GetTestScratchDatabaseName to avoid database connection during OneTimeSetUp
+  - Previously called GetTestDatabase() during setup, causing failures if DB wasn't accessible
+  - Now uses reflection to safely access test configuration after setup completes
 - **SQL Server dangling transaction detection**
   - Fixed bug where `HasDanglingTransaction()` incorrectly returned `false` when the validation query itself failed due to a pending transaction
   - When `@@TRANCOUNT > 0`, SQL Server requires all commands to have the `.Transaction` property set, causing the validation query to throw an exception
