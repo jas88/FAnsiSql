@@ -216,10 +216,10 @@ public sealed class MicrosoftSQLServerHelper : DiscoveredServerHelper
 
     public override string GetServerLevelConnectionKey(string connectionString)
     {
-        // Remove database name for server-level pooling
+        // Use master database for server-level pooling to avoid default database issues
         var builder = new SqlConnectionStringBuilder(connectionString)
         {
-            InitialCatalog = "" // Remove database
+            InitialCatalog = "master" // Always use master for server-level connections
         };
         return builder.ConnectionString;
     }

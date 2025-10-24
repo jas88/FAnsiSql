@@ -197,7 +197,7 @@ namespace FAnsi.Discovery.QueryableAbstraction
             return results;
         }
 
-        private object MaterializeRow(DbDataReader reader, Type elementType)
+        private object MaterializeRow(DbDataReader reader, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] Type elementType)
         {
             // For primitive types and strings, just read the first column
             if (elementType.IsPrimitive || elementType == typeof(string) || elementType == typeof(decimal) ||
@@ -244,7 +244,7 @@ namespace FAnsi.Discovery.QueryableAbstraction
             return instance;
         }
 
-        private static Type GetElementType(Type type)
+        private static Type GetElementType([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] Type type)
         {
             // Handle IQueryable<T>
             if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IQueryable<>))

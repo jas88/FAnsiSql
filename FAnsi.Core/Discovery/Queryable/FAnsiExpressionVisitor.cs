@@ -39,6 +39,7 @@ namespace FAnsi.Discovery.QueryableAbstraction
             return _components;
         }
 
+        [RequiresDynamicCode()]
         protected override Expression VisitMethodCall(MethodCallExpression node)
         {
             if (node.Method.DeclaringType == typeof(Queryable) || node.Method.DeclaringType == typeof(Enumerable))
