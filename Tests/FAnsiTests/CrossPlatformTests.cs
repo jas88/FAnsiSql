@@ -164,9 +164,8 @@ public sealed class CrossPlatformTests : DatabaseTests
         var result = tbl.GetDataTable();
         var expectedTime = new TimeSpan(0, 0, 0, 0);
 
-        var resultTimeSpans =
-            //Oracle is a bit special it only stores whole dates then has server side settings about how much to return (like a format string)
-            type == DatabaseType.Oracle
+        //Oracle is a bit special it only stores whole dates then has server side settings about how much to return (like a format string)
+        var resultTimeSpans = type == DatabaseType.Oracle
             ? new[] { (DateTime)result.Rows[0][0], (DateTime)result.Rows[1][0] }.Select(static dt => dt.TimeOfDay)
                 .Cast<object>().ToArray()
             : [result.Rows[0][0], result.Rows[1][0]];
@@ -239,9 +238,8 @@ public sealed class CrossPlatformTests : DatabaseTests
         var result = tbl.GetDataTable();
         var expectedTime = new TimeSpan(13, 11, 00);
 
-        var resultTimeSpans =
-            //Oracle is a bit special it only stores whole dates then has server side settings about how much to return (like a format string)
-            type == DatabaseType.Oracle
+        //Oracle is a bit special it only stores whole dates then has server side settings about how much to return (like a format string)
+        var resultTimeSpans = type == DatabaseType.Oracle
             ? new[] { (DateTime)result.Rows[0][0], (DateTime)result.Rows[1][0] }.Select(static dt => dt.TimeOfDay)
                 .Cast<object>().ToArray()
             : [result.Rows[0][0], result.Rows[1][0]];
