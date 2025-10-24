@@ -32,6 +32,8 @@ jobs:
       with:
         cache: true
         cache-dependency-path: Directory.Packages.props
+    - name: MS repo
+      run: curl -sL https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
 
     - name: Cache and install database packages
       uses: awalsh128/cache-apt-pkgs-action@v1.6.0
