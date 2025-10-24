@@ -185,7 +185,7 @@ jobs:
       if: contains(github.ref,'refs/tags/')
       run: dotnet nuget push FAnsi*.nupkg -s https://api.nuget.org/v3/index.json -k ${{ secrets.NUGET_API_KEY }} --skip-duplicate
     - name: Store created nupkg files
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         path: '*.nupkg'
         retention-days: 1
