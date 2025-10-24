@@ -24,17 +24,6 @@ jobs:
           DB_MEMORY: 128m
         ports:
           - 1521:1521
-      postgres:
-        image: postgres:latest
-        env:
-          POSTGRES_PASSWORD: pgpass4291
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
 
     steps:
     - name: Disable write flush for CI runs
@@ -55,10 +44,21 @@ jobs:
         sudo add-apt-repository "$(wget -qO- https://packages.microsoft.com/config/ubuntu/22.04/mssql-server-2022.list)"
         sudo apt-get install -y --no-install-recommends postgresql mssql-tools mssql-server
         sudo -E /opt/mssql/bin/mssql-conf -n setup accept-eula
-    - name: MySQL
+    - name: Setup MySQL and PostgreSQL
       run: |
-        mv Tests/FAnsiTests/TestDatabases{-github,}.xml
+        # MySQL (already installed via systemd service)
         sudo systemctl start mysql.service
+
+        # PostgreSQL - install via apt (much faster than Docker)
+        sudo apt-get update -qq
+        sudo apt-get install -y postgresql postgresql-contrib
+        sudo systemctl start postgresql
+
+        # Create postgres user password
+        sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'pgpass4291';"
+
+        # Replace TestDatabases.xml for CI
+        mv Tests/FAnsiTests/TestDatabases{-github,}.xml
     - name: Test
       run: dotnet test --logger "console;verbosity=minimal" --nologo -p:TestTfmsInParallel=true -p:ParallelizeTestCollections=true
 
