@@ -1,0 +1,10 @@
+<TestDatabases>
+  <Settings>
+    <AllowDatabaseCreation>True</AllowDatabaseCreation>
+    <TestScratchDatabase>FAnsiTests</TestScratchDatabase>
+  </Settings>
+  <TestDatabase>
+    <DatabaseType>PostgreSql</DatabaseType>
+    <ConnectionString>Host=127.0.0.1;User ID=postgres;Password=pgpass4291;Database=postgres</ConnectionString>
+  </TestDatabase>
+</TestDatabases>
