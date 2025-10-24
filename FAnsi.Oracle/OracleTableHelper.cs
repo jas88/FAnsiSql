@@ -124,27 +124,21 @@ public sealed class OracleTableHelper : DiscoveredTableHelper
         // Use ALL_TABLES/ALL_VIEWS to check existence with a single targeted query
         // In Oracle, the "database" is actually the owner/schema
         string sql;
-        if (table.TableType == TableType.View)
-        {
-            sql = """
+        sql = table.TableType == TableType.View
+            ? """
                 SELECT CASE WHEN EXISTS (
                     SELECT 1 FROM ALL_VIEWS
                     WHERE UPPER(view_name) = UPPER(:tableName)
                     AND UPPER(owner) = UPPER(:owner)
                 ) THEN 1 ELSE 0 END FROM DUAL
-                """;
-        }
-        else
-        {
-            // For tables or unknown types, check ALL_TABLES
-            sql = """
+                """
+            : """
                 SELECT CASE WHEN EXISTS (
                     SELECT 1 FROM ALL_TABLES
                     WHERE UPPER(table_name) = UPPER(:tableName)
                     AND UPPER(owner) = UPPER(:owner)
                 ) THEN 1 ELSE 0 END FROM DUAL
                 """;
-        }
 
         using var cmd = new OracleCommand(sql, (OracleConnection)connection.Connection);
         cmd.Transaction = (OracleTransaction?)connection.Transaction;
