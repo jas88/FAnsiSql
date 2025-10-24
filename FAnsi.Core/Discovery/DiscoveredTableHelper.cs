@@ -99,7 +99,7 @@ public abstract class DiscoveredTableHelper : IDiscoveredTableHelper
 
         foreach (var c in table.DiscoverColumns())
         {
-            var sqlType = c.DataType.SQLType;
+            var sqlType = c.DataType!.SQLType;
 
             if (c.IsAutoIncrement && convertIdentityToInt)
                 sqlType = "int";

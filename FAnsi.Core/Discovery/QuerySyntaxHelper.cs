@@ -332,7 +332,7 @@ public abstract partial class QuerySyntaxHelper(
                 _factories.Add(culture, new TypeDeciderFactory(culture));
 
             var tt = TypeTranslater;
-            p.DbType = tt.GetDbTypeForSQLDBType(discoveredColumn.DataType.SQLType);
+            p.DbType = tt.GetDbTypeForSQLDBType(discoveredColumn.DataType!.SQLType);
             var cSharpType = tt.GetCSharpTypeForSQLDBType(discoveredColumn.DataType.SQLType);
 
             if (IsBasicallyNull(value))

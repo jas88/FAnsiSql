@@ -174,7 +174,7 @@ public class DiscoveredTable : IHasFullyQualifiedNameToo, IMightNotExist, IHasQu
             {
                 var col = dt.Columns.Add(c.GetRuntimeName());
                 col.AllowDBNull = c.AllowNulls;
-                col.DataType = c.DataType.GetCSharpDataType();
+                col.DataType = c.DataType!.GetCSharpDataType();
             }
 
         Helper.FillDataTableWithTopX(args, this, topX, dt);

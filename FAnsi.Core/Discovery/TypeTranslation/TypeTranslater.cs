@@ -290,7 +290,7 @@ public abstract partial class TypeTranslater : ITypeTranslater
 
     protected Guesser GetGuesserFor(DiscoveredColumn discoveredColumn, int extraLengthPerNonAsciiCharacter)
     {
-        var reqType = GetDataTypeRequestForSQLDBType(discoveredColumn.DataType.SQLType);
+        var reqType = GetDataTypeRequestForSQLDBType(discoveredColumn.DataType!.SQLType);
         return new Guesser(reqType)
         {
             ExtraLengthPerNonAsciiCharacter = extraLengthPerNonAsciiCharacter

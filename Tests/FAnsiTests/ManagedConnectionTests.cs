@@ -19,12 +19,9 @@ internal sealed class ManagedConnectionTests : DatabaseTests
     }
 
     /// <summary>
-    /// Tests that a managed connection is automatically opened and reused via pooling when there
-    /// is no <see cref="IManagedTransaction"/> ongoing. Connection pooling keeps connections alive
-    /// to reduce ephemeral connection churn.
-    ///
-    /// Note: Oracle uses ADO.NET's native pooling instead of thread-local pooling (see issue #30)
-    /// so it has different behavior - connections close on disposal and return to ADO.NET's pool.
+    /// Tests that a managed connection is automatically opened when created.
+    /// Thread-local pooling is currently disabled (all database types use ADO.NET pooling),
+    /// so connections close on disposal and return to ADO.NET's pool.
     /// </summary>
     /// <param name="dbType"></param>
     [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
@@ -39,21 +36,9 @@ internal sealed class ManagedConnectionTests : DatabaseTests
             Assert.That(con.Connection.State, Is.EqualTo(ConnectionState.Open));
         }
 
-        if (dbType == DatabaseType.Oracle)
-        {
-            // Oracle uses ADO.NET pooling (not thread-local) - connection closes and returns to ADO.NET pool
-            // Changed in v3.3.1 to fix issue #30 - we can't detect dangling transactions in Oracle
-            Assert.That(con.Connection.State, Is.EqualTo(ConnectionState.Closed));
-        }
-        else
-        {
-            // SQL Server/MySQL/PostgreSQL use thread-local pooling - connection remains open
-            Assert.That(con.Connection.State, Is.EqualTo(ConnectionState.Open));
-
-            //Clearing the thread-local pool closes the connection
-            FAnsi.Discovery.DiscoveredServer.ClearCurrentThreadConnectionPool();
-            Assert.That(con.Connection.State, Is.EqualTo(ConnectionState.Closed));
-        }
+        // Thread-local pooling is disabled - all database types use ADO.NET pooling
+        // Connection closes on dispose and returns to ADO.NET's pool
+        Assert.That(con.Connection.State, Is.EqualTo(ConnectionState.Closed));
     }
 
 

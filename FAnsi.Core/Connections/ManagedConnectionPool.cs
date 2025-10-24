@@ -43,18 +43,10 @@ internal static class ManagedConnectionPool
         if (transaction != null)
             return new ManagedConnection(server, transaction);
 
-        // Oracle: Skip thread-local pooling and rely on ADO.NET's native Oracle pooling
-        // We can't reliably detect dangling transactions at the SQL level for Oracle
-        // Return a normal connection (CloseOnDispose=true) so it's properly returned to ADO.NET's pool
-        if (server.DatabaseType == DatabaseType.Oracle)
-            return new ManagedConnection(server, null);
-
-        // SQL Server and MySQL: Use server-level pooling with database switching
-        if (server.DatabaseType == DatabaseType.MicrosoftSQLServer || server.DatabaseType == DatabaseType.MySql)
-            return GetServerLevelPooledConnection(server);
-
-        // PostgreSQL: Use database-level pooling (cannot switch databases on same connection)
-        return GetDatabaseLevelPooledConnection(server);
+        // TEMPORARY: Disable thread-local pooling for all database types
+        // Rely on ADO.NET's native connection pooling instead
+        // TODO: Re-enable after fixing server-level pooling database switching issues
+        return new ManagedConnection(server, null);
     }
 
     /// <summary>
