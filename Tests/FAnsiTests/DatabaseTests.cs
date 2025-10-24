@@ -31,8 +31,8 @@ public abstract class DatabaseTests
     [OneTimeSetUp]
     public void CheckFiles()
     {
-        // Explicitly load implementations for testing
-        // (Production code using FAnsi.Legacy gets auto-loading via ModuleInitializer)
+        // Explicit loading for tests (ModuleInitializer timing is unreliable in test runners)
+        // Production code using FAnsi.Legacy gets automatic loading
 #pragma warning disable CS0618 // Type or member is obsolete
         ImplementationManager.Load<MicrosoftSQLImplementation>();
         ImplementationManager.Load<MySqlImplementation>();

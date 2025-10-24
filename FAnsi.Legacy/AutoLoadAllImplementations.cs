@@ -9,8 +9,8 @@ using FAnsi.Implementations.Sqlite;
 namespace FAnsi.Legacy;
 
 /// <summary>
-/// Auto-loads all DBMS implementations when FAnsi.Legacy assembly is loaded.
-/// This ensures all implementations are registered without requiring manual Load() calls.
+/// Auto-registers all DBMS implementations when FAnsi.Legacy loads.
+/// AOT-compatible: uses direct type references and explicit registration.
 /// </summary>
 internal static class AutoLoadAllImplementations
 {
@@ -18,6 +18,8 @@ internal static class AutoLoadAllImplementations
 #pragma warning disable CS0618 // Type or member is obsolete
     internal static void Initialize()
     {
+        // Directly register each implementation
+        // This is AOT-compatible (no reflection, no Type.GetType)
         ImplementationManager.Load<MicrosoftSQLImplementation>();
         ImplementationManager.Load<MySqlImplementation>();
         ImplementationManager.Load<OracleImplementation>();
