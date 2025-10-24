@@ -60,7 +60,7 @@ jobs:
         mv Tests/FAnsiTests/TestDatabases{-github,}.xml
         sudo systemctl start mysql.service
     - name: Test
-      run: dotnet test --logger "console;verbosity=minimal" --nologo
+      run: dotnet test --logger "console;verbosity=minimal" --nologo --maximum-parallel-test-modules 6
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v4
