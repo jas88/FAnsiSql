@@ -1,7 +1,7 @@
 <TestDatabases>
   <Settings>
     <AllowDatabaseCreation>True</AllowDatabaseCreation>
-    <TestScratchDatabase>FAnsiTests</TestScratchDatabase>
+    <TestScratchDatabase>FAnsiTests_Oracle</TestScratchDatabase>
   </Settings>
   <TestDatabase>
     <DatabaseType>Oracle</DatabaseType>
