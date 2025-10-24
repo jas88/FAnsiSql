@@ -64,7 +64,7 @@ public abstract partial class QuerySyntaxHelper(
 
     public ITypeTranslater TypeTranslater { get; private set; } = translater;
 
-    private readonly Dictionary<CultureInfo, TypeDeciderFactory> factories = [];
+    private readonly Dictionary<CultureInfo, TypeDeciderFactory> _factories = [];
 
     public IAggregateHelper AggregateHelper { get; private set; } = aggregateHelper;
     public IUpdateHelper UpdateHelper { get; set; } = updateHelper;
@@ -328,18 +328,18 @@ public abstract partial class QuerySyntaxHelper(
         {
             culture ??= CultureInfo.InvariantCulture;
 
-            if (!factories.ContainsKey(culture))
-                factories.Add(culture, new TypeDeciderFactory(culture));
+            if (!_factories.ContainsKey(culture))
+                _factories.Add(culture, new TypeDeciderFactory(culture));
 
             var tt = TypeTranslater;
-            p.DbType = tt.GetDbTypeForSQLDBType(discoveredColumn.DataType.SQLType);
+            p.DbType = tt.GetDbTypeForSQLDBType(discoveredColumn.DataType!.SQLType);
             var cSharpType = tt.GetCSharpTypeForSQLDBType(discoveredColumn.DataType.SQLType);
 
             if (IsBasicallyNull(value))
                 p.Value = DBNull.Value;
-            else if (value is string strVal && factories[culture].IsSupported(cSharpType)) //if the input is a string and it's for a hard type e.g. TimeSpan
+            else if (value is string strVal && _factories[culture].IsSupported(cSharpType)) //if the input is a string and it's for a hard type e.g. TimeSpan
             {
-                var decider = factories[culture].Create(cSharpType);
+                var decider = _factories[culture].Create(cSharpType);
                 var o = decider.Parse(strVal);
 
                 if (o is DateTime d) o = FormatDateTimeForDbParameter(d);

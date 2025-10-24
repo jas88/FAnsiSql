@@ -108,6 +108,81 @@ public sealed partial class MySqlTableHelper : DiscoveredTableHelper
         return type;
     }
 
+    public override bool Exists(DiscoveredTable table, IManagedTransaction? transaction = null)
+    {
+        if (!table.Database.Exists())
+            return false;
+
+        using var connection = table.Database.Server.GetManagedConnection(transaction);
+
+        // Use INFORMATION_SCHEMA.TABLES to check for table/view existence with a single targeted query
+        var tableType = table.TableType switch
+        {
+            TableType.Table => "'BASE TABLE'",
+            TableType.View => "'VIEW'",
+            _ => "'BASE TABLE', 'VIEW'" // For unknown types, check both
+        };
+
+        var sql = $"""
+            SELECT EXISTS (
+                SELECT 1 FROM information_schema.`TABLES`
+                WHERE table_schema = @db
+                AND table_name = @tbl
+                AND table_type IN ({tableType})
+            )
+            """;
+
+        using var cmd = table.Database.Server.Helper.GetCommand(sql, connection.Connection);
+        cmd.Transaction = connection.Transaction;
+
+        var p = new MySqlParameter("@db", MySqlDbType.String)
+        {
+            Value = table.Database.GetRuntimeName()
+        };
+        cmd.Parameters.Add(p);
+
+        p = new MySqlParameter("@tbl", MySqlDbType.String)
+        {
+            Value = table.GetRuntimeName()
+        };
+        cmd.Parameters.Add(p);
+
+        var result = cmd.ExecuteScalar();
+        return Convert.ToBoolean(result);
+    }
+
+    public override bool HasPrimaryKey(DiscoveredTable table, IManagedTransaction? transaction = null)
+    {
+        using var connection = table.Database.Server.GetManagedConnection(transaction);
+
+        const string sql = """
+            SELECT EXISTS (
+                SELECT 1 FROM information_schema.`TABLE_CONSTRAINTS`
+                WHERE table_schema = @db
+                AND table_name = @tbl
+                AND constraint_type = 'PRIMARY KEY'
+            )
+            """;
+
+        using var cmd = table.Database.Server.Helper.GetCommand(sql, connection.Connection);
+        cmd.Transaction = connection.Transaction;
+
+        var p = new MySqlParameter("@db", MySqlDbType.String)
+        {
+            Value = table.Database.GetRuntimeName()
+        };
+        cmd.Parameters.Add(p);
+
+        p = new MySqlParameter("@tbl", MySqlDbType.String)
+        {
+            Value = table.GetRuntimeName()
+        };
+        cmd.Parameters.Add(p);
+
+        var result = cmd.ExecuteScalar();
+        return Convert.ToBoolean(result);
+    }
+
     public override IDiscoveredColumnHelper GetColumnHelper() => MySqlColumnHelper.Instance;
 
     public override void DropColumn(DbConnection connection, DiscoveredColumn columnToDrop)

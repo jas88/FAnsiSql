@@ -19,12 +19,9 @@ internal sealed class ManagedConnectionTests : DatabaseTests
     }
 
     /// <summary>
-    /// Tests that a managed connection is automatically opened and reused via pooling when there
-    /// is no <see cref="IManagedTransaction"/> ongoing. Connection pooling keeps connections alive
-    /// to reduce ephemeral connection churn.
-    ///
-    /// Note: Oracle uses ADO.NET's native pooling instead of thread-local pooling (see issue #30)
-    /// so it has different behavior - connections close on disposal and return to ADO.NET's pool.
+    /// Tests that a managed connection is automatically opened when created.
+    /// Thread-local pooling is currently disabled (all database types use ADO.NET pooling),
+    /// so connections close on disposal and return to ADO.NET's pool.
     /// </summary>
     /// <param name="dbType"></param>
     [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
@@ -39,21 +36,9 @@ internal sealed class ManagedConnectionTests : DatabaseTests
             Assert.That(con.Connection.State, Is.EqualTo(ConnectionState.Open));
         }
 
-        if (dbType == DatabaseType.Oracle)
-        {
-            // Oracle uses ADO.NET pooling (not thread-local) - connection closes and returns to ADO.NET pool
-            // Changed in v3.3.1 to fix issue #30 - we can't detect dangling transactions in Oracle
-            Assert.That(con.Connection.State, Is.EqualTo(ConnectionState.Closed));
-        }
-        else
-        {
-            // SQL Server/MySQL/PostgreSQL use thread-local pooling - connection remains open
-            Assert.That(con.Connection.State, Is.EqualTo(ConnectionState.Open));
-
-            //Clearing the thread-local pool closes the connection
-            FAnsi.Discovery.DiscoveredServer.ClearCurrentThreadConnectionPool();
-            Assert.That(con.Connection.State, Is.EqualTo(ConnectionState.Closed));
-        }
+        // Thread-local pooling is disabled - all database types use ADO.NET pooling
+        // Connection closes on dispose and returns to ADO.NET's pool
+        Assert.That(con.Connection.State, Is.EqualTo(ConnectionState.Closed));
     }
 
 
@@ -230,5 +215,61 @@ internal sealed class ManagedConnectionTests : DatabaseTests
 
         //finally should close it
         Assert.That(con.Connection.State, Is.EqualTo(ConnectionState.Closed));
+    }
+
+    /// <summary>
+    /// Tests that connections with dangling transactions (@@TRANCOUNT > 0) are properly detected
+    /// and rejected from the thread-local pool. Reproduces issue where HasDanglingTransaction
+    /// catch block incorrectly returned false when the validation query itself failed due to
+    /// pending transaction.
+    /// </summary>
+    [TestCase(DatabaseType.MicrosoftSQLServer)]
+    public void Test_DanglingTransaction_IsDetectedAndRejected(DatabaseType dbType)
+    {
+        var db = GetTestDatabase(dbType);
+
+        // Clear pool to start fresh
+        FAnsi.Discovery.DiscoveredServer.ClearCurrentThreadConnectionPool();
+
+        IManagedConnection firstCon;
+        using (firstCon = db.Server.GetManagedConnection())
+        {
+            Assert.That(firstCon.Connection.State, Is.EqualTo(ConnectionState.Open));
+
+            // Simulate RDMP scenario: Start a transaction using raw SQL (not IManagedTransaction)
+            // This leaves @@TRANCOUNT > 0 but ManagedTransaction is null
+            using var cmd = firstCon.Connection.CreateCommand();
+            cmd.CommandText = "BEGIN TRANSACTION";
+            cmd.ExecuteNonQuery();
+
+            // Verify transaction was started
+            using var checkCmd = firstCon.Connection.CreateCommand();
+            checkCmd.CommandText = "SELECT @@TRANCOUNT";
+            var tranCount = (int)checkCmd.ExecuteScalar()!;
+            Assert.That(tranCount, Is.GreaterThan(0), "Transaction should have been started");
+        }
+        // Connection disposed but still in pool with dangling transaction
+
+        // Try to get a connection again - should get a FRESH one, not the dirty pooled one
+        IManagedConnection secondCon;
+        using (secondCon = db.Server.GetManagedConnection())
+        {
+            Assert.That(secondCon.Connection.State, Is.EqualTo(ConnectionState.Open));
+
+            // This should NOT fail - we should have gotten a clean connection
+            using var cmd = secondCon.Connection.CreateCommand();
+            cmd.CommandText = "SELECT 1";
+            var result = cmd.ExecuteScalar();
+            Assert.That(result, Is.EqualTo(1), "Should be able to execute commands on clean connection");
+
+            // Verify no dangling transaction on new connection
+            using var checkCmd = secondCon.Connection.CreateCommand();
+            checkCmd.CommandText = "SELECT @@TRANCOUNT";
+            var tranCount = (int)checkCmd.ExecuteScalar()!;
+            Assert.That(tranCount, Is.EqualTo(0), "New connection should not have dangling transaction");
+        }
+
+        // Cleanup
+        FAnsi.Discovery.DiscoveredServer.ClearCurrentThreadConnectionPool();
     }
 }

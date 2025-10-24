@@ -90,8 +90,8 @@ public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
 
     protected override string BuildAxisAggregate(AggregateCustomLineCollection query)
     {
-        var countAlias = query.CountSelect.GetAliasFromText(query.SyntaxHelper);
-        var axisColumnAlias = query.AxisSelect.GetAliasFromText(query.SyntaxHelper) ?? "joinDt";
+        var countAlias = query.CountSelect!.GetAliasFromText(query.SyntaxHelper)!;
+        var axisColumnAlias = query.AxisSelect!.GetAliasFromText(query.SyntaxHelper) ?? "joinDt";
 
         WrapAxisColumnWithDatePartFunction(query, axisColumnAlias);
 
@@ -117,9 +117,9 @@ public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
             """
             ,
             string.Join(Environment.NewLine, query.Lines.Where(static c => c.LocationToInsert < QueryComponent.SELECT)),
-            GetDateAxisTableDeclaration(query.Axis),
+            GetDateAxisTableDeclaration(query.Axis!),
 
-            GetDatePartOfColumn(query.Axis.AxisIncrement, "axis.dt"),
+            GetDatePartOfColumn(query.Axis!.AxisIncrement, "axis.dt"),
             countAlias,
 
             //the entire query
@@ -173,7 +173,7 @@ public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
 
                                   """,
             syntaxHelper.Escape(string.Join(Environment.NewLine, query.Lines.Where(static c => c.LocationToInsert < QueryComponent.SELECT))),
-            syntaxHelper.Escape(GetDateAxisTableDeclaration(query.Axis)),
+            syntaxHelper.Escape(GetDateAxisTableDeclaration(query.Axis!)),
 
             //the entire select query up to the end of the group by (omitting any Top X)
             syntaxHelper.Escape(string.Join(Environment.NewLine, query.Lines.Where(static c =>
@@ -182,7 +182,7 @@ public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
 
             syntaxHelper.Escape(countAlias),
             syntaxHelper.Escape(pivotAlias),
-            syntaxHelper.Escape(GetDatePartOfColumn(query.Axis.AxisIncrement, "axis.dt")),
+            syntaxHelper.Escape(GetDatePartOfColumn(query.Axis!.AxisIncrement, "axis.dt")),
             axisColumnAlias
         );
 
@@ -251,16 +251,16 @@ public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
         var syntaxHelper = query.SyntaxHelper;
 
         //find the pivot column e.g. 'hb_extract AS Healthboard'
-        var pivotSelectLine = query.PivotSelect;
+        var pivotSelectLine = query.PivotSelect!;
         var pivotSqlWithoutAlias = pivotSelectLine.GetTextWithoutAlias(syntaxHelper);
-        pivotAlias = pivotSelectLine.GetAliasFromText(syntaxHelper);
+        pivotAlias = pivotSelectLine.GetAliasFromText(syntaxHelper)!;
 
         //ensure it has an RHS
         if (string.IsNullOrWhiteSpace(pivotAlias))
             pivotAlias = syntaxHelper.GetRuntimeName(pivotSqlWithoutAlias);
 
-        var countSqlWithoutAlias = query.CountSelect.GetTextWithoutAlias(syntaxHelper);
-        countAlias = query.CountSelect.GetAliasFromText(syntaxHelper);
+        var countSqlWithoutAlias = query.CountSelect!.GetTextWithoutAlias(syntaxHelper);
+        countAlias = query.CountSelect.GetAliasFromText(syntaxHelper)!;
 
         var axisColumnWithoutAlias = query.AxisSelect?.GetTextWithoutAlias(query.SyntaxHelper);
         axisColumnAlias = query.AxisSelect?.GetAliasFromText(query.SyntaxHelper) ?? "joinDt";

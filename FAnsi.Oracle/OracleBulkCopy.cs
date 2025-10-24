@@ -43,8 +43,8 @@ internal sealed class OracleBulkCopy(DiscoveredTable targetTable, IManagedConnec
 
         foreach (var (dataColumn, discoveredColumn) in mapping)
         {
-            var p = _server.AddParameterWithValueToCommand(parameterNames[dataColumn], cmd, DBNull.Value);
-            p.DbType = tt.GetDbTypeForSQLDBType(discoveredColumn.DataType.SQLType);
+            var p = _server.AddParameterWithValueToCommand(parameterNames[dataColumn]!, cmd, DBNull.Value);
+            p.DbType = tt.GetDbTypeForSQLDBType(discoveredColumn.DataType!.SQLType);
 
             switch (p.DbType)
             {
@@ -80,7 +80,7 @@ internal sealed class OracleBulkCopy(DiscoveredTable targetTable, IManagedConnec
 
         foreach (var col in mapping.Keys)
         {
-            var param = cmd.Parameters[parameterNames[col]];
+            var param = cmd.Parameters[parameterNames[col]!];
             param.Value = values[col].ToArray();
         }
 

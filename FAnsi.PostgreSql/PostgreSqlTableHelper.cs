@@ -104,6 +104,78 @@ public sealed class PostgreSqlTableHelper : DiscoveredTableHelper
         r.Close();
     }
 
+    public override bool Exists(DiscoveredTable table, IManagedTransaction? transaction = null)
+    {
+        if (!table.Database.Exists())
+            return false;
+
+        using var connection = table.Database.Server.GetManagedConnection(transaction);
+
+        // Use pg_catalog to check for table/view existence with a single targeted query
+        var relKind = table.TableType switch
+        {
+            TableType.Table => "'r'", // r = ordinary table
+            TableType.View => "'v'",  // v = view
+            _ => "'r', 'v'" // For unknown types, check both
+        };
+
+        var sql = $"""
+            SELECT EXISTS (
+                SELECT 1 FROM pg_catalog.pg_class c
+                INNER JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+                WHERE c.relname = @tableName
+                AND n.nspname = @schemaName
+                AND c.relkind IN ({relKind})
+            )
+            """;
+
+        using var cmd = table.GetCommand(sql, connection.Connection, connection.Transaction);
+
+        var p = cmd.CreateParameter();
+        p.ParameterName = "@tableName";
+        p.Value = table.GetRuntimeName();
+        cmd.Parameters.Add(p);
+
+        var p2 = cmd.CreateParameter();
+        p2.ParameterName = "@schemaName";
+        p2.Value = string.IsNullOrWhiteSpace(table.Schema) ? PostgreSqlSyntaxHelper.DefaultPostgresSchema : table.Schema;
+        cmd.Parameters.Add(p2);
+
+        var result = cmd.ExecuteScalar();
+        return Convert.ToBoolean(result);
+    }
+
+    public override bool HasPrimaryKey(DiscoveredTable table, IManagedTransaction? transaction = null)
+    {
+        using var connection = table.Database.Server.GetManagedConnection(transaction);
+
+        const string sql = """
+            SELECT EXISTS (
+                SELECT 1 FROM pg_catalog.pg_constraint con
+                INNER JOIN pg_catalog.pg_class rel ON con.conrelid = rel.oid
+                INNER JOIN pg_catalog.pg_namespace nsp ON nsp.oid = rel.relnamespace
+                WHERE con.contype = 'p'
+                AND rel.relname = @tableName
+                AND nsp.nspname = @schemaName
+            )
+            """;
+
+        using var cmd = table.GetCommand(sql, connection.Connection, connection.Transaction);
+
+        var p = cmd.CreateParameter();
+        p.ParameterName = "@tableName";
+        p.Value = table.GetRuntimeName();
+        cmd.Parameters.Add(p);
+
+        var p2 = cmd.CreateParameter();
+        p2.ParameterName = "@schemaName";
+        p2.Value = string.IsNullOrWhiteSpace(table.Schema) ? PostgreSqlSyntaxHelper.DefaultPostgresSchema : table.Schema;
+        cmd.Parameters.Add(p2);
+
+        var result = cmd.ExecuteScalar();
+        return Convert.ToBoolean(result);
+    }
+
     private static string GetSQLType_FromSpColumnsResult(DbDataReader r)
     {
         var columnType = r["data_type"] as string;

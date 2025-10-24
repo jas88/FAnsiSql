@@ -89,7 +89,7 @@ public sealed class MicrosoftSQLDatabaseHelper : DiscoveredDatabaseHelper
 
     public override void DropDatabase(DiscoveredDatabase database)
     {
-        var userIsCurrentlyInDatabase = database.Server.GetCurrentDatabase().GetRuntimeName().Equals(database.GetRuntimeName());
+        var userIsCurrentlyInDatabase = database.Server.GetCurrentDatabase()!.GetRuntimeName().Equals(database.GetRuntimeName());
 
         var serverConnectionBuilder = new SqlConnectionStringBuilder(database.Server.Builder.ConnectionString);
         if (userIsCurrentlyInDatabase)
@@ -102,14 +102,14 @@ public sealed class MicrosoftSQLDatabaseHelper : DiscoveredDatabaseHelper
         try
         {
             // try dropping the db with single user mode enabled if the user wanted
-            DropDatabase(databaseToDrop, server, SetSingleUserWhenDroppingDatabases);
+            DropDatabase(databaseToDrop!, server, SetSingleUserWhenDroppingDatabases);
         }
         catch (Exception)
         {
             // failed to drop... maybe it dropped anyway though?
             if (SetSingleUserWhenDroppingDatabases && database.Exists())
                 // try without the single user mode bit
-                DropDatabase(databaseToDrop, server, false);
+                DropDatabase(databaseToDrop!, server, false);
             else
                 throw;
         }

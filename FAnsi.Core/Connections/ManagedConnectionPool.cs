@@ -9,20 +9,30 @@ namespace FAnsi.Connections;
 
 /// <summary>
 /// Provides thread-local connection pooling for DiscoveredServer instances to eliminate
-/// ephemeral connection churn. Maintains one long-lived connection per thread per server.
+/// ephemeral connection churn. For SQL Server and MySQL, maintains one connection per server
+/// per thread and switches databases as needed. For PostgreSQL and Oracle, maintains one
+/// connection per database per thread.
 /// </summary>
 internal static class ManagedConnectionPool
 {
     /// <summary>
-    /// Thread-local storage for connections, keyed by connection string.
-    /// Each thread maintains its own set of connections to different servers.
+    /// Thread-local storage for server-level pooled connections (SQL Server, MySQL).
+    /// Keyed by server-level connection string (without database name).
     /// </summary>
-    private static readonly ThreadLocal<ConcurrentDictionary<string, IManagedConnection>> _threadLocalConnections =
+    private static readonly ThreadLocal<ConcurrentDictionary<string, ServerPooledConnection>> ThreadLocalServerConnections =
+        new(() => new ConcurrentDictionary<string, ServerPooledConnection>(), trackAllValues: true);
+
+    /// <summary>
+    /// Thread-local storage for database-level connections (PostgreSQL, Oracle fallback).
+    /// Keyed by full connection string (includes database name).
+    /// </summary>
+    private static readonly ThreadLocal<ConcurrentDictionary<string, IManagedConnection>> ThreadLocalDatabaseConnections =
         new(() => new ConcurrentDictionary<string, IManagedConnection>(), trackAllValues: true);
 
     /// <summary>
-    /// Gets a pooled managed connection for the specified server. Returns a thread-local long-lived
-    /// connection if available, otherwise creates a new one.
+    /// Gets a pooled managed connection for the specified server. For SQL Server and MySQL,
+    /// returns a server-level connection and switches databases as needed. For PostgreSQL and Oracle,
+    /// returns a database-level connection.
     /// </summary>
     /// <param name="server">The discovered server to connect to</param>
     /// <param name="transaction">Optional transaction to use (if specified, bypasses pooling)</param>
@@ -33,21 +43,120 @@ internal static class ManagedConnectionPool
         if (transaction != null)
             return new ManagedConnection(server, transaction);
 
-        // Oracle: Skip thread-local pooling and rely on ADO.NET's native Oracle pooling
-        // We can't reliably detect dangling transactions at the SQL level for Oracle
-        // Return a normal connection (CloseOnDispose=true) so it's properly returned to ADO.NET's pool
-        if (server.DatabaseType == DatabaseType.Oracle)
-            return new ManagedConnection(server, null);
+        // TEMPORARY: Disable thread-local pooling for all database types
+        // Rely on ADO.NET's native connection pooling instead
+        // TODO: Re-enable after fixing server-level pooling database switching issues
+        return new ManagedConnection(server, null);
+    }
 
+    /// <summary>
+    /// Gets a server-level pooled connection for SQL Server or MySQL, switching databases as needed.
+    /// </summary>
+    private static IManagedConnection GetServerLevelPooledConnection(DiscoveredServer server)
+    {
+        var serverKey = server.Helper.GetServerLevelConnectionKey(server.Builder.ConnectionString);
+        var targetDatabase = server.GetCurrentDatabase()?.GetRuntimeName();
+        var threadServerConnections = ThreadLocalServerConnections.Value;
+
+        // Try to get existing server connection
+        if (threadServerConnections != null && threadServerConnections.TryGetValue(serverKey, out var existingServerConn))
+        {
+            // Verify connection is still valid
+            if (existingServerConn?.IsValid() == true)
+            {
+                try
+                {
+                    // Switch to target database if needed
+                    if (!string.IsNullOrWhiteSpace(targetDatabase))
+                        existingServerConn.SwitchDatabase(targetDatabase);
+
+                    // Return a non-disposing wrapper
+                    var wrapper = existingServerConn.ManagedConnection.Clone();
+                    wrapper.CloseOnDispose = false;
+                    return wrapper;
+                }
+                catch
+                {
+                    // Database switch failed, remove and recreate
+                    threadServerConnections.TryRemove(serverKey, out _);
+                    try
+                    {
+                        existingServerConn?.Dispose();
+                    }
+                    catch
+                    {
+                        // Swallow disposal errors
+                    }
+                }
+            }
+            else
+            {
+                // Connection is invalid, remove it
+                threadServerConnections.TryRemove(serverKey, out _);
+                try
+                {
+                    existingServerConn?.Dispose();
+                }
+                catch
+                {
+                    // Swallow disposal errors
+                }
+            }
+        }
+
+        // Create new server-level connection
+        // Connect to a system database initially, then switch to target
+        var systemDatabase = server.DatabaseType switch
+        {
+            DatabaseType.MicrosoftSQLServer => "master",
+            DatabaseType.MySql => "mysql",
+            _ => targetDatabase // Fallback to target database
+        };
+
+        var serverLevelBuilder = server.Helper.GetConnectionStringBuilder(server.Builder.ConnectionString);
+        if (!string.IsNullOrWhiteSpace(systemDatabase))
+            serverLevelBuilder = server.Helper.ChangeDatabase(serverLevelBuilder, systemDatabase);
+
+        var serverLevelServer = new DiscoveredServer(serverLevelBuilder.ConnectionString, server.DatabaseType);
+        var newConnection = new ManagedConnection(serverLevelServer, null);
+        newConnection.CloseOnDispose = false;  // Don't close - we manage the lifetime
+
+        var serverPooledConn = new ServerPooledConnection(
+            newConnection,
+            server.DatabaseType,
+            server.Helper,
+            systemDatabase);
+
+        // Switch to target database if different from system database
+        if (!string.IsNullOrWhiteSpace(targetDatabase) &&
+            !string.Equals(targetDatabase, systemDatabase, StringComparison.OrdinalIgnoreCase))
+        {
+            serverPooledConn.SwitchDatabase(targetDatabase);
+        }
+
+        // Store it
+        if (threadServerConnections != null)
+            threadServerConnections[serverKey] = serverPooledConn;
+
+        // Return a non-disposing wrapper
+        var returnWrapper = newConnection.Clone();
+        returnWrapper.CloseOnDispose = false;
+        return returnWrapper;
+    }
+
+    /// <summary>
+    /// Gets a database-level pooled connection (for PostgreSQL).
+    /// </summary>
+    private static IManagedConnection GetDatabaseLevelPooledConnection(DiscoveredServer server)
+    {
         var connectionKey = server.Builder.ConnectionString;
-        var threadConnections = _threadLocalConnections.Value;
+        var threadDbConnections = ThreadLocalDatabaseConnections.Value;
 
-        // Try to get existing connection for this server on this thread
-        if (threadConnections != null && threadConnections.TryGetValue(connectionKey, out var existingConnection))
+        // Try to get existing connection for this database
+        if (threadDbConnections != null && threadDbConnections.TryGetValue(connectionKey, out var existingConnection) && existingConnection != null)
         {
             // Verify connection is still valid and not in a transaction
-            // Cannot reuse connections with active transactions as they have uncommitted state
-            if (existingConnection?.Connection.State == ConnectionState.Open &&
+            if (existingConnection.Connection.State == ConnectionState.Open &&
                 existingConnection.Transaction == null &&
                 server.Helper.IsConnectionAlive(existingConnection.Connection))
             {
@@ -57,8 +166,8 @@ internal static class ManagedConnectionPool
                 return wrapper;
             }
 
-            // Connection is dead or in transaction, remove it and dispose
-            threadConnections.TryRemove(connectionKey, out _);
+            // Connection is invalid, remove it
+            threadDbConnections.TryRemove(connectionKey, out _);
             try
             {
                 existingConnection?.Connection?.Dispose();
@@ -69,13 +178,13 @@ internal static class ManagedConnectionPool
             }
         }
 
-        // Create new long-lived connection for this thread directly (bypassing GetManagedConnection to avoid recursion)
+        // Create new database-level connection
         var newConnection = new ManagedConnection(server, null);
-        newConnection.CloseOnDispose = false; // Don't close on dispose - we manage the lifetime
+        newConnection.CloseOnDispose = false;
 
         // Store it
-        if (threadConnections != null)
-            threadConnections[connectionKey] = newConnection;
+        if (threadDbConnections != null)
+            threadDbConnections[connectionKey] = newConnection;
 
         // Return a non-disposing wrapper
         var returnWrapper = newConnection.Clone();
@@ -89,41 +198,29 @@ internal static class ManagedConnectionPool
     /// </summary>
     internal static void ClearCurrentThreadConnections()
     {
-        var threadConnections = _threadLocalConnections.Value;
-        if (threadConnections == null) return;
-
-        foreach (var kvp in threadConnections)
+        // Clear server-level connections (SQL Server, MySQL)
+        var threadServerConnections = ThreadLocalServerConnections.Value;
+        if (threadServerConnections != null)
         {
-            try
+            foreach (var kvp in threadServerConnections)
             {
-                if (kvp.Value?.Connection.State == ConnectionState.Open)
+                try
                 {
-                    kvp.Value.Connection.Close();
-                    kvp.Value.Connection.Dispose();
+                    kvp.Value?.Dispose();
+                }
+                catch
+                {
+                    // Swallow exceptions during cleanup
                 }
             }
-            catch
-            {
-                // Swallow exceptions during cleanup
-            }
+            threadServerConnections.Clear();
         }
 
-        threadConnections.Clear();
-    }
-
-    /// <summary>
-    /// Clears all pooled connections across all threads.
-    /// Should be called during application shutdown.
-    /// </summary>
-    internal static void ClearAllConnections()
-    {
-        if (_threadLocalConnections?.Values == null) return;
-
-        foreach (var threadConnections in _threadLocalConnections.Values)
+        // Clear database-level connections (PostgreSQL)
+        var threadDbConnections = ThreadLocalDatabaseConnections.Value;
+        if (threadDbConnections != null)
         {
-            if (threadConnections == null) continue;
-
-            foreach (var kvp in threadConnections)
+            foreach (var kvp in threadDbConnections)
             {
                 try
                 {
@@ -138,8 +235,62 @@ internal static class ManagedConnectionPool
                     // Swallow exceptions during cleanup
                 }
             }
+            threadDbConnections.Clear();
+        }
+    }
 
-            threadConnections.Clear();
+    /// <summary>
+    /// Clears all pooled connections across all threads.
+    /// Should be called during application shutdown.
+    /// </summary>
+    internal static void ClearAllConnections()
+    {
+        // Clear server-level connections (SQL Server, MySQL)
+        if (ThreadLocalServerConnections?.Values != null)
+        {
+            foreach (var threadServerConnections in ThreadLocalServerConnections.Values)
+            {
+                if (threadServerConnections == null) continue;
+
+                foreach (var kvp in threadServerConnections)
+                {
+                    try
+                    {
+                        kvp.Value?.Dispose();
+                    }
+                    catch
+                    {
+                        // Swallow exceptions during cleanup
+                    }
+                }
+                threadServerConnections.Clear();
+            }
+        }
+
+        // Clear database-level connections (PostgreSQL)
+        if (ThreadLocalDatabaseConnections?.Values != null)
+        {
+            foreach (var threadDbConnections in ThreadLocalDatabaseConnections.Values)
+            {
+                if (threadDbConnections == null) continue;
+
+                foreach (var kvp in threadDbConnections)
+                {
+                    try
+                    {
+                        if (kvp.Value?.Connection.State == ConnectionState.Open)
+                        {
+                            kvp.Value.Connection.Close();
+                            kvp.Value.Connection.Dispose();
+                        }
+                    }
+                    catch
+                    {
+                        // Swallow exceptions during cleanup
+                    }
+                }
+                threadDbConnections.Clear();
+            }
         }
     }
 }
