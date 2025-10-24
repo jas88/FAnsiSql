@@ -153,10 +153,10 @@ internal static class ManagedConnectionPool
         var threadDbConnections = ThreadLocalDatabaseConnections.Value;
 
         // Try to get existing connection for this database
-        if (threadDbConnections != null && threadDbConnections.TryGetValue(connectionKey, out var existingConnection))
+        if (threadDbConnections != null && threadDbConnections.TryGetValue(connectionKey, out var existingConnection) && existingConnection != null)
         {
             // Verify connection is still valid and not in a transaction
-            if (existingConnection?.Connection.State == ConnectionState.Open &&
+            if (existingConnection.Connection.State == ConnectionState.Open &&
                 existingConnection.Transaction == null &&
                 server.Helper.IsConnectionAlive(existingConnection.Connection))
             {
