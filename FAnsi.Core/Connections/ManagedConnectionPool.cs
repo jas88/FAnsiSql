@@ -19,14 +19,14 @@ internal static class ManagedConnectionPool
     /// Thread-local storage for server-level pooled connections (SQL Server, MySQL).
     /// Keyed by server-level connection string (without database name).
     /// </summary>
-    private static readonly ThreadLocal<ConcurrentDictionary<string, ServerPooledConnection>> _threadLocalServerConnections =
+    private static readonly ThreadLocal<ConcurrentDictionary<string, ServerPooledConnection>> ThreadLocalServerConnections =
         new(() => new ConcurrentDictionary<string, ServerPooledConnection>(), trackAllValues: true);
 
     /// <summary>
     /// Thread-local storage for database-level connections (PostgreSQL, Oracle fallback).
     /// Keyed by full connection string (includes database name).
     /// </summary>
-    private static readonly ThreadLocal<ConcurrentDictionary<string, IManagedConnection>> _threadLocalDatabaseConnections =
+    private static readonly ThreadLocal<ConcurrentDictionary<string, IManagedConnection>> ThreadLocalDatabaseConnections =
         new(() => new ConcurrentDictionary<string, IManagedConnection>(), trackAllValues: true);
 
     /// <summary>
@@ -64,7 +64,7 @@ internal static class ManagedConnectionPool
     {
         var serverKey = server.Helper.GetServerLevelConnectionKey(server.Builder.ConnectionString);
         var targetDatabase = server.GetCurrentDatabase()?.GetRuntimeName();
-        var threadServerConnections = _threadLocalServerConnections.Value;
+        var threadServerConnections = ThreadLocalServerConnections.Value;
 
         // Try to get existing server connection
         if (threadServerConnections != null && threadServerConnections.TryGetValue(serverKey, out var existingServerConn))
@@ -158,7 +158,7 @@ internal static class ManagedConnectionPool
     private static IManagedConnection GetDatabaseLevelPooledConnection(DiscoveredServer server)
     {
         var connectionKey = server.Builder.ConnectionString;
-        var threadDbConnections = _threadLocalDatabaseConnections.Value;
+        var threadDbConnections = ThreadLocalDatabaseConnections.Value;
 
         // Try to get existing connection for this database
         if (threadDbConnections != null && threadDbConnections.TryGetValue(connectionKey, out var existingConnection))
@@ -207,7 +207,7 @@ internal static class ManagedConnectionPool
     internal static void ClearCurrentThreadConnections()
     {
         // Clear server-level connections (SQL Server, MySQL)
-        var threadServerConnections = _threadLocalServerConnections.Value;
+        var threadServerConnections = ThreadLocalServerConnections.Value;
         if (threadServerConnections != null)
         {
             foreach (var kvp in threadServerConnections)
@@ -225,7 +225,7 @@ internal static class ManagedConnectionPool
         }
 
         // Clear database-level connections (PostgreSQL)
-        var threadDbConnections = _threadLocalDatabaseConnections.Value;
+        var threadDbConnections = ThreadLocalDatabaseConnections.Value;
         if (threadDbConnections != null)
         {
             foreach (var kvp in threadDbConnections)
@@ -254,9 +254,9 @@ internal static class ManagedConnectionPool
     internal static void ClearAllConnections()
     {
         // Clear server-level connections (SQL Server, MySQL)
-        if (_threadLocalServerConnections?.Values != null)
+        if (ThreadLocalServerConnections?.Values != null)
         {
-            foreach (var threadServerConnections in _threadLocalServerConnections.Values)
+            foreach (var threadServerConnections in ThreadLocalServerConnections.Values)
             {
                 if (threadServerConnections == null) continue;
 
@@ -276,9 +276,9 @@ internal static class ManagedConnectionPool
         }
 
         // Clear database-level connections (PostgreSQL)
-        if (_threadLocalDatabaseConnections?.Values != null)
+        if (ThreadLocalDatabaseConnections?.Values != null)
         {
-            foreach (var threadDbConnections in _threadLocalDatabaseConnections.Values)
+            foreach (var threadDbConnections in ThreadLocalDatabaseConnections.Values)
             {
                 if (threadDbConnections == null) continue;
 

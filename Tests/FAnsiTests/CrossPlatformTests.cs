@@ -1093,7 +1093,7 @@ public sealed class CrossPlatformTests : DatabaseTests
         ]);
 
         //test basic insert
-        foreach (var s in someDates)
+        foreach (var s in _someDates)
             tbl.Insert(new Dictionary<string, object>
                 {
                     {"ID",1},
@@ -1109,20 +1109,20 @@ public sealed class CrossPlatformTests : DatabaseTests
         dt.Columns.Add("mydate");
         dt.Columns.Add("mystring");
 
-        foreach (var s in someDates)
+        foreach (var s in _someDates)
             dt.Rows.Add(2, s, Guid.NewGuid().ToString());
 
-        Assert.That(tbl.GetRowCount(), Is.EqualTo(someDates.Length));
+        Assert.That(tbl.GetRowCount(), Is.EqualTo(_someDates.Length));
 
         using (var bulkInsert = tbl.BeginBulkInsert(culture))
         {
             bulkInsert.Upload(dt);
         }
 
-        Assert.That(tbl.GetRowCount(), Is.EqualTo(someDates.Length * 2));
+        Assert.That(tbl.GetRowCount(), Is.EqualTo(_someDates.Length * 2));
     }
 
-    private readonly string[] someDates = [
+    private readonly string[] _someDates = [
         "22\\5\\19",
         "22/5/19",
         "22-5-19",

@@ -32,25 +32,25 @@ public abstract partial class TypeTranslater : ITypeTranslater
     /// The maximum number of characters to declare explicitly in the char type (e.g. varchar(500)) before instead declaring the text/varchar(max) etc type
     /// appropriate to the database engine being targeted
     /// </summary>
-    private readonly int MaxStringWidthBeforeMax;
+    private readonly int _maxStringWidthBeforeMax;
 
     /// <summary>
     /// The size to declare string fields when the API user has neglected to supply a length.  This should be high, if you want to avoid lots of extra long columns
     /// use <see cref="Guesser"/> to determine the required length/type at runtime.
     /// </summary>
-    private readonly int StringWidthWhenNotSupplied;
+    private readonly int _stringWidthWhenNotSupplied;
 
     /// <summary>
     ///
     /// </summary>
     /// <param name="dateRegex"><see cref="DateRegex"/></param>
-    /// <param name="maxStringWidthBeforeMax"><see cref="MaxStringWidthBeforeMax"/></param>
-    /// <param name="stringWidthWhenNotSupplied"><see cref="StringWidthWhenNotSupplied"/></param>
+    /// <param name="maxStringWidthBeforeMax"><see cref="_maxStringWidthBeforeMax"/></param>
+    /// <param name="stringWidthWhenNotSupplied"><see cref="_stringWidthWhenNotSupplied"/></param>
     protected TypeTranslater(Regex dateRegex, int maxStringWidthBeforeMax, int stringWidthWhenNotSupplied)
     {
         DateRegex = dateRegex;
-        MaxStringWidthBeforeMax = maxStringWidthBeforeMax;
-        StringWidthWhenNotSupplied = stringWidthWhenNotSupplied;
+        _maxStringWidthBeforeMax = maxStringWidthBeforeMax;
+        _stringWidthWhenNotSupplied = stringWidthWhenNotSupplied;
     }
 
     public string GetSQLDBTypeForCSharpType(DatabaseTypeRequest request)
@@ -111,9 +111,9 @@ public abstract partial class TypeTranslater : ITypeTranslater
     protected string GetStringDataType(int? maxExpectedStringWidth)
     {
         if (maxExpectedStringWidth == null)
-            return GetStringDataTypeImpl(StringWidthWhenNotSupplied);
+            return GetStringDataTypeImpl(_stringWidthWhenNotSupplied);
 
-        if (maxExpectedStringWidth > MaxStringWidthBeforeMax)
+        if (maxExpectedStringWidth > _maxStringWidthBeforeMax)
             return GetStringDataTypeWithUnlimitedWidth();
 
         return GetStringDataTypeImpl(maxExpectedStringWidth.Value);
@@ -127,9 +127,9 @@ public abstract partial class TypeTranslater : ITypeTranslater
     private string GetUnicodeStringDataType(int? maxExpectedStringWidth)
     {
         if (maxExpectedStringWidth == null)
-            return GetUnicodeStringDataTypeImpl(StringWidthWhenNotSupplied);
+            return GetUnicodeStringDataTypeImpl(_stringWidthWhenNotSupplied);
 
-        if (maxExpectedStringWidth > MaxStringWidthBeforeMax)
+        if (maxExpectedStringWidth > _maxStringWidthBeforeMax)
             return GetUnicodeStringDataTypeWithUnlimitedWidth();
 
         return GetUnicodeStringDataTypeImpl(maxExpectedStringWidth.Value);
