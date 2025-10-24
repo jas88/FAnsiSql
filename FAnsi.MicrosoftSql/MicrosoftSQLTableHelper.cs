@@ -38,7 +38,7 @@ public sealed partial class MicrosoftSQLTableHelper : DiscoveredTableHelper
             //if it is a table valued function prefix the column name with the table valued function name
             var columnName = discoveredTable is DiscoveredTableValuedFunction
                 ? $"{discoveredTable.GetRuntimeName()}.{r["COLUMN_NAME"]}"
-                : r["COLUMN_NAME"].ToString();
+                : r["COLUMN_NAME"].ToString()!;
 
             var toAdd = new DiscoveredColumn(discoveredTable, columnName, isNullable)
             {
@@ -232,7 +232,7 @@ public sealed partial class MicrosoftSQLTableHelper : DiscoveredTableHelper
         {
             using var connection = args.GetManagedConnection(table);
             var columnHelper = GetColumnHelper();
-            foreach (var alterSql in discoverColumns.Where(static dc => dc.AllowNulls).Select(col => columnHelper.GetAlterColumnToSql(col, col.DataType.SQLType, false)))
+            foreach (var alterSql in discoverColumns.Where(static dc => dc.AllowNulls).Select(col => columnHelper.GetAlterColumnToSql(col, col.DataType!.SQLType!, false)))
             {
                 using var alterCmd = table.GetCommand(alterSql, connection.Connection, connection.Transaction);
                 args.ExecuteNonQuery(alterCmd);
@@ -321,7 +321,7 @@ public sealed partial class MicrosoftSQLTableHelper : DiscoveredTableHelper
                     toReturn.Add(current.Name, current);
                 }
 
-                current.AddKeys(r["PKCOLUMN_NAME"].ToString(), r["FKCOLUMN_NAME"].ToString(), transaction);
+                current.AddKeys(r["PKCOLUMN_NAME"].ToString()!, r["FKCOLUMN_NAME"].ToString()!, transaction);
             }
         }
 

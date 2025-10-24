@@ -29,13 +29,13 @@ public sealed class OracleAggregateHelper : AggregateHelper
 
         var startDateSql =
             //is it a date in some format or other?
-            DateTime.TryParse(axis.StartDate.Trim('\'', '"'), out var start)
+            DateTime.TryParse(axis.StartDate!.Trim('\'', '"'), out var start)
                 ? $"to_date('{start:yyyyMMdd}','yyyymmdd')"
-                : $"to_date(to_char({axis.StartDate}, 'YYYYMMDD'), 'yyyymmdd')"; //assume its some Oracle specific syntax that results in a date
+                : $"to_date(to_char({axis.StartDate!}, 'YYYYMMDD'), 'yyyymmdd')"; //assume its some Oracle specific syntax that results in a date
 
-        var endDateSql = DateTime.TryParse(axis.EndDate.Trim('\'', '"'), out var end)
+        var endDateSql = DateTime.TryParse(axis.EndDate!.Trim('\'', '"'), out var end)
             ? $"to_date('{end:yyyyMMdd}','yyyymmdd')"
-            : $"to_date(to_char({axis.EndDate}, 'YYYYMMDD'), 'yyyymmdd')"; //assume its some Oracle specific syntax that results in a date e.g. CURRENT_TIMESTAMP
+            : $"to_date(to_char({axis.EndDate!}, 'YYYYMMDD'), 'yyyymmdd')"; //assume its some Oracle specific syntax that results in a date e.g. CURRENT_TIMESTAMP
 
         return axis.AxisIncrement switch
         {
@@ -100,12 +100,12 @@ group by
 dt
 order by dt*/
 
-        var countAlias = query.CountSelect.GetAliasFromText(query.SyntaxHelper);
-        var axisColumnAlias = query.AxisSelect.GetAliasFromText(query.SyntaxHelper) ?? "joinDt";
+        var countAlias = query.CountSelect!.GetAliasFromText(query.SyntaxHelper);
+        var axisColumnAlias = query.AxisSelect!.GetAliasFromText(query.SyntaxHelper) ?? "joinDt";
 
         WrapAxisColumnWithDatePartFunction(query, axisColumnAlias);
 
-        var calendar = GetDateAxisTableDeclaration(query.Axis);
+        var calendar = GetDateAxisTableDeclaration(query.Axis!);
 
         return string.Format(
             """
@@ -129,7 +129,7 @@ order by dt*/
             string.Join(Environment.NewLine, query.Lines.Where(static c => c.LocationToInsert < QueryComponent.SELECT)),
             //then add the calendar
             calendar,
-            GetDatePartOfColumn(query.Axis.AxisIncrement, "dt"),
+            GetDatePartOfColumn(query.Axis!.AxisIncrement, "dt"),
             countAlias,
             //the entire query
             string.Join(Environment.NewLine, query.Lines.Where(static c => c.LocationToInsert is >= QueryComponent.SELECT and <= QueryComponent.Having)),
@@ -141,8 +141,8 @@ order by dt*/
 
     protected override string BuildPivotOnlyAggregate(AggregateCustomLineCollection query, CustomLine nonPivotColumn)
     {
-        var pivotSqlWithoutAlias = query.PivotSelect.GetTextWithoutAlias(query.SyntaxHelper);
-        var countSqlWithoutAlias = query.CountSelect.GetTextWithoutAlias(query.SyntaxHelper);
+        var pivotSqlWithoutAlias = query.PivotSelect!.GetTextWithoutAlias(query.SyntaxHelper);
+        var countSqlWithoutAlias = query.CountSelect!.GetTextWithoutAlias(query.SyntaxHelper);
 
         query.SyntaxHelper.SplitLineIntoOuterMostMethodAndContents(countSqlWithoutAlias, out var aggregateMethod,
             out var aggregateParameter);
@@ -199,9 +199,9 @@ order by dt*/
 
     protected override string BuildPivotAndAxisAggregate(AggregateCustomLineCollection query)
     {
-        var pivotSqlWithoutAlias = query.PivotSelect.GetTextWithoutAlias(query.SyntaxHelper);
-        var countSqlWithoutAlias = query.CountSelect.GetTextWithoutAlias(query.SyntaxHelper);
-        var axisColumnAlias = query.AxisSelect.GetAliasFromText(query.SyntaxHelper) ?? "joinDt";
+        var pivotSqlWithoutAlias = query.PivotSelect!.GetTextWithoutAlias(query.SyntaxHelper);
+        var countSqlWithoutAlias = query.CountSelect!.GetTextWithoutAlias(query.SyntaxHelper);
+        var axisColumnAlias = query.AxisSelect!.GetAliasFromText(query.SyntaxHelper) ?? "joinDt";
 
         query.SyntaxHelper.SplitLineIntoOuterMostMethodAndContents(countSqlWithoutAlias, out var aggregateMethod,
             out var aggregateParameter);
@@ -211,7 +211,7 @@ order by dt*/
 
         WrapAxisColumnWithDatePartFunction(query, axisColumnAlias);
 
-        var calendar = GetDateAxisTableDeclaration(query.Axis);
+        var calendar = GetDateAxisTableDeclaration(query.Axis!);
 
         // Oracle pivot with date axis
         return string.Format("""
@@ -242,7 +242,7 @@ order by dt*/
             string.Join(Environment.NewLine,
                 query.Lines.Where(static c => c.LocationToInsert is >= QueryComponent.SELECT and <= QueryComponent.Having)),
             pivotSqlWithoutAlias,
-            GetDatePartOfColumn(query.Axis.AxisIncrement, "calendar.dt"),
+            GetDatePartOfColumn(query.Axis!.AxisIncrement, "calendar.dt"),
             $"{aggregateMethod}(case when {pivotSqlWithoutAlias} = pivot_values.piv then {aggregateParameter} else null end)",
             axisColumnAlias
         );

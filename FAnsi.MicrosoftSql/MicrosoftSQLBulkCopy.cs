@@ -66,33 +66,35 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
     /// <returns>Dictionary mapping colid (1-based) to column metadata</returns>
     private Dictionary<int, ColumnMappingMetadata> BuildColumnMetadataCache(SqlBulkCopy insert)
     {
-        // Extract metadata for each mapped column
-        var mappings = new List<ColumnMappingMetadata>();
-
+        // Build mapping dictionary for fast lookup by destination column name
+        var mappingByDestColumn = new Dictionary<string, SqlBulkCopyColumnMapping>(StringComparer.OrdinalIgnoreCase);
         foreach (SqlBulkCopyColumnMapping mapping in insert.ColumnMappings)
+            mappingByDestColumn[mapping.DestinationColumn] = mapping;
+
+        // Iterate through TargetTableColumns in physical table order
+        // SQL Server assigns colid based on table column order (NOT alphabetical)
+        var cache = new Dictionary<int, ColumnMappingMetadata>();
+        var colid = 1; // 1-based
+
+        foreach (var destColumn in TargetTableColumns)
         {
-            var destColumnName = mapping.DestinationColumn;
+            var destColumnName = destColumn.GetRuntimeName();
 
-            // Get column metadata from target table
-            var destColumn = TargetTableColumns
-                .FirstOrDefault(c => c.GetRuntimeName().Equals(destColumnName,
-                    StringComparison.OrdinalIgnoreCase));
-
-            mappings.Add(new ColumnMappingMetadata
+            // Only include columns that are actually mapped
+            if (mappingByDestColumn.TryGetValue(destColumnName, out var mapping))
             {
-                SourceColumn = mapping.SourceColumn,
-                DestinationColumn = destColumnName,
-                MaxLength = destColumn?.DataType?.GetLengthIfString(),
-                DataType = destColumn?.DataType?.SQLType
-            });
+                cache[colid] = new ColumnMappingMetadata
+                {
+                    SourceColumn = mapping.SourceColumn,
+                    DestinationColumn = destColumnName,
+                    MaxLength = destColumn.DataType?.GetLengthIfString(),
+                    DataType = destColumn.DataType?.SQLType
+                };
+                colid++;
+            }
         }
 
-        // Sort by destination column name (replicates SQL Server's internal _sortedColumnMappings behavior)
-        // colid in error messages is 1-based, so index 0 = colid 1
-        return mappings
-            .OrderBy(m => m.DestinationColumn, StringComparer.OrdinalIgnoreCase)
-            .Select((metadata, index) => new { index, metadata })
-            .ToDictionary(x => x.index + 1, x => x.metadata); // 1-based indexing
+        return cache;
     }
 
     private int BulkInsertWithBetterErrorMessages(SqlBulkCopy insert, DataTable dt, DiscoveredServer serverForLineByLineInvestigation)
@@ -250,7 +252,7 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
 
         // Build enhanced error message (matching original format)
         newMessage = ex.Message.Insert(match.Index + match.Length,
-            $"(Source Column <<{metadata.SourceColumn}>> Dest Column <<{metadata.DestinationColumn}>> which has MaxLength of {metadata.MaxLength?.ToString() ?? "unknown"})");
+            $"(colid {colId}: Source Column <<{metadata.SourceColumn}>> Dest Column <<{metadata.DestinationColumn}>> which has MaxLength of {metadata.MaxLength?.ToString() ?? "unknown"})");
 
         return true;
     }

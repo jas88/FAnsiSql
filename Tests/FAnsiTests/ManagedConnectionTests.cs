@@ -245,7 +245,7 @@ internal sealed class ManagedConnectionTests : DatabaseTests
             // Verify transaction was started
             using var checkCmd = firstCon.Connection.CreateCommand();
             checkCmd.CommandText = "SELECT @@TRANCOUNT";
-            var tranCount = (int)checkCmd.ExecuteScalar();
+            var tranCount = (int)checkCmd.ExecuteScalar()!;
             Assert.That(tranCount, Is.GreaterThan(0), "Transaction should have been started");
         }
         // Connection disposed but still in pool with dangling transaction
@@ -265,7 +265,7 @@ internal sealed class ManagedConnectionTests : DatabaseTests
             // Verify no dangling transaction on new connection
             using var checkCmd = secondCon.Connection.CreateCommand();
             checkCmd.CommandText = "SELECT @@TRANCOUNT";
-            var tranCount = (int)checkCmd.ExecuteScalar();
+            var tranCount = (int)checkCmd.ExecuteScalar()!;
             Assert.That(tranCount, Is.EqualTo(0), "New connection should not have dangling transaction");
         }
 
