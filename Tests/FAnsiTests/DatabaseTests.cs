@@ -12,6 +12,7 @@ using FAnsi.Implementations.MySql;
 using FAnsi.Implementations.Oracle;
 using FAnsi.Implementations.MicrosoftSQL;
 using FAnsi.Implementations.PostgreSql;
+using FAnsi.Implementations.Sqlite;
 using NUnit.Framework;
 
 namespace FAnsiTests;
@@ -30,10 +31,15 @@ public abstract class DatabaseTests
     [OneTimeSetUp]
     public void CheckFiles()
     {
-        ImplementationManager.Load<OracleImplementation>();
+        // Explicit loading for tests (ModuleInitializer timing is unreliable in test runners)
+        // Production code using FAnsi.Legacy gets automatic loading
+#pragma warning disable CS0618 // Type or member is obsolete
         ImplementationManager.Load<MicrosoftSQLImplementation>();
         ImplementationManager.Load<MySqlImplementation>();
+        ImplementationManager.Load<OracleImplementation>();
         ImplementationManager.Load<PostgreSqlImplementation>();
+        ImplementationManager.Load<SqliteImplementation>();
+#pragma warning restore CS0618 // Type or member is obsolete
 
         var file = Path.Combine(TestContext.CurrentContext.TestDirectory, TestFilename);
 

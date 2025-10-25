@@ -29,6 +29,7 @@ public sealed class ImplementationManager
     /// loads all implementations in the assembly hosting the <typeparamref name="T"/>
     /// </summary>
     /// <typeparam name="T"></typeparam>
+    [Obsolete("Implementations now auto-register when their assembly is loaded. Manual loading is no longer necessary.")]
     public static void Load<T>() where T : IImplementation, new()
     {
         var loading = new T();
