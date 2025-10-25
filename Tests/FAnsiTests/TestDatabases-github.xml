@@ -20,4 +20,8 @@
     <DatabaseType>PostgreSql</DatabaseType>
     <ConnectionString>User ID=postgres;Password=pgpass4291;Host=127.0.0.1;Port=5432;Database=postgres</ConnectionString>
   </TestDatabase>
+  <TestDatabase>
+    <DatabaseType>Sqlite</DatabaseType>
+    <ConnectionString>Data Source=:memory:</ConnectionString>
+  </TestDatabase>
 </TestDatabases>

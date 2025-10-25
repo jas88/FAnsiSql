@@ -15,7 +15,9 @@ try
 {
     // Test 1: Load implementation
     Console.WriteLine("Test 1: Loading SQL Server implementation...");
+#pragma warning disable CS0618 // Type or member is obsolete
     ImplementationManager.Load<MicrosoftSQLImplementation>();
+#pragma warning restore CS0618 // Type or member is obsolete
     Console.WriteLine("✅ Implementation loaded successfully");
     Console.WriteLine();
 

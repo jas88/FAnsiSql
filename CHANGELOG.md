@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **SQLite support** - Fifth database platform alongside SQL Server, MySQL, Oracle, and PostgreSQL
+  - Full implementation of all core operations (table creation, bulk insert, queries, type translation)
+  - Type affinity system for SQLite's flexible typing
+  - In-memory database support for fast testing (Data Source=:memory:)
+  - File-based persistent databases
+  - Enhanced BulkCopy error reporting (matches SQL Server quality)
+  - Auto-registration via ModuleInitializer
+  - Comprehensive XML documentation (100% coverage)
+  - 111+ cross-platform tests enabled
+  - Platform limitations clearly documented (no ALTER COLUMN, no schemas, no PIVOT, etc)
+
 ## [3.3.2] - 2025-10-24
 
 ### Fixed

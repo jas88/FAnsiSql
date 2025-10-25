@@ -34,6 +34,8 @@ public sealed class CrossPlatformTests : DatabaseTests
     [TestCase(DatabaseType.Oracle, "2007-01-01 00:00:00")]
     [TestCase(DatabaseType.PostgreSql, "01/01/2007 00:00:00")]
     [TestCase(DatabaseType.PostgreSql, "2007-01-01 00:00:00")]
+    [TestCase(DatabaseType.Sqlite, "01/01/2007 00:00:00")]
+    [TestCase(DatabaseType.Sqlite, "2007-01-01 00:00:00")]
     public void DateColumnTests_NoTime(DatabaseType type, object input)
     {
         var db = GetTestDatabase(type);
@@ -67,6 +69,8 @@ public sealed class CrossPlatformTests : DatabaseTests
     [TestCase(DatabaseType.Oracle, "28/2/1993 5:36:27 AM", "en-GB")]
     [TestCase(DatabaseType.PostgreSql, "2/28/1993 5:36:27 AM", "en-US")]
     [TestCase(DatabaseType.PostgreSql, "28/2/1993 5:36:27 AM", "en-GB")]
+    [TestCase(DatabaseType.Sqlite, "2/28/1993 5:36:27 AM", "en-US")]
+    [TestCase(DatabaseType.Sqlite, "28/2/1993 5:36:27 AM", "en-GB")]
     public void DateColumnTests_UkUsFormat_Explicit(DatabaseType type, object input, string culture)
     {
         var db = GetTestDatabase(type);
@@ -108,6 +112,7 @@ public sealed class CrossPlatformTests : DatabaseTests
     [TestCase(DatabaseType.MySql, "2/28/1993 5:36:27 AM", "en-US")]
     [TestCase(DatabaseType.Oracle, "2/28/1993 5:36:27 AM", "en-US")]
     [TestCase(DatabaseType.PostgreSql, "2/28/1993 5:36:27 AM", "en-US")]
+    [TestCase(DatabaseType.Sqlite, "2/28/1993 5:36:27 AM", "en-US")]
     public void DateColumnTests_PrimaryKeyColumn(DatabaseType type, object input, string culture)
     {
         var db = GetTestDatabase(type);
@@ -145,6 +150,8 @@ public sealed class CrossPlatformTests : DatabaseTests
     [TestCase(DatabaseType.Oracle, "00:00")]
     [TestCase(DatabaseType.PostgreSql, "00:00:00")]
     [TestCase(DatabaseType.PostgreSql, "00:00")]
+    [TestCase(DatabaseType.Sqlite, "00:00:00")]
+    [TestCase(DatabaseType.Sqlite, "00:00")]
     public void DateColumnTests_TimeOnly_Midnight(DatabaseType type, object input)
     {
         var db = GetTestDatabase(type);
@@ -219,6 +226,8 @@ public sealed class CrossPlatformTests : DatabaseTests
     [TestCase(DatabaseType.Oracle, "13:11")]
     [TestCase(DatabaseType.PostgreSql, "13:11:10")]
     [TestCase(DatabaseType.PostgreSql, "13:11")]
+    [TestCase(DatabaseType.Sqlite, "13:11:10")]
+    [TestCase(DatabaseType.Sqlite, "13:11")]
     public void DateColumnTests_TimeOnly_Afternoon(DatabaseType type, object input)
     {
         var db = GetTestDatabase(type);
@@ -268,6 +277,11 @@ public sealed class CrossPlatformTests : DatabaseTests
     [TestCase(DatabaseType.PostgreSql, "boolean", "0")]
     [TestCase(DatabaseType.PostgreSql, "int", "00.0")]
     [TestCase(DatabaseType.PostgreSql, "int", "-24")]
+    [TestCase(DatabaseType.Sqlite, "INTEGER", "-23.00")]
+    [TestCase(DatabaseType.Sqlite, "INTEGER", "23.0")]
+    [TestCase(DatabaseType.Sqlite, "INTEGER", "0")]
+    [TestCase(DatabaseType.Sqlite, "INTEGER", "00.0")]
+    [TestCase(DatabaseType.Sqlite, "INTEGER", "-24")]
     public void TypeConsensusBetweenGuesserAndDiscoveredTableTest(DatabaseType dbType, string datatType, string insertValue)
     {
         var database = GetTestDatabase(dbType);
@@ -783,6 +797,7 @@ public sealed class CrossPlatformTests : DatabaseTests
     [TestCase(DatabaseType.MySql, "_-o-_", ":>0<:")]
     [TestCase(DatabaseType.MicrosoftSQLServer, "_-o-_", ":>0<:")]
     [TestCase(DatabaseType.PostgreSql, "_-o-_", ":>0<:")]
+    [TestCase(DatabaseType.Sqlite, "_-o-_", ":>0<:")]
     public void HorribleDatabaseAndTableNames(DatabaseType type, string horribleDatabaseName, string horribleTableName)
     {
         AssertCanCreateDatabases();
@@ -913,6 +928,8 @@ public sealed class CrossPlatformTests : DatabaseTests
     [TestCase(DatabaseType.PostgreSql, "_-o-_", ":>0<:", "-_")]
     [TestCase(DatabaseType.PostgreSql, "Comment", "Comment", "Comment")] //reserved keyword in Oracle
     [TestCase(DatabaseType.PostgreSql, "Comment", "SSSS", "Space Out")]
+    [TestCase(DatabaseType.Sqlite, "_-o-_", ":>0<:", "-_")]
+    [TestCase(DatabaseType.Sqlite, "Comment", "SSSS", "Space Out")]
     public void HorribleColumnNames(DatabaseType type, string horribleDatabaseName, string horribleTableName, string columnName)
     {
         AssertCanCreateDatabases();

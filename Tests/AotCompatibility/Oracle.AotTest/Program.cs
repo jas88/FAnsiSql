@@ -12,7 +12,9 @@ Console.WriteLine();
 try
 {
     Console.WriteLine("Test 1: Loading Oracle implementation...");
+#pragma warning disable CS0618 // Type or member is obsolete
     ImplementationManager.Load<OracleImplementation>();
+#pragma warning restore CS0618 // Type or member is obsolete
     Console.WriteLine("✅ Implementation loaded");
     Console.WriteLine();
 

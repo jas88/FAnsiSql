@@ -1,19 +1,19 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <PackageId>FAnsiSql.Legacy</PackageId>
-    <version>0.1.0</version>
-    <title>FAnsiSql.Legacy</title>
+    <PackageId>HIC.FAnsi.Sqlite</PackageId>
+    <version>0.0.7</version>
+    <title>HIC.FAnsi.Sqlite</title>
     <authors>Health Informatics Centre - University of Dundee</authors>
     <owners>Health Informatics Centre - University of Dundee</owners>
-    <PackageProjectUrl>https://github.com/jas88/FAnsiSql</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/HicServices/FAnsiSql</PackageProjectUrl>
     <PackageLicenseExpression>GPL-3.0-or-later</PackageLicenseExpression>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-    <description>FAnsiSql is a database management/ETL library that allows you to perform common SQL operations without having to know which Database Management System (DBMS) you are targetting (e.g. Sql Server, My Sql, Oracle). This legacy meta-package includes all supported DBMS implementations for easy migration from HIC.FAnsiSql. New projects should use the modular packages (FAnsi.Core + specific DBMS packages).</description>
-    <PackageTags>Ansi,SQL,Legacy</PackageTags>
-    <AssemblyTitle>FAnsiSql.Legacy</AssemblyTitle>
+    <description>SQLite implementation for FAnsiSql</description>
+    <PackageTags>Ansi,SQL,SQLite</PackageTags>
+    <AssemblyTitle>HIC.FAnsi.Sqlite</AssemblyTitle>
     <Company>Health Informatics Centre, University of Dundee</Company>
-    <Product>FAnsiSql.Legacy</Product>
-    <Description>FAnsiSql legacy package with all DBMS implementations included</Description>
+    <Product>HIC.FAnsi.Sqlite</Product>
+    <Description>SQLite implementation for FAnsiSql</Description>
     <Copyright>Copyright ©  2019-2025</Copyright>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
@@ -31,13 +31,9 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\FAnsi.Core\FAnsi.Core.csproj" />
-    <ProjectReference Include="..\FAnsi.MicrosoftSql\FAnsi.MicrosoftSql.csproj" />
-    <ProjectReference Include="..\FAnsi.MySql\FAnsi.MySql.csproj" />
-    <ProjectReference Include="..\FAnsi.Oracle\FAnsi.Oracle.csproj" />
-    <ProjectReference Include="..\FAnsi.PostgreSql\FAnsi.PostgreSql.csproj" />
-    <ProjectReference Include="..\FAnsi.Sqlite\FAnsi.Sqlite.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.0" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>

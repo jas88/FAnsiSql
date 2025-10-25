@@ -22,8 +22,9 @@ fi
 echo "✅ Code formatting is correct"
 
 # Run dotnet build to verify solution compiles
+# Exclude CA2255 (ModuleInitializer is correct usage in libraries)
 echo "🔨 Building solution..."
-if ! dotnet build --nologo --verbosity quiet -p:TreatWarningsAsErrors=true; then
+if ! dotnet build --nologo --verbosity quiet -p:TreatWarningsAsErrors=true -p:WarningsNotAsErrors="CA2255"; then
     echo "❌ Build failed. Please fix build errors before committing."
     exit 1
 fi

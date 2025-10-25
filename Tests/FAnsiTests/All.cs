@@ -12,6 +12,18 @@ public sealed class All
         DatabaseType.MicrosoftSQLServer,
         DatabaseType.MySql,
         DatabaseType.Oracle,
+        DatabaseType.PostgreSql,
+        DatabaseType.Sqlite
+    ];
+
+    /// <summary>
+    /// <see cref="TestCaseSourceAttribute"/> for tests that should run on all DBMS except SQLite
+    /// (used for features that SQLite legitimately does not support, like MD5 hashing)
+    /// </summary>
+    public static readonly DatabaseType[] DatabaseTypesExceptSqlite = [
+        DatabaseType.MicrosoftSQLServer,
+        DatabaseType.MySql,
+        DatabaseType.Oracle,
         DatabaseType.PostgreSql
     ];
 
@@ -24,10 +36,12 @@ public sealed class All
         new object[] {DatabaseType.MySql,true},
         new object[] {DatabaseType.Oracle,true},
         new object[] {DatabaseType.PostgreSql,true},
+        new object[] {DatabaseType.Sqlite,true},
         new object[] {DatabaseType.MicrosoftSQLServer,false},
         new object[] {DatabaseType.MySql,false},
         new object[] {DatabaseType.Oracle,false},
-        new object[] {DatabaseType.PostgreSql,false}
+        new object[] {DatabaseType.PostgreSql,false},
+        new object[] {DatabaseType.Sqlite,false}
     ];
 
 
@@ -55,6 +69,11 @@ public sealed class All
         new object[] {DatabaseType.PostgreSql,true,true},
         new object[] {DatabaseType.PostgreSql,true,false},
         new object[] {DatabaseType.PostgreSql,false,true},
-        new object[] {DatabaseType.PostgreSql,false,false}
+        new object[] {DatabaseType.PostgreSql,false,false},
+
+        new object[] {DatabaseType.Sqlite,true,true},
+        new object[] {DatabaseType.Sqlite,true,false},
+        new object[] {DatabaseType.Sqlite,false,true},
+        new object[] {DatabaseType.Sqlite,false,false}
     ];
 }
