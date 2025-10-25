@@ -7,6 +7,9 @@
 *.txt text eol=crlf
 *.resx text eol=crlf
 
+# Shell scripts should always use LF endings (Unix standard)
+*.sh text eol=lf
+
 # (binary is a macro for -text -diff)
 *.png binary
 *.jpg binary

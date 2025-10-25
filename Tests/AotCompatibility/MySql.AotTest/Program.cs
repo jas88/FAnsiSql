@@ -12,7 +12,9 @@ Console.WriteLine();
 try
 {
     Console.WriteLine("Test 1: Loading MySQL implementation...");
+#pragma warning disable CS0618 // Type or member is obsolete
     ImplementationManager.Load<MySqlImplementation>();
+#pragma warning restore CS0618 // Type or member is obsolete
     Console.WriteLine("✅ Implementation loaded");
     Console.WriteLine();
 
