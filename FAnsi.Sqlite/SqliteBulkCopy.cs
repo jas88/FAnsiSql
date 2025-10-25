@@ -11,12 +11,38 @@ using Microsoft.Data.Sqlite;
 namespace FAnsi.Implementations.Sqlite;
 
 /// <summary>
-/// Inserts rows into SQLite table using batch INSERT commands with parameters for better performance and safety.
+/// Bulk insert implementation for SQLite. Inserts rows into SQLite tables using batched parameterized
+/// INSERT commands for better performance and safety.
 /// </summary>
+/// <param name="targetTable">The table to insert into</param>
+/// <param name="connection">The managed database connection</param>
+/// <param name="culture">The culture for value conversion</param>
+/// <remarks>
+/// <para>SQLite doesn't have native bulk copy like SQL Server. This implementation batches multiple
+/// INSERT statements in transactions for improved performance.</para>
+/// <para>Key features:</para>
+/// <list type="bullet">
+/// <item><description>Batched inserts (default 1000 rows per batch)</description></item>
+/// <item><description>Parameterized queries for safety</description></item>
+/// <item><description>Line-by-line error diagnostics on failures</description></item>
+/// <item><description>Automatic type conversion for SQLite compatibility</description></item>
+/// </list>
+/// </remarks>
 public sealed class SqliteBulkCopy(DiscoveredTable targetTable, IManagedConnection connection, CultureInfo culture)
     : BulkCopy(targetTable, connection, culture)
 {
+    /// <summary>
+    /// Gets or sets the timeout in seconds for batch insert operations. Default is 30 seconds.
+    /// </summary>
     public static int BulkInsertBatchTimeoutInSeconds { get; set; } = 30;
+
+    /// <summary>
+    /// Gets or sets the number of rows to insert per batch. Default is 1000.
+    /// </summary>
+    /// <remarks>
+    /// SQLite can handle larger batches than some databases due to its simpler architecture.
+    /// Increase for better performance with large datasets, decrease if experiencing memory issues.
+    /// </remarks>
     public static int BatchSize { get; set; } = 1000; // SQLite can handle larger batches than some databases
 
     public override int UploadImpl(DataTable dt)
@@ -300,6 +326,21 @@ public sealed class SqliteBulkCopy(DiscoveredTable targetTable, IManagedConnecti
         };
     }
 
+    /// <summary>
+    /// Uploads data from a DataTable to the target SQLite table.
+    /// </summary>
+    /// <param name="dt">The DataTable containing data to upload</param>
+    /// <returns>The number of rows inserted</returns>
+    /// <remarks>
+    /// <para>This method:</para>
+    /// <list type="number">
+    /// <item><description>Converts empty strings to nulls</description></item>
+    /// <item><description>Converts string types to hard types where appropriate</description></item>
+    /// <item><description>Batches inserts for performance</description></item>
+    /// <item><description>Uses parameterized queries for safety</description></item>
+    /// <item><description>Provides detailed error diagnostics on failure</description></item>
+    /// </list>
+    /// </remarks>
     public override int Upload(DataTable dt)
     {
         if (dt.Rows.Count == 0)

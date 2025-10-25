@@ -17,6 +17,17 @@ public sealed class All
     ];
 
     /// <summary>
+    /// <see cref="TestCaseSourceAttribute"/> for tests that should run on all DBMS except SQLite
+    /// (used for features that SQLite legitimately does not support, like MD5 hashing)
+    /// </summary>
+    public static readonly DatabaseType[] DatabaseTypesExceptSqlite = [
+        DatabaseType.MicrosoftSQLServer,
+        DatabaseType.MySql,
+        DatabaseType.Oracle,
+        DatabaseType.PostgreSql
+    ];
+
+    /// <summary>
     /// <see cref="TestCaseSourceAttribute"/> for tests that should run on all DBMS
     /// with both permutations of true/false.  Matches exhaustively method signature (DatabaseType,bool)
     /// </summary>
