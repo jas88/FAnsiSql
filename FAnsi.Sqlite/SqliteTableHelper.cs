@@ -262,8 +262,7 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
         return relationships.Values;
     }
 
-    [RequiresUnreferencedCode()]
-    public override void FillDataTableWithTopX(DatabaseOperationArgs args, DiscoveredTable table, int topX, DataTable dt)
+    protected override void FillDataTableWithTopX(DatabaseOperationArgs args, DiscoveredTable table, int topX, DataTable dt)
     {
         using var con = args.GetManagedConnection(table);
         using var cmd = table.Database.Server.GetCommand(GetTopXSqlForTable(table, topX), con);
