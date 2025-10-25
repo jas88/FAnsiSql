@@ -18,7 +18,7 @@
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <IsAotCompatible>true</IsAotCompatible>
-    <NoWarn>CS1591</NoWarn>
+    <NoWarn>CS1591;CA2255</NoWarn>
     <NeutralLanguage>en-GB</NeutralLanguage>
     <DebugType>embedded</DebugType>
     <PackageReadmeFile>README.md</PackageReadmeFile>

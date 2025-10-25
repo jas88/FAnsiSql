@@ -233,7 +233,7 @@ public sealed class SqliteBulkCopy(DiscoveredTable targetTable, IManagedConnecti
                 message.Contains(sourceColumn, StringComparison.OrdinalIgnoreCase))
             {
                 var sourceValue = dr[kvp.Key.Ordinal];
-                var destDataType = kvp.Value.DataType.SQLType;
+                var destDataType = kvp.Value.DataType!.SQLType;
 
                 return $"The complaint was about source column '{sourceColumn}' " +
                        $"which had value '{ValueToString(sourceValue)}', " +

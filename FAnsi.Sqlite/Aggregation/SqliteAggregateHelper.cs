@@ -55,14 +55,14 @@ public sealed class SqliteAggregateHelper : AggregateHelper
 
     protected override string BuildAxisAggregate(AggregateCustomLineCollection query)
     {
-        var countAlias = query.CountSelect.GetAliasFromText(query.SyntaxHelper);
-        var axisColumnAlias = query.AxisSelect.GetAliasFromText(query.SyntaxHelper) ?? "joinDt";
+        var countAlias = query.CountSelect!.GetAliasFromText(query.SyntaxHelper)!;
+        var axisColumnAlias = query.AxisSelect!.GetAliasFromText(query.SyntaxHelper) ?? "joinDt";
 
         WrapAxisColumnWithDatePartFunction(query, axisColumnAlias);
 
         // SQLite doesn't support complex pivoting like MySQL, so we'll use a simpler approach
         // Create a CTE (Common Table Expression) for the date range
-        var startDate = query.Axis.StartDate;
+        var startDate = query.Axis!.StartDate;
         var endDate = query.Axis.EndDate;
         var increment = query.Axis.AxisIncrement;
 

@@ -73,7 +73,7 @@ public sealed class SqliteQuerySyntaxHelper : QuerySyntaxHelper
     /// <remarks>
     /// SQLite escapes right brackets by doubling them within quoted identifiers.
     /// </remarks>
-    private string? GetRuntimeNameWithEscapedBrackets(string s) => GetRuntimeName(s)?.Replace("]", "]]");
+    private string GetRuntimeNameWithEscapedBrackets(string s) => GetRuntimeName(s)!.Replace("]", "]]");
 
     /// <inheritdoc />
     protected override string UnescapeWrappedNameBody(string name) => name.Replace("]]", "]");
@@ -93,7 +93,7 @@ public sealed class SqliteQuerySyntaxHelper : QuerySyntaxHelper
     {
         // SQLite doesn't support schemas in the same way as other databases
         // Just return the wrapped table name
-        return EnsureWrapped(tableName);
+        return EnsureWrapped(tableName)!;
     }
 
     /// <summary>

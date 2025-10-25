@@ -30,10 +30,12 @@ public abstract class DatabaseTests
     [OneTimeSetUp]
     public void CheckFiles()
     {
+#pragma warning disable CS0618 // Type or member is obsolete
         ImplementationManager.Load<OracleImplementation>();
         ImplementationManager.Load<MicrosoftSQLImplementation>();
         ImplementationManager.Load<MySqlImplementation>();
         ImplementationManager.Load<PostgreSqlImplementation>();
+#pragma warning restore CS0618
 
         var file = Path.Combine(TestContext.CurrentContext.TestDirectory, TestFilename);
 

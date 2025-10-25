@@ -112,7 +112,7 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
         cmd.ExecuteNonQuery();
 
         // Get the last inserted rowid
-        using var identityCmd = discoveredTable.Database.Server.GetCommand("SELECT last_insert_rowid()", cmd.Connection);
+        using var identityCmd = discoveredTable.Database.Server.GetCommand("SELECT last_insert_rowid()", cmd.Connection!);
         identityCmd.Transaction = transaction?.Transaction;
         return Convert.ToInt32(identityCmd.ExecuteScalar());
     }
@@ -262,11 +262,25 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
         return relationships.Values;
     }
 
-    protected override void FillDataTableWithTopX(DatabaseOperationArgs args, DiscoveredTable table, int topX, DataTable dt)
+    public override void FillDataTableWithTopX(DatabaseOperationArgs args, DiscoveredTable table, int topX, DataTable dt)
     {
         using var con = args.GetManagedConnection(table);
         using var cmd = table.Database.Server.GetCommand(GetTopXSqlForTable(table, topX), con);
         using var reader = cmd.ExecuteReader();
-        dt.Load(reader);
+
+        // Manually populate DataTable to avoid reflection (AOT-compatible)
+        // Add columns if DataTable is empty
+        if (dt.Columns.Count == 0)
+            for (var i = 0; i < reader.FieldCount; i++)
+                dt.Columns.Add(reader.GetName(i), reader.GetFieldType(i));
+
+        // Add rows
+        while (reader.Read())
+        {
+            var row = dt.NewRow();
+            for (var i = 0; i < reader.FieldCount; i++)
+                row[i] = reader.GetValue(i);
+            dt.Rows.Add(row);
+        }
     }
 }
