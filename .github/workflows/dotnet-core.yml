@@ -88,9 +88,7 @@ jobs:
         sarif_file: sarif-results/csharp.sarif
 
     # AOT Compatibility Tests (reuses same databases)
-    # AOT compatibility tests - temporarily disabled
-    # Re-enable periodically to check Oracle AOT status
-    # - name: Test SQL Server AOT Compatibility
+    - name: Test SQL Server AOT Compatibility
       run: |
         echo "=== Building SQL Server AOT Test ==="
         dotnet publish Tests/AotCompatibility/SqlServer.AotTest/SqlServer.AotTest.csproj \
