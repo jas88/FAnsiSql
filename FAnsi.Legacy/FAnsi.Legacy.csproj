@@ -1,7 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <PackageId>FAnsiSql.Legacy</PackageId>
-    <version>0.1.0</version>
     <title>FAnsiSql.Legacy</title>
     <authors>Health Informatics Centre - University of Dundee</authors>
     <owners>Health Informatics Centre - University of Dundee</owners>

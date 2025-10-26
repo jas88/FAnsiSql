@@ -1,18 +1,17 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <PackageId>HIC.FAnsi.Sqlite</PackageId>
-    <version>0.0.7</version>
-    <title>HIC.FAnsi.Sqlite</title>
+    <PackageId>FAnsiSql.Sqlite</PackageId>
+    <title>FAnsiSql.Sqlite</title>
     <authors>Health Informatics Centre - University of Dundee</authors>
     <owners>Health Informatics Centre - University of Dundee</owners>
-    <PackageProjectUrl>https://github.com/HicServices/FAnsiSql</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/jas88/FAnsiSql</PackageProjectUrl>
     <PackageLicenseExpression>GPL-3.0-or-later</PackageLicenseExpression>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <description>SQLite implementation for FAnsiSql</description>
     <PackageTags>Ansi,SQL,SQLite</PackageTags>
-    <AssemblyTitle>HIC.FAnsi.Sqlite</AssemblyTitle>
+    <AssemblyTitle>FAnsiSql.Sqlite</AssemblyTitle>
     <Company>Health Informatics Centre, University of Dundee</Company>
-    <Product>HIC.FAnsi.Sqlite</Product>
+    <Product>FAnsiSql.Sqlite</Product>
     <Description>SQLite implementation for FAnsiSql</Description>
     <Copyright>Copyright ©  2019-2025</Copyright>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
