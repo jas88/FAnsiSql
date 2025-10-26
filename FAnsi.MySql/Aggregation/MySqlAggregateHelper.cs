@@ -220,6 +220,10 @@ public sealed class MySqlAggregateHelper : AggregateHelper
     /// <summary>
     /// Returns the section of the PIVOT which identifies unique values.
     /// For MySQL 8.0+ this uses a CTE instead of a temporary table and builds dynamic CASE statements.
+    ///
+    /// IMPORTANT: When using TOP X (LIMIT), the LIMIT clause must be placed at the CTE level
+    /// AFTER the GROUP BY and HAVING clauses, NOT inside the ROW_NUMBER() OVER() window function.
+    /// MySQL does not allow LIMIT inside window function OVER() clauses (GitHub Issue #38).
     /// </summary>
     private static string GetPivotPart1(AggregateCustomLineCollection query)
     {
@@ -267,12 +271,14 @@ public sealed class MySqlAggregateHelper : AggregateHelper
                              WITH pivotValues AS (
                                  SELECT
                                  {1} as piv,
-                                 ROW_NUMBER() OVER (ORDER BY {6} {5}) as rn
+                                 ROW_NUMBER() OVER (ORDER BY {6}) as rn
                                  {3}
                                  {4}
                                  GROUP BY
                                  {1}
                                  {7}
+                                 ORDER BY {6}
+                                 {5}
                              )
                              SELECT
                                GROUP_CONCAT(

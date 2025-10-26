@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.3.3] - 2025-10-26
+
 ### Added
 - **SQLite support** - Fifth database platform alongside SQL Server, MySQL, Oracle, and PostgreSQL
   - Full implementation of all core operations (table creation, bulk insert, queries, type translation)
@@ -18,6 +20,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Comprehensive XML documentation (100% coverage)
   - 111+ cross-platform tests enabled
   - Platform limitations clearly documented (no ALTER COLUMN, no schemas, no PIVOT, etc)
+
+### Fixed
+- **MySQL PIVOT+TOP query syntax error** (Issue #38)
+  - Fixed incorrect LIMIT placement inside ROW_NUMBER() OVER() window function clause
+  - MySQL does not allow LIMIT inside window function OVER() clauses (Error 1064)
+  - Moved LIMIT to correct position at CTE level, after GROUP BY and ORDER BY
+  - Fixes 3 failing RDMP tests: GroupBy_PivotWithSum_HAVING_Top1_WHERE, GroupBy_PivotWithSum_Top2AlphabeticalAsc_WHEREStatement, GroupBy_PivotWithSum_Top2BasedonCountColumnDesc
+  - Added 6 comprehensive test cases for PIVOT+TOP combinations
+  - MySQL-only change, no impact on SQL Server/PostgreSQL/Oracle
+
+### Changed
+- Removed hardcoded version from FAnsi.Core.csproj (MinVer handles versioning automatically)
 
 ## [3.3.2] - 2025-10-24
 
@@ -530,7 +544,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed Drop table to work correctly with Views
 - Exists now works correctly for Views (previously it would return true if there was no view but a table with the same name)
 
-[Unreleased]: https://github.com/HicServices/FAnsiSql/compare/v3.2.6...main
+[Unreleased]: https://github.com/jas88/FAnsiSql/compare/v3.3.3...main
+[3.3.3]: https://github.com/jas88/FAnsiSql/compare/v3.3.2...v3.3.3
+[3.3.2]: https://github.com/jas88/FAnsiSql/compare/v3.3.1...v3.3.2
+[3.3.1]: https://github.com/jas88/FAnsiSql/compare/v3.3.0...v3.3.1
+[3.3.0]: https://github.com/jas88/FAnsiSql/compare/v3.2.7...v3.3.0
+[3.2.7]: https://github.com/jas88/FAnsiSql/compare/v3.2.6...v3.2.7
 [3.2.6]: https://github.com/HicServices/FAnsiSql/compare/v2.3.5...v3.2.6
 [3.2.5]: https://github.com/HicServices/FAnsiSql/compare/v2.3.4...v3.2.5
 [3.2.4]: https://github.com/HicServices/FAnsiSql/compare/v3.2.3...v3.2.4

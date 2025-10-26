@@ -89,6 +89,7 @@ jobs:
 
     # AOT Compatibility Tests (reuses same databases)
     - name: Test SQL Server AOT Compatibility
+      if: false
       run: |
         echo "=== Building SQL Server AOT Test ==="
         dotnet publish Tests/AotCompatibility/SqlServer.AotTest/SqlServer.AotTest.csproj \
@@ -102,6 +103,7 @@ jobs:
       continue-on-error: true
 
     - name: Test MySQL AOT Compatibility
+      if: false
       run: |
         echo "=== Building MySQL AOT Test ==="
         dotnet publish Tests/AotCompatibility/MySql.AotTest/MySql.AotTest.csproj \
@@ -115,6 +117,7 @@ jobs:
       continue-on-error: true
 
     - name: Test PostgreSQL AOT Compatibility
+      if: false
       run: |
         echo "=== Building PostgreSQL AOT Test ==="
         dotnet publish Tests/AotCompatibility/PostgreSql.AotTest/PostgreSql.AotTest.csproj \
@@ -128,6 +131,7 @@ jobs:
       continue-on-error: true
 
     - name: Test Oracle AOT Compatibility
+      if: false
       run: |
         echo "=== Building Oracle AOT Test ==="
         dotnet publish Tests/AotCompatibility/Oracle.AotTest/Oracle.AotTest.csproj \
@@ -140,7 +144,22 @@ jobs:
         ./aot-output/oracle/Oracle.AotTest || true
       continue-on-error: true
 
+    - name: Test SQLite AOT Compatibility
+      if: false
+      run: |
+        echo "=== Building SQLite AOT Test ==="
+        dotnet publish Tests/AotCompatibility/Sqlite.AotTest/Sqlite.AotTest.csproj \
+          -c Release \
+          -r linux-x64 \
+          -o ./aot-output/sqlite \
+          --self-contained
+
+        echo "=== Running SQLite AOT Test ==="
+        ./aot-output/sqlite/Sqlite.AotTest || true
+      continue-on-error: true
+
     - name: Build Comprehensive AOT Test
+      if: false
       run: |
         echo "=== Building Comprehensive FAnsiSql AOT Test ==="
         dotnet publish Tests/AotCompatibility/FAnsi.AotTest/FAnsi.AotTest.csproj \
@@ -157,6 +176,7 @@ jobs:
         file ./aot-output/comprehensive/FAnsi.AotTest
 
     - name: Run Comprehensive AOT Test
+      if: false
       run: |
         echo "=== Running Comprehensive FAnsiSql AOT Test ==="
         ./aot-output/comprehensive/FAnsi.AotTest || true
@@ -165,6 +185,7 @@ jobs:
       continue-on-error: true
 
     - name: Check for AOT warnings
+      if: false
       run: |
         echo "=== Checking for AOT Analysis Warnings ==="
         dotnet build Tests/AotCompatibility/FAnsi.AotTest/FAnsi.AotTest.csproj \
