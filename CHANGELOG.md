@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.3.4] - 2025-10-26
+
+### Fixed
+- **FAnsiSql.Legacy package dependency correction**
+  - Fixed FAnsiSql.Legacy to correctly reference "FAnsiSql.Sqlite" instead of "HIC.FAnsi.Sqlite"
+  - The v3.3.3 package was built before the PackageId was updated in FAnsi.Sqlite.csproj
+  - No code changes required - ProjectReference automatically converts to correct PackageId on rebuild
+
 ## [3.3.3] - 2025-10-26
 
 ### Added
@@ -544,7 +552,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed Drop table to work correctly with Views
 - Exists now works correctly for Views (previously it would return true if there was no view but a table with the same name)
 
-[Unreleased]: https://github.com/jas88/FAnsiSql/compare/v3.3.3...main
+[Unreleased]: https://github.com/jas88/FAnsiSql/compare/v3.3.4...main
+[3.3.4]: https://github.com/jas88/FAnsiSql/compare/v3.3.3...v3.3.4
 [3.3.3]: https://github.com/jas88/FAnsiSql/compare/v3.3.2...v3.3.3
 [3.3.2]: https://github.com/jas88/FAnsiSql/compare/v3.3.1...v3.3.2
 [3.3.1]: https://github.com/jas88/FAnsiSql/compare/v3.3.0...v3.3.1
