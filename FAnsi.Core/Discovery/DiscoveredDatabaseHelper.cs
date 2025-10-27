@@ -112,11 +112,9 @@ public abstract class DiscoveredDatabaseHelper : IDiscoveredDatabaseHelper
         //connect to the server and send it
         var server = args.Database.Server;
 
-        using (var con = server.GetConnection())
+        using (var con = server.GetManagedConnection())
         {
-            con.Open();
-
-            ExecuteBatchNonQuery(bodySql, con);
+            ExecuteBatchNonQuery(bodySql, con.Connection);
         }
 
         //Get reference to the newly created table

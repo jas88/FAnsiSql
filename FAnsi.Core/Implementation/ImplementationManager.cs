@@ -29,7 +29,7 @@ public sealed class ImplementationManager
     /// loads all implementations in the assembly hosting the <typeparamref name="T"/>
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    [Obsolete("Implementations now auto-register when their assembly is loaded. Manual loading is no longer necessary.")]
+    [Obsolete("Implementations now auto-register via ModuleInitializer when their assembly is loaded. To force assembly loading, call {TypeName}.EnsureLoaded() instead (e.g., MicrosoftSQLImplementation.EnsureLoaded()).")]
     public static void Load<T>() where T : IImplementation, new()
     {
         var loading = new T();
