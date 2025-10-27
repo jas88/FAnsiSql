@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **MySQL foreign key name length limit** (Upstream Issue HicServices/FAnsiSql#276)
+  - Auto-generated foreign key names now respect MySQL's 64-character identifier limit
+  - Long names are truncated with deterministic hash suffix for uniqueness
+  - Format: `FK_{truncated}_{8-hex-hash}` (e.g., `FK_VeryLongTable_AnotherLongTable_A1B2C3D4`)
+  - Prevents `MySqlException: Identifier name is too long`
+  - Applies to both foreign key and primary key constraint names
+
+### Added
+- **PostgreSQL Exists() regression tests** (Upstream Issue HicServices/FAnsiSql#335)
+  - Added comprehensive test suite for `DiscoveredDatabase.Exists()` behavior
+  - Verifies all RDBMS types return `false` for non-existent databases without throwing
+  - PostgreSQL implementation already correct: connects to `postgres` system database to query `pg_database`
+  - Tests prevent regression of the upstream bug
+
 ## [3.4.0] - 2025-10-27
 
 ### Added
