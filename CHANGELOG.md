@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.4.0] - 2025-10-27
+
 ### Added
 - **Standardized ModuleInitializer auto-registration across all RDBMS implementations**
   - All five implementations (SQL Server, MySQL, Oracle, PostgreSQL, SQLite) now use consistent ModuleInitializer pattern
