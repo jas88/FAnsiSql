@@ -257,13 +257,51 @@ public abstract class DiscoveredDatabaseHelper : IDiscoveredDatabaseHelper
 
     private static string MakeSensibleConstraintName(string prefix, string tableName)
     {
+        const int MaxIdentifierLength = 64; // MySQL limit - most restrictive among supported DBMS
+
         var constraintName = QuerySyntaxHelper.MakeHeaderNameSensible(tableName);
 
-        if (!string.IsNullOrWhiteSpace(constraintName)) return $"{prefix}{constraintName}";
+        if (string.IsNullOrWhiteSpace(constraintName))
+        {
+            var r = new Random();
+            constraintName = $"Constraint{r.Next(10000)}";
+            return $"{prefix}{constraintName}";
+        }
 
-        var r = new Random();
-        constraintName = $"Constraint{r.Next(10000)}";
-        return $"{prefix}{constraintName}";
+        var fullName = $"{prefix}{constraintName}";
+
+        // If name is within limits, use it as-is
+        if (fullName.Length <= MaxIdentifierLength)
+            return fullName;
+
+        // Name is too long - truncate and add deterministic hash for uniqueness
+        // Format: {prefix}{truncated}_{hash}
+        // Reserve 9 characters for hash suffix (_12345678)
+        var hashSuffix = GetDeterministicHash(constraintName);
+        var maxBaseLength = MaxIdentifierLength - prefix.Length - 9; // 9 = underscore + 8 hex digits
+
+        var truncated = constraintName.Length > maxBaseLength
+            ? constraintName.Substring(0, maxBaseLength)
+            : constraintName;
+
+        return $"{prefix}{truncated}_{hashSuffix:X8}";
+    }
+
+    /// <summary>
+    /// Generates a deterministic 32-bit hash for a string.
+    /// Same input always produces same output, ensuring consistent FK names across runs.
+    /// </summary>
+    private static int GetDeterministicHash(string input)
+    {
+        unchecked
+        {
+            int hash = 23;
+            foreach (char c in input)
+            {
+                hash = hash * 31 + c;
+            }
+            return hash;
+        }
     }
 
     public void ExecuteBatchNonQuery(string sql, DbConnection conn, DbTransaction? transaction = null, int timeout = 30)
