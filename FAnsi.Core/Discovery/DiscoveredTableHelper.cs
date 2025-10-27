@@ -83,12 +83,25 @@ public abstract class DiscoveredTableHelper : IDiscoveredTableHelper
 
     public abstract IBulkCopy BeginBulkInsert(DiscoveredTable discoveredTable, IManagedConnection connection, CultureInfo culture);
 
+    /// <summary>
+    /// Truncates the table (deletes all rows but preserves the table structure)
+    /// </summary>
+    /// <param name="discoveredTable">The table to truncate</param>
     public virtual void TruncateTable(DiscoveredTable discoveredTable)
     {
+        using var con = discoveredTable.Database.Server.GetManagedConnection();
+        TruncateTable(discoveredTable, con.Connection);
+    }
+
+    /// <summary>
+    /// Truncates the table (deletes all rows but preserves the table structure) using an existing connection
+    /// </summary>
+    /// <param name="discoveredTable">The table to truncate</param>
+    /// <param name="connection">An existing open connection to use</param>
+    public virtual void TruncateTable(DiscoveredTable discoveredTable, DbConnection connection)
+    {
         var server = discoveredTable.Database.Server;
-        using var con = server.GetConnection();
-        con.Open();
-        using var cmd = server.GetCommand($"TRUNCATE TABLE {discoveredTable.GetFullyQualifiedName()}", con);
+        using var cmd = server.GetCommand($"TRUNCATE TABLE {discoveredTable.GetFullyQualifiedName()}", connection);
         cmd.ExecuteNonQuery();
     }
 

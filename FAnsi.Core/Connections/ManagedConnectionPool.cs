@@ -43,10 +43,25 @@ internal static class ManagedConnectionPool
         if (transaction != null)
             return new ManagedConnection(server, transaction);
 
-        // TEMPORARY: Disable thread-local pooling for all database types
-        // Rely on ADO.NET's native connection pooling instead
-        // TODO: Re-enable after fixing server-level pooling database switching issues
-        return new ManagedConnection(server, null);
+        // Check configuration flag for thread-local pooling
+        if (!FAnsiConfiguration.EnableThreadLocalConnectionPooling)
+        {
+            // Feature flag disabled: Use ADO.NET's native connection pooling
+            return new ManagedConnection(server, null);
+        }
+
+        // Feature flag enabled: Use thread-local connection pooling
+        return server.DatabaseType switch
+        {
+            DatabaseType.MicrosoftSQLServer or DatabaseType.MySql =>
+                GetServerLevelPooledConnection(server),
+            DatabaseType.PostgreSql =>
+                GetDatabaseLevelPooledConnection(server),
+            DatabaseType.Oracle or DatabaseType.Sqlite =>
+                // Oracle and SQLite fall back to ADO.NET native pooling
+                new ManagedConnection(server, null),
+            _ => new ManagedConnection(server, null)
+        };
     }
 
     /// <summary>

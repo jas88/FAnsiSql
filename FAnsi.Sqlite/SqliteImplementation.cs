@@ -24,6 +24,16 @@ namespace FAnsi.Implementations.Sqlite;
 public sealed class SqliteImplementation()
     : Implementation<SqliteConnectionStringBuilder>(DatabaseType.Sqlite)
 {
+    /// <summary>
+    /// Ensures this implementation is registered with the ImplementationManager.
+    /// Call this method if you need to guarantee the implementation is loaded before use.
+    /// </summary>
+    public static void EnsureLoaded()
+    {
+        // Method body intentionally empty - the ModuleInitializer handles registration.
+        // This method exists to force the assembly to load, triggering the ModuleInitializer.
+    }
+
     /// <inheritdoc />
     public override IDiscoveredServerHelper GetServerHelper() => SqliteServerHelper.Instance;
 
@@ -43,6 +53,7 @@ internal static class AutoRegister
     /// Automatically registers the SQLite implementation when the assembly is loaded.
     /// </summary>
     [ModuleInitializer]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2255:The 'ModuleInitializer' attribute should not be used in libraries", Justification = "Required for automatic DBMS implementation registration")]
 #pragma warning disable CS0618 // Type or member is obsolete
     internal static void Initialize() => ImplementationManager.Load<SqliteImplementation>();
 #pragma warning restore CS0618 // Type or member is obsolete

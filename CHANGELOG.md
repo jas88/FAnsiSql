@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Standardized ModuleInitializer auto-registration across all RDBMS implementations**
+  - All five implementations (SQL Server, MySQL, Oracle, PostgreSQL, SQLite) now use consistent ModuleInitializer pattern
+  - Added `EnsureLoaded()` static method to each implementation for explicit assembly loading
+  - No manual registration required - implementations auto-register when assembly loads
+  - Removed static constructors in favor of ModuleInitializer for more reliable registration
+  - AOT-compatible with proper CA2255 warning suppression
+
+- **Optional thread-local connection pooling via feature flag**
+  - New `FAnsiConfiguration.EnableThreadLocalConnectionPooling` flag (default: `false`)
+  - When enabled, reduces connection count by up to 90% for SQL Server/MySQL in multi-database scenarios
+  - SQL Server and MySQL use server-level pooling with automatic database switching
+  - PostgreSQL uses database-level pooling (cannot switch databases)
+  - Oracle and SQLite continue using ADO.NET native pooling
+  - New `FAnsiConfiguration.ClearConnectionPools()` and `ClearAllConnectionPools()` methods
+  - Comprehensive XML documentation with usage examples and warnings
+
+### Changed
+- **Updated ImplementationManager.Load<T>() obsolete message**
+  - Now provides clear guidance: "call {TypeName}.EnsureLoaded() instead"
+  - Example: `MicrosoftSQLImplementation.EnsureLoaded()`
+  - Explains ModuleInitializer auto-registration behavior
+
+### Improved
+- **Refactored connection management for better reusability**
+  - Added connection-parameter overloads to key helper methods
+  - `TruncateTable()` now has overload accepting existing `DbConnection`
+  - `CreateTable()` uses `GetManagedConnection()` for automatic pooling support
+  - Pattern: `Method() { using var conn = GetManagedConnection(); return Method(conn); }`
+
 ## [3.3.4] - 2025-10-26
 
 ### Fixed
