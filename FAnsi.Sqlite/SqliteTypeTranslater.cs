@@ -127,6 +127,12 @@ public sealed partial class SqliteTypeTranslater : TypeTranslater
     /// </remarks>
     protected override string GetDateDateTimeDataType() => "TEXT";  // SQLite stores dates as text, numeric, or real
 
+    /// <summary>
+    /// Gets the SQL type for byte array values.
+    /// </summary>
+    /// <returns>"BLOB" (SQLite's binary data type)</returns>
+    protected override string GetByteArrayDataType() => "BLOB";
+
     [GeneratedRegex(@"^(tinyint)|(int1)", RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]
     private static partial Regex ByteRe();
     [GeneratedRegex(@"^(smallint)|(int2)", RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]

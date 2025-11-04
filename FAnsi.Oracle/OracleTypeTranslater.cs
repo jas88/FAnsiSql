@@ -75,6 +75,8 @@ public sealed partial class OracleTypeTranslater : TypeTranslater
 
     protected override string GetDateDateTimeDataType() => "DATE";
 
+    protected override string GetByteArrayDataType() => "blob";
+
     public override Guesser GetGuesserFor(DiscoveredColumn discoveredColumn) => base.GetGuesserFor(discoveredColumn, ExtraLengthPerNonAsciiCharacter);
 
     [GeneratedRegex("^([N]?CLOB)|(LONG)", RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]

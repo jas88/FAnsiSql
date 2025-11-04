@@ -22,6 +22,8 @@ public sealed partial class PostgreSqlTypeTranslater : TypeTranslater
 
     protected override string GetDateDateTimeDataType() => "timestamp";
 
+    protected override string GetByteArrayDataType() => "bytea";
+
     public NpgsqlDbType GetNpgsqlDbTypeForCSharpType(Type t)
     {
 

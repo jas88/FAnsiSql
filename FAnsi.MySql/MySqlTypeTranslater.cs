@@ -57,6 +57,10 @@ public sealed partial class MySqlTypeTranslater : TypeTranslater
 
     protected override bool IsBit(string sqlType) => base.IsBit(sqlType) || AlsoBitRegex.IsMatch(sqlType);
 
+    protected override string GetByteArrayDataType() => "longblob";
+
+    protected override string GetGuidDataType() => "char(36)";  // MySQL stores UUIDs as char(36) for compatibility
+
     [GeneratedRegex(@"tinyint\(1\)", RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]
     private static partial Regex AlsoBitRe();
     [GeneratedRegex("(long)|(enum)|(set)|(text)|(mediumtext)", RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]

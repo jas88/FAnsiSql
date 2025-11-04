@@ -94,7 +94,7 @@ public abstract partial class TypeTranslater : ITypeTranslater
         throw new TypeNotMappedException(string.Format(FAnsiStrings.TypeTranslater_GetSQLDBTypeForCSharpType_Unsure_what_SQL_type_to_use_for_CSharp_Type___0_____TypeTranslater_was___1__, t.Name, GetType().Name));
     }
 
-    private static string GetByteArrayDataType() => "varbinary(max)";
+    protected virtual string GetByteArrayDataType() => "blob";
 
     private static string GetByteDataType() => "tinyint";
 
@@ -106,7 +106,7 @@ public abstract partial class TypeTranslater : ITypeTranslater
         return $"decimal({decimalSize.Precision},{decimalSize.Scale})";
     }
 
-    protected virtual string GetDateDateTimeDataType() => "datetime";
+    protected virtual string GetDateDateTimeDataType() => "timestamp";
 
     protected string GetStringDataType(int? maxExpectedStringWidth)
     {
@@ -119,7 +119,7 @@ public abstract partial class TypeTranslater : ITypeTranslater
         return GetStringDataTypeImpl(maxExpectedStringWidth.Value);
     }
 
-    protected virtual string GetStringDataTypeImpl(int maxExpectedStringWidth) => $"varchar({maxExpectedStringWidth})";
+    protected virtual string GetStringDataTypeImpl(int maxExpectedStringWidth) => $"character varying({maxExpectedStringWidth})";
 
     public abstract string GetStringDataTypeWithUnlimitedWidth();
 
@@ -135,7 +135,7 @@ public abstract partial class TypeTranslater : ITypeTranslater
         return GetUnicodeStringDataTypeImpl(maxExpectedStringWidth.Value);
     }
 
-    protected virtual string GetUnicodeStringDataTypeImpl(int maxExpectedStringWidth) => $"nvarchar({maxExpectedStringWidth})";
+    protected virtual string GetUnicodeStringDataTypeImpl(int maxExpectedStringWidth) => $"character varying({maxExpectedStringWidth})";
 
     public abstract string GetUnicodeStringDataTypeWithUnlimitedWidth();
 
@@ -149,7 +149,7 @@ public abstract partial class TypeTranslater : ITypeTranslater
 
     protected virtual string GetBigIntDataType() => "bigint";
 
-    private static string GetGuidDataType() => "uniqueidentifier";
+    protected virtual string GetGuidDataType() => "uuid";
 
     /// <inheritdoc/>
     [return:
