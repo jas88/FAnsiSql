@@ -22,7 +22,7 @@ namespace FAnsi.Implementations.Sqlite;
 /// </list>
 /// </remarks>
 public sealed class SqliteImplementation()
-    : Implementation<SqliteConnectionStringBuilder>(DatabaseType.Sqlite)
+    : Implementation<SqliteConnectionStringBuilder>(DatabaseType.Sqlite, typeof(SqliteConnection))
 {
     /// <summary>
     /// Ensures this implementation is registered with the ImplementationManager.

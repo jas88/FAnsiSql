@@ -7,7 +7,7 @@ using MySqlConnector;
 
 namespace FAnsi.Implementations.MySql;
 
-public sealed class MySqlImplementation() : Implementation<MySqlConnectionStringBuilder>(DatabaseType.MySql)
+public sealed class MySqlImplementation() : Implementation<MySqlConnectionStringBuilder>(DatabaseType.MySql, typeof(MySqlConnection))
 {
     /// <summary>
     /// Ensures this implementation is registered with the ImplementationManager.
@@ -20,6 +20,8 @@ public sealed class MySqlImplementation() : Implementation<MySqlConnectionString
     }
 
     public static IDiscoveredServerHelper ServerHelper => MySqlServerHelper.Instance;
+
+    public override IDiscoveredServerHelper GetServerHelper() => MySqlServerHelper.Instance;
 
     public override bool IsFor(DbConnection connection) => connection is MySqlConnection;
 

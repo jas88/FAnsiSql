@@ -7,7 +7,7 @@ using Oracle.ManagedDataAccess.Client;
 
 namespace FAnsi.Implementations.Oracle;
 
-public sealed class OracleImplementation() : Implementation<OracleConnectionStringBuilder>(DatabaseType.Oracle)
+public sealed class OracleImplementation() : Implementation<OracleConnectionStringBuilder>(DatabaseType.Oracle, typeof(OracleConnection))
 {
     /// <summary>
     /// Ensures this implementation is registered with the ImplementationManager.
@@ -20,6 +20,8 @@ public sealed class OracleImplementation() : Implementation<OracleConnectionStri
     }
 
     public static IDiscoveredServerHelper ServerHelper => OracleServerHelper.Instance;
+
+    public override IDiscoveredServerHelper GetServerHelper() => OracleServerHelper.Instance;
 
     public override bool IsFor(DbConnection connection) => connection is OracleConnection;
 

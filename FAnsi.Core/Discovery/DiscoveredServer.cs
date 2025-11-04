@@ -64,6 +64,8 @@ public sealed class DiscoveredServer : IMightNotExist
     /// <summary>
     /// Recursively loads all referenced assemblies to trigger FAnsiSql provider ModuleInitializers.
     /// </summary>
+    [RequiresUnreferencedCode("Calls System.Reflection.Assembly.GetReferencedAssemblies()")]
+    [RequiresDynamicCode("Calls System.Reflection.Assembly.Load()")]
     private static void LoadReferencedFAnsiSqlAssemblies()
     {
         var loadedAssemblyNames = new HashSet<string>();
@@ -92,7 +94,7 @@ public sealed class DiscoveredServer : IMightNotExist
                 foreach (var referencedAssembly in referencedAssemblies)
                 {
                     // Look for FAnsiSql provider assemblies
-                    if (referencedAssembly.Name.StartsWith("FAnsiSql.", StringComparison.Ordinal))
+                    if (referencedAssembly.Name != null && referencedAssembly.Name.StartsWith("FAnsiSql.", StringComparison.Ordinal))
                     {
                         try
                         {

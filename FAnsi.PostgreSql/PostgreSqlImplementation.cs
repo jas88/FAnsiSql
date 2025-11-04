@@ -7,7 +7,7 @@ using Npgsql;
 
 namespace FAnsi.Implementations.PostgreSql;
 
-public sealed class PostgreSqlImplementation() : Implementation<NpgsqlConnectionStringBuilder>(DatabaseType.PostgreSql)
+public sealed class PostgreSqlImplementation() : Implementation<NpgsqlConnectionStringBuilder>(DatabaseType.PostgreSql, typeof(NpgsqlConnection))
 {
     /// <summary>
     /// Ensures this implementation is registered with the ImplementationManager.
@@ -20,6 +20,8 @@ public sealed class PostgreSqlImplementation() : Implementation<NpgsqlConnection
     }
 
     public static IDiscoveredServerHelper ServerHelper => PostgreSqlServerHelper.Instance;
+
+    public override IDiscoveredServerHelper GetServerHelper() => PostgreSqlServerHelper.Instance;
 
     public override bool IsFor(DbConnection connection) => connection is NpgsqlConnection;
 
