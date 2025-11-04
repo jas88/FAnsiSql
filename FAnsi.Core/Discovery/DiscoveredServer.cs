@@ -15,6 +15,8 @@ namespace FAnsi.Discovery;
 /// <summary>
 /// Cross database type reference to a database server.  Allows you to get connections, create commands, list databases etc.
 /// </summary>
+[RequiresUnreferencedCode("Calls FAnsi.Discovery.DiscoveredServer.LoadReferencedFAnsiSqlAssemblies()")]
+[RequiresDynamicCode("Calls FAnsi.Discovery.DiscoveredServer.LoadReferencedFAnsiSqlAssemblies()")]
 public sealed class DiscoveredServer : IMightNotExist
 {
     /// <summary>
