@@ -7,7 +7,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 
-namespace FAnsiSql.Migration.Generator;
+namespace FAnsiSql.Core.SourceGeneration;
 
 /// <summary>
 /// Source generator that creates type-safe generic wrappers for existing FAnsiSql APIs.

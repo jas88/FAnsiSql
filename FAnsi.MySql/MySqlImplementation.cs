@@ -19,7 +19,7 @@ public sealed class MySqlImplementation() : Implementation<MySqlConnectionString
         // This method exists to force the assembly to load, triggering the ModuleInitializer.
     }
 
-    public override IDiscoveredServerHelper GetServerHelper() => MySqlServerHelper.Instance;
+    public static IDiscoveredServerHelper ServerHelper => MySqlServerHelper.Instance;
 
     public override bool IsFor(DbConnection connection) => connection is MySqlConnection;
 

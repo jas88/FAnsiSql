@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using FAnsi.Connections;
 using FAnsi.Discovery.QuerySyntax;
@@ -49,6 +51,68 @@ public sealed class DiscoveredServer : IMightNotExist
     /// Returns the password portion of <cref name="Builder"/> if specified
     /// </summary>
     public string? ExplicitPasswordIfAny => Helper.GetExplicitPasswordIfAny(Builder);
+
+    /// <summary>
+    /// Static constructor that ensures all referenced FAnsiSql provider assemblies are loaded.
+    /// This triggers ModuleInitializers in provider assemblies for automatic registration.
+    /// </summary>
+    static DiscoveredServer()
+    {
+        LoadReferencedFAnsiSqlAssemblies();
+    }
+
+    /// <summary>
+    /// Recursively loads all referenced assemblies to trigger FAnsiSql provider ModuleInitializers.
+    /// </summary>
+    private static void LoadReferencedFAnsiSqlAssemblies()
+    {
+        var loadedAssemblyNames = new HashSet<string>();
+        var assemblyQueue = new Queue<Assembly>();
+
+        // Start with the current assembly
+        var entryAssembly = Assembly.GetEntryAssembly() ?? Assembly.GetCallingAssembly();
+        assemblyQueue.Enqueue(entryAssembly);
+
+        while (assemblyQueue.Count > 0)
+        {
+            var assembly = assemblyQueue.Dequeue();
+            var assemblyName = assembly.GetName();
+
+            // Skip if we've already processed this assembly
+            if (loadedAssemblyNames.Contains(assemblyName.FullName))
+                continue;
+
+            loadedAssemblyNames.Add(assemblyName.FullName);
+
+            try
+            {
+                // Get all referenced assemblies
+                var referencedAssemblies = assembly.GetReferencedAssemblies();
+
+                foreach (var referencedAssembly in referencedAssemblies)
+                {
+                    // Look for FAnsiSql provider assemblies
+                    if (referencedAssembly.Name.StartsWith("FAnsiSql.", StringComparison.Ordinal))
+                    {
+                        try
+                        {
+                            // Load the assembly (this triggers its ModuleInitializer if present)
+                            var loadedAssembly = Assembly.Load(referencedAssembly);
+                            assemblyQueue.Enqueue(loadedAssembly);
+                        }
+                        catch
+                        {
+                            // Assembly might not be available or loading failed - skip it
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                // Skip assemblies that can't be analyzed
+            }
+        }
+    }
 
     /// <summary>
     /// <para>Creates a new server pointed at the <paramref name="builder"/> server. </para>

@@ -19,7 +19,7 @@ public sealed class PostgreSqlImplementation() : Implementation<NpgsqlConnection
         // This method exists to force the assembly to load, triggering the ModuleInitializer.
     }
 
-    public override IDiscoveredServerHelper GetServerHelper() => PostgreSqlServerHelper.Instance;
+    public static IDiscoveredServerHelper ServerHelper => PostgreSqlServerHelper.Instance;
 
     public override bool IsFor(DbConnection connection) => connection is NpgsqlConnection;
 

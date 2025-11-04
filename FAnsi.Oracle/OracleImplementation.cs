@@ -19,7 +19,7 @@ public sealed class OracleImplementation() : Implementation<OracleConnectionStri
         // This method exists to force the assembly to load, triggering the ModuleInitializer.
     }
 
-    public override IDiscoveredServerHelper GetServerHelper() => OracleServerHelper.Instance;
+    public static IDiscoveredServerHelper ServerHelper => OracleServerHelper.Instance;
 
     public override bool IsFor(DbConnection connection) => connection is OracleConnection;
 
