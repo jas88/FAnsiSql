@@ -5,7 +5,6 @@ using System.Diagnostics.Contracts;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using FAnsi.Connections;
@@ -286,13 +285,6 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
             message.AppendLine();
             message.Append(e.StackTrace);
         }
-
-        if (e is ReflectionTypeLoadException reflectionTypeLoadException)
-            foreach (var loaderException in reflectionTypeLoadException.LoaderExceptions.OfType<Exception>())
-            {
-                message.AppendLine();
-                message.Append(ExceptionToListOfInnerMessages(loaderException, includeStackTrace));
-            }
 
         if (e.InnerException == null) return message.ToString();
 
