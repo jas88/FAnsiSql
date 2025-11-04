@@ -23,31 +23,64 @@ public sealed partial class MySqlTypeTranslater : TypeTranslater
         LongRegex = LongRe();
     }
 
-    public override int GetLengthIfString(string sqlType) =>
-        sqlType.ToUpperInvariant() switch
-        {
-            "TINYTEXT" => 1 << 8,
-            "TEXT" => 1 << 16,
-            "MEDIUMTEXT" => 1 << 24,
-            "LONGTEXT" => int.MaxValue, // Should be 1<<32 but that overflows...
-            _ => AlsoStringRegex.IsMatch(sqlType) ? int.MaxValue : base.GetLengthIfString(sqlType)
-        };
+    public override int GetLengthIfString(string sqlType)
+    {
+        if (string.IsNullOrWhiteSpace(sqlType))
+            return -1;
+
+        // Use span-based comparison for better performance - no string allocation
+        var sqlTypeSpan = sqlType.AsSpan();
+
+        // Check for text types using ordinal comparison for performance
+        if (sqlTypeSpan.Equals("TINYTEXT", StringComparison.OrdinalIgnoreCase))
+            return 1 << 8;
+
+        if (sqlTypeSpan.Equals("TEXT", StringComparison.OrdinalIgnoreCase))
+            return 1 << 16;
+
+        if (sqlTypeSpan.Equals("MEDIUMTEXT", StringComparison.OrdinalIgnoreCase))
+            return 1 << 24;
+
+        if (sqlTypeSpan.Equals("LONGTEXT", StringComparison.OrdinalIgnoreCase))
+            return int.MaxValue; // Should be 1<<32 but that overflows...
+
+        return AlsoStringRegex.IsMatch(sqlType) ? int.MaxValue : base.GetLengthIfString(sqlType);
+    }
 
     public override string GetStringDataTypeWithUnlimitedWidth() => "longtext";
 
     public override string GetUnicodeStringDataTypeWithUnlimitedWidth() => "longtext";
 
+    protected override string GetStringDataTypeImpl(int maxExpectedStringWidth) => $"varchar({maxExpectedStringWidth})";
+
     protected override string GetUnicodeStringDataTypeImpl(int maxExpectedStringWidth) => $"varchar({maxExpectedStringWidth})";
 
-    protected override bool IsBool(string sqlType) => base.IsBool(sqlType) || sqlType.StartsWith("tinyint(1)", StringComparison.InvariantCultureIgnoreCase);
+    protected override bool IsBool(string sqlType)
+    {
+        // Use span-based comparison for better performance
+        if (base.IsBool(sqlType))
+            return true;
 
-    protected override bool IsInt(string sqlType) =>
-        //not an int
-        !sqlType.StartsWith("int8", StringComparison.InvariantCultureIgnoreCase) && base.IsInt(sqlType);
+        var sqlTypeSpan = sqlType.AsSpan();
+        return sqlTypeSpan.StartsWith("tinyint(1)", StringComparison.OrdinalIgnoreCase);
+    }
+
+    protected override bool IsInt(string sqlType)
+    {
+        //not an int - use span-based comparison
+        var sqlTypeSpan = sqlType.AsSpan();
+        if (sqlTypeSpan.StartsWith("int8", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        return base.IsInt(sqlType);
+    }
 
     protected override bool IsString(string sqlType)
     {
-        if (sqlType.Contains("binary", StringComparison.InvariantCultureIgnoreCase))
+        // Use span-based comparison for better performance
+        var sqlTypeSpan = sqlType.AsSpan();
+
+        if (sqlTypeSpan.Contains("binary", StringComparison.OrdinalIgnoreCase))
             return false;
 
         return base.IsString(sqlType) || AlsoStringRegex.IsMatch(sqlType);
@@ -61,20 +94,28 @@ public sealed partial class MySqlTypeTranslater : TypeTranslater
 
     protected override string GetGuidDataType() => "char(36)";  // MySQL stores UUIDs as char(36) for compatibility
 
+    // Optimized regex patterns with ReadOnlySpan<char> compatibility and better performance
     [GeneratedRegex(@"tinyint\(1\)", RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]
     private static partial Regex AlsoBitRe();
+
     [GeneratedRegex("(long)|(enum)|(set)|(text)|(mediumtext)", RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]
     private static partial Regex AlsoStringRe();
+
     [GeneratedRegex(@"^(tinyint)|(int1)", RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]
     private static partial Regex ByteRe();
+
     [GeneratedRegex("^(dec)|(fixed)", RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]
     private static partial Regex AlsoFloatingPointRe();
+
     [GeneratedRegex(@"^(smallint)|(int2)", RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]
     private static partial Regex SmallIntRe();
+
     [GeneratedRegex(@"^(int)|(mediumint)|(middleint)|(int3)|(int4)", RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]
     private static partial Regex IntRe();
+
     [GeneratedRegex(@"^(bigint)|(int8)", RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]
     private static partial Regex LongRe();
+
     [GeneratedRegex(@"(date)|(timestamp)", RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]
     private static partial Regex DateRe();
 }
