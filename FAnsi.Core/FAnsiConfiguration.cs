@@ -36,7 +36,7 @@ public static class FAnsiConfiguration
     /// FAnsiConfiguration.EnableThreadLocalConnectionPooling = false;
     /// </code>
     /// </example>
-    public static bool EnableThreadLocalConnectionPooling { get; set; } = false;
+    public static bool EnableThreadLocalConnectionPooling { get; set; }
 
     /// <summary>
     /// <para>Clears all thread-local connection pools. Only has effect when

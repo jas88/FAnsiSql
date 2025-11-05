@@ -97,7 +97,7 @@ public sealed class SqliteBulkCopy(DiscoveredTable targetTable, IManagedConnecti
 
         // Pre-allocate StringBuilder with estimated capacity for better performance
         // Estimate: (parameter_placeholder + comma) * columnCount * batchSize + overhead
-        var estimatedClauseCapacity = Math.Max(1024, (3 * columnCount * BatchSize) + 100); // @pX format is about 3 chars
+        var estimatedClauseCapacity = Math.Max(1024, 3 * columnCount * BatchSize + 100); // @pX format is about 3 chars
         var valueClauses = new StringBuilder(estimatedClauseCapacity);
 
         var batchRows = 0;

@@ -89,23 +89,23 @@ public sealed class MicrosoftQuerySyntaxHelper : QuerySyntaxHelper
     /// <returns></returns>
     private string? GetRuntimeNameWithDoubledClosingSquareBrackets(string s) => GetRuntimeName(s)?.Replace("]", "]]");
 
-    public override string EnsureFullyQualified(string? databaseName, string? schema, string tableName)
+    public override string EnsureFullyQualified(string? databaseName, string? schemaName, string tableName)
     {
         //if there is no schema address it as db..table (which is the same as db.dbo.table in Microsoft SQL Server)
-        if (string.IsNullOrWhiteSpace(schema))
+        if (string.IsNullOrWhiteSpace(schemaName))
             return
                 $"{EnsureWrapped(GetRuntimeName(databaseName))}{DatabaseTableSeparator}{DatabaseTableSeparator}{EnsureWrapped(GetRuntimeName(tableName))}";
 
         //there is a schema so add it in
         return
-            $"{EnsureWrapped(GetRuntimeName(databaseName))}{DatabaseTableSeparator}{EnsureWrapped(GetRuntimeName(schema))}{DatabaseTableSeparator}{EnsureWrapped(GetRuntimeName(tableName))}";
+            $"{EnsureWrapped(GetRuntimeName(databaseName))}{DatabaseTableSeparator}{EnsureWrapped(GetRuntimeName(schemaName))}{DatabaseTableSeparator}{EnsureWrapped(GetRuntimeName(tableName))}";
     }
 
-    public override string EnsureFullyQualified(string? databaseName, string? schema, string tableName, string columnName, bool isTableValuedFunction = false)
+    public override string EnsureFullyQualified(string? databaseName, string? schemaName, string tableName, string columnName, bool isTableValuedFunction = false)
     {
         if (isTableValuedFunction)
             return GetRuntimeName(tableName) + DatabaseTableSeparator + EnsureWrapped(GetRuntimeName(columnName));//table valued functions do not support database name being in the column level selection list area of sql queries
 
-        return EnsureFullyQualified(databaseName, schema, tableName) + DatabaseTableSeparator + EnsureWrapped(GetRuntimeName(columnName));
+        return EnsureFullyQualified(databaseName, schemaName, tableName) + DatabaseTableSeparator + EnsureWrapped(GetRuntimeName(columnName));
     }
 }

@@ -40,16 +40,16 @@ public sealed class OracleQuerySyntaxHelper : QuerySyntaxHelper
 
     public override string EnsureWrappedImpl(string databaseOrTableName) => $"\"{GetRuntimeName(databaseOrTableName)}\"";
 
-    public override string EnsureFullyQualified(string? databaseName, string? schema, string tableName)
+    public override string EnsureFullyQualified(string? databaseName, string? schemaName, string tableName)
     {
         //if there is no schema address it as db..table (which is the same as db.dbo.table in Microsoft SQL Server)
-        if (!string.IsNullOrWhiteSpace(schema))
+        if (!string.IsNullOrWhiteSpace(schemaName))
             throw new NotSupportedException("Schema (e.g. .dbo. not supported by Oracle)");
 
         return $"\"{GetRuntimeName(databaseName)}\"{DatabaseTableSeparator}\"{GetRuntimeName(tableName)}\"";
     }
 
-    public override string EnsureFullyQualified(string? databaseName, string? schema, string tableName, string columnName, bool isTableValuedFunction = false) => $"{EnsureFullyQualified(databaseName, schema, tableName)}.\"{GetRuntimeName(columnName)}\"";
+    public override string EnsureFullyQualified(string? databaseName, string? schemaName, string tableName, string columnName, bool isTableValuedFunction = false) => $"{EnsureFullyQualified(databaseName, schemaName, tableName)}.\"{GetRuntimeName(columnName)}\"";
 
     public override TopXResponse HowDoWeAchieveTopX(int x) => new($"OFFSET 0 ROWS FETCH NEXT {x} ROWS ONLY", QueryComponent.Postfix);
 

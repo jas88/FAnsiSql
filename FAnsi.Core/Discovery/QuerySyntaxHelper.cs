@@ -171,12 +171,12 @@ public abstract partial class QuerySyntaxHelper(
 
     public abstract string EnsureWrappedImpl(string databaseOrTableName);
 
-    public abstract string EnsureFullyQualified(string? databaseName, string? schema, string tableName);
+    public abstract string EnsureFullyQualified(string? databaseName, string? schemaName, string tableName);
 
-    public virtual string EnsureFullyQualified(string? databaseName, string? schema, string tableName, string columnName, bool isTableValuedFunction = false) =>
+    public virtual string EnsureFullyQualified(string? databaseName, string? schemaName, string tableName, string columnName, bool isTableValuedFunction = false) =>
         isTableValuedFunction ? $"{GetRuntimeName(tableName)}.{GetRuntimeName(columnName)}"
             : //table valued functions do not support database name being in the column level selection list area of sql queries
-            $"{EnsureFullyQualified(databaseName, schema, tableName)}.{EnsureWrapped(GetRuntimeName(columnName))}";
+            $"{EnsureFullyQualified(databaseName, schemaName, tableName)}.{EnsureWrapped(GetRuntimeName(columnName))}";
 
     public virtual string Escape(string sql) => string.IsNullOrWhiteSpace(sql) ? sql : sql.Replace("'", "''");
     public abstract TopXResponse HowDoWeAchieveTopX(int x);
@@ -361,9 +361,9 @@ public abstract partial class QuerySyntaxHelper(
         return p;
     }
 
-    public void ValidateDatabaseName(string? databaseName)
+    public void ValidateDatabaseName(string? database)
     {
-        if (!IsValidDatabaseName(databaseName, out var reason))
+        if (!IsValidDatabaseName(database, out var reason))
             throw new RuntimeNameException(reason);
     }
     public void ValidateTableName(string tableName)

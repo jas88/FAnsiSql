@@ -89,7 +89,7 @@ public sealed class SqliteQuerySyntaxHelper : QuerySyntaxHelper
     /// SQLite doesn't support schemas in the traditional sense. Only the table name is used.
     /// For multi-database support, use ATTACH DATABASE.
     /// </remarks>
-    public override string EnsureFullyQualified(string? databaseName, string? schema, string tableName)
+    public override string EnsureFullyQualified(string? databaseName, string? schemaName, string tableName)
     {
         // SQLite doesn't support schemas in the same way as other databases
         // Just return the wrapped table name
