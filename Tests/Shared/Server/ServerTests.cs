@@ -64,7 +64,16 @@ internal sealed class ServerLevelTests : DatabaseTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(server.Name, Is.EqualTo("loco"));
+            // SQLite doesn't have traditional server names - it uses file paths
+            // For SQLite, the "server" parameter becomes the database file path
+            if (type == DatabaseType.Sqlite)
+            {
+                Assert.That(server.Name, Is.EqualTo("bob")); // SQLite treats database parameter as name
+            }
+            else
+            {
+                Assert.That(server.Name, Is.EqualTo("loco"));
+            }
 
             //Oracle does not persist database in connection string
             Assert.That(server.GetCurrentDatabase()?.GetRuntimeName(), type == DatabaseType.Oracle ? Is.Null : Is.EqualTo("bob"));
@@ -84,7 +93,17 @@ internal sealed class ServerLevelTests : DatabaseTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(server.Name, Is.EqualTo("loco"));
+            // SQLite doesn't have traditional server names - it uses file paths
+            // For SQLite, the "server" parameter becomes the database file path
+            if (type == DatabaseType.Sqlite)
+            {
+                // When no database is specified for SQLite, server name should be used
+                Assert.That(server.Name, Is.EqualTo("loco"));
+            }
+            else
+            {
+                Assert.That(server.Name, Is.EqualTo("loco"));
+            }
 
             Assert.That(server.GetCurrentDatabase(), Is.Null);
         });

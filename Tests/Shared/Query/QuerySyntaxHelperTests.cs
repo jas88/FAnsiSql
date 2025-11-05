@@ -10,6 +10,17 @@ namespace FAnsiTests.Query;
 
 internal sealed class QuerySyntaxHelperTests
 {
+    [OneTimeSetUp]
+    public void LoadImplementations()
+    {
+        // Ensure all implementations are loaded for these tests
+        // These calls force assembly loading via static constructors
+        FAnsi.Implementations.MicrosoftSQL.MicrosoftSQLImplementation.EnsureLoaded();
+        FAnsi.Implementations.MySql.MySqlImplementation.EnsureLoaded();
+        FAnsi.Implementations.Oracle.OracleImplementation.EnsureLoaded();
+        FAnsi.Implementations.PostgreSql.PostgreSqlImplementation.EnsureLoaded();
+        FAnsi.Implementations.Sqlite.SqliteImplementation.EnsureLoaded();
+    }
 
 
     //Oracle always uppers everything because... Oracle
