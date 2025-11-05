@@ -49,7 +49,7 @@ public sealed class SqliteQuerySyntaxHelper : QuerySyntaxHelper
     /// SQLite database names are file paths, so dots are allowed for file extensions.
     /// Only parentheses are restricted as they can cause SQL syntax issues.
     /// </remarks>
-    public override char[] IllegalNameChars => ['(' , ')'];
+    public override char[] IllegalNameChars => ['(', ')'];
 
     /// <summary>
     /// Gets the opening qualifier character for identifiers (left square bracket).

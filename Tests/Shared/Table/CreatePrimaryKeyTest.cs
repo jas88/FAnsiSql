@@ -11,7 +11,7 @@ namespace FAnsiTests.Table;
 
 internal sealed class CreatePrimaryKeyTest : DatabaseTests
 {
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void TestBasicCase_KeysCreated(DatabaseType databaseType)
     {
         // Force columns B and C to be strings otherwise Oracle gets upset by TypeGuesser mis-guessing the nulls as boolean
@@ -54,7 +54,7 @@ internal sealed class CreatePrimaryKeyTest : DatabaseTests
         });
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void TestBasicCase_FailHalfWay_SchemaUnchanged(DatabaseType databaseType)
     {
         DiscoveredTable tbl;

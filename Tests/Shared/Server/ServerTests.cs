@@ -9,7 +9,7 @@ namespace FAnsiTests.Server;
 
 internal sealed class ServerLevelTests : DatabaseTests
 {
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void Server_Exists(DatabaseType type)
     {
         var server = GetTestServer(type);
@@ -17,7 +17,7 @@ internal sealed class ServerLevelTests : DatabaseTests
     }
 
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void Server_Constructors(DatabaseType dbType)
     {
         var helper = ImplementationManager.GetImplementation(dbType).GetServerHelper();
@@ -28,7 +28,7 @@ internal sealed class ServerLevelTests : DatabaseTests
         Assert.That(server.Name, Is.EqualTo("localhost"));
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void Server_RespondsWithinTime(DatabaseType type)
     {
         var server = GetTestServer(type);
@@ -40,7 +40,7 @@ internal sealed class ServerLevelTests : DatabaseTests
     /// Tests systems ability to deal with missing information in the connection string
     /// </summary>
     /// <param name="type"></param>
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void ServerHelper_GetCurrentDatabase_WhenNoneSpecified(DatabaseType type)
     {
         var helper = ImplementationManager.GetImplementation(type).GetServerHelper();
@@ -54,7 +54,7 @@ internal sealed class ServerLevelTests : DatabaseTests
         });
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void ServerHelper_GetConnectionStringBuilder(DatabaseType type)
     {
         var helper = ImplementationManager.GetImplementation(type).GetServerHelper();
@@ -93,7 +93,7 @@ internal sealed class ServerLevelTests : DatabaseTests
     }
 
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypesWithBoolFlags))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypesWithBoolFlags))]
     public void ServerHelper_GetConnectionStringBuilder_NoDatabase(DatabaseType type, bool useWhitespace)
     {
         var helper = ImplementationManager.GetImplementation(type).GetServerHelper();
@@ -115,7 +115,7 @@ internal sealed class ServerLevelTests : DatabaseTests
                 Assert.That(server.Name, Is.EqualTo("loco"));
             }
 
-                    Assert.That(server.GetCurrentDatabase(), Is.Null);
+            Assert.That(server.GetCurrentDatabase(), Is.Null);
         });
 
         Assert.Multiple(() =>
@@ -138,7 +138,7 @@ internal sealed class ServerLevelTests : DatabaseTests
         {
             Assert.That(server.Name, Is.EqualTo("loco"));
 
-                    Assert.That(server.GetCurrentDatabase(), Is.Null);
+            Assert.That(server.GetCurrentDatabase(), Is.Null);
         });
 
 
@@ -182,7 +182,7 @@ internal sealed class ServerLevelTests : DatabaseTests
     /// </summary>
     /// <param name="type"></param>
     /// <param name="useApiFirst"></param>
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypesWithBoolFlags))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypesWithBoolFlags))]
     public void ServerHelper_ChangeDatabase_AdHoc(DatabaseType type, bool useApiFirst)
     {
         if (type == DatabaseType.Oracle)
@@ -285,7 +285,7 @@ internal sealed class ServerLevelTests : DatabaseTests
         AssertAreEqual(toTable.GetDataTable(), tblFrom.GetDataTable());
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void TestServer_GetVersion(DatabaseType dbType)
     {
         var db = GetTestDatabase(dbType, false);

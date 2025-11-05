@@ -10,7 +10,7 @@ namespace FAnsiTests.Parameters;
 
 internal sealed class ParameterTests : DatabaseTests
 {
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void Test_SupportsEmbeddedParameters_DeclarationOrThrow(DatabaseType type)
     {
         var syntax = ImplementationManager.GetImplementation(type).GetQuerySyntaxHelper();

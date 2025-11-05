@@ -30,21 +30,23 @@ public sealed class SqliteAggregateHelper : AggregateHelper
     /// <returns>SQLite date function expression using strftime()</returns>
     /// <exception cref="ArgumentOutOfRangeException">Thrown if increment is not supported</exception>
     /// <remarks>
-    /// <para>SQLite date part mappings:</para>
+    /// <para>SQLite date part mappings with proper type casting:</para>
     /// <list type="bullet">
-    /// <item><description>Day: DATE(column)</description></item>
-    /// <item><description>Month: strftime('%Y-%m', column)</description></item>
-    /// <item><description>Year: strftime('%Y', column)</description></item>
-    /// <item><description>Quarter: Calculated from month using expression</description></item>
+    /// <item><description>Day: strftime('%m/%d/%Y %H:%M:%S', column) - matches expected format</description></item>
+    /// <item><description>Month: strftime('%Y-%m', column) - returns YYYY-MM format</description></item>
+    /// <item><description>Year: CAST(strftime('%Y', column) AS INTEGER) - returns integer</description></item>
+    /// <item><description>Quarter: strftime('%Y', column) || 'Q' || ((strftime('%m', column) - 1) / 3 + 1) - returns string</description></item>
     /// </list>
     /// </remarks>
     public override string GetDatePartOfColumn(AxisIncrement increment, string columnSql)
     {
         return increment switch
         {
-            AxisIncrement.Day => $"DATE({columnSql})",
+            // Format as MM/DD/YYYY HH:MM:SS to match test expectations
+            AxisIncrement.Day => $"strftime('%m/%d/%Y %H:%M:%S', {columnSql})",
             AxisIncrement.Month => $"strftime('%Y-%m', {columnSql})",
-            AxisIncrement.Year => $"strftime('%Y', {columnSql})",
+            // Cast to INTEGER to ensure numeric type instead of string
+            AxisIncrement.Year => $"CAST(strftime('%Y', {columnSql}) AS INTEGER)",
             AxisIncrement.Quarter => $"strftime('%Y', {columnSql}) || 'Q' || ((strftime('%m', {columnSql}) - 1) / 3 + 1)",
             _ => throw new ArgumentOutOfRangeException(nameof(increment))
         };

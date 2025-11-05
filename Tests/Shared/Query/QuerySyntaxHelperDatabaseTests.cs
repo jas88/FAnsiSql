@@ -9,7 +9,7 @@ namespace FAnsiTests.Query;
 internal sealed class QuerySyntaxHelperDatabaseTests : DatabaseTests
 {
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypesExceptSqlite))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypesExceptSqlite))]
     public void Test_HowDoWeAchieveMd5(DatabaseType dbType)
     {
         var db = GetTestDatabase(dbType, false);
@@ -39,7 +39,7 @@ internal sealed class QuerySyntaxHelperDatabaseTests : DatabaseTests
         Assert.That(ex.Message, Does.Contain("SQLite does not have a built-in MD5 function"));
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void Test_LenFunc(DatabaseType dbType)
     {
         var db = GetTestDatabase(dbType, false);

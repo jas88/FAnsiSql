@@ -21,6 +21,6 @@
   </TestDatabase>
   <TestDatabase>
     <DatabaseType>Sqlite</DatabaseType>
-    <ConnectionString>Data Source=FAnsiTests.db;Mode=Memory;Cache=Shared</ConnectionString>
+    <ConnectionString>Data Source=|DataDirectory|/FAnsiTests.db</ConnectionString>
   </TestDatabase>
 </TestDatabases>

@@ -10,7 +10,7 @@ namespace FAnsiTests.Table;
 
 internal sealed class ForeignKeyTests : DatabaseTests
 {
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypesWithBoolFlags))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypesWithBoolFlags))]
     public void TestForeignKey_OneColumnKey(DatabaseType dbType, bool cascade)
     {
         var db = GetTestDatabase(dbType);
@@ -81,7 +81,7 @@ internal sealed class ForeignKeyTests : DatabaseTests
         parentTable.Drop();
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void TestForeignKey_TwoColumnKey(DatabaseType dbType)
     {
         var db = GetTestDatabase(dbType);
@@ -142,7 +142,7 @@ internal sealed class ForeignKeyTests : DatabaseTests
         parentTable.Drop();
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypesWithBoolFlags))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypesWithBoolFlags))]
     public void Test_ThreeTables_OnePrimary(DatabaseType dbType, bool useTransaction)
     {
         /*       t2
@@ -205,7 +205,7 @@ internal sealed class ForeignKeyTests : DatabaseTests
         Assert.That(sort2, Does.Contain(t3));
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void Test_ThreeTables_TwoPrimary(DatabaseType dbType)
     {
         /*  t1

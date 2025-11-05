@@ -10,7 +10,7 @@ namespace FAnsiTests.Aggregation;
 
 internal sealed class CalendarAggregationTests : AggregationTests
 {
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void Test_Calendar_Year(DatabaseType type)
     {
         var tbl = GetTestTable(type);
@@ -73,7 +73,7 @@ internal sealed class CalendarAggregationTests : AggregationTests
         });
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void Test_Calendar_Quarter(DatabaseType type)
     {
         var tbl = GetTestTable(type);
@@ -116,7 +116,7 @@ internal sealed class CalendarAggregationTests : AggregationTests
         AssertHasRow(dt, "2001Q2", null);
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void Test_Calendar_Month(DatabaseType type)
     {
         var tbl = GetTestTable(type);
@@ -161,7 +161,7 @@ internal sealed class CalendarAggregationTests : AggregationTests
         AssertHasRow(dt, "2001-02", null);
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void Test_Calendar_Day(DatabaseType type)
     {
         var tbl = GetTestTable(type);
@@ -205,7 +205,7 @@ internal sealed class CalendarAggregationTests : AggregationTests
     }
 
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void Test_Calendar_ToToday(DatabaseType type)
     {
         var tbl = GetTestTable(type);
@@ -275,7 +275,7 @@ internal sealed class CalendarAggregationTests : AggregationTests
     /// Tests to ensure that the order of the count(*) and EventDate columns don't matter
     /// </summary>
     /// <param name="type"></param>
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void Test_Calendar_SELECTColumnOrder_CountAfterAxisColumn(DatabaseType type)
     {
         var tbl = GetTestTable(type);

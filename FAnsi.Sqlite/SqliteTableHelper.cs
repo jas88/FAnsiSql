@@ -123,6 +123,31 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
         return Enumerable.Empty<DiscoveredParameter>();
     }
 
+    /// <summary>
+    /// Adds a column to a SQLite table with proper SQL syntax.
+    /// </summary>
+    /// <param name="args">Database operation arguments</param>
+    /// <param name="table">The table to add the column to</param>
+    /// <param name="name">The column name</param>
+    /// <param name="dataType">The SQL data type</param>
+    /// <param name="allowNulls">Whether null values are allowed</param>
+    /// <remarks>
+    /// SQLite has limited ALTER TABLE support. This method handles the basic ADD COLUMN operation
+    /// with proper bracket escaping for SQLite.
+    /// </remarks>
+    public override void AddColumn(DatabaseOperationArgs args, DiscoveredTable table, string name, string dataType, bool allowNulls)
+    {
+        var syntax = table.GetQuerySyntaxHelper();
+        var wrappedTableName = syntax.EnsureWrapped(table.GetRuntimeName());
+        var wrappedColumnName = syntax.EnsureWrapped(name);
+        var nullConstraint = allowNulls ? "NULL" : "NOT NULL";
+
+        using var con = args.GetManagedConnection(table);
+        using var cmd = table.Database.Server.GetCommand(
+            $"ALTER TABLE {wrappedTableName} ADD COLUMN {wrappedColumnName} {dataType} {nullConstraint}", con);
+        args.ExecuteNonQuery(cmd);
+    }
+
     public override IBulkCopy BeginBulkInsert(DiscoveredTable discoveredTable, IManagedConnection connection, CultureInfo culture)
     {
         return new SqliteBulkCopy(discoveredTable, connection, culture);

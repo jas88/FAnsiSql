@@ -15,7 +15,7 @@ namespace FAnsiTests.Table;
 
 internal sealed class CreateTableTests : DatabaseTests
 {
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void CreateSimpleTable_Exists(DatabaseType type)
     {
         var db = GetTestDatabase(type);
@@ -31,7 +31,7 @@ internal sealed class CreateTableTests : DatabaseTests
         Assert.That(table.Exists(), Is.False);
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void TestTableCreation(DatabaseType type)
     {
         var database = GetTestDatabase(type);
@@ -123,7 +123,7 @@ internal sealed class CreateTableTests : DatabaseTests
         table.Drop();
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void CreateSimpleTable_VarcharTypeCorrect(DatabaseType type)
     {
         var db = GetTestDatabase(type);
@@ -161,7 +161,7 @@ internal sealed class CreateTableTests : DatabaseTests
         Assert.That(table.Exists(), Is.False);
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void CreateTable_PrimaryKey_FromDataTable(DatabaseType databaseType)
     {
         var database = GetTestDatabase(databaseType);
@@ -176,7 +176,7 @@ internal sealed class CreateTableTests : DatabaseTests
         Assert.That(table.DiscoverColumn("Name").IsPrimaryKey);
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void CreateTable_PrimaryKey_FromColumnRequest(DatabaseType databaseType)
     {
         var database = GetTestDatabase(databaseType);
@@ -215,7 +215,7 @@ internal sealed class CreateTableTests : DatabaseTests
         Assert.That(tbl.DiscoverColumn("Name").Collation, Is.EqualTo(collation));
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void CreateTable_BoolStrings(DatabaseType type)
     {
         var db = GetTestDatabase(type);
@@ -266,7 +266,7 @@ internal sealed class CreateTableTests : DatabaseTests
         tbl.Drop();
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void Test_DropColumn(DatabaseType dbType)
     {
         var db = GetTestDatabase(dbType);
@@ -338,7 +338,7 @@ internal sealed class CreateTableTests : DatabaseTests
         Assert.That(comp.Guess.Unicode);
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void Test_CreateTable_UnicodeNames(DatabaseType dbType)
     {
         var db = GetTestDatabase(dbType);
@@ -402,7 +402,7 @@ internal sealed class CreateTableTests : DatabaseTests
         tbl.Drop();
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void Test_CreateTable_DoNotRetype(DatabaseType dbType)
     {
         //T and F is normally True and False.  If you want to keep it as a string set DoNotRetype
@@ -465,7 +465,7 @@ internal sealed class CreateTableTests : DatabaseTests
     /// <summary>
     /// Tests how CreateTable interacts with <see cref="DataColumn"/> of type Object
     /// </summary>
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void CreateTable_ObjectColumns_StringContent(DatabaseType dbType)
     {
         //T and F is normally True and False.  If you want to keep it as a string set DoNotRetype
@@ -518,7 +518,7 @@ internal sealed class CreateTableTests : DatabaseTests
         }
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void TestSomething(DatabaseType dbType)
     {
         var db = GetTestDatabase(dbType);
@@ -587,7 +587,7 @@ internal sealed class CreateTableTests : DatabaseTests
         });
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypesWithBoolFlags))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypesWithBoolFlags))]
     public void CreateTable_GuessSettings_ExplicitDateTimeFormat(DatabaseType dbType, bool useCustomDate)
     {
         //Values like 013020 would normally be treated as string data (due to leading zero) but maybe the user wants it to be a date?

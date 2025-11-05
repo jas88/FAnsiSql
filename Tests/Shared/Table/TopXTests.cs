@@ -9,7 +9,7 @@ namespace FAnsiTests.Table;
 
 internal sealed class TopXTests : DatabaseTests
 {
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypesWithBoolFlags))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypesWithBoolFlags))]
     public void Test_TopX_OrderBy(DatabaseType type, bool asc)
     {
         var db = GetTestDatabase(type);

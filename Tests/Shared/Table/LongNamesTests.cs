@@ -8,7 +8,7 @@ namespace FAnsiTests.Table;
 
 internal sealed class LongNamesTests : DatabaseTests
 {
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void Test_LongTableName_CreateAndReadBack(DatabaseType dbType)
     {
         var db = GetTestDatabase(dbType);
@@ -29,7 +29,7 @@ internal sealed class LongNamesTests : DatabaseTests
         Assert.That(col.GetRuntimeName(), Is.EqualTo(columnName).IgnoreCase);
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void Test_LongDatabaseNames_CreateAndReadBack(DatabaseType dbType)
     {
         AssertCanCreateDatabases();

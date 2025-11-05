@@ -9,7 +9,7 @@ namespace FAnsiTests.Table;
 
 internal sealed class DataTypeAdjusterTests : DatabaseTests
 {
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void CreateTable_WithAdjuster(DatabaseType type)
     {
         var tbl = GetTestDatabase(type).CreateTable("MyTable",

@@ -45,6 +45,57 @@ public sealed class SqliteDatabaseHelper : DiscoveredDatabaseHelper
     public override IDiscoveredTableHelper GetTableHelper() => new SqliteTableHelper();
 
     /// <summary>
+    /// Generates SQLite-compatible CREATE TABLE column definition with proper default value syntax.
+    /// </summary>
+    /// <param name="col">The column request</param>
+    /// <param name="datatype">The SQL data type</param>
+    /// <param name="syntaxHelper">The query syntax helper</param>
+    /// <returns>SQLite-compatible column definition</returns>
+    /// <remarks>
+    /// SQLite requires specific syntax for default values, especially for functions like date('now').
+    /// This method ensures proper formatting without extra parentheses that could cause syntax errors.
+    /// </remarks>
+    protected override string GetCreateTableSqlLineForColumn(DatabaseColumnRequest col, string datatype, IQuerySyntaxHelper syntaxHelper)
+    {
+        var parts = new List<string>
+        {
+            syntaxHelper.EnsureWrapped(col.ColumnName),
+            datatype
+        };
+
+        // Add default value if specified
+        if (col.Default != MandatoryScalarFunctions.None)
+        {
+            var defaultValue = syntaxHelper.GetScalarFunctionSql(col.Default);
+            parts.Add($"DEFAULT {defaultValue}");
+        }
+
+        // Add collation if specified
+        if (!string.IsNullOrWhiteSpace(col.Collation))
+        {
+            parts.Add($"COLLATE {col.Collation}");
+        }
+
+        // Add NULL/NOT NULL constraint
+        if (col.AllowNulls && !col.IsPrimaryKey)
+        {
+            parts.Add("NULL");
+        }
+        else
+        {
+            parts.Add("NOT NULL");
+        }
+
+        // Add auto-increment if specified
+        if (col.IsAutoIncrement)
+        {
+            parts.Add(syntaxHelper.GetAutoIncrementKeywordIfAny());
+        }
+
+        return string.Join(" ", parts);
+    }
+
+    /// <summary>
     /// Drops (deletes) a SQLite database by removing its file.
     /// </summary>
     /// <param name="database">The database to drop</param>

@@ -7,7 +7,7 @@ namespace FAnsiTests;
 
 internal sealed class ManagedConnectionTests : DatabaseTests
 {
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void Test_GetConnection_NotOpenAtStart(DatabaseType dbType)
     {
         var db = GetTestDatabase(dbType);
@@ -24,7 +24,7 @@ internal sealed class ManagedConnectionTests : DatabaseTests
     /// so connections close on disposal and return to ADO.NET's pool.
     /// </summary>
     /// <param name="dbType"></param>
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void Test_GetManagedConnection_AutoOpenClose(DatabaseType dbType)
     {
         var db = GetTestDatabase(dbType);
@@ -47,7 +47,7 @@ internal sealed class ManagedConnectionTests : DatabaseTests
     /// a new transaction
     /// </summary>
     /// <param name="dbType"></param>
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void Test_BeginNewTransactedConnection_AutoOpenClose(DatabaseType dbType)
     {
         var db = GetTestDatabase(dbType);
@@ -72,7 +72,7 @@ internal sealed class ManagedConnectionTests : DatabaseTests
     /// opening and closing their own connections or do have a <see cref="IManagedTransaction"/> and ignore open/dispose step</para>
     /// </summary>
     /// <param name="dbType"></param>
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void Test_GetManagedConnection_OngoingTransaction(DatabaseType dbType)
     {
         var db = GetTestDatabase(dbType);
@@ -117,7 +117,7 @@ internal sealed class ManagedConnectionTests : DatabaseTests
     /// </summary>
     /// <param name="dbType"></param>
     /// <param name="commit">Whether to commit</param>
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypesWithBoolFlags))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypesWithBoolFlags))]
     public void Test_GetManagedConnection_OngoingTransaction_WithCommitRollback(DatabaseType dbType, bool commit)
     {
         var db = GetTestDatabase(dbType);
@@ -164,7 +164,7 @@ internal sealed class ManagedConnectionTests : DatabaseTests
     }
 
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void Test_ManagedTransaction_MultipleCancel(DatabaseType dbType)
     {
         var db = GetTestDatabase(dbType);
@@ -185,7 +185,7 @@ internal sealed class ManagedConnectionTests : DatabaseTests
     /// a new transaction
     /// </summary>
     /// <param name="dbType"></param>
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void Test_Clone_AutoOpenClose(DatabaseType dbType)
     {
         var db = GetTestDatabase(dbType);

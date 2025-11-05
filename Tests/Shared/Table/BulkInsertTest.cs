@@ -15,7 +15,7 @@ namespace FAnsiTests.Table;
 
 internal sealed class BulkInsertTest : DatabaseTests
 {
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void TestBulkInsert_Basic(DatabaseType type)
     {
         var db = GetTestDatabase(type);
@@ -49,7 +49,7 @@ internal sealed class BulkInsertTest : DatabaseTests
         Assert.That(tbl.GetRowCount(), Is.EqualTo(3));
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void TestBulkInsert_SpacedOutNames(DatabaseType type)
     {
         var db = GetTestDatabase(type);
@@ -93,7 +93,7 @@ internal sealed class BulkInsertTest : DatabaseTests
         Assert.That(tbl.GetRowCount(), Is.EqualTo(4));
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void TestBulkInsert_ColumnOrdinals(DatabaseType type)
     {
         var db = GetTestDatabase(type);
@@ -135,7 +135,7 @@ internal sealed class BulkInsertTest : DatabaseTests
         });
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void TestBulkInsert_Transaction(DatabaseType type)
     {
         var db = GetTestDatabase(type);
@@ -181,7 +181,7 @@ internal sealed class BulkInsertTest : DatabaseTests
         Assert.That(tbl.GetRowCount(), Is.EqualTo(3));
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void TestBulkInsert_AbandonTransaction(DatabaseType type)
     {
         var db = GetTestDatabase(type);
@@ -228,7 +228,7 @@ internal sealed class BulkInsertTest : DatabaseTests
     }
 
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void TestBulkInsert_AlterColumn_MidTransaction(DatabaseType type)
     {
         var db = GetTestDatabase(type);
@@ -281,7 +281,7 @@ internal sealed class BulkInsertTest : DatabaseTests
         Assert.That(tbl.GetRowCount(), Is.EqualTo(3));
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void BulkInsert_MixedCase(DatabaseType type)
     {
         var db = GetTestDatabase(type);
@@ -308,7 +308,7 @@ internal sealed class BulkInsertTest : DatabaseTests
         Assert.That(result.Rows, Has.Count.EqualTo(2)); //2 rows inserted
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void UnmatchedColumnsBulkInsertTest_UsesDefaultValues_Passes(DatabaseType type)
     {
         var db = GetTestDatabase(type);
@@ -361,7 +361,7 @@ internal sealed class BulkInsertTest : DatabaseTests
     /// then maybe this test will be inconsistent?
     /// </summary>
     /// <param name="type"></param>
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void UnmatchedColumnsBulkInsertTest_UsesDefaultValues_TwoLargeBatches_Passes(DatabaseType type)
     {
         const int numberOfRowsPerBatch = 100010;
@@ -515,7 +515,7 @@ internal sealed class BulkInsertTest : DatabaseTests
         tbl.Drop();
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void NullPrimaryKey_ThrowsException(DatabaseType type)
     {
         var db = GetTestDatabase(type);
@@ -537,7 +537,7 @@ internal sealed class BulkInsertTest : DatabaseTests
         Assert.Throws(Is.InstanceOf<Exception>(), () => blk.Upload(dt));
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void AutoIncrementPrimaryKey_Passes(DatabaseType type)
     {
         var db = GetTestDatabase(type);
@@ -586,7 +586,7 @@ internal sealed class BulkInsertTest : DatabaseTests
     }
 
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void TestBulkInsert_ScientificNotation(DatabaseType type)
     {
         var db = GetTestDatabase(type);
@@ -633,7 +633,7 @@ internal sealed class BulkInsertTest : DatabaseTests
             Assert.Fail();
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void TestBulkInsert_Unicode(DatabaseType dbType)
     {
         var db = GetTestDatabase(dbType);
@@ -672,7 +672,7 @@ internal sealed class BulkInsertTest : DatabaseTests
         table.Drop();
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void TestBulkInsert_SchemaTooNarrow_StringError(DatabaseType type)
     {
         var db = GetTestDatabase(type);
@@ -725,7 +725,7 @@ internal sealed class BulkInsertTest : DatabaseTests
         }
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void TestBulkInsert_ExplicitDateTimeFormats(DatabaseType type)
     {
 
@@ -753,7 +753,7 @@ internal sealed class BulkInsertTest : DatabaseTests
         Assert.That(dtDown.Rows[0]["MyDate"], Is.EqualTo(new DateTime(2001, 12, 30)));
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void TestBulkInsert_SchemaTooNarrow_DecimalError(DatabaseType type)
     {
         var db = GetTestDatabase(type);
@@ -807,7 +807,7 @@ internal sealed class BulkInsertTest : DatabaseTests
         }
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void TestBulkInsert_BadDecimalFormat_DecimalError(DatabaseType type)
     {
         var db = GetTestDatabase(type);

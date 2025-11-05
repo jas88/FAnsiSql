@@ -9,7 +9,7 @@ namespace FAnsiTests.Table;
 
 internal sealed class CreateIndexTest : DatabaseTests
 {
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypesWithTwoBoolFlags))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypesWithTwoBoolFlags))]
     public void TestBasicCase_IndexCreated(DatabaseType databaseType, bool unique, bool multiColumn)
     {
         // Force columns B and C to be strings otherwise Oracle gets upset by TypeGuesser mis-guessing the nulls as boolean
@@ -44,7 +44,7 @@ internal sealed class CreateIndexTest : DatabaseTests
         Assert.DoesNotThrow(() => tbl.DropIndex("my_index"));
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void TestBasicCase_DeleteIndexThatDoesntExist(DatabaseType databaseType)
     {
         // Force columns B and C to be strings otherwise Oracle gets upset by TypeGuesser mis-guessing the nulls as boolean

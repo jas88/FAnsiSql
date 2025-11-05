@@ -67,6 +67,9 @@ internal abstract class AggregationTests : DatabaseTests
             catch (Exception e)
             {
                 TestContext.Out.WriteLine($"Could not setup test database for DatabaseType {key}:{e}");
+                // Add null entry to dictionary so GetTestTable can handle it properly
+                var dic = easy ? _easyTables : _hardTables;
+                dic.Add(key, null!);
             }
     }
 
@@ -159,7 +162,11 @@ internal abstract class AggregationTests : DatabaseTests
         if (!dic.ContainsKey(type))
             Assert.Inconclusive($"No connection string found for Test database type {type}");
 
-        return dic[type];
+        var table = dic[type];
+        if (table == null)
+            Assert.Inconclusive($"Test database setup failed for DatabaseType {type}");
+
+        return table;
     }
 
 }

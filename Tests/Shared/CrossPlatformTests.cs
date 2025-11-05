@@ -18,7 +18,7 @@ namespace FAnsiTests;
 public sealed class CrossPlatformTests : DatabaseTests
 {
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void TestTableCreation_NullTableName(DatabaseType type)
     {
         var db = GetTestDatabase(type);
@@ -324,7 +324,7 @@ public sealed class CrossPlatformTests : DatabaseTests
         tbl.Drop();
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void ForeignKeyCreationTest(DatabaseType type)
     {
         var database = GetTestDatabase(type);
@@ -404,7 +404,7 @@ public sealed class CrossPlatformTests : DatabaseTests
         }
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypesWithBoolFlags))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypesWithBoolFlags))]
     public void ForeignKeyCreationTest_TwoColumns(DatabaseType type, bool cascadeDelete)
     {
         var database = GetTestDatabase(type);
@@ -489,7 +489,7 @@ public sealed class CrossPlatformTests : DatabaseTests
         }
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void CreateMaxVarcharColumns(DatabaseType type)
     {
         var database = GetTestDatabase(type);
@@ -515,7 +515,7 @@ public sealed class CrossPlatformTests : DatabaseTests
     }
 
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void CreateMaxVarcharColumnFromDataTable(DatabaseType type)
     {
         var database = GetTestDatabase(type);
@@ -542,7 +542,7 @@ public sealed class CrossPlatformTests : DatabaseTests
         Assert.That(dt2.Rows[0][0], Is.EqualTo(sb.ToString()));
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void CreateDateColumnFromDataTable(DatabaseType type)
     {
         var database = GetTestDatabase(type);
@@ -559,7 +559,7 @@ public sealed class CrossPlatformTests : DatabaseTests
         Assert.That(dt.Rows[0][0], Is.EqualTo(new DateTime(2001, 01, 22)));
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypesWithBoolFlags))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypesWithBoolFlags))]
     public void AddColumnTest(DatabaseType type, bool useTransaction)
     {
         const string newColumnName = "My Fun New Column[Lol]"; //<- lets make sure dodgy names are also supported
@@ -640,7 +640,7 @@ public sealed class CrossPlatformTests : DatabaseTests
         });
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void ChangeDatabaseShouldNotAffectOriginalConnectionString_Test(DatabaseType type)
     {
         var database1 = GetTestDatabase(type);
@@ -650,7 +650,7 @@ public sealed class CrossPlatformTests : DatabaseTests
         Assert.That(database1.Server.Builder.ConnectionString, Is.EqualTo(stringBefore));
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypesWithTwoBoolFlags))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypesWithTwoBoolFlags))]
     public void TestDistincting(DatabaseType type, bool useTransaction, bool dodgyNames)
     {
         var database = GetTestDatabase(type);
@@ -703,7 +703,7 @@ public sealed class CrossPlatformTests : DatabaseTests
         });
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void TestIntDataTypes(DatabaseType type)
     {
         var database = GetTestDatabase(type);
@@ -747,7 +747,7 @@ public sealed class CrossPlatformTests : DatabaseTests
         });
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void TestFloatDataTypes(DatabaseType type)
     {
         var database = GetTestDatabase(type);
@@ -967,7 +967,7 @@ public sealed class CrossPlatformTests : DatabaseTests
         }
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void CreateTable_AutoIncrementColumnTest(DatabaseType type)
     {
         var database = GetTestDatabase(type);
@@ -1007,7 +1007,7 @@ public sealed class CrossPlatformTests : DatabaseTests
         Assert.That(autoIncrement, Is.EqualTo(2));
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void CreateTable_DefaultTest_Date(DatabaseType type)
     {
         var database = GetTestDatabase(type);
@@ -1046,7 +1046,7 @@ public sealed class CrossPlatformTests : DatabaseTests
         });
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void CreateTable_DefaultTest_Guid(DatabaseType type)
     {
         var database = GetTestDatabase(type);
@@ -1094,7 +1094,7 @@ public sealed class CrossPlatformTests : DatabaseTests
         Assert.That(databaseValue, Is.Not.Null);
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void Test_BulkInserting_LotsOfDates(DatabaseType type)
     {
         var culture = new CultureInfo("en-gb");

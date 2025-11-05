@@ -115,6 +115,13 @@ public sealed class SqliteServerHelper : DiscoveredServerHelper
         var dataSource = string.IsNullOrWhiteSpace(database) ? server : database;
         builder.DataSource = dataSource;
 
+        // Store whether we have an explicit database for GetCurrentDatabase()
+        // Use a custom property to track this since SQLite doesn't have separate server/database
+        if (!string.IsNullOrWhiteSpace(database))
+        {
+            builder["ExplicitDatabase"] = database;
+        }
+
         // SQLite doesn't use username/password authentication, but we accept them
         return builder;
     }
@@ -317,7 +324,14 @@ public sealed class SqliteServerHelper : DiscoveredServerHelper
     /// </remarks>
     public override string? GetCurrentDatabase(DbConnectionStringBuilder builder)
     {
-        var dataSource = builder[DatabaseKeyName]?.ToString();
-        return string.IsNullOrEmpty(dataSource) ? null : dataSource;
+        // Check if we have an explicit database set
+        var explicitDatabase = builder["ExplicitDatabase"]?.ToString();
+        if (!string.IsNullOrEmpty(explicitDatabase))
+        {
+            return explicitDatabase;
+        }
+
+        // If no explicit database, return null even if DataSource is set from server name
+        return null;
     }
 }

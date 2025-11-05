@@ -7,7 +7,7 @@ namespace FAnsiTests.Table;
 
 internal sealed class TestRename : DatabaseTests
 {
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void TestRenamingTable(DatabaseType type)
     {
         var db = GetTestDatabase(type);

@@ -10,7 +10,7 @@ namespace FAnsiTests.Table;
 
 internal sealed class UpdateTests : DatabaseTests
 {
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void Test_UpdateTableFromJoin(DatabaseType dbType)
     {
         var db = GetTestDatabase(dbType);

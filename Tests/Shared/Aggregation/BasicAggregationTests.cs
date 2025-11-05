@@ -9,7 +9,7 @@ namespace FAnsiTests.Aggregation;
 
 internal sealed class BasicAggregationTests : AggregationTests
 {
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void Test_BasicCount(DatabaseType type)
     {
         var tbl = GetTestTable(type);
@@ -32,7 +32,7 @@ internal sealed class BasicAggregationTests : AggregationTests
     }
 
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void Test_GroupByCount(DatabaseType type)
     {
         var tbl = GetTestTable(type);

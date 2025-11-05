@@ -96,7 +96,7 @@ internal sealed class QuerySyntaxHelperTests
             }
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void EnsureWrapped_MultipleCalls(DatabaseType dbType)
     {
         var syntax = QuerySyntaxHelperFactory.Create(dbType);
@@ -107,7 +107,7 @@ internal sealed class QuerySyntaxHelperTests
         Assert.That(twice, Is.EqualTo(once));
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void SyntaxHelperTest_GetRuntimeName_Impossible(DatabaseType t)
     {
         var syntaxHelper = ImplementationManager.GetImplementation(t).GetQuerySyntaxHelper();
@@ -163,7 +163,7 @@ internal sealed class QuerySyntaxHelperTests
             });
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void Test_GetAlias(DatabaseType t)
     {
         var syntaxHelper = ImplementationManager.GetImplementation(t).GetQuerySyntaxHelper();
@@ -183,7 +183,7 @@ internal sealed class QuerySyntaxHelperTests
         });
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void Test_BooleanWrapper(DatabaseType dbType)
     {
         Assert.Multiple(() =>
@@ -195,7 +195,7 @@ internal sealed class QuerySyntaxHelperTests
         });
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void Test_NameValidation(DatabaseType dbType)
     {
         var syntaxHelper = ImplementationManager.GetImplementation(dbType).GetQuerySyntaxHelper();
@@ -221,7 +221,7 @@ internal sealed class QuerySyntaxHelperTests
         });
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void Test_GetFullyQualifiedName(DatabaseType dbType)
     {
         var syntaxHelper = ImplementationManager.GetImplementation(dbType).GetQuerySyntaxHelper();
@@ -251,7 +251,7 @@ internal sealed class QuerySyntaxHelperTests
         }
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void Test_GetFullyQualifiedName_WhitespaceSchema(DatabaseType dbType)
     {
         var syntaxHelper = ImplementationManager.GetImplementation(dbType).GetQuerySyntaxHelper();

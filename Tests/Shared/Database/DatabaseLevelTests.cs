@@ -15,7 +15,7 @@ namespace FAnsiTests.Database;
 
 internal sealed class DatabaseLevelTests : DatabaseTests
 {
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void Database_Exists(DatabaseType type)
     {
         var server = GetTestDatabase(type);
@@ -35,7 +35,7 @@ internal sealed class DatabaseLevelTests : DatabaseTests
         Assert.That(db.GetRuntimeName(), Is.EqualTo(upperCase ? "OMG" : "omg"));
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void Test_CreateSchema(DatabaseType type)
     {
         var db = GetTestDatabase(type);
@@ -56,7 +56,7 @@ internal sealed class DatabaseLevelTests : DatabaseTests
             Assert.That(tbl.Schema, Is.EqualTo("Fr ank"));
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void TestListDatabasesAsync(DatabaseType type)
     {
         var db = GetTestDatabase(type, false);

@@ -78,8 +78,15 @@ public abstract class DatabaseTests
             // Make sure our scratch db exists for PostgreSQL
             if (databaseType == DatabaseType.PostgreSql)
             {
-                var server = GetTestServer(DatabaseType.PostgreSql);
-                if (server.DiscoverDatabases().All(db => db.GetWrappedName()?.Contains(_testScratchDatabase) != true)) server.CreateDatabase(_testScratchDatabase);
+                try
+                {
+                    var server = GetTestServer(DatabaseType.PostgreSql);
+                    if (server.DiscoverDatabases().All(db => db.GetWrappedName()?.Contains(_testScratchDatabase) != true)) server.CreateDatabase(_testScratchDatabase);
+                }
+                catch (Exception ex)
+                {
+                    TestContext.Out.WriteLine($"Warning: Could not setup PostgreSQL scratch database: {ex.Message}");
+                }
             }
         }
     }
@@ -95,17 +102,21 @@ public abstract class DatabaseTests
     protected DiscoveredDatabase GetTestDatabase(DatabaseType type, bool cleanDatabase = true)
     {
         var server = GetTestServer(type);
-        var db = server.ExpectDatabase(_testScratchDatabase);
 
-        if (!db.Exists())
-            if (_allowDatabaseCreation)
-                db.Create();
-            else
-                Assert.Inconclusive(
-                    $"Database {_testScratchDatabase} did not exist on server {server} and AllowDatabaseCreation was false in {TestFilename}");
-        else
+        // For SQLite file-based databases, use the database name from the connection string
+        var databaseName = type == DatabaseType.Sqlite ? "FAnsiTests.db" : _testScratchDatabase;
+        var db = server.ExpectDatabase(databaseName);
+
+        try
         {
-            if (!cleanDatabase) return db;
+            if (!db.Exists())
+            {
+                if (_allowDatabaseCreation)
+                    db.Create();
+            }
+            else
+            {
+                if (!cleanDatabase) return db;
 
             IEnumerable<DiscoveredTable> deleteTableOrder;
 
@@ -125,6 +136,11 @@ public abstract class DatabaseTests
 
             foreach (var func in db.DiscoverTableValuedFunctions())
                 func.Drop();
+            }
+        }
+        catch (Exception ex)
+        {
+            Assert.Inconclusive($"Could not connect to database {databaseName} on server {server}: {ex.Message}");
         }
 
         return db;

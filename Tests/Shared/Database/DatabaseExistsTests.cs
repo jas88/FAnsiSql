@@ -21,7 +21,7 @@ internal sealed class DatabaseExistsTests : DatabaseTests
     /// This fork's implementation correctly handles this by using DatabaseExists() which connects
     /// to the postgres system database before checking.
     /// </remarks>
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void DiscoveredDatabase_Exists_NonExistentDatabase_ReturnsFalse(DatabaseType dbType)
     {
         var server = GetTestServer(dbType);
@@ -35,7 +35,7 @@ internal sealed class DatabaseExistsTests : DatabaseTests
     /// <summary>
     /// Test that DiscoveredDatabase.Exists() returns true for existing databases
     /// </summary>
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void DiscoveredDatabase_Exists_ExistingDatabase_ReturnsTrue(DatabaseType dbType)
     {
         var db = GetTestDatabase(dbType);
@@ -47,7 +47,7 @@ internal sealed class DatabaseExistsTests : DatabaseTests
     /// <summary>
     /// Test that creating and then checking a database works correctly
     /// </summary>
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void DiscoveredDatabase_Exists_AfterCreate_ReturnsTrue(DatabaseType dbType)
     {
         var server = GetTestServer(dbType);

@@ -8,7 +8,7 @@ namespace FAnsiTests.Table;
 
 public sealed class BigIntTests : DatabaseTests
 {
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void TestBigInt_Insert(DatabaseType dbType)
     {
         var db = GetTestDatabase(dbType);
@@ -26,7 +26,7 @@ public sealed class BigIntTests : DatabaseTests
         tbl.Drop();
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void TestBigInt_InsertDataTable(DatabaseType dbType)
     {
         var db = GetTestDatabase(dbType);

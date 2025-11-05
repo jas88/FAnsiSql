@@ -5,6 +5,7 @@
     <Copyright>Copyright ©  2025</Copyright>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <RootNamespace>FAnsiTests</RootNamespace>
+    <DefineConstants>FANSI_MYSQL_TESTS</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="..\..\SharedAssemblyInfo.cs" Link="SharedAssemblyInfo.cs" />

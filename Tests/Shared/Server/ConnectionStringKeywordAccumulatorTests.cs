@@ -104,7 +104,7 @@ public sealed class ConnectionStringKeywordAccumulatorTests
     }
 
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void TestKeywords_Invalid(DatabaseType databaseType)
     {
         var acc = new ConnectionStringKeywordAccumulator(databaseType);

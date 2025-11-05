@@ -73,7 +73,7 @@ internal sealed class BasicInsertTests : DatabaseTests
         tbl.Drop();
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void CreateTableAndInsertAValue_ReturnsIdentity(DatabaseType type)
     {
         var db = GetTestDatabase(type);

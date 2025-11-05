@@ -44,7 +44,7 @@ internal sealed class BadNamesTests : DatabaseTests
 
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void Test_EnsureWrapped_EmptyExpressions(DatabaseType dbType)
     {
         var syntax = QuerySyntaxHelperFactory.Create(dbType);
@@ -72,7 +72,7 @@ internal sealed class BadNamesTests : DatabaseTests
         });
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void BadNames_DiscoverColumns(DatabaseType dbType)
     {
         var tbl = SetupBadNamesTable(dbType);
@@ -82,7 +82,7 @@ internal sealed class BadNamesTests : DatabaseTests
         tbl.Drop();
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void BadNames_AlterType(DatabaseType dbType)
     {
         var tbl = SetupBadNamesTable(dbType);
@@ -102,7 +102,7 @@ internal sealed class BadNamesTests : DatabaseTests
 
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypesWithBoolFlags))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypesWithBoolFlags))]
     public void BadNames_TopXColumn(DatabaseType dbType, bool noNulls)
     {
         var (_, badColumnName, _) = GetBadNames(dbType);
@@ -138,7 +138,7 @@ internal sealed class BadNamesTests : DatabaseTests
 
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void BadNames_DropColumn(DatabaseType dbType)
     {
         var (_, badColumnName, _) = GetBadNames(dbType);
@@ -157,7 +157,7 @@ internal sealed class BadNamesTests : DatabaseTests
 
     /////////// Table tests ///////////////////
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void BadNames_TopXTable(DatabaseType dbType)
     {
         var (_, badColumnName, _) = GetBadNames(dbType);
@@ -187,7 +187,7 @@ internal sealed class BadNamesTests : DatabaseTests
         tbl.Drop();
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void BadNames_DiscoverRelationships(DatabaseType dbType)
     {
         var (badTableName, badColumnName, _) = GetBadNames(dbType);
@@ -224,7 +224,7 @@ internal sealed class BadNamesTests : DatabaseTests
         tbl1.Drop();
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void BadNames_BulkInsert(DatabaseType dbType)
     {
         var (_, badColumnName, badColumnName2) = GetBadNames(dbType);
@@ -246,7 +246,7 @@ internal sealed class BadNamesTests : DatabaseTests
     }
 
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [TestCaseSource(typeof(TestProjectDatabaseTypes), nameof(TestProjectDatabaseTypes.GetCurrentProjectDatabaseTypes))]
     public void BadNames_Rename(DatabaseType dbType)
     {
         var (badTableName, _, _) = GetBadNames(dbType);
