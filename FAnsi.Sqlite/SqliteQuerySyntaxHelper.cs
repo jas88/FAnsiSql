@@ -138,7 +138,7 @@ public sealed class SqliteQuerySyntaxHelper : QuerySyntaxHelper
     /// </remarks>
     public override string GetParameterDeclaration(
         string proposedNewParameterName, string sqlType) =>
-            // SQLite doesn't require parameter declaration like SQL Server
+        // SQLite doesn't require parameter declaration like SQL Server
         $"/* {proposedNewParameterName} */";
 
     /// <summary>
