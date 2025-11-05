@@ -77,8 +77,18 @@ internal sealed class ServerLevelTests : DatabaseTests
 
             //Oracle does not persist database in connection string
             Assert.That(server.GetCurrentDatabase()?.GetRuntimeName(), type == DatabaseType.Oracle ? Is.Null : Is.EqualTo("bob"));
-            Assert.That(server.ExplicitUsernameIfAny, Is.EqualTo("franko"));
-            Assert.That(server.ExplicitPasswordIfAny, Is.EqualTo("wacky"));
+
+            // SQLite doesn't support username/password authentication
+            if (type == DatabaseType.Sqlite)
+            {
+                Assert.That(server.ExplicitUsernameIfAny, Is.Null);
+                Assert.That(server.ExplicitPasswordIfAny, Is.Null);
+            }
+            else
+            {
+                Assert.That(server.ExplicitUsernameIfAny, Is.EqualTo("franko"));
+                Assert.That(server.ExplicitPasswordIfAny, Is.EqualTo("wacky"));
+            }
         });
     }
 
@@ -105,13 +115,22 @@ internal sealed class ServerLevelTests : DatabaseTests
                 Assert.That(server.Name, Is.EqualTo("loco"));
             }
 
-            Assert.That(server.GetCurrentDatabase(), Is.Null);
+                    Assert.That(server.GetCurrentDatabase(), Is.Null);
         });
 
         Assert.Multiple(() =>
         {
-            Assert.That(server.ExplicitUsernameIfAny, Is.EqualTo("franko"));
-            Assert.That(server.ExplicitPasswordIfAny, Is.EqualTo("wacky"));
+            // SQLite doesn't support username/password authentication
+            if (type == DatabaseType.Sqlite)
+            {
+                Assert.That(server.ExplicitUsernameIfAny, Is.Null);
+                Assert.That(server.ExplicitPasswordIfAny, Is.Null);
+            }
+            else
+            {
+                Assert.That(server.ExplicitUsernameIfAny, Is.EqualTo("franko"));
+                Assert.That(server.ExplicitPasswordIfAny, Is.EqualTo("wacky"));
+            }
         });
 
         server = new DiscoveredServer("loco", useWhitespace ? "  " : null, type, "frank", "kangaro");
@@ -119,7 +138,7 @@ internal sealed class ServerLevelTests : DatabaseTests
         {
             Assert.That(server.Name, Is.EqualTo("loco"));
 
-            Assert.That(server.GetCurrentDatabase(), Is.Null);
+                    Assert.That(server.GetCurrentDatabase(), Is.Null);
         });
 
 

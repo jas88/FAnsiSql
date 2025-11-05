@@ -43,6 +43,15 @@ public sealed class SqliteQuerySyntaxHelper : QuerySyntaxHelper
     public override int MaximumColumnLength => 1024;
 
     /// <summary>
+    /// Gets characters which are not permitted in column names by FAnsi for SQLite.
+    /// </summary>
+    /// <remarks>
+    /// SQLite database names are file paths, so dots are allowed for file extensions.
+    /// Only parentheses are restricted as they can cause SQL syntax issues.
+    /// </remarks>
+    public override char[] IllegalNameChars => ['(' , ')'];
+
+    /// <summary>
     /// Gets the opening qualifier character for identifiers (left square bracket).
     /// </summary>
     public override string OpenQualifier => "[";

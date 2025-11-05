@@ -1,7 +1,10 @@
 <TestDatabases>
   <Settings>
     <AllowDatabaseCreation>True</AllowDatabaseCreation>
-    <TestScratchDatabase>:memory:</TestScratchDatabase>
+    <TestScratchDatabase>FAnsiTests.db</TestScratchDatabase>
   </Settings>
-  <!-- SQLite will use in-memory database for testing -->
+  <TestDatabase>
+    <DatabaseType>Sqlite</DatabaseType>
+    <ConnectionString>Data Source=FAnsiTests.db;Mode=Memory;Cache=Shared</ConnectionString>
+  </TestDatabase>
 </TestDatabases>

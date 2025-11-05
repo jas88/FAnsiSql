@@ -67,6 +67,7 @@ internal sealed class DatabaseLevelTests : DatabaseTests
             DatabaseType.MicrosoftSQLServer => Throws.TypeOf<TaskCanceledException>(),
             DatabaseType.PostgreSql => Throws.Nothing,
             DatabaseType.Oracle => Throws.TypeOf<OperationCanceledException>(),
+            DatabaseType.Sqlite => Throws.Nothing, // SQLite is file-based, should work normally
             _ => throw new ArgumentOutOfRangeException(nameof(type), type, null)
         };
 

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Data.Common;
 using FAnsi.Discovery;
 using FAnsi.Discovery.QuerySyntax;
@@ -53,15 +54,36 @@ public sealed class SqliteServerHelper : DiscoveredServerHelper
     /// Gets a data adapter for the specified command.
     /// </summary>
     /// <param name="cmd">The command to create an adapter for</param>
-    /// <exception cref="NotSupportedException">SQLite does not support DbDataAdapter directly through this API</exception>
-    public override DbDataAdapter GetDataAdapter(DbCommand cmd) => throw new NotSupportedException("SQLite does not support DbDataAdapter directly");
+    /// <returns>A configured DbDataAdapter for SQLite</returns>
+    /// <remarks>
+    /// SQLite doesn't have a built-in DataAdapter, so we create a custom implementation
+    /// that executes commands and fills DataTables manually.
+    /// </remarks>
+    public override DbDataAdapter GetDataAdapter(DbCommand cmd)
+    {
+        if (cmd is not SqliteCommand sqliteCmd)
+            throw new ArgumentException("Command must be a SqliteCommand", nameof(cmd));
+
+        return new SQLiteDataAdapterWrapper(sqliteCmd);
+    }
 
     /// <summary>
     /// Gets a command builder for the specified command.
     /// </summary>
     /// <param name="cmd">The command to create a builder for</param>
-    /// <exception cref="NotSupportedException">SQLite does not support DbCommandBuilder directly through this API</exception>
-    public override DbCommandBuilder GetCommandBuilder(DbCommand cmd) => throw new NotSupportedException("SQLite does not support DbCommandBuilder directly");
+    /// <returns>A basic DbCommandBuilder for SQLite compatibility</returns>
+    /// <remarks>
+    /// SQLite doesn't have automatic command generation, so this returns a minimal implementation.
+    /// Users should write explicit SQL commands for INSERT/UPDATE/DELETE operations.
+    /// </remarks>
+    public override DbCommandBuilder GetCommandBuilder(DbCommand cmd)
+    {
+        if (cmd is not SqliteCommand)
+            throw new ArgumentException("Command must be a SqliteCommand", nameof(cmd));
+
+        // Return a basic command builder - users should write explicit SQL for SQLite
+        return new SQLiteCommandBuilderWrapper();
+    }
 
     /// <inheritdoc />
     public override DbParameter GetParameter(string parameterName) => new SqliteParameter(parameterName, null);
@@ -89,7 +111,8 @@ public sealed class SqliteServerHelper : DiscoveredServerHelper
         var builder = new SqliteConnectionStringBuilder();
 
         // For SQLite, server and database are the same (file path)
-        var dataSource = database ?? server;
+        // Treat whitespace database the same as null
+        var dataSource = string.IsNullOrWhiteSpace(database) ? server : database;
         builder.DataSource = dataSource;
 
         // SQLite doesn't use username/password authentication, but we accept them
@@ -282,5 +305,19 @@ public sealed class SqliteServerHelper : DiscoveredServerHelper
         {
             return null;
         }
+    }
+
+    /// <summary>
+    /// Gets the current database name from the connection string builder.
+    /// </summary>
+    /// <param name="builder">The connection string builder</param>
+    /// <returns>The DataSource value if set, null otherwise</returns>
+    /// <remarks>
+    /// For SQLite, the DataSource represents the database file, so we return it as the current database.
+    /// </remarks>
+    public override string? GetCurrentDatabase(DbConnectionStringBuilder builder)
+    {
+        var dataSource = builder[DatabaseKeyName]?.ToString();
+        return string.IsNullOrEmpty(dataSource) ? null : dataSource;
     }
 }
