@@ -76,10 +76,11 @@ public abstract class DatabaseTests
             TestConnectionStrings.Add(databaseType, constr);
 
             // Make sure our scratch db exists for PostgreSQL
-            if (databaseType != DatabaseType.PostgreSql) continue;
-
-            var server = GetTestServer(DatabaseType.PostgreSql);
-            if (server.DiscoverDatabases().All(db => db.GetWrappedName()?.Contains(_testScratchDatabase) != true)) server.CreateDatabase(_testScratchDatabase);
+            if (databaseType == DatabaseType.PostgreSql)
+            {
+                var server = GetTestServer(DatabaseType.PostgreSql);
+                if (server.DiscoverDatabases().All(db => db.GetWrappedName()?.Contains(_testScratchDatabase) != true)) server.CreateDatabase(_testScratchDatabase);
+            }
         }
     }
 

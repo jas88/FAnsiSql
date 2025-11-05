@@ -19,4 +19,9 @@
   <ItemGroup>
     <ProjectReference Include="..\..\FAnsi.Legacy\FAnsi.Legacy.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <None Update="TestDatabases.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 </Project>
