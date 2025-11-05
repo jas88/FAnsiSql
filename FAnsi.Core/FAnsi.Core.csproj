@@ -39,17 +39,9 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="System.Linq.Async" Version="6.0.3" />
-    <!-- Source generation dependencies -->
-    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.3.4" PrivateAssets="all" />
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.8.0" PrivateAssets="all" />
   </ItemGroup>
 
-  <!-- Include source generators as analyzers (files automatically included by SDK) -->
-  <ItemGroup>
-    <None Include="$(OutputPath)\FAnsiSql.Core.SourceGeneration.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
-    <None Include="$(OutputPath)\FAnsiSql.Core.SourceGeneration.dll" Pack="true" PackagePath="analyzers/dotnet/roslyn3.9/cs" Visible="false" />
-    <None Include="$(OutputPath)\FAnsiSql.Core.SourceGeneration.dll" Pack="true" PackagePath="analyzers/dotnet/roslyn4.0/cs" Visible="false" />
-  </ItemGroup>
+  <!-- Source generation removed - analyzer DLL references cleaned up -->
   <ItemGroup>
     <None Include="..\README.md" Pack="true" PackagePath="\" />
   </ItemGroup>

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Diagnostics.CodeAnalysis;
 using FAnsi.Discovery;
 using FAnsi.Discovery.ConnectionStringDefaults;
 using FAnsi.Discovery.QuerySyntax;
@@ -144,6 +145,8 @@ public sealed class MySqlServerHelper : DiscoveredServerHelper
         return false;
     }
 
+    [RequiresUnreferencedCode()]
+    [RequiresDynamicCode()]
     public override bool DatabaseExists(DiscoveredDatabase database)
     {
         // Remove database from connection string - INFORMATION_SCHEMA is accessible from any connection

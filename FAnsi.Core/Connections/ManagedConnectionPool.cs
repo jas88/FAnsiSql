@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Data;
 using System.Data.Common;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using FAnsi.Discovery;
 
@@ -67,6 +68,8 @@ internal static class ManagedConnectionPool
     /// <summary>
     /// Gets a server-level pooled connection for SQL Server or MySQL, switching databases as needed.
     /// </summary>
+    [RequiresUnreferencedCode("Calls FAnsi.Discovery.DiscoveredServer.DiscoveredServer(String, DatabaseType)")]
+    [RequiresDynamicCode("Calls FAnsi.Discovery.DiscoveredServer.DiscoveredServer(String, DatabaseType)")]
     private static IManagedConnection GetServerLevelPooledConnection(DiscoveredServer server)
     {
         var serverKey = server.Helper.GetServerLevelConnectionKey(server.Builder.ConnectionString);

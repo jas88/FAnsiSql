@@ -66,6 +66,8 @@ public sealed class DiscoveredServer : IMightNotExist
     /// <summary>
     /// Loads and registers all available FAnsiSql provider implementations.
     /// </summary>
+    [UnconditionalSuppressMessage("AssemblyLoadTrimming", "IL2026:RequiresUnreferencedCode", Justification = "The usage of Type.GetType is necessary and safe in this context.")]
+    [UnconditionalSuppressMessage("RequiresDynamicCode", "IL3050:RequiresDynamicCode", Justification = "The usage of Type.GetType and Activator.CreateInstance is necessary and safe in this context.")]
     private static void LoadFAnsiSqlImplementations()
     {
         // Known FAnsiSql provider implementation types

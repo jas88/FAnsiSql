@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Diagnostics.CodeAnalysis;
 using FAnsi.Discovery;
 using FAnsi.Discovery.QuerySyntax;
 using FAnsi.Naming;
@@ -202,6 +203,8 @@ public sealed class MicrosoftSQLServerHelper : DiscoveredServerHelper
         return false;
     }
 
+    [RequiresUnreferencedCode()]
+    [RequiresDynamicCode()]
     public override bool DatabaseExists(DiscoveredDatabase database)
     {
         // Connect to master database to query sys.databases (can't connect to target DB if it doesn't exist!)

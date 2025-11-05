@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using FAnsi.Discovery;
 using FAnsi.Discovery.QuerySyntax;
@@ -87,6 +88,8 @@ public sealed class MicrosoftSQLDatabaseHelper : DiscoveredDatabaseHelper
 
     public override IDiscoveredTableHelper GetTableHelper() => new MicrosoftSQLTableHelper();
 
+    [RequiresUnreferencedCode()]
+    [RequiresDynamicCode()]
     public override void DropDatabase(DiscoveredDatabase database)
     {
         var userIsCurrentlyInDatabase = database.Server.GetCurrentDatabase()!.GetRuntimeName().Equals(database.GetRuntimeName());
