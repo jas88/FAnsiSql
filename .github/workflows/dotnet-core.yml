@@ -61,7 +61,11 @@ jobs:
         sudo systemctl start mysql.service
 
         # Replace test configuration for CI
-        mv Tests/FAnsiTests/TestDatabases{-github,}.xml
+        for proj in FAnsi.Core.Tests FAnsi.MicrosoftSql.Tests FAnsi.MySql.Tests FAnsi.PostgreSql.Tests FAnsi.Oracle.Tests FAnsi.Sqlite.Tests; do
+          if [ -f "Tests/$proj/TestDatabases-github.xml" ]; then
+            mv "Tests/$proj/TestDatabases{-github,}.xml"
+          fi
+        done
     - name: Test
       run: dotnet test FAnsi.sln --logger "console;verbosity=minimal" --nologo -p:TestTfmsInParallel=true
 

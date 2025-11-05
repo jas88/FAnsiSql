@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TestDatabases>
+  <Settings>
+    <AllowDatabaseCreation>True</AllowDatabaseCreation>
+    <TestScratchDatabase>FAnsiTests</TestScratchDatabase>
+  </Settings>
+  <TestDatabase>
+    <DatabaseType>Oracle</DatabaseType>
+    <ConnectionString>Data Source=localhost:1521/XEPDB1;User ID=system;Password=oracle</ConnectionString>
+  </TestDatabase>
+</TestDatabases>

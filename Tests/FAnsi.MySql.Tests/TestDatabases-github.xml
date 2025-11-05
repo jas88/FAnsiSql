@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TestDatabases>
+  <Settings>
+    <AllowDatabaseCreation>True</AllowDatabaseCreation>
+    <TestScratchDatabase>FAnsiTests</TestScratchDatabase>
+  </Settings>
+  <TestDatabase>
+    <DatabaseType>MySql</DatabaseType>
+    <ConnectionString>Server=localhost;Database=mysql;User ID=root;Password=</ConnectionString>
+  </TestDatabase>
+</TestDatabases>
