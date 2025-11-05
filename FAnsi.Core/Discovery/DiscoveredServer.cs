@@ -55,88 +55,49 @@ public sealed class DiscoveredServer : IMightNotExist
     public string? ExplicitPasswordIfAny => Helper.GetExplicitPasswordIfAny(Builder);
 
     /// <summary>
-    /// Static constructor that ensures all referenced FAnsiSql provider assemblies are loaded.
+    /// Static constructor that ensures all FAnsiSql provider implementations are loaded.
     /// This triggers ModuleInitializers in provider assemblies for automatic registration.
     /// </summary>
-    [RequiresUnreferencedCode("Calls FAnsi.Discovery.DiscoveredServer.LoadReferencedFAnsiSqlAssemblies()")]
-    [RequiresDynamicCode("Calls FAnsi.Discovery.DiscoveredServer.LoadReferencedFAnsiSqlAssemblies()")]
+    [RequiresUnreferencedCode("Calls FAnsi.Discovery.DiscoveredServer.LoadFAnsiSqlImplementations()")]
+    [RequiresDynamicCode("Calls FAnsi.Discovery.DiscoveredServer.LoadFAnsiSqlImplementations()")]
     static DiscoveredServer()
     {
-        LoadReferencedFAnsiSqlAssemblies();
+        LoadFAnsiSqlImplementations();
     }
 
     /// <summary>
-    /// Recursively loads all referenced assemblies to trigger FAnsiSql provider ModuleInitializers.
+    /// Loads all known FAnsiSql provider implementations to trigger their ModuleInitializers.
     /// </summary>
-    [RequiresUnreferencedCode("Calls System.Reflection.Assembly.GetReferencedAssemblies()")]
-    [RequiresDynamicCode("Calls System.Reflection.Assembly.Load()")]
-    private static void LoadReferencedFAnsiSqlAssemblies()
+    [RequiresUnreferencedCode("Calls FAnsi.Discovery.DiscoveredServer.LoadFAnsiSqlImplementations()")]
+    [RequiresDynamicCode("Calls FAnsi.Discovery.DiscoveredServer.LoadFAnsiSqlImplementations()")]
+    private static void LoadFAnsiSqlImplementations()
     {
-        var loadedAssemblyNames = new HashSet<string>();
-        var assemblyQueue = new Queue<Assembly>();
-
-        // Start with the current assembly
-        var entryAssembly = Assembly.GetEntryAssembly() ?? Assembly.GetCallingAssembly();
-        assemblyQueue.Enqueue(entryAssembly);
-
-        while (assemblyQueue.Count > 0)
+        // Known FAnsiSql provider implementation types
+        var implementationTypes = new[]
         {
-            var assembly = assemblyQueue.Dequeue();
-            var assemblyName = assembly.GetName();
+            "FAnsi.Implementations.MicrosoftSQL.MicrosoftSQLImplementation, FAnsiSql.MicrosoftSql",
+            "FAnsi.Implementations.MySql.MySqlImplementation, FAnsiSql.MySql",
+            "FAnsi.Implementations.Oracle.OracleImplementation, FAnsiSql.Oracle",
+            "FAnsi.Implementations.PostgreSql.PostgreSqlImplementation, FAnsiSql.PostgreSql",
+            "FAnsi.Implementations.Sqlite.SqliteImplementation, FAnsiSql.Sqlite"
+        };
 
-            // Skip if we've already processed this assembly
-            if (loadedAssemblyNames.Contains(assemblyName.FullName))
-                continue;
-
-            loadedAssemblyNames.Add(assemblyName.FullName);
-
+        foreach (var implementationType in implementationTypes)
+        {
             try
             {
-                // Get all referenced assemblies
-                var referencedAssemblies = assembly.GetReferencedAssemblies();
-
-                foreach (var referencedAssembly in referencedAssemblies)
+                // Try to load the type - this will trigger loading of the assembly and its ModuleInitializer
+                var type = Type.GetType(implementationType);
+                if (type != null)
                 {
-                    // Look for FAnsiSql provider assemblies
-                    if (referencedAssembly.Name != null && referencedAssembly.Name.StartsWith("FAnsiSql.", StringComparison.Ordinal))
-                    {
-                        try
-                        {
-                            // Try to load a known implementation type from each provider assembly
-                            // This is more robust than Assembly.Load() and helps with AOT compatibility
-                            Type? providerType = referencedAssembly.Name switch
-                            {
-                                "FAnsiSql.MicrosoftSql" => Type.GetType("FAnsi.Implementations.MicrosoftSQL.MicrosoftSQLImplementation, FAnsiSql.MicrosoftSql"),
-                                "FAnsiSql.MySql" => Type.GetType("FAnsi.Implementations.MySql.MySqlImplementation, FAnsiSql.MySql"),
-                                "FAnsiSql.Oracle" => Type.GetType("FAnsi.Implementations.Oracle.OracleImplementation, FAnsiSql.Oracle"),
-                                "FAnsiSql.PostgreSql" => Type.GetType("FAnsi.Implementations.PostgreSql.PostgreSqlImplementation, FAnsiSql.PostgreSql"),
-                                "FAnsiSql.Sqlite" => Type.GetType("FAnsi.Implementations.Sqlite.SqliteImplementation, FAnsiSql.Sqlite"),
-                                _ => null
-                            };
-
-                            if (providerType != null)
-                            {
-                                // Load the assembly using the type's assembly (more reliable)
-                                var loadedAssembly = providerType.Assembly;
-                                assemblyQueue.Enqueue(loadedAssembly);
-                            }
-                            else
-                            {
-                                // Fallback to Assembly.Load() for unknown providers
-                                var loadedAssembly = Assembly.Load(referencedAssembly);
-                                assemblyQueue.Enqueue(loadedAssembly);
-                            }
-                        }
-                        catch
-                        {
-                            // Assembly or type not available - skip it
-                        }
-                    }
+                    // Access the assembly to ensure it's loaded and ModuleInitializer runs
+                    _ = type.Assembly;
                 }
+                // If type is null, the implementation assembly isn't available - just ignore it
             }
             catch
             {
-                // Skip assemblies that can't be analyzed
+                // Type loading failed - implementation not available, skip it
             }
         }
     }
