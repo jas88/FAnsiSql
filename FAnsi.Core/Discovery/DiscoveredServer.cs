@@ -15,8 +15,6 @@ namespace FAnsi.Discovery;
 /// <summary>
 /// Cross database type reference to a database server.  Allows you to get connections, create commands, list databases etc.
 /// </summary>
-[RequiresUnreferencedCode("Calls FAnsi.Discovery.DiscoveredServer.LoadReferencedFAnsiSqlAssemblies()")]
-[RequiresDynamicCode("Calls FAnsi.Discovery.DiscoveredServer.LoadReferencedFAnsiSqlAssemblies()")]
 public sealed class DiscoveredServer : IMightNotExist
 {
     /// <summary>
@@ -66,8 +64,7 @@ public sealed class DiscoveredServer : IMightNotExist
     /// <summary>
     /// Loads and registers all available FAnsiSql provider implementations.
     /// </summary>
-    [UnconditionalSuppressMessage("AssemblyLoadTrimming", "IL2026:RequiresUnreferencedCode", Justification = "The usage of Type.GetType is necessary and safe in this context.")]
-    [UnconditionalSuppressMessage("RequiresDynamicCode", "IL3050:RequiresDynamicCode", Justification = "The usage of Type.GetType and Activator.CreateInstance is necessary and safe in this context.")]
+    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2057", Justification = "Type.GetType with assembly-qualified names is safe for known FAnsiSql provider types.")]
     private static void LoadFAnsiSqlImplementations()
     {
         // Known FAnsiSql provider implementation types
