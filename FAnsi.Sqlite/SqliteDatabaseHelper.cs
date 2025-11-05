@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using FAnsi.Discovery;
 using FAnsi.Discovery.QuerySyntax;
+using FAnsi.Naming;
 using Microsoft.Data.Sqlite;
 
 namespace FAnsi.Implementations.Sqlite;
@@ -93,6 +94,99 @@ public sealed class SqliteDatabaseHelper : DiscoveredDatabaseHelper
         }
 
         return string.Join(" ", parts);
+    }
+
+    /// <summary>
+    /// Generates SQLite-compatible CREATE TABLE SQL with proper comma handling.
+    /// </summary>
+    /// <param name="database">The database to create the table in</param>
+    /// <param name="tableName">The name of the table to create</param>
+    /// <param name="columns">The columns to create</param>
+    /// <param name="foreignKeyPairs">Foreign key relationships (optional)</param>
+    /// <param name="cascadeDelete">Whether to cascade deletes for foreign keys</param>
+    /// <param name="schema">The schema name (ignored for SQLite)</param>
+    /// <returns>SQLite-compatible CREATE TABLE SQL statement</returns>
+    /// <remarks>
+    /// Overrides the base implementation to ensure proper comma handling in CREATE TABLE statements.
+    /// SQLite is stricter about comma placement and doesn't allow trailing commas before closing parentheses.
+    /// </remarks>
+    public override string GetCreateTableSql(DiscoveredDatabase database, string tableName,
+        DatabaseColumnRequest[] columns, Dictionary<DatabaseColumnRequest, DiscoveredColumn>? foreignKeyPairs,
+        bool cascadeDelete, string? schema)
+    {
+        var syntaxHelper = database.Server.GetQuerySyntaxHelper();
+        var fullyQualifiedName = syntaxHelper.EnsureFullyQualified(database.GetRuntimeName(), null, tableName);
+
+        var bodySql = new System.Text.StringBuilder();
+        bodySql.AppendLine($"CREATE TABLE {fullyQualifiedName}(");
+
+        for (var i = 0; i < columns.Length; i++)
+        {
+            var col = columns[i];
+            var datatype = col.GetSQLDbType(syntaxHelper.TypeTranslater);
+
+            // Add the column definition
+            bodySql.Append(GetCreateTableSqlLineForColumn(col, datatype, syntaxHelper));
+
+            // Add comma if not the last column and there are no primary keys or foreign keys
+            var isLastColumn = i == columns.Length - 1;
+            var hasPrimaryKey = columns.Any(c => c.IsPrimaryKey);
+            var hasForeignKey = foreignKeyPairs != null && foreignKeyPairs.Any();
+
+            if (!isLastColumn || hasPrimaryKey || hasForeignKey)
+                bodySql.AppendLine(",");
+            else
+                bodySql.AppendLine();
+        }
+
+        var pks = columns.Where(static c => c.IsPrimaryKey).ToArray();
+        if (pks.Length != 0)
+        {
+            // Add primary key constraint without trailing comma
+            var constraintName = MakeSensibleConstraintName("PK_", tableName);
+            var pkColumns = string.Join(",", pks.Select(c => syntaxHelper.EnsureWrapped(c.ColumnName)));
+            bodySql.AppendLine($" CONSTRAINT {constraintName} PRIMARY KEY ({pkColumns})");
+        }
+
+        if (foreignKeyPairs != null)
+        {
+            bodySql.AppendLine();
+            bodySql.AppendLine(GetForeignKeyConstraintSql(tableName, syntaxHelper,
+                foreignKeyPairs.ToDictionary(static k => (IHasRuntimeName)k.Key, static v => v.Value), cascadeDelete, null));
+        }
+
+        bodySql.AppendLine($");{Environment.NewLine}");
+
+        return bodySql.ToString();
+    }
+
+    /// <summary>
+    /// Generates a sensible constraint name for SQLite.
+    /// </summary>
+    /// <param name="prefix">The prefix for the constraint name</param>
+    /// <param name="tableName">The table name</param>
+    /// <returns>A valid constraint name within SQLite's limits</returns>
+    /// <remarks>
+    /// SQLite has a 128-character limit on identifiers. This method ensures constraint names
+    /// fit within this limit while remaining meaningful.
+    /// </remarks>
+    private static string MakeSensibleConstraintName(string prefix, string tableName)
+    {
+        const int MaxIdentifierLength = 128; // SQLite limit
+
+        var constraintName = QuerySyntaxHelper.MakeHeaderNameSensible(tableName);
+
+        if (string.IsNullOrWhiteSpace(constraintName))
+        {
+            var r = new Random();
+            constraintName = $"Constraint{r.Next(10000)}";
+            return $"{prefix}{constraintName}";
+        }
+
+        var prefixAndName = prefix + constraintName;
+        return prefixAndName.Length > MaxIdentifierLength
+            ? prefix + constraintName[..(MaxIdentifierLength - prefix.Length)]
+            : prefixAndName;
     }
 
     /// <summary>

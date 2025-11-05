@@ -98,7 +98,7 @@ public sealed class SqliteServerHelper : DiscoveredServerHelper
     /// <summary>
     /// Creates a connection string builder with the specified parameters.
     /// </summary>
-    /// <param name="server">The server/file path (used if database is null)</param>
+    /// <param name="connectionString">The server/file path (used if database is null)</param>
     /// <param name="database">The database file path (preferred over server)</param>
     /// <param name="username">Username (ignored for SQLite as it has no authentication)</param>
     /// <param name="password">Password (ignored for SQLite as it has no authentication)</param>
@@ -106,21 +106,14 @@ public sealed class SqliteServerHelper : DiscoveredServerHelper
     /// <remarks>
     /// SQLite doesn't use username/password authentication. These parameters are accepted for API compatibility but ignored.
     /// </remarks>
-    protected override DbConnectionStringBuilder GetConnectionStringBuilderImpl(string server, string? database, string username, string password)
+    protected override DbConnectionStringBuilder GetConnectionStringBuilderImpl(string connectionString, string? database, string username, string password)
     {
         var builder = new SqliteConnectionStringBuilder();
 
         // For SQLite, server and database are the same (file path)
         // Treat whitespace database the same as null
-        var dataSource = string.IsNullOrWhiteSpace(database) ? server : database;
+        var dataSource = string.IsNullOrWhiteSpace(database) ? connectionString : database;
         builder.DataSource = dataSource;
-
-        // Store whether we have an explicit database for GetCurrentDatabase()
-        // Use a custom property to track this since SQLite doesn't have separate server/database
-        if (!string.IsNullOrWhiteSpace(database))
-        {
-            builder["ExplicitDatabase"] = database;
-        }
 
         // SQLite doesn't use username/password authentication, but we accept them
         return builder;
@@ -321,17 +314,11 @@ public sealed class SqliteServerHelper : DiscoveredServerHelper
     /// <returns>The DataSource value if set, null otherwise</returns>
     /// <remarks>
     /// For SQLite, the DataSource represents the database file, so we return it as the current database.
+    /// Since SQLite doesn't support custom connection string properties, we return the DataSource directly.
     /// </remarks>
     public override string? GetCurrentDatabase(DbConnectionStringBuilder builder)
     {
-        // Check if we have an explicit database set
-        var explicitDatabase = builder["ExplicitDatabase"]?.ToString();
-        if (!string.IsNullOrEmpty(explicitDatabase))
-        {
-            return explicitDatabase;
-        }
-
-        // If no explicit database, return null even if DataSource is set from server name
-        return null;
+        // For SQLite, just return the DataSource since that's the database file
+        return builder.TryGetValue("Data Source", out var dataSource) ? dataSource?.ToString() : null;
     }
 }

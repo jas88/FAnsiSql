@@ -5,6 +5,6 @@
   </Settings>
   <TestDatabase>
     <DatabaseType>Sqlite</DatabaseType>
-    <ConnectionString>Data Source=FAnsiTests.db;Mode=Memory;Cache=Shared</ConnectionString>
+    <ConnectionString>Data Source=FAnsiTests.db;Pooling=True;Cache=Private</ConnectionString>
   </TestDatabase>
 </TestDatabases>

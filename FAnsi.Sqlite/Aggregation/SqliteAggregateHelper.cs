@@ -30,9 +30,9 @@ public sealed class SqliteAggregateHelper : AggregateHelper
     /// <returns>SQLite date function expression using strftime()</returns>
     /// <exception cref="ArgumentOutOfRangeException">Thrown if increment is not supported</exception>
     /// <remarks>
-    /// <para>SQLite date part mappings with proper type casting:</para>
+    /// <para>SQLite date part mappings consistent with other databases:</para>
     /// <list type="bullet">
-    /// <item><description>Day: strftime('%m/%d/%Y %H:%M:%S', column) - matches expected format</description></item>
+    /// <item><description>Day: DATE(column) - strips time, matches SQL Server/PostgreSQL/MySQL behavior</description></item>
     /// <item><description>Month: strftime('%Y-%m', column) - returns YYYY-MM format</description></item>
     /// <item><description>Year: CAST(strftime('%Y', column) AS INTEGER) - returns integer</description></item>
     /// <item><description>Quarter: strftime('%Y', column) || 'Q' || ((strftime('%m', column) - 1) / 3 + 1) - returns string</description></item>
@@ -42,8 +42,8 @@ public sealed class SqliteAggregateHelper : AggregateHelper
     {
         return increment switch
         {
-            // Format as MM/DD/YYYY HH:MM:SS to match test expectations
-            AxisIncrement.Day => $"strftime('%m/%d/%Y %H:%M:%S', {columnSql})",
+            // Use DATE() to strip time like other databases (SQL Server Convert(date), PostgreSQL ::date, MySQL DATE())
+            AxisIncrement.Day => $"DATE({columnSql})",
             AxisIncrement.Month => $"strftime('%Y-%m', {columnSql})",
             // Cast to INTEGER to ensure numeric type instead of string
             AxisIncrement.Year => $"CAST(strftime('%Y', {columnSql}) AS INTEGER)",
