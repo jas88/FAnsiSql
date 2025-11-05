@@ -7,7 +7,7 @@ using Oracle.ManagedDataAccess.Client;
 
 namespace FAnsi.Implementations.Oracle;
 
-public sealed class OracleImplementation() : Implementation<OracleConnectionStringBuilder>(DatabaseType.Oracle)
+public sealed class OracleImplementation() : Implementation<OracleConnectionStringBuilder>(DatabaseType.Oracle, typeof(OracleConnection))
 {
     /// <summary>
     /// Ensures this implementation is registered with the ImplementationManager.
@@ -18,6 +18,8 @@ public sealed class OracleImplementation() : Implementation<OracleConnectionStri
         // Method body intentionally empty - the ModuleInitializer handles registration.
         // This method exists to force the assembly to load, triggering the ModuleInitializer.
     }
+
+    public static IDiscoveredServerHelper ServerHelper => OracleServerHelper.Instance;
 
     public override IDiscoveredServerHelper GetServerHelper() => OracleServerHelper.Instance;
 

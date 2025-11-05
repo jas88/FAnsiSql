@@ -8,7 +8,7 @@ using Microsoft.Data.SqlClient;
 namespace FAnsi.Implementations.MicrosoftSQL;
 
 public sealed class MicrosoftSQLImplementation()
-    : Implementation<SqlConnectionStringBuilder>(DatabaseType.MicrosoftSQLServer)
+    : Implementation<SqlConnectionStringBuilder>(DatabaseType.MicrosoftSQLServer, typeof(SqlConnection))
 {
     /// <summary>
     /// Ensures this implementation is registered with the ImplementationManager.

@@ -18,9 +18,13 @@ public sealed partial class PostgreSqlTypeTranslater : TypeTranslater
 
     protected override string GetUnicodeStringDataTypeImpl(int maxExpectedStringWidth) => GetStringDataType(maxExpectedStringWidth);
 
+    protected override string GetStringDataTypeImpl(int maxExpectedStringWidth) => $"varchar({maxExpectedStringWidth})";
+
     public override string GetUnicodeStringDataTypeWithUnlimitedWidth() => "text";
 
     protected override string GetDateDateTimeDataType() => "timestamp";
+
+    protected override string GetByteArrayDataType() => "bytea";
 
     public NpgsqlDbType GetNpgsqlDbTypeForCSharpType(Type t)
     {

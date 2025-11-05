@@ -24,7 +24,7 @@ public abstract class DatabaseTests
     protected readonly Dictionary<DatabaseType, string> TestConnectionStrings = [];
 
     private bool _allowDatabaseCreation;
-    private string _testScratchDatabase;
+    private string _testScratchDatabase = null!;
 
     private const string TestFilename = "TestDatabases.xml";
 

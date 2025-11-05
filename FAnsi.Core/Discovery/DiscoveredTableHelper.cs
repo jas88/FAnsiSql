@@ -6,6 +6,7 @@ using System.Globalization;
 using System.Linq;
 using FAnsi.Connections;
 using FAnsi.Discovery.Constraints;
+using FAnsi.Discovery.Helpers;
 using FAnsi.Exceptions;
 using FAnsi.Naming;
 
@@ -26,7 +27,7 @@ public abstract class DiscoveredTableHelper : IDiscoveredTableHelper
         // This is an inefficient fallback implementation
         // Database-specific implementations override this with targeted EXISTS queries
         return table.Database.DiscoverTables(includeViews: table.TableType == TableType.View, transaction)
-            .Any(t => t.GetRuntimeName().Equals(table.GetRuntimeName(), StringComparison.InvariantCultureIgnoreCase));
+            .Any(t => StringComparisonHelper.DatabaseObjectNamesEqual(t.GetRuntimeName(), table.GetRuntimeName()));
     }
 
     /// <summary>
@@ -286,9 +287,14 @@ public abstract class DiscoveredTableHelper : IDiscoveredTableHelper
             }
         }
 
-        return primary.DiscoverRelationships(args.TransactionIfAny).Single(
-            r => r.Name.Equals(constraintName, StringComparison.CurrentCultureIgnoreCase)
-        );
+        // Manual loop optimization to avoid LINQ Single allocation and use span comparisons
+        foreach (var relationship in primary.DiscoverRelationships(args.TransactionIfAny))
+        {
+            if (constraintName.AsSpan().Equals(relationship.Name.AsSpan(), StringComparison.CurrentCultureIgnoreCase))
+                return relationship;
+        }
+
+        throw new InvalidOperationException($"Relationship with constraint name '{constraintName}' not found");
     }
 
     protected abstract string GetRenameTableSql(DiscoveredTable discoveredTable, string newName);

@@ -63,7 +63,7 @@ jobs:
         # Replace test configuration for CI
         mv Tests/FAnsiTests/TestDatabases{-github,}.xml
     - name: Test
-      run: dotnet test --logger "console;verbosity=minimal" --nologo -p:TestTfmsInParallel=true
+      run: dotnet test FAnsi.sln --logger "console;verbosity=minimal" --nologo -p:TestTfmsInParallel=true
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v4
@@ -201,7 +201,7 @@ jobs:
 
     - name: Pack
       run: |
-        dotnet pack -c Release -p:DebugType=full -p:SymbolPackageFormat=snupkg --include-symbols --nologo -p:Version=$(fgrep AssemblyInformationalVersion SharedAssemblyInfo.cs|cut -d'"' -f2) -o .
+        dotnet pack FAnsi.sln -c Release -p:DebugType=full -p:SymbolPackageFormat=snupkg --include-symbols --nologo -p:Version=$(fgrep AssemblyInformationalVersion SharedAssemblyInfo.cs|cut -d'"' -f2) -o .
     - name: Nuget push
       if: contains(github.ref,'refs/tags/')
       run: dotnet nuget push FAnsi*.nupkg -s https://api.nuget.org/v3/index.json -k ${{ secrets.NUGET_API_KEY }} --skip-duplicate

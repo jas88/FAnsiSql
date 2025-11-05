@@ -21,6 +21,7 @@
     <NeutralLanguage>en-GB</NeutralLanguage>
     <DebugType>embedded</DebugType>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <!-- EnforceExtendedAnalyzerRules disabled due to conflicts with existing codebase -->
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <WarningLevel>1</WarningLevel>
@@ -39,6 +40,8 @@
     </PackageReference>
     <PackageReference Include="System.Linq.Async" Version="6.0.3" />
   </ItemGroup>
+
+  <!-- Source generation removed - analyzer DLL references cleaned up -->
   <ItemGroup>
     <None Include="..\README.md" Pack="true" PackagePath="\" />
   </ItemGroup>

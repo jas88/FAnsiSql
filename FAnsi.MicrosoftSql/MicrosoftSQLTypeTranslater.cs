@@ -26,6 +26,14 @@ public sealed partial class MicrosoftSQLTypeTranslater : TypeTranslater
     public override string GetUnicodeStringDataTypeWithUnlimitedWidth() => "nvarchar(max)";
 
     protected override bool IsByteArray(string sqlType) => base.IsByteArray(sqlType) || AlsoBinaryRegex.IsMatch(sqlType);
+
+    protected override string GetByteArrayDataType() => "varbinary(max)";
+
+    protected override string GetStringDataTypeImpl(int maxExpectedStringWidth) => $"varchar({maxExpectedStringWidth})";
+
+    protected override string GetUnicodeStringDataTypeImpl(int maxExpectedStringWidth) => $"nvarchar({maxExpectedStringWidth})";
+
+    protected override string GetGuidDataType() => "uniqueidentifier";
     [GeneratedRegex("date", RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]
     private static partial Regex DateRe();
     [GeneratedRegex("(image)|(timestamp)|(rowversion)", RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]

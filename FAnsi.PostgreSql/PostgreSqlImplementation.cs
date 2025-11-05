@@ -7,7 +7,7 @@ using Npgsql;
 
 namespace FAnsi.Implementations.PostgreSql;
 
-public sealed class PostgreSqlImplementation() : Implementation<NpgsqlConnectionStringBuilder>(DatabaseType.PostgreSql)
+public sealed class PostgreSqlImplementation() : Implementation<NpgsqlConnectionStringBuilder>(DatabaseType.PostgreSql, typeof(NpgsqlConnection))
 {
     /// <summary>
     /// Ensures this implementation is registered with the ImplementationManager.
@@ -18,6 +18,8 @@ public sealed class PostgreSqlImplementation() : Implementation<NpgsqlConnection
         // Method body intentionally empty - the ModuleInitializer handles registration.
         // This method exists to force the assembly to load, triggering the ModuleInitializer.
     }
+
+    public static IDiscoveredServerHelper ServerHelper => PostgreSqlServerHelper.Instance;
 
     public override IDiscoveredServerHelper GetServerHelper() => PostgreSqlServerHelper.Instance;
 

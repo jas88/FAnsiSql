@@ -10,6 +10,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using FAnsi.Connections;
 using FAnsi.Discovery;
+using FAnsi.Discovery.Helpers;
 using Microsoft.Data.SqlClient;
 
 namespace FAnsi.Implementations.MicrosoftSQL;
@@ -190,7 +191,16 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
                                     line, result), e);
 
                         var sourceValue = dr[badMapping.SourceColumn];
-                        var destColumn = TargetTableColumns.SingleOrDefault(c => c.GetRuntimeName().Equals(badMapping.DestinationColumn));
+                        // Manual loop optimization to avoid LINQ SingleOrDefault allocation and use span comparisons
+                        DiscoveredColumn? destColumn = null;
+                        foreach (var column in TargetTableColumns)
+                        {
+                            if (StringComparisonHelper.ColumnNamesEqual(column.GetRuntimeName(), badMapping.DestinationColumn))
+                            {
+                                destColumn = column;
+                                break;
+                            }
+                        }
 
                         if (destColumn != null)
                             return new FileLoadException(

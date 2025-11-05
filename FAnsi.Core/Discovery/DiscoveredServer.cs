@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using FAnsi.Connections;
 using FAnsi.Discovery.QuerySyntax;
@@ -49,6 +51,56 @@ public sealed class DiscoveredServer : IMightNotExist
     /// Returns the password portion of <cref name="Builder"/> if specified
     /// </summary>
     public string? ExplicitPasswordIfAny => Helper.GetExplicitPasswordIfAny(Builder);
+
+    /// <summary>
+    /// Static constructor that ensures all FAnsiSql provider implementations are loaded.
+    /// This triggers ModuleInitializers in provider assemblies for automatic registration.
+    /// </summary>
+    static DiscoveredServer()
+    {
+        LoadFAnsiSqlImplementations();
+    }
+
+    /// <summary>
+    /// Loads and registers all available FAnsiSql provider implementations.
+    /// </summary>
+    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2057", Justification = "Type.GetType with assembly-qualified names is safe for known FAnsiSql provider types.")]
+    private static void LoadFAnsiSqlImplementations()
+    {
+        // Known FAnsiSql provider implementation types
+        var implementationTypes = new[]
+        {
+            "FAnsi.Implementations.MicrosoftSQL.MicrosoftSQLImplementation, FAnsiSql.MicrosoftSql",
+            "FAnsi.Implementations.MySql.MySqlImplementation, FAnsiSql.MySql",
+            "FAnsi.Implementations.Oracle.OracleImplementation, FAnsiSql.Oracle",
+            "FAnsi.Implementations.PostgreSql.PostgreSqlImplementation, FAnsiSql.PostgreSql",
+            "FAnsi.Implementations.Sqlite.SqliteImplementation, FAnsiSql.Sqlite"
+        };
+
+        foreach (var implementationType in implementationTypes)
+        {
+            try
+            {
+                // Try to load the type to ensure the assembly is available
+                var type = Type.GetType(implementationType);
+                if (type != null)
+                {
+                    // Create an instance of the implementation using reflection
+                    var instance = Activator.CreateInstance(type);
+                    if (instance is FAnsi.Implementation.IImplementation impl)
+                    {
+                        // Register the implementation directly (no ModuleInitializer needed)
+                        ImplementationManager.Register(impl);
+                    }
+                }
+                // If type is null, the implementation assembly isn't available - just ignore it
+            }
+            catch
+            {
+                // Type loading or registration failed - implementation not available, skip it
+            }
+        }
+    }
 
     /// <summary>
     /// <para>Creates a new server pointed at the <paramref name="builder"/> server. </para>

@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Linq;
 using System.Threading;
 using FAnsi.Connections;
+using FAnsi.Discovery.Helpers;
 using TypeGuesser;
 using TypeGuesser.Deciders;
 
@@ -179,7 +180,19 @@ public abstract class BulkCopy : IBulkCopy
 
         foreach (var colInSource in inputColumns)
         {
-            var match = TargetTableColumns.SingleOrDefault(c => c.GetRuntimeName().Equals(colInSource.ColumnName, StringComparison.CurrentCultureIgnoreCase));
+            // Use optimized span-based comparison for high-performance column name matching
+            var colSourceNameSpan = colInSource.ColumnName.AsSpan();
+            DiscoveredColumn? match = null;
+
+            // Manual loop optimization to avoid LINQ allocations and use span comparisons
+            foreach (var targetColumn in TargetTableColumns)
+            {
+                if (StringComparisonHelper.RuntimeNamesEqual(targetColumn.GetRuntimeName(), colInSource.ColumnName))
+                {
+                    match = targetColumn;
+                    break;
+                }
+            }
 
             if (match == null)
             {

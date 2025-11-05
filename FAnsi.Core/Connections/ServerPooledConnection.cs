@@ -78,7 +78,7 @@ internal sealed class ServerPooledConnection : IDisposable
                 throw new NotSupportedException($"Database switching is not supported for {DatabaseType}");
 
             default:
-                throw new ArgumentOutOfRangeException(nameof(DatabaseType), $"Unknown database type: {DatabaseType}");
+                throw new ArgumentOutOfRangeException(nameof(targetDatabase), $"Unknown database type: {DatabaseType}");
         }
     }
 

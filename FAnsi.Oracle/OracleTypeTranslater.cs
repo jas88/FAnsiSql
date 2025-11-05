@@ -1,6 +1,7 @@
 using System;
 using System.Text.RegularExpressions;
 using FAnsi.Discovery;
+using FAnsi.Discovery.Helpers;
 using FAnsi.Discovery.TypeTranslation;
 using TypeGuesser;
 
@@ -51,10 +52,10 @@ public sealed partial class OracleTypeTranslater : TypeTranslater
     /// </summary>
     /// <param name="sqlType"></param>
     /// <returns></returns>
-    protected override bool IsBit(string sqlType) => sqlType.Equals("decimal(1,0)", StringComparison.InvariantCultureIgnoreCase);
+    protected override bool IsBit(string sqlType) => StringComparisonHelper.SqlTypesEqual(sqlType, "decimal(1,0)");
 
     protected override bool IsString(string sqlType) =>
-        !sqlType.Contains("RAW", StringComparison.InvariantCultureIgnoreCase) &&
+        !StringComparisonHelper.SqlTypeContains(sqlType, "RAW") &&
         (base.IsString(sqlType) || AlsoStringRegex.IsMatch(sqlType));
 
     protected override bool IsFloatingPoint(string sqlType) => base.IsFloatingPoint(sqlType) || AlsoFloatingPointRegex.IsMatch(sqlType);
@@ -63,17 +64,21 @@ public sealed partial class OracleTypeTranslater : TypeTranslater
 
     protected override bool IsSmallInt(string sqlType) =>
         //yup you ask for one of these, you will get a NUMBER(38) https://docs.oracle.com/cd/A58617_01/server.804/a58241/ch5.htm
-        sqlType.Equals("decimal(5,0)", StringComparison.InvariantCultureIgnoreCase) ||
-        (!sqlType.StartsWith("SMALLINT", StringComparison.InvariantCultureIgnoreCase) && base.IsSmallInt(sqlType));
+        StringComparisonHelper.SqlTypesEqual(sqlType, "decimal(5,0)") ||
+        (!sqlType.AsSpan().StartsWith("SMALLINT".AsSpan(), StringComparison.InvariantCultureIgnoreCase) && base.IsSmallInt(sqlType));
 
     protected override bool IsInt(string sqlType) =>
         //yup you ask for one of these, you will get a NUMBER(38) https://docs.oracle.com/cd/A58617_01/server.804/a58241/ch5.htm
-        sqlType.Equals("decimal(10,0)", StringComparison.InvariantCultureIgnoreCase) || sqlType.StartsWith("SMALLINT", StringComparison.InvariantCultureIgnoreCase) || base.IsInt(sqlType);
+        StringComparisonHelper.SqlTypesEqual(sqlType, "decimal(10,0)") ||
+        sqlType.AsSpan().StartsWith("SMALLINT".AsSpan(), StringComparison.InvariantCultureIgnoreCase) ||
+        base.IsInt(sqlType);
 
-    protected override bool IsLong(string sqlType) => sqlType.Equals("decimal(19,0)", StringComparison.InvariantCultureIgnoreCase) || base.IsLong(sqlType);
+    protected override bool IsLong(string sqlType) => StringComparisonHelper.SqlTypesEqual(sqlType, "decimal(19,0)") || base.IsLong(sqlType);
     protected override bool IsByteArray(string sqlType) => base.IsByteArray(sqlType) || AlsoByteArrayRegex.IsMatch(sqlType);
 
     protected override string GetDateDateTimeDataType() => "DATE";
+
+    protected override string GetByteArrayDataType() => "blob";
 
     public override Guesser GetGuesserFor(DiscoveredColumn discoveredColumn) => base.GetGuesserFor(discoveredColumn, ExtraLengthPerNonAsciiCharacter);
 

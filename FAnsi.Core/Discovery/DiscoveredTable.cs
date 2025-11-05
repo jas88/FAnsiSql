@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading;
 using FAnsi.Connections;
 using FAnsi.Discovery.Constraints;
+using FAnsi.Discovery.Helpers;
 using FAnsi.Discovery.QuerySyntax;
 using FAnsi.Naming;
 using TypeGuesser;
@@ -81,7 +82,7 @@ public class DiscoveredTable : IHasFullyQualifiedNameToo, IMightNotExist, IHasQu
             return false;
 
         return Database.DiscoverTables(TableType == TableType.View, transaction)
-            .Any(t => t.GetRuntimeName().Equals(GetRuntimeName(), StringComparison.InvariantCultureIgnoreCase));
+            .Any(t => StringComparisonHelper.DatabaseObjectNamesEqual(t.GetRuntimeName(), GetRuntimeName()));
     }
 
     /// <summary>
@@ -138,7 +139,15 @@ public class DiscoveredTable : IHasFullyQualifiedNameToo, IMightNotExist, IHasQu
     {
         try
         {
-            return DiscoverColumns(transaction).Single(c => c.GetRuntimeName().Equals(QuerySyntaxHelper.GetRuntimeName(specificColumnName), StringComparison.InvariantCultureIgnoreCase));
+            // Manual loop optimization to avoid LINQ Single allocation and use span comparisons
+            var targetColumnName = QuerySyntaxHelper.GetRuntimeName(specificColumnName);
+            foreach (var column in DiscoverColumns(transaction))
+            {
+                if (StringComparisonHelper.DatabaseObjectNamesEqual(column.GetRuntimeName(), targetColumnName))
+                    return column;
+            }
+
+            throw new InvalidOperationException($"Column '{specificColumnName}' not found in table '{TableName}'");
         }
         catch (InvalidOperationException e)
         {
@@ -483,8 +492,18 @@ public class DiscoveredTable : IHasFullyQualifiedNameToo, IMightNotExist, IHasQu
 
         foreach (var k in toInsert.Keys)
         {
-            var match =
-                cols.SingleOrDefault(c => c.GetRuntimeName().Equals(k, StringComparison.InvariantCultureIgnoreCase)) ??
+            // Manual loop optimization to avoid LINQ SingleOrDefault allocation and use span comparisons
+            DiscoveredColumn? match = null;
+            foreach (var column in cols)
+            {
+                if (StringComparisonHelper.DatabaseObjectNamesEqual(column.GetRuntimeName(), k))
+                {
+                    match = column;
+                    break;
+                }
+            }
+
+            if (match == null)
                 throw new ColumnMappingException(string.Format(
                     FAnsiStrings
                         .DiscoveredTable_Insert_Insert_failed__could_not_find_column_called___0___in_table___1__, k,
@@ -521,8 +540,8 @@ public class DiscoveredTable : IHasFullyQualifiedNameToo, IMightNotExist, IHasQu
         if (other is null) return false;
 
         return
-            string.Equals(TableName, other.TableName, StringComparison.OrdinalIgnoreCase)
-            && string.Equals(GetSchemaWithDefaultForNull(), other.GetSchemaWithDefaultForNull(), StringComparison.OrdinalIgnoreCase)
+            TableName.AsSpan().Equals(other.TableName.AsSpan(), StringComparison.OrdinalIgnoreCase)
+            && GetSchemaWithDefaultForNull().AsSpan().Equals(other.GetSchemaWithDefaultForNull().AsSpan(), StringComparison.OrdinalIgnoreCase)
             && Equals(Database, other.Database) && TableType == other.TableType;
     }
 

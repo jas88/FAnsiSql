@@ -94,7 +94,7 @@ public abstract partial class TypeTranslater : ITypeTranslater
         throw new TypeNotMappedException(string.Format(FAnsiStrings.TypeTranslater_GetSQLDBTypeForCSharpType_Unsure_what_SQL_type_to_use_for_CSharp_Type___0_____TypeTranslater_was___1__, t.Name, GetType().Name));
     }
 
-    private static string GetByteArrayDataType() => "varbinary(max)";
+    protected virtual string GetByteArrayDataType() => "blob";
 
     private static string GetByteDataType() => "tinyint";
 
@@ -106,7 +106,7 @@ public abstract partial class TypeTranslater : ITypeTranslater
         return $"decimal({decimalSize.Precision},{decimalSize.Scale})";
     }
 
-    protected virtual string GetDateDateTimeDataType() => "datetime";
+    protected virtual string GetDateDateTimeDataType() => "timestamp";
 
     protected string GetStringDataType(int? maxExpectedStringWidth)
     {
@@ -119,7 +119,7 @@ public abstract partial class TypeTranslater : ITypeTranslater
         return GetStringDataTypeImpl(maxExpectedStringWidth.Value);
     }
 
-    protected virtual string GetStringDataTypeImpl(int maxExpectedStringWidth) => $"varchar({maxExpectedStringWidth})";
+    protected virtual string GetStringDataTypeImpl(int maxExpectedStringWidth) => $"character varying({maxExpectedStringWidth})";
 
     public abstract string GetStringDataTypeWithUnlimitedWidth();
 
@@ -135,7 +135,7 @@ public abstract partial class TypeTranslater : ITypeTranslater
         return GetUnicodeStringDataTypeImpl(maxExpectedStringWidth.Value);
     }
 
-    protected virtual string GetUnicodeStringDataTypeImpl(int maxExpectedStringWidth) => $"nvarchar({maxExpectedStringWidth})";
+    protected virtual string GetUnicodeStringDataTypeImpl(int maxExpectedStringWidth) => $"character varying({maxExpectedStringWidth})";
 
     public abstract string GetUnicodeStringDataTypeWithUnlimitedWidth();
 
@@ -149,7 +149,7 @@ public abstract partial class TypeTranslater : ITypeTranslater
 
     protected virtual string GetBigIntDataType() => "bigint";
 
-    private static string GetGuidDataType() => "uniqueidentifier";
+    protected virtual string GetGuidDataType() => "uuid";
 
     /// <inheritdoc/>
     [return:
@@ -284,7 +284,9 @@ public abstract partial class TypeTranslater : ITypeTranslater
     /// </summary>
     /// <param name="sqlType"></param>
     /// <returns></returns>
-    private static bool IsUnicode(string sqlType) => sqlType != null && sqlType.StartsWith("n", StringComparison.CurrentCultureIgnoreCase);
+    private static bool IsUnicode(string sqlType) =>
+        !string.IsNullOrEmpty(sqlType) &&
+        sqlType.AsSpan().StartsWith("n", StringComparison.OrdinalIgnoreCase);
 
     public virtual Guesser GetGuesserFor(DiscoveredColumn discoveredColumn) => GetGuesserFor(discoveredColumn, 0);
 
@@ -302,17 +304,54 @@ public abstract partial class TypeTranslater : ITypeTranslater
         if (string.IsNullOrWhiteSpace(sqlType))
             return -1;
 
-        if (sqlType.Contains("(max)", StringComparison.OrdinalIgnoreCase) || sqlType.ToLower().Equals("text") || sqlType.ToLower().Equals("ntext"))
-            return int.MaxValue;
+        // Use ReadOnlySpan for zero-allocation string comparison
+        var sqlTypeSpan = sqlType.AsSpan();
 
-        if (sqlType.Contains("char", StringComparison.OrdinalIgnoreCase))
+        // Optimized checks using span and ordinal comparisons
+        if (sqlTypeSpan.Contains("(max)", StringComparison.OrdinalIgnoreCase) ||
+            sqlTypeSpan.Equals("text", StringComparison.OrdinalIgnoreCase) ||
+            sqlTypeSpan.Equals("ntext", StringComparison.OrdinalIgnoreCase))
         {
-            var match = StringSizeRegex().Match(sqlType);
-            if (match.Success)
-                return int.Parse(match.Groups[1].Value);
+            return int.MaxValue;
+        }
+
+        if (sqlTypeSpan.Contains("char", StringComparison.OrdinalIgnoreCase))
+        {
+            // Use span-based parsing for better performance
+            return ParseSizeFromType(sqlTypeSpan);
         }
 
         return -1;
+    }
+
+    /// <summary>
+    /// Parses the size from a type definition using ReadOnlySpan for optimal performance
+    /// </summary>
+    /// <param name="typeSpan">The type definition as ReadOnlySpan</param>
+    /// <returns>The parsed size or -1 if not found</returns>
+    private static int ParseSizeFromType(ReadOnlySpan<char> typeSpan)
+    {
+        var openParenIndex = typeSpan.IndexOf('(');
+        if (openParenIndex == -1) return -1;
+
+        var closeParenIndex = typeSpan.Slice(openParenIndex + 1).IndexOf(')');
+        if (closeParenIndex == -1) return -1;
+        closeParenIndex += openParenIndex + 1;
+        if (closeParenIndex == -1) return -1;
+
+        var numberSpan = typeSpan.Slice(openParenIndex + 1, closeParenIndex - openParenIndex - 1);
+
+        // Fast path: check if all characters are digits
+        if (numberSpan.Length == 0) return -1;
+
+        for (int i = 0; i < numberSpan.Length; i++)
+        {
+            if (!char.IsDigit(numberSpan[i]))
+                return -1;
+        }
+
+        // Use span-based parsing for zero allocation
+        return int.TryParse(numberSpan, out var result) ? result : -1;
     }
 
     public DecimalSize? GetDigitsBeforeAndAfterDecimalPointIfDecimal(string sqlType)
@@ -320,11 +359,51 @@ public abstract partial class TypeTranslater : ITypeTranslater
         if (string.IsNullOrWhiteSpace(sqlType))
             return null;
 
-        var match = DecimalsBeforeAndAfterRe().Match(sqlType);
-        if (!match.Success) return null;
+        // Use span-based parsing for better performance
+        var sqlTypeSpan = sqlType.AsSpan();
+        return ParseDecimalSize(sqlTypeSpan);
+    }
 
-        var precision = int.Parse(match.Groups[1].Value);
-        var scale = int.Parse(match.Groups[2].Value);
+    /// <summary>
+    /// Parses decimal size information using ReadOnlySpan for optimal performance
+    /// </summary>
+    /// <param name="typeSpan">The type definition as ReadOnlySpan</param>
+    /// <returns>DecimalSize if parsing succeeds, null otherwise</returns>
+    private static DecimalSize? ParseDecimalSize(ReadOnlySpan<char> typeSpan)
+    {
+        var openParenIndex = typeSpan.IndexOf('(');
+        if (openParenIndex == -1) return null;
+
+        var closeParenIndex = typeSpan.Slice(openParenIndex + 1).IndexOf(')');
+        if (closeParenIndex == -1) return null;
+        closeParenIndex += openParenIndex + 1;
+        if (closeParenIndex == -1) return null;
+
+        var contentSpan = typeSpan.Slice(openParenIndex + 1, closeParenIndex - openParenIndex - 1);
+        var commaIndex = contentSpan.IndexOf(',');
+        if (commaIndex == -1) return null;
+
+        var precisionSpan = contentSpan.Slice(0, commaIndex);
+        var scaleSpan = contentSpan.Slice(commaIndex + 1);
+
+        // Fast path: validate digits
+        if (precisionSpan.Length == 0 || scaleSpan.Length == 0) return null;
+
+        for (int i = 0; i < precisionSpan.Length; i++)
+        {
+            if (!char.IsDigit(precisionSpan[i]))
+                return null;
+        }
+
+        for (int i = 0; i < scaleSpan.Length; i++)
+        {
+            if (!char.IsDigit(scaleSpan[i]))
+                return null;
+        }
+
+        if (!int.TryParse(precisionSpan, out var precision) || !int.TryParse(scaleSpan, out var scale))
+            return null;
+
         return new DecimalSize(precision - scale, scale);
     }
 

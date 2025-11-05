@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Globalization;
 using System.IO;
@@ -37,13 +38,14 @@ public sealed class SqliteBulkCopy(DiscoveredTable targetTable, IManagedConnecti
     public static int BulkInsertBatchTimeoutInSeconds { get; set; } = 30;
 
     /// <summary>
-    /// Gets or sets the number of rows to insert per batch. Default is 1000.
+    /// Gets or sets the number of rows to insert per batch. Default is 5000.
     /// </summary>
     /// <remarks>
     /// SQLite can handle larger batches than some databases due to its simpler architecture.
+    /// 5000 rows provides a good balance between performance and memory usage.
     /// Increase for better performance with large datasets, decrease if experiencing memory issues.
     /// </remarks>
-    public static int BatchSize { get; set; } = 1000; // SQLite can handle larger batches than some databases
+    public static int BatchSize { get; set; } = 5000; // Optimized for SQLite performance
 
     public override int UploadImpl(DataTable dt)
     {
@@ -84,46 +86,63 @@ public sealed class SqliteBulkCopy(DiscoveredTable targetTable, IManagedConnecti
         if (BulkInsertBatchTimeoutInSeconds != 0)
             cmd.CommandTimeout = BulkInsertBatchTimeoutInSeconds;
 
-        // Build the parameterized INSERT statement
+        // Pre-build static parts of the INSERT statement
         var columnNames = string.Join(",", matchedColumns.Values.Select(c => $"[{c.GetRuntimeName()}]"));
         var baseCommand = $"INSERT INTO {TargetTable.GetFullyQualifiedName()}({columnNames}) VALUES ";
 
+        // Pre-calculate values to avoid repeated calculations in the main loop
+        var totalRows = dt.Rows.Count;
+        var columnCount = matchedColumns.Count;
+        var columnEntries = matchedColumns.ToArray(); // Convert to array for faster enumeration
+
+        // Pre-allocate StringBuilder with estimated capacity for better performance
+        // Estimate: (parameter_placeholder + comma) * columnCount * batchSize + overhead
+        var estimatedClauseCapacity = Math.Max(1024, 3 * columnCount * BatchSize + 100); // @pX format is about 3 chars
+        var valueClauses = new StringBuilder(estimatedClauseCapacity);
+
         var batchRows = 0;
-        var valueClauses = new StringBuilder();
         var parameterIndex = 0;
 
-        foreach (DataRow dr in dt.Rows)
+        // Cache Last() check result to avoid expensive enumeration in each iteration
+        var lastRowIndex = totalRows - 1;
+
+        for (var rowIndex = 0; rowIndex < totalRows; rowIndex++)
         {
+            var dr = dt.Rows[rowIndex];
+
             if (batchRows > 0)
                 valueClauses.Append(',');
 
             valueClauses.Append('(');
-            var columnIndex = 0;
-            foreach (var kvp in matchedColumns)
+
+            // Reuse the pre-allocated column array for faster access
+            for (var colIndex = 0; colIndex < columnCount; colIndex++)
             {
-                if (columnIndex > 0)
+                var kvp = columnEntries[colIndex];
+
+                if (colIndex > 0)
                     valueClauses.Append(',');
 
                 var paramName = $"@p{parameterIndex}";
                 valueClauses.Append(paramName);
 
+                // Create parameter and add directly to command
                 var parameter = new SqliteParameter(paramName, ConvertValueForSQLite(dr[kvp.Key.Ordinal]));
                 cmd.Parameters.Add(parameter);
 
                 parameterIndex++;
-                columnIndex++;
             }
             valueClauses.Append(')');
 
             batchRows++;
 
             // Execute batch when we reach batch size or it's the last row
-            if (batchRows >= BatchSize || dr == dt.Rows.Cast<DataRow>().Last())
+            if (batchRows >= BatchSize || rowIndex == lastRowIndex)
             {
                 cmd.CommandText = baseCommand + valueClauses.ToString();
                 affected += cmd.ExecuteNonQuery();
 
-                // Reset for next batch
+                // Reset for next batch - reuse existing objects where possible
                 cmd.Parameters.Clear();
                 valueClauses.Clear();
                 batchRows = 0;
@@ -160,25 +179,31 @@ public sealed class SqliteBulkCopy(DiscoveredTable targetTable, IManagedConnecti
         if (BulkInsertBatchTimeoutInSeconds != 0)
             cmd.CommandTimeout = BulkInsertBatchTimeoutInSeconds;
 
-        // Build single-row INSERT statement
+        // Pre-build static parts of the single-row INSERT statement for better performance
         var columnNames = string.Join(",", matchedColumns.Values.Select(c => $"[{c.GetRuntimeName()}]"));
         var paramNames = string.Join(",", matchedColumns.Keys.Select((_, i) => $"@p{i}"));
         cmd.CommandText = $"INSERT INTO {TargetTable.GetFullyQualifiedName()}({columnNames}) VALUES ({paramNames})";
 
+        // Pre-allocate parameter list with known capacity for this investigation
+        var columnCount = matchedColumns.Count;
+        var columnEntries = matchedColumns.ToArray(); // Convert to array for faster enumeration
+
         // Try each row individually
-        foreach (DataRow dr in dt.Rows)
+        var totalRows = dt.Rows.Count;
+        for (var rowIndex = 0; rowIndex < totalRows; rowIndex++)
         {
+            var dr = dt.Rows[rowIndex];
             try
             {
                 cmd.Parameters.Clear();
-                var parameterIndex = 0;
 
-                foreach (var kvp in matchedColumns)
+                // Use pre-allocated column array and indexed loop for better performance
+                for (var colIndex = 0; colIndex < columnCount; colIndex++)
                 {
-                    var paramName = $"@p{parameterIndex}";
+                    var kvp = columnEntries[colIndex];
+                    var paramName = $"@p{colIndex}";
                     var value = ConvertValueForSQLite(dr[kvp.Key.Ordinal]);
                     cmd.Parameters.Add(new SqliteParameter(paramName, value));
-                    parameterIndex++;
                 }
 
                 cmd.ExecuteNonQuery();
@@ -196,9 +221,9 @@ public sealed class SqliteBulkCopy(DiscoveredTable targetTable, IManagedConnecti
                         exception);
                 }
 
-                // Fallback: report row number and all values
+                // Fallback: report row number and all values - use pre-allocated array for performance
                 var rowValues = string.Join(Environment.NewLine,
-                    matchedColumns.Select(kvp =>
+                    columnEntries.Select(kvp =>
                         $"  [{kvp.Key.ColumnName}] = {ValueToString(dr[kvp.Key.Ordinal])}"));
 
                 return new FileLoadException(
@@ -220,10 +245,11 @@ public sealed class SqliteBulkCopy(DiscoveredTable targetTable, IManagedConnecti
     private string? IdentifyBadColumn(Exception exception, DataRow dr, System.Collections.Generic.Dictionary<DataColumn, DiscoveredColumn> matchedColumns)
     {
         var message = exception.Message;
+        var columnEntries = matchedColumns.ToArray(); // Convert to array for better performance
 
         // SQLite error messages often include column information
         // Common patterns: "constraint failed: table.column", "datatype mismatch"
-        foreach (var kvp in matchedColumns)
+        foreach (var kvp in columnEntries)
         {
             var sourceColumn = kvp.Key.ColumnName;
             var destColumn = kvp.Value.GetRuntimeName();
@@ -242,11 +268,11 @@ public sealed class SqliteBulkCopy(DiscoveredTable targetTable, IManagedConnecti
             }
         }
 
-        // Check for common constraint violations
+        // Check for common constraint violations - reuse the pre-allocated array
         if (message.Contains("constraint", StringComparison.OrdinalIgnoreCase))
         {
             // Try to extract which column from constraint name or message
-            foreach (var kvp in matchedColumns)
+            foreach (var kvp in columnEntries)
             {
                 var destColumn = kvp.Value.GetRuntimeName();
                 if (message.Contains(destColumn, StringComparison.OrdinalIgnoreCase))

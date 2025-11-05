@@ -49,17 +49,17 @@ public sealed class PostgreSqlSyntaxHelper : QuerySyntaxHelper
 
     protected override string UnescapeWrappedNameBody(string name) => name.Replace("\"\"", "\"");
 
-    public override string EnsureFullyQualified(string? databaseName, string? schema, string tableName) =>
+    public override string EnsureFullyQualified(string? databaseName, string? schemaName, string tableName) =>
         //if there is no schema address it as db..table (which is the same as db.dbo.table in Microsoft SQL Server)
-        $"{EnsureWrapped(databaseName)}{DatabaseTableSeparator}{(string.IsNullOrWhiteSpace(schema) ? DefaultPostgresSchema : EnsureWrapped(schema))}{DatabaseTableSeparator}{EnsureWrapped(tableName)}";
+        $"{EnsureWrapped(databaseName)}{DatabaseTableSeparator}{(string.IsNullOrWhiteSpace(schemaName) ? DefaultPostgresSchema : EnsureWrapped(schemaName))}{DatabaseTableSeparator}{EnsureWrapped(tableName)}";
 
-    public override string EnsureFullyQualified(string? databaseName, string? schema, string tableName, string columnName,
+    public override string EnsureFullyQualified(string? databaseName, string? schemaName, string tableName, string columnName,
         bool isTableValuedFunction = false)
     {
         if (isTableValuedFunction)
             return $"{EnsureWrapped(tableName)}.{EnsureWrapped(GetRuntimeName(columnName))}"; //table valued functions do not support database name being in the column level selection list area of sql queries
 
-        return $"{EnsureFullyQualified(databaseName, schema, tableName)}.\"{GetRuntimeName(columnName)}\"";
+        return $"{EnsureFullyQualified(databaseName, schemaName, tableName)}.\"{GetRuntimeName(columnName)}\"";
     }
 
 
