@@ -58,8 +58,6 @@ public sealed class DiscoveredServer : IMightNotExist
     /// Static constructor that ensures all FAnsiSql provider implementations are loaded.
     /// This triggers ModuleInitializers in provider assemblies for automatic registration.
     /// </summary>
-    [RequiresUnreferencedCode("Calls FAnsi.Discovery.DiscoveredServer.LoadFAnsiSqlImplementations()")]
-    [RequiresDynamicCode("Calls FAnsi.Discovery.DiscoveredServer.LoadFAnsiSqlImplementations()")]
     static DiscoveredServer()
     {
         LoadFAnsiSqlImplementations();
@@ -68,8 +66,6 @@ public sealed class DiscoveredServer : IMightNotExist
     /// <summary>
     /// Loads all known FAnsiSql provider implementations to trigger their ModuleInitializers.
     /// </summary>
-    [RequiresUnreferencedCode("Calls FAnsi.Discovery.DiscoveredServer.LoadFAnsiSqlImplementations()")]
-    [RequiresDynamicCode("Calls FAnsi.Discovery.DiscoveredServer.LoadFAnsiSqlImplementations()")]
     private static void LoadFAnsiSqlImplementations()
     {
         // Known FAnsiSql provider implementation types
