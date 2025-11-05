@@ -58,6 +58,8 @@ public sealed class DiscoveredServer : IMightNotExist
     /// Static constructor that ensures all referenced FAnsiSql provider assemblies are loaded.
     /// This triggers ModuleInitializers in provider assemblies for automatic registration.
     /// </summary>
+    [RequiresUnreferencedCode("Calls FAnsi.Discovery.DiscoveredServer.LoadReferencedFAnsiSqlAssemblies()")]
+    [RequiresDynamicCode("Calls FAnsi.Discovery.DiscoveredServer.LoadReferencedFAnsiSqlAssemblies()")]
     static DiscoveredServer()
     {
         LoadReferencedFAnsiSqlAssemblies();
@@ -100,13 +102,34 @@ public sealed class DiscoveredServer : IMightNotExist
                     {
                         try
                         {
-                            // Load the assembly (this triggers its ModuleInitializer if present)
-                            var loadedAssembly = Assembly.Load(referencedAssembly);
-                            assemblyQueue.Enqueue(loadedAssembly);
+                            // Try to load a known implementation type from each provider assembly
+                            // This is more robust than Assembly.Load() and helps with AOT compatibility
+                            Type? providerType = referencedAssembly.Name switch
+                            {
+                                "FAnsiSql.MicrosoftSql" => Type.GetType("FAnsi.Implementations.MicrosoftSQL.MicrosoftSQLImplementation, FAnsiSql.MicrosoftSql"),
+                                "FAnsiSql.MySql" => Type.GetType("FAnsi.Implementations.MySql.MySqlImplementation, FAnsiSql.MySql"),
+                                "FAnsiSql.Oracle" => Type.GetType("FAnsi.Implementations.Oracle.OracleImplementation, FAnsiSql.Oracle"),
+                                "FAnsiSql.PostgreSql" => Type.GetType("FAnsi.Implementations.PostgreSql.PostgreSqlImplementation, FAnsiSql.PostgreSql"),
+                                "FAnsiSql.Sqlite" => Type.GetType("FAnsi.Implementations.Sqlite.SqliteImplementation, FAnsiSql.Sqlite"),
+                                _ => null
+                            };
+
+                            if (providerType != null)
+                            {
+                                // Load the assembly using the type's assembly (more reliable)
+                                var loadedAssembly = providerType.Assembly;
+                                assemblyQueue.Enqueue(loadedAssembly);
+                            }
+                            else
+                            {
+                                // Fallback to Assembly.Load() for unknown providers
+                                var loadedAssembly = Assembly.Load(referencedAssembly);
+                                assemblyQueue.Enqueue(loadedAssembly);
+                            }
                         }
                         catch
                         {
-                            // Assembly might not be available or loading failed - skip it
+                            // Assembly or type not available - skip it
                         }
                     }
                 }
