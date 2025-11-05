@@ -6,6 +6,6 @@
   </Settings>
   <TestDatabase>
     <DatabaseType>PostgreSql</DatabaseType>
-    <ConnectionString>Host=127.0.0.1;User ID=postgres;Password=pgpass4291;Database=postgres</ConnectionString>
+    <ConnectionString>Host=localhost;Port=5432;Username=postgres;Password=YourStrong!Passw0rd;Database=FAnsiTests</ConnectionString>
   </TestDatabase>
 </TestDatabases>

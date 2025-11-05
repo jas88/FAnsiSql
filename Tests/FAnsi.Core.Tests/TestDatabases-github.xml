@@ -1,7 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <TestDatabases>
   <Settings>
-    <AllowDatabaseCreation>False</AllowDatabaseCreation>
+    <AllowDatabaseCreation>True</AllowDatabaseCreation>
     <TestScratchDatabase>FAnsiTests</TestScratchDatabase>
   </Settings>
+  <TestDatabase>
+    <DatabaseType>MicrosoftSQLServer</DatabaseType>
+    <ConnectionString>Data Source=localhost;Integrated Security=false;User ID=sa;Password=YourStrong!Passw0rd;Encrypt=true;TrustServerCertificate=true</ConnectionString>
+  </TestDatabase>
+  <TestDatabase>
+    <DatabaseType>MySql</DatabaseType>
+    <ConnectionString>Server=localhost;Port=3306;User ID=root;Password=YourStrong!Passw0rd;Database=FAnsiTests</ConnectionString>
+  </TestDatabase>
+  <TestDatabase>
+    <DatabaseType>PostgreSql</DatabaseType>
+    <ConnectionString>Host=localhost;Port=5432;Username=postgres;Password=YourStrong!Passw0rd;Database=FAnsiTests</ConnectionString>
+  </TestDatabase>
+  <TestDatabase>
+    <DatabaseType>Oracle</DatabaseType>
+    <ConnectionString>Data Source=localhost:1521/XE;User ID=fansi_tests;Password=YourStrong!Passw0rd</ConnectionString>
+  </TestDatabase>
+  <TestDatabase>
+    <DatabaseType>Sqlite</DatabaseType>
+    <ConnectionString>Data Source=|DataDirectory|/FAnsiTests.db</ConnectionString>
+  </TestDatabase>
 </TestDatabases>

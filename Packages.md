@@ -17,7 +17,6 @@
 | Microsoft.Data.Sqlite | 9.0.10 | [GitHub](https://github.com/dotnet/efcore) | [MIT](https://opensource.org/licenses/MIT) | Enables interaction with SQLite databases | Official MS SQLite provider |
 | **Core Libraries** | | | | | |
 | HIC.TypeGuesser | 1.2.7 | [GitHub](https://github.com/HicServices/TypeGuesser) | [MIT](https://opensource.org/licenses/MIT) | Allows picking system Types for untyped strings e.g. `"12.3"` | Data type inference from strings |
-| System.Linq.Async | 6.0.3 | [GitHub](https://github.com/dotnet/reactive) | [MIT](https://opensource.org/licenses/MIT) | Adds async support to LINQ | Enables async LINQ operations |
 | **Build & Development Tools** | | | | | |
 | **Code Analysis Tools** | | | | | |
 | Microsoft.CodeAnalysis.Analyzers | 3.3.4 | [GitHub](https://github.com/dotnet/roslyn-analyzers) | [MIT](https://opensource.org/licenses/MIT) | Roslyn analyzers for code quality | Build-time analysis, private assets |

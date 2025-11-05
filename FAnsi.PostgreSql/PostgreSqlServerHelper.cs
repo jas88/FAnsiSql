@@ -36,7 +36,14 @@ public sealed class PostgreSqlServerHelper : DiscoveredServerHelper
 
     public override void CreateDatabase(DbConnectionStringBuilder builder, IHasRuntimeName newDatabaseName)
     {
-        using var con = new NpgsqlConnection(builder.ConnectionString);
+        // Connect to postgres system database first to create the new database
+        // (can't connect to target database if it doesn't exist)
+        var systemDbBuilder = new NpgsqlConnectionStringBuilder(builder.ConnectionString)
+        {
+            Database = "postgres" // System database
+        };
+
+        using var con = new NpgsqlConnection(systemDbBuilder.ConnectionString);
         con.Open();
         using var cmd = GetCommand($"CREATE DATABASE \"{newDatabaseName.GetRuntimeName()}\"", con);
         cmd.CommandTimeout = CreateDatabaseTimeoutInSeconds;

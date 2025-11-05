@@ -6,6 +6,6 @@
   </Settings>
   <TestDatabase>
     <DatabaseType>MySql</DatabaseType>
-    <ConnectionString>Server=localhost;Database=mysql;User ID=root;Password=mysqlpass</ConnectionString>
+    <ConnectionString>Server=localhost;Port=3306;User ID=root;Password=YourStrong!Passw0rd;Database=FAnsiTests</ConnectionString>
   </TestDatabase>
 </TestDatabases>

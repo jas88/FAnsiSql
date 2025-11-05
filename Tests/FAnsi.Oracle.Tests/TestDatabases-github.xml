@@ -6,6 +6,6 @@
   </Settings>
   <TestDatabase>
     <DatabaseType>Oracle</DatabaseType>
-    <ConnectionString>Data Source=localhost:1521/XEPDB1;User ID=system;Password=oracle</ConnectionString>
+    <ConnectionString>Data Source=localhost:1521/XE;User ID=fansi_tests;Password=YourStrong!Passw0rd</ConnectionString>
   </TestDatabase>
 </TestDatabases>

@@ -6,6 +6,6 @@
   </Settings>
   <TestDatabase>
     <DatabaseType>Sqlite</DatabaseType>
-    <ConnectionString>Data Source=:memory:</ConnectionString>
+    <ConnectionString>Data Source=|DataDirectory|/FAnsiTests.db</ConnectionString>
   </TestDatabase>
 </TestDatabases>
