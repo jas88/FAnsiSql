@@ -64,7 +64,7 @@ public sealed class DiscoveredServer : IMightNotExist
     }
 
     /// <summary>
-    /// Loads all known FAnsiSql provider implementations to trigger their ModuleInitializers.
+    /// Loads and registers all available FAnsiSql provider implementations.
     /// </summary>
     private static void LoadFAnsiSqlImplementations()
     {
@@ -82,18 +82,23 @@ public sealed class DiscoveredServer : IMightNotExist
         {
             try
             {
-                // Try to load the type - this will trigger loading of the assembly and its ModuleInitializer
+                // Try to load the type to ensure the assembly is available
                 var type = Type.GetType(implementationType);
                 if (type != null)
                 {
-                    // Access the assembly to ensure it's loaded and ModuleInitializer runs
-                    _ = type.Assembly;
+                    // Create an instance of the implementation using reflection
+                    var instance = Activator.CreateInstance(type);
+                    if (instance is FAnsi.Implementation.IImplementation impl)
+                    {
+                        // Register the implementation directly (no ModuleInitializer needed)
+                        ImplementationManager.Register(impl);
+                    }
                 }
                 // If type is null, the implementation assembly isn't available - just ignore it
             }
             catch
             {
-                // Type loading failed - implementation not available, skip it
+                // Type loading or registration failed - implementation not available, skip it
             }
         }
     }
