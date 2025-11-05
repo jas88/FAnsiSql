@@ -34,15 +34,6 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="HIC.TypeGuesser" Version="1.2.7" />
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
-    <PackageReference Include="System.Linq.Async" Version="6.0.3" />
-  </ItemGroup>
-
-  <!-- Source generation removed - analyzer DLL references cleaned up -->
-  <ItemGroup>
     <None Include="..\README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
   <ItemGroup>

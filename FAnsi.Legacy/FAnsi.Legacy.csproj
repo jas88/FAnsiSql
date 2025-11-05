@@ -36,13 +36,4 @@
     <ProjectReference Include="..\FAnsi.PostgreSql\FAnsi.PostgreSql.csproj" />
     <ProjectReference Include="..\FAnsi.Sqlite\FAnsi.Sqlite.csproj" />
   </ItemGroup>
-  <ItemGroup>
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="..\README.md" Pack="true" PackagePath="\" />
-  </ItemGroup>
-</Project>
+  </Project>

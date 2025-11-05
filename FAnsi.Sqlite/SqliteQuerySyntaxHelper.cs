@@ -97,6 +97,26 @@ public sealed class SqliteQuerySyntaxHelper : QuerySyntaxHelper
     }
 
     /// <summary>
+    /// Ensures a column name is fully qualified with database, schema, and table.
+    /// </summary>
+    /// <param name="databaseName">The database name (ignored for SQLite)</param>
+    /// <param name="schemaName">The schema name (ignored for SQLite)</param>
+    /// <param name="tableName">The table name</param>
+    /// <param name="columnName">The column name</param>
+    /// <param name="isTableValuedFunction">Whether this is a table-valued function (ignored for SQLite)</param>
+    /// <returns>The fully qualified column name</returns>
+    /// <remarks>
+    /// SQLite doesn't support schemas or database prefixes in the same way as other databases.
+    /// Only the table and column names are used.
+    /// </remarks>
+    public override string EnsureFullyQualified(string? databaseName, string? schemaName, string tableName, string columnName, bool isTableValuedFunction = false)
+    {
+        // SQLite doesn't support schemas/database prefixes like other databases
+        // Just return [table].[column] format
+        return $"{EnsureWrapped(tableName)}.{EnsureWrapped(columnName)}";
+    }
+
+    /// <summary>
     /// Specifies how to achieve TOP X functionality in SQLite.
     /// </summary>
     /// <param name="x">The number of rows to return</param>
@@ -116,8 +136,9 @@ public sealed class SqliteQuerySyntaxHelper : QuerySyntaxHelper
     /// SQLite doesn't require explicit parameter declarations like SQL Server's DECLARE.
     /// Parameters are automatically typed based on usage.
     /// </remarks>
-    public override string GetParameterDeclaration(string proposedNewParameterName, string sqlType) =>
-        // SQLite doesn't require parameter declaration like SQL Server
+    public override string GetParameterDeclaration(
+        string proposedNewParameterName, string sqlType) =>
+            // SQLite doesn't require parameter declaration like SQL Server
         $"/* {proposedNewParameterName} */";
 
     /// <summary>
