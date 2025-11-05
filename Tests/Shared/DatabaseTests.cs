@@ -12,6 +12,7 @@ using FAnsi.Implementations.MySql;
 using FAnsi.Implementations.Oracle;
 using FAnsi.Implementations.MicrosoftSQL;
 using FAnsi.Implementations.PostgreSql;
+using FAnsi.Implementations.Sqlite;
 using NUnit.Framework;
 
 namespace FAnsiTests;
@@ -30,17 +31,19 @@ public abstract class DatabaseTests
     [OneTimeSetUp]
     public void CheckFiles()
     {
+        // Explicit loading for tests (ModuleInitializer timing is unreliable in test runners)
+        // Production code using FAnsi.Legacy gets automatic loading
 #pragma warning disable CS0618 // Type or member is obsolete
-        ImplementationManager.Load<OracleImplementation>();
         ImplementationManager.Load<MicrosoftSQLImplementation>();
         ImplementationManager.Load<MySqlImplementation>();
+        ImplementationManager.Load<OracleImplementation>();
         ImplementationManager.Load<PostgreSqlImplementation>();
-#pragma warning restore CS0618
+        ImplementationManager.Load<SqliteImplementation>();
+#pragma warning restore CS0618 // Type or member is obsolete
 
         var file = Path.Combine(TestContext.CurrentContext.TestDirectory, TestFilename);
 
-        if (!File.Exists(file))
-            Assert.Ignore($"Could not find {TestFilename} - database not configured for testing");
+        Assert.That(File.Exists(file), $"Could not find {TestFilename}");
 
         var doc = XDocument.Load(file);
 
@@ -66,38 +69,24 @@ public abstract class DatabaseTests
             if (!Enum.TryParse(type, out DatabaseType databaseType))
                 throw new Exception($"Could not parse DatabaseType {type}");
 
+
             var constr = element.Element("ConnectionString")?.Value ??
                          throw new Exception($"Invalid connection string for {type}");
 
-            // Test database connectivity - if it fails, ignore all tests for this database type
-            try
-            {
-                var server = new DiscoveredServer(constr, databaseType);
-                using var testCon = server.GetConnection();
-                testCon.Open();
-                testCon.Close();
+            TestConnectionStrings.Add(databaseType, constr);
 
-                TestConnectionStrings.Add(databaseType, constr);
+            // Make sure our scratch db exists for PostgreSQL
+            if (databaseType != DatabaseType.PostgreSql) continue;
 
-                // Make sure our scratch db exists for PostgreSQL
-                if (databaseType == DatabaseType.PostgreSql)
-                {
-                    if (server.DiscoverDatabases().All(db => db.GetWrappedName()?.Contains(_testScratchDatabase) != true))
-                        server.CreateDatabase(_testScratchDatabase);
-                }
-            }
-            catch (Exception ex)
-            {
-                // Database not available - ignore all tests for this type
-                Assert.Ignore($"Cannot connect to {databaseType} ({ex.GetType().Name}: {ex.Message}) - skipping all tests for this database type");
-            }
+            var server = GetTestServer(DatabaseType.PostgreSql);
+            if (server.DiscoverDatabases().All(db => db.GetWrappedName()?.Contains(_testScratchDatabase) != true)) server.CreateDatabase(_testScratchDatabase);
         }
     }
 
     protected DiscoveredServer GetTestServer(DatabaseType type)
     {
         if (!TestConnectionStrings.TryGetValue(type, out var connString))
-            Assert.Ignore($"No connection string configured for {type} - skipping tests");
+            Assert.Inconclusive("No connection string configured for that server");
 
         return new DiscoveredServer(connString, type);
     }
@@ -111,8 +100,8 @@ public abstract class DatabaseTests
             if (_allowDatabaseCreation)
                 db.Create();
             else
-                Assert.Ignore(
-                    $"Database {_testScratchDatabase} does not exist and AllowDatabaseCreation is false - skipping tests");
+                Assert.Inconclusive(
+                    $"Database {_testScratchDatabase} did not exist on server {server} and AllowDatabaseCreation was false in {TestFilename}");
         else
         {
             if (!cleanDatabase) return db;
@@ -143,7 +132,7 @@ public abstract class DatabaseTests
     protected void AssertCanCreateDatabases()
     {
         if (!_allowDatabaseCreation)
-            Assert.Ignore("AllowDatabaseCreation is false - skipping database creation tests");
+            Assert.Inconclusive("Test cannot run when AllowDatabaseCreation is false");
     }
 
     private static bool AreBasicallyEquals(object? o, object? o2, bool handleSlashRSlashN = true)
