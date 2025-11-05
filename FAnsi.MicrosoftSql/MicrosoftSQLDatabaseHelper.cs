@@ -88,8 +88,6 @@ public sealed class MicrosoftSQLDatabaseHelper : DiscoveredDatabaseHelper
 
     public override IDiscoveredTableHelper GetTableHelper() => new MicrosoftSQLTableHelper();
 
-    [RequiresUnreferencedCode()]
-    [RequiresDynamicCode()]
     public override void DropDatabase(DiscoveredDatabase database)
     {
         var userIsCurrentlyInDatabase = database.Server.GetCurrentDatabase()!.GetRuntimeName().Equals(database.GetRuntimeName());

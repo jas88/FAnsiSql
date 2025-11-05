@@ -162,8 +162,6 @@ public sealed class OracleServerHelper : DiscoveredServerHelper
         return false;
     }
 
-    [RequiresUnreferencedCode()]
-    [RequiresDynamicCode()]
     public override bool DatabaseExists(DiscoveredDatabase database)
     {
         // In Oracle, databases are schemas/users - can query ALL_USERS from any connection

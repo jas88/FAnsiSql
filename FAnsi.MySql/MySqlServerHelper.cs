@@ -145,8 +145,6 @@ public sealed class MySqlServerHelper : DiscoveredServerHelper
         return false;
     }
 
-    [RequiresUnreferencedCode()]
-    [RequiresDynamicCode()]
     public override bool DatabaseExists(DiscoveredDatabase database)
     {
         // Remove database from connection string - INFORMATION_SCHEMA is accessible from any connection

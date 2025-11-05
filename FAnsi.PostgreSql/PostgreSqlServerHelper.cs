@@ -126,8 +126,6 @@ public sealed class PostgreSqlServerHelper : DiscoveredServerHelper
         return false;
     }
 
-    [RequiresUnreferencedCode()]
-    [RequiresDynamicCode()]
     public override bool DatabaseExists(DiscoveredDatabase database)
     {
         // Connect to postgres database to query pg_database (can't connect to target DB if it doesn't exist!)
