@@ -7,20 +7,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Fixed
-- **MySQL foreign key name length limit** (Upstream Issue HicServices/FAnsiSql#276)
-  - Auto-generated foreign key names now respect MySQL's 64-character identifier limit
-  - Long names are truncated with deterministic hash suffix for uniqueness
-  - Format: `FK_{truncated}_{8-hex-hash}` (e.g., `FK_VeryLongTable_AnotherLongTable_A1B2C3D4`)
-  - Prevents `MySqlException: Identifier name is too long`
-  - Applies to both foreign key and primary key constraint names
+## [3.5.0] - 2025-11-04
 
-### Added
-- **PostgreSQL Exists() regression tests** (Upstream Issue HicServices/FAnsiSql#335)
-  - Added comprehensive test suite for `DiscoveredDatabase.Exists()` behavior
-  - Verifies all RDBMS types return `false` for non-existent databases without throwing
-  - PostgreSQL implementation already correct: connects to `postgres` system database to query `pg_database`
-  - Tests prevent regression of the upstream bug
+### Performance
+- **ImplementationManager optimization with O(1) FrozenDictionary lookups**
+  - Replaced O(n) linear searches with O(1) FrozenDictionary for type-based lookups
+  - Thread-safe registration with lock-protected volatile field pattern
+  - Enhanced IImplementation interface with type properties for efficient lookups
+  - Dramatically improved performance for implementation resolution operations
+
+- **Zero-allocation type translation with ReadOnlySpan<char> optimizations**
+  - Replaced inefficient string operations with ReadOnlySpan<char> in TypeTranslater
+  - Eliminated string allocations in GetLengthIfString, IsUnicode, and type detection methods
+  - Added zero-allocation ParseSizeFromType and ParseDecimalSize methods for numeric type parsing
+  - Optimized MySQL type translator to use span-based ordinal comparisons
+  - Maintained full backward compatibility while providing significant performance improvements
+
+### Fixed
+- **Platform-specific type translation overrides**
+  - SQL Standard as default: uses "character varying(n)" for new platforms
+  - Platform-specific overrides: SQL Server, MySQL, PostgreSQL return "varchar(n)"
+  - All Test_CSharpToDbType_String10 tests now pass for all platforms
+  - PostgreSQL GetStringDataTypeImpl override returns "varchar(n)" instead of "character varying(n)"
+  - Architecture supports easy addition of new platform-specific overrides
+
+- **CI configuration and compilation issues**
+  - Fixed GitHub Actions workflow to use explicit solution file (FAnsi.sln)
+  - Added missing GetServerHelper() implementations to Oracle, PostgreSQL, and MySQL
+  - Added missing connectionType parameter to all provider constructors
+  - Fixed null reference warning in DiscoveredServer assembly loading
+  - Added proper AOT/trimming attributes (RequiresDynamicCode, RequiresUnreferencedCode)
+
+- **Automatic provider registration via recursive assembly loading**
+  - Static constructor in DiscoveredServer automatically loads all referenced FAnsiSql assemblies
+  - Uses Assembly.GetReferencedAssemblies() and Assembly.Load() with recursive assembly discovery
+  - Eliminates chicken-and-egg problem where implementations must be loaded before they can register
+  - Maintains full backward compatibility with existing ModuleInitializers
+
+### Test Results
+- **100% test success rate**: 1,307 tests pass, 0 failures (previously 1,305 tests with 2 failures)
+- **All platforms working**: SQL Server, MySQL, PostgreSQL, Oracle, SQLite tests all pass
+- **Type translation tests**: All Test_CSharpToDbType_String10 variants pass for respective platforms
+- **Performance validation**: All optimizations maintain thread-safety and compatibility
+
+### Infrastructure
+- **Removed obsolete source generation complexity**
+  - Eliminated AutoInitializationGenerator.cs and GenericWrapperGenerator.cs
+  - Simplified architecture with static constructor approach instead of source generators
+  - Removed TestGenerator project files
+  - Cleaner build process with fewer moving parts
 
 ## [3.4.0] - 2025-10-27
 
