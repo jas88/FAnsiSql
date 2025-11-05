@@ -24,6 +24,11 @@ public sealed class ImplementationManager
     private volatile FrozenDictionary<Type, IImplementation> _lookup = FrozenDictionary<Type, IImplementation>.Empty;
 
     /// <summary>
+    /// Fast O(1) array lookup for DatabaseType to implementation mapping. Initialized with nulls.
+    /// </summary>
+    private static readonly IImplementation?[] _databaseTypeLookup = new IImplementation[5]; // 5 DatabaseType enum values
+
+    /// <summary>
     /// Registers an implementation instance for fast O(1) lookups
     /// </summary>
     /// <param name="implementation">The implementation to register</param>
@@ -40,6 +45,11 @@ public sealed class ImplementationManager
 
             // Rebuild the frozen dictionary
             Instance._lookup = builder.ToFrozenDictionary();
+
+            // Store in DatabaseType array for O(1) lookup
+            var dbType = implementation.SupportedDatabaseType;
+            if (dbType >= 0 && (int)dbType < _databaseTypeLookup.Length)
+                _databaseTypeLookup[(int)dbType] = implementation;
         }
     }
 
@@ -57,10 +67,11 @@ public sealed class ImplementationManager
 
     public static IImplementation GetImplementation(DatabaseType databaseType)
     {
-        // For DatabaseType, we need to use linear search since we can't use it as a Type key
-        foreach (var implementation in Instance._lookup.Values.Distinct())
+        // O(1) array lookup using DatabaseType enum as index
+        if (databaseType >= 0 && (int)databaseType < _databaseTypeLookup.Length)
         {
-            if (implementation.SupportedDatabaseType == databaseType)
+            var implementation = _databaseTypeLookup[(int)databaseType];
+            if (implementation != null)
                 return implementation;
         }
 
