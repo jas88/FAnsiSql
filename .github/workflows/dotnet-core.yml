@@ -66,6 +66,17 @@ jobs:
         sudo mysql -u root -e "ALTER USER 'root'@'localhost' IDENTIFIED BY 'YourStrong!Passw0rd';" || \
         echo "MySQL configuration skipped - using default auth"
 
+        # Wait for Oracle to start up
+        echo "Waiting for Oracle to start..."
+        for i in {1..30}; do
+          if timeout 10s bash -c "</dev/tcp/localhost/1521" 2>/dev/null; then
+            echo "Oracle is ready"
+            break
+          fi
+          echo "Waiting for Oracle... ($i/30)"
+          sleep 2
+        done
+
         # Wait for SQL Server to start up (can take 30+ seconds)
         echo "Waiting for SQL Server to start..."
         for i in {1..30}; do
