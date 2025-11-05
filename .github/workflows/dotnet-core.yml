@@ -64,56 +64,69 @@ jobs:
         # Configure MySQL with proper authentication
         # Wait for MySQL to start first
         echo "Waiting for MySQL to start..."
-        for i in {1..10}; do
+        for i in {1..15}; do
           if sudo mysqladmin ping -h localhost --silent; then
             echo "MySQL is ready"
             break
           fi
-          echo "Waiting for MySQL... ($i/10)"
-          sleep 1
+          echo "Waiting for MySQL... ($i/15)"
+          sleep 2
         done
 
-        # Try to configure MySQL authentication with multiple fallbacks
-        sudo mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'YourStrong!Passw0rd';" \
-          2>/dev/null || \
-        sudo mysql -u root -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'YourStrong!Passw0rd';" \
-          2>/dev/null || \
-        sudo mysql -e "SET PASSWORD FOR 'root'@'localhost' = PASSWORD('YourStrong!Passw0rd');" \
-          2>/dev/null || \
-        echo "Warning: MySQL authentication configuration may have failed"
+        # Configure MySQL to use traditional password authentication
+        echo "Configuring MySQL authentication..."
+
+        # Disable unix_socket authentication and configure native password
+        sudo mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'YourStrong!Passw0rd';" 2>/dev/null || \
+        sudo mysql -u root -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'YourStrong!Passw0rd';" 2>/dev/null || {
+          echo "Falling back to manual user creation..."
+          sudo mysql -e "DROP USER IF EXISTS 'root'@'localhost';" 2>/dev/null || true
+          sudo mysql -e "CREATE USER 'root'@'localhost' IDENTIFIED BY 'YourStrong!Passw0rd';" 2>/dev/null || true
+          sudo mysql -e "GRANT ALL PRIVILEGES ON *.* TO 'root'@'localhost' WITH GRANT OPTION;" 2>/dev/null || true
+        }
+
+        # Ensure proper privileges and flush
+        sudo mysql -e "FLUSH PRIVILEGES;" 2>/dev/null || true
 
         # Verify MySQL configuration works
         if echo "SELECT 1;" | sudo mysql -u root -p'YourStrong!Passw0rd' &>/dev/null; then
           echo "MySQL authentication configuration verified"
         else
-          echo "Warning: MySQL authentication test failed - attempting alternative configuration"
-          sudo mysql -e "FLUSH PRIVILEGES;" 2>/dev/null || true
-          sudo mysql -e "CREATE USER IF NOT EXISTS 'root'@'localhost' IDENTIFIED BY 'YourStrong!Passw0rd';" \
-            2>/dev/null || true
-          sudo mysql -e "GRANT ALL PRIVILEGES ON *.* TO 'root'@'localhost' WITH GRANT OPTION;" \
-            2>/dev/null || true
+          echo "Warning: MySQL authentication test failed - attempting final configuration"
+          sudo mysql -e "UPDATE mysql.user SET plugin = 'mysql_native_password' WHERE User = 'root';" 2>/dev/null || true
+          sudo mysql -e "UPDATE mysql.user SET authentication_string = PASSWORD('YourStrong!Passw0rd') WHERE User = 'root';" 2>/dev/null || true
           sudo mysql -e "FLUSH PRIVILEGES;" 2>/dev/null || true
         fi
 
-        # Wait for Oracle to start up
+        # Wait for Oracle to start up (database can take longer than port open)
         echo "Waiting for Oracle to start..."
-        for i in {1..30}; do
+        for i in {1..45}; do
+          # First check if port is open
           if timeout 10s bash -c "</dev/tcp/localhost/1521" 2>/dev/null; then
-            echo "Oracle is ready"
-            break
+            # Then test actual database connection using docker exec
+            if docker exec oracle_$(docker ps -q --filter "name=oracle") bash -c "echo \"SELECT 1 FROM DUAL;\" | sqlplus -L system/oracle@localhost:1521/XE" &>/dev/null; then
+              echo "Oracle is ready"
+              break
+            fi
           fi
-          echo "Waiting for Oracle... ($i/30)"
-          sleep 2
+          echo "Waiting for Oracle... ($i/45)"
+          sleep 3
         done
 
         # Wait for SQL Server to start up (can take 30+ seconds)
         echo "Waiting for SQL Server to start..."
-        for i in {1..30}; do
+        for i in {1..45}; do
           if /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -Q "SELECT 1" &>/dev/null; then
             echo "SQL Server is ready"
+            # Additional verification - test database creation
+            if /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -Q "CREATE DATABASE test_connection_verification; DROP DATABASE test_connection_verification;" &>/dev/null; then
+              echo "SQL Server database creation verified"
+            else
+              echo "Warning: SQL Server basic connection works but database creation may have issues"
+            fi
             break
           fi
-          echo "Waiting for SQL Server... ($i/30)"
+          echo "Waiting for SQL Server... ($i/45)"
           sleep 2
         done
 

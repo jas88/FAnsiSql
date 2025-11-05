@@ -299,13 +299,98 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
             for (var i = 0; i < reader.FieldCount; i++)
                 dt.Columns.Add(reader.GetName(i), reader.GetFieldType(i));
 
-        // Add rows
+        // Add rows with type conversion for pre-configured DataTable columns
         while (reader.Read())
         {
             var row = dt.NewRow();
             for (var i = 0; i < reader.FieldCount; i++)
-                row[i] = reader.GetValue(i);
+            {
+                var columnName = reader.GetName(i);
+                var readerValue = reader.GetValue(i);
+
+                // Find the corresponding DataTable column
+                var dataColumn = dt.Columns[columnName];
+                if (dataColumn != null && dataColumn.DataType != typeof(string) && readerValue is string stringValue)
+                {
+                    // Convert string value to the expected column type
+                    row[i] = ConvertStringToTypedValue(stringValue, dataColumn.DataType);
+                }
+                else
+                {
+                    // Use the raw reader value when no conversion is needed
+                    row[i] = readerValue;
+                }
+            }
             dt.Rows.Add(row);
+        }
+    }
+
+    /// <summary>
+    /// Converts a string value to the specified target type for SQLite data reading.
+    /// Handles common conversions needed when SQLite stores data as TEXT but the DataTable expects specific types.
+    /// </summary>
+    /// <param name="stringValue">The string value from SQLite</param>
+    /// <param name="targetType">The target C# type expected by the DataTable column</param>
+    /// <returns>The converted value or null if conversion fails</returns>
+    private static object? ConvertStringToTypedValue(string stringValue, Type targetType)
+    {
+        if (stringValue == null || string.IsNullOrEmpty(stringValue))
+            return null;
+
+        try
+        {
+            if (targetType == typeof(TimeSpan))
+            {
+                return TimeSpan.Parse(stringValue);
+            }
+            if (targetType == typeof(DateTime))
+            {
+                return DateTime.Parse(stringValue);
+            }
+            if (targetType == typeof(bool))
+            {
+                return Convert.ToBoolean(stringValue);
+            }
+            if (targetType == typeof(int))
+            {
+                return Convert.ToInt32(stringValue);
+            }
+            if (targetType == typeof(long))
+            {
+                return Convert.ToInt64(stringValue);
+            }
+            if (targetType == typeof(short))
+            {
+                return Convert.ToInt16(stringValue);
+            }
+            if (targetType == typeof(decimal))
+            {
+                return Convert.ToDecimal(stringValue);
+            }
+            if (targetType == typeof(float))
+            {
+                return Convert.ToSingle(stringValue);
+            }
+            if (targetType == typeof(double))
+            {
+                return Convert.ToDouble(stringValue);
+            }
+            if (targetType == typeof(Guid))
+            {
+                return Guid.Parse(stringValue);
+            }
+            if (targetType == typeof(byte[]))
+            {
+                return Convert.FromBase64String(stringValue);
+            }
+
+            // If no specific conversion is needed, return the original string
+            return stringValue;
+        }
+        catch
+        {
+            // If conversion fails, return the original string to maintain compatibility
+            return stringValue;
         }
     }
 }
