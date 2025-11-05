@@ -100,9 +100,6 @@ public sealed class SqliteBulkCopy(DiscoveredTable targetTable, IManagedConnecti
         var estimatedClauseCapacity = Math.Max(1024, (3 * columnCount * BatchSize) + 100); // @pX format is about 3 chars
         var valueClauses = new StringBuilder(estimatedClauseCapacity);
 
-        // Pre-allocate parameter list to avoid frequent resizing
-        var parameters = new List<SqliteParameter>(columnCount * BatchSize);
-
         var batchRows = 0;
         var parameterIndex = 0;
 
@@ -129,9 +126,8 @@ public sealed class SqliteBulkCopy(DiscoveredTable targetTable, IManagedConnecti
                 var paramName = $"@p{parameterIndex}";
                 valueClauses.Append(paramName);
 
-                // Create parameter with pre-allocated capacity
+                // Create parameter and add directly to command
                 var parameter = new SqliteParameter(paramName, ConvertValueForSQLite(dr[kvp.Key.Ordinal]));
-                parameters.Add(parameter);
                 cmd.Parameters.Add(parameter);
 
                 parameterIndex++;
@@ -148,7 +144,6 @@ public sealed class SqliteBulkCopy(DiscoveredTable targetTable, IManagedConnecti
 
                 // Reset for next batch - reuse existing objects where possible
                 cmd.Parameters.Clear();
-                parameters.Clear(); // Clear the list but keep capacity
                 valueClauses.Clear();
                 batchRows = 0;
                 parameterIndex = 0;
