@@ -44,6 +44,16 @@ jobs:
         version: 1.0
         execute_install_scripts: true
 
+    - name: Stop default MySQL
+      run: sudo service mysql stop || true
+
+    - name: Setup MySQL
+      uses: mirromutth/mysql-action@v1.1
+      with:
+        mysql version: '8.0'
+        mysql database: 'FAnsiTests'
+        mysql root password: ${{ env.MSSQL_SA_PASSWORD }}
+
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v4
       with:
@@ -59,71 +69,6 @@ jobs:
         sudo systemctl start mssql-server
         sudo systemctl start postgresql
         sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'YourStrong!Passw0rd';"
-        sudo systemctl start mysql.service
-
-        # Configure MySQL with proper authentication
-        # Wait for MySQL to start first
-        echo "Waiting for MySQL to start..."
-        for i in {1..15}; do
-          if sudo mysqladmin ping -h localhost --silent; then
-            echo "MySQL is ready"
-            break
-          fi
-          echo "Waiting for MySQL... ($i/15)"
-          sleep 2
-        done
-
-        # Configure MySQL to use traditional password authentication
-        echo "Configuring MySQL authentication..."
-
-        # Disable unix_socket authentication and configure native password
-        sudo mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '$MSSQL_SA_PASSWORD';" 2>/dev/null || \
-        sudo mysql -u root -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '$MSSQL_SA_PASSWORD';" 2>/dev/null || {
-          echo "Falling back to manual user creation..."
-          sudo mysql -e "DROP USER IF EXISTS 'root'@'localhost';" 2>/dev/null || true
-          sudo mysql -e "CREATE USER 'root'@'localhost' IDENTIFIED BY '$MSSQL_SA_PASSWORD';" 2>/dev/null || true
-          sudo mysql -e "GRANT ALL PRIVILEGES ON *.* TO 'root'@'localhost' WITH GRANT OPTION;" 2>/dev/null || true
-        }
-
-        # Ensure proper privileges and flush
-        sudo mysql -e "FLUSH PRIVILEGES;" 2>/dev/null || true
-
-        # Verify MySQL configuration works WITHOUT sudo (actual password auth test)
-        echo "Testing MySQL password authentication..."
-        if echo "SELECT 1;" | mysql -h 127.0.0.1 -u root -p"$MSSQL_SA_PASSWORD" &>/dev/null; then
-          echo "✓ MySQL password authentication verified"
-        else
-          echo "⚠ MySQL password authentication failed - attempting recovery..."
-          # Stop MySQL to ensure clean state
-          sudo systemctl stop mysql.service
-
-          # Edit MySQL config to disable unix_socket authentication
-          echo "[mysqld]" | sudo tee /etc/mysql/mysql.conf.d/zzz-fansisql.cnf
-          echo "skip-grant-tables" | sudo tee -a /etc/mysql/mysql.conf.d/zzz-fansisql.cnf
-
-          # Start MySQL in no-auth mode
-          sudo systemctl start mysql.service
-          sleep 3
-
-          # Reset root password completely
-          mysql -u root -e "FLUSH PRIVILEGES;" 2>/dev/null
-          mysql -u root -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '$MSSQL_SA_PASSWORD';" 2>/dev/null
-          mysql -u root -e "FLUSH PRIVILEGES;" 2>/dev/null
-
-          # Re-enable authentication
-          sudo rm /etc/mysql/mysql.conf.d/zzz-fansisql.cnf
-          sudo systemctl restart mysql.service
-          sleep 3
-
-          # Final verification
-          if echo "SELECT 1;" | mysql -h 127.0.0.1 -u root -p"$MSSQL_SA_PASSWORD" &>/dev/null; then
-            echo "✓ MySQL password authentication recovered successfully"
-          else
-            echo "❌ MySQL password authentication still failing"
-            # Show MySQL auth methods for debugging
-            sudo mysql -e "SELECT user, host, plugin FROM mysql.user WHERE user='root';" || true
-          fi
-        fi
 
         # Wait for Oracle to start up (database can take longer than port open)
         echo "Waiting for Oracle to start..."
@@ -163,28 +108,6 @@ jobs:
             mv "Tests/$proj/TestDatabases-github.xml" "Tests/$proj/TestDatabases.xml"
           fi
         done
-
-        # Verify MySQL configuration swap succeeded
-        echo "Verifying MySQL test configuration..."
-        for proj in FAnsi.MySql.Tests FAnsi.Core.Tests; do
-          if [ ! -f "Tests/$proj/TestDatabases.xml" ]; then
-            echo "ERROR: Tests/$proj/TestDatabases.xml not found after swap!"
-            ls -la "Tests/$proj/" || true
-            exit 1
-          fi
-          echo "✓ Tests/$proj/TestDatabases.xml exists"
-
-          # Verify MySQL section contains correct password
-          if grep -q "Password=$MSSQL_SA_PASSWORD" "Tests/$proj/TestDatabases.xml"; then
-            echo "✓ Tests/$proj/TestDatabases.xml has correct MySQL password"
-          else
-            echo "ERROR: Tests/$proj/TestDatabases.xml missing correct MySQL password"
-            echo "MySQL configuration:"
-            grep -A 2 "DatabaseType.*MySql" "Tests/$proj/TestDatabases.xml" || echo "No MySQL config found"
-            exit 1
-          fi
-        done
-        echo "MySQL configuration verification complete"
     - name: Test
       run: dotnet test FAnsi.sln --logger "console;verbosity=minimal" --nologo -p:TestTfmsInParallel=true
 
