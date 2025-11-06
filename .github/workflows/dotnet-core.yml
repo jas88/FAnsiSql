@@ -136,6 +136,28 @@ jobs:
             mv "Tests/$proj/TestDatabases-github.xml" "Tests/$proj/TestDatabases.xml"
           fi
         done
+
+        # Verify MySQL configuration swap succeeded
+        echo "Verifying MySQL test configuration..."
+        for proj in FAnsi.MySql.Tests FAnsi.Core.Tests; do
+          if [ ! -f "Tests/$proj/TestDatabases.xml" ]; then
+            echo "ERROR: Tests/$proj/TestDatabases.xml not found after swap!"
+            ls -la "Tests/$proj/" || true
+            exit 1
+          fi
+          echo "✓ Tests/$proj/TestDatabases.xml exists"
+
+          # Verify MySQL section contains correct password
+          if grep -q "Password=YourStrong!Passw0rd" "Tests/$proj/TestDatabases.xml"; then
+            echo "✓ Tests/$proj/TestDatabases.xml has correct MySQL password"
+          else
+            echo "ERROR: Tests/$proj/TestDatabases.xml missing correct MySQL password"
+            echo "MySQL configuration:"
+            grep -A 2 "DatabaseType.*MySql" "Tests/$proj/TestDatabases.xml" || echo "No MySQL config found"
+            exit 1
+          fi
+        done
+        echo "MySQL configuration verification complete"
     - name: Test
       run: dotnet test FAnsi.sln --logger "console;verbosity=minimal" --nologo -p:TestTfmsInParallel=true
 

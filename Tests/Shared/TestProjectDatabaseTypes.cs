@@ -43,7 +43,9 @@ public sealed class TestProjectDatabaseTypes
     /// </summary>
     public static DatabaseType[] GetCurrentProjectDatabaseTypes()
     {
-#if FANSI_MICROSOFTSQL_TESTS
+#if FANSI_CORE_TESTS
+        return All.DatabaseTypes;
+#elif FANSI_MICROSOFTSQL_TESTS
         return MicrosoftSqlServerOnly;
 #elif FANSI_MYSQL_TESTS
         return MySqlOnly;
@@ -54,8 +56,9 @@ public sealed class TestProjectDatabaseTypes
 #elif FANSI_SQLITE_TESTS
         return SqliteOnly;
 #else
-        // Fallback to all database types for backward compatibility or if used in wrong context
-        return All.DatabaseTypes;
+        throw new InvalidOperationException(
+            "No FANSI_*_TESTS compile constant defined. Please add the appropriate DefineConstants to the test project's .csproj file. " +
+            "Valid constants are: FANSI_CORE_TESTS, FANSI_MICROSOFTSQL_TESTS, FANSI_MYSQL_TESTS, FANSI_ORACLE_TESTS, FANSI_POSTGRESQL_TESTS, FANSI_SQLITE_TESTS");
 #endif
     }
 

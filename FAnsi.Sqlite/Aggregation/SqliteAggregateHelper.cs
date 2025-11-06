@@ -32,11 +32,12 @@ public sealed class SqliteAggregateHelper : AggregateHelper
     /// <remarks>
     /// <para>SQLite date part mappings consistent with other databases:</para>
     /// <list type="bullet">
-    /// <item><description>Day: DATE(column) - strips time, matches SQL Server/PostgreSQL/MySQL behavior</description></item>
-    /// <item><description>Month: strftime('%Y-%m', column) - returns YYYY-MM format</description></item>
-    /// <item><description>Year: CAST(strftime('%Y', column) AS INTEGER) - returns integer</description></item>
-    /// <item><description>Quarter: strftime('%Y', column) || 'Q' || ((strftime('%m', column) - 1) / 3 + 1) - returns string</description></item>
+    /// <item><description>Day: DATE(column) - strips time, returns TEXT, matches SQL Server/PostgreSQL/MySQL behavior</description></item>
+    /// <item><description>Month: strftime('%Y-%m', column) - returns TEXT in YYYY-MM format</description></item>
+    /// <item><description>Year: strftime('%Y', column) - returns TEXT to maintain type consistency for JOIN conditions</description></item>
+    /// <item><description>Quarter: strftime('%Y', column) || 'Q' || ((strftime('%m', column) - 1) / 3 + 1) - returns TEXT</description></item>
     /// </list>
+    /// <para>All return TEXT types to ensure JOIN condition compatibility in calendar aggregation queries (TEXT = TEXT).</para>
     /// </remarks>
     public override string GetDatePartOfColumn(AxisIncrement increment, string columnSql)
     {
@@ -45,8 +46,8 @@ public sealed class SqliteAggregateHelper : AggregateHelper
             // Use DATE() to strip time like other databases (SQL Server Convert(date), PostgreSQL ::date, MySQL DATE())
             AxisIncrement.Day => $"DATE({columnSql})",
             AxisIncrement.Month => $"strftime('%Y-%m', {columnSql})",
-            // Cast to INTEGER to ensure numeric type instead of string
-            AxisIncrement.Year => $"CAST(strftime('%Y', {columnSql}) AS INTEGER)",
+            // Return TEXT (not INTEGER) to maintain type consistency for JOIN conditions in calendar aggregations
+            AxisIncrement.Year => $"strftime('%Y', {columnSql})",
             AxisIncrement.Quarter => $"strftime('%Y', {columnSql}) || 'Q' || ((strftime('%m', {columnSql}) - 1) / 3 + 1)",
             _ => throw new ArgumentOutOfRangeException(nameof(increment))
         };
@@ -68,6 +69,12 @@ public sealed class SqliteAggregateHelper : AggregateHelper
         var endDate = query.Axis.EndDate;
         var increment = query.Axis.AxisIncrement;
 
+        // For the final SELECT, cast to appropriate types for expected data types, but keep TEXT in JOIN condition
+        // Year: INTEGER, others: TEXT (which is what they already return)
+        var selectExpression = increment == AxisIncrement.Year
+            ? $"CAST({GetDatePartOfColumn(increment, "dateAxis.dt")} AS INTEGER)"
+            : GetDatePartOfColumn(increment, "dateAxis.dt");
+
         return $"""
                WITH RECURSIVE dateAxis AS (
                    SELECT DATE({startDate}) AS dt
@@ -77,8 +84,8 @@ public sealed class SqliteAggregateHelper : AggregateHelper
                    WHERE dt < DATE({endDate})
                )
                SELECT
-               {GetDatePartOfColumn(increment, "dateAxis.dt")} AS joinDt,
-               COALESCE(dataset.{countAlias}, 0) AS {countAlias}
+               {selectExpression} AS joinDt,
+               dataset.{countAlias}
                FROM dateAxis
                LEFT JOIN (
                    {string.Join(Environment.NewLine, query.Lines.Where(c => c.LocationToInsert is >= QueryComponent.SELECT and <= QueryComponent.Having).Select(l => l.Text))}
