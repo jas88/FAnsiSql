@@ -88,14 +88,41 @@ jobs:
         # Ensure proper privileges and flush
         sudo mysql -e "FLUSH PRIVILEGES;" 2>/dev/null || true
 
-        # Verify MySQL configuration works
-        if echo "SELECT 1;" | sudo mysql -u root -p'YourStrong!Passw0rd' &>/dev/null; then
-          echo "MySQL authentication configuration verified"
+        # Verify MySQL configuration works WITHOUT sudo (actual password auth test)
+        echo "Testing MySQL password authentication..."
+        if echo "SELECT 1;" | mysql -h 127.0.0.1 -u root -p'YourStrong!Passw0rd' &>/dev/null; then
+          echo "✓ MySQL password authentication verified"
         else
-          echo "Warning: MySQL authentication test failed - attempting final configuration"
-          sudo mysql -e "UPDATE mysql.user SET plugin = 'mysql_native_password' WHERE User = 'root';" 2>/dev/null || true
-          sudo mysql -e "UPDATE mysql.user SET authentication_string = PASSWORD('YourStrong!Passw0rd') WHERE User = 'root';" 2>/dev/null || true
-          sudo mysql -e "FLUSH PRIVILEGES;" 2>/dev/null || true
+          echo "⚠ MySQL password authentication failed - attempting recovery..."
+          # Stop MySQL to ensure clean state
+          sudo systemctl stop mysql.service
+
+          # Edit MySQL config to disable unix_socket authentication
+          echo "[mysqld]" | sudo tee /etc/mysql/mysql.conf.d/zzz-fansisql.cnf
+          echo "skip-grant-tables" | sudo tee -a /etc/mysql/mysql.conf.d/zzz-fansisql.cnf
+
+          # Start MySQL in no-auth mode
+          sudo systemctl start mysql.service
+          sleep 3
+
+          # Reset root password completely
+          mysql -u root -e "FLUSH PRIVILEGES;" 2>/dev/null
+          mysql -u root -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'YourStrong!Passw0rd';" 2>/dev/null
+          mysql -u root -e "FLUSH PRIVILEGES;" 2>/dev/null
+
+          # Re-enable authentication
+          sudo rm /etc/mysql/mysql.conf.d/zzz-fansisql.cnf
+          sudo systemctl restart mysql.service
+          sleep 3
+
+          # Final verification
+          if echo "SELECT 1;" | mysql -h 127.0.0.1 -u root -p'YourStrong!Passw0rd' &>/dev/null; then
+            echo "✓ MySQL password authentication recovered successfully"
+          else
+            echo "❌ MySQL password authentication still failing"
+            # Show MySQL auth methods for debugging
+            sudo mysql -e "SELECT user, host, plugin FROM mysql.user WHERE user='root';" || true
+          fi
         fi
 
         # Wait for Oracle to start up (database can take longer than port open)
