@@ -111,22 +111,27 @@ public sealed partial class SqliteTypeTranslater : TypeTranslater
     /// <summary>
     /// Gets the SQL type for time values.
     /// </summary>
-    /// <returns>"TEXT" (SQLite stores times as text strings)</returns>
-    protected override string GetTimeDataType() => "TEXT";
+    /// <returns>"TIME" (SQLite treats this as TEXT affinity but preserves the type name)</returns>
+    /// <remarks>
+    /// Similar to DATETIME, using "TIME" instead of "TEXT" allows FAnsi to recognize TimeSpan columns via regex matching.
+    /// SQLite still applies TEXT type affinity and stores times as text strings.
+    /// </remarks>
+    protected override string GetTimeDataType() => "TIME";
 
     /// <summary>
     /// Gets the SQL type for date/datetime values.
     /// </summary>
-    /// <returns>"TEXT" (SQLite stores dates as text, though numeric and real are also supported)</returns>
+    /// <returns>"DATETIME" (SQLite treats this as TEXT affinity but preserves the type name)</returns>
     /// <remarks>
-    /// SQLite doesn't have dedicated date/time types. Dates can be stored as:
+    /// SQLite doesn't have dedicated date/time types but uses type affinity. By declaring columns as DATETIME:
     /// <list type="bullet">
-    /// <item><description>TEXT as ISO8601 strings ("YYYY-MM-DD HH:MM:SS.SSS")</description></item>
-    /// <item><description>REAL as Julian day numbers</description></item>
-    /// <item><description>INTEGER as Unix Time (seconds since 1970-01-01 00:00:00 UTC)</description></item>
+    /// <item><description>SQLite applies TEXT type affinity (same storage as "TEXT")</description></item>
+    /// <item><description>PRAGMA table_info() preserves "DATETIME" as the type name</description></item>
+    /// <item><description>FAnsi can recognize these as DateTime columns via IsDate() regex matching</description></item>
+    /// <item><description>Values are stored as TEXT ISO8601 strings ("YYYY-MM-DD HH:MM:SS.SSS")</description></item>
     /// </list>
     /// </remarks>
-    protected override string GetDateDateTimeDataType() => "TEXT";  // SQLite stores dates as text, numeric, or real
+    protected override string GetDateDateTimeDataType() => "DATETIME";  // SQLite uses TEXT affinity but preserves type name
 
     /// <summary>
     /// Gets the SQL type for byte array values.
