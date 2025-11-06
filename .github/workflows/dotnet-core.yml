@@ -77,11 +77,11 @@ jobs:
         echo "Configuring MySQL authentication..."
 
         # Disable unix_socket authentication and configure native password
-        sudo mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'YourStrong!Passw0rd';" 2>/dev/null || \
-        sudo mysql -u root -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'YourStrong!Passw0rd';" 2>/dev/null || {
+        sudo mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '$MSSQL_SA_PASSWORD';" 2>/dev/null || \
+        sudo mysql -u root -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '$MSSQL_SA_PASSWORD';" 2>/dev/null || {
           echo "Falling back to manual user creation..."
           sudo mysql -e "DROP USER IF EXISTS 'root'@'localhost';" 2>/dev/null || true
-          sudo mysql -e "CREATE USER 'root'@'localhost' IDENTIFIED BY 'YourStrong!Passw0rd';" 2>/dev/null || true
+          sudo mysql -e "CREATE USER 'root'@'localhost' IDENTIFIED BY '$MSSQL_SA_PASSWORD';" 2>/dev/null || true
           sudo mysql -e "GRANT ALL PRIVILEGES ON *.* TO 'root'@'localhost' WITH GRANT OPTION;" 2>/dev/null || true
         }
 
@@ -90,7 +90,7 @@ jobs:
 
         # Verify MySQL configuration works WITHOUT sudo (actual password auth test)
         echo "Testing MySQL password authentication..."
-        if echo "SELECT 1;" | mysql -h 127.0.0.1 -u root -p'YourStrong!Passw0rd' &>/dev/null; then
+        if echo "SELECT 1;" | mysql -h 127.0.0.1 -u root -p"$MSSQL_SA_PASSWORD" &>/dev/null; then
           echo "✓ MySQL password authentication verified"
         else
           echo "⚠ MySQL password authentication failed - attempting recovery..."
@@ -107,7 +107,7 @@ jobs:
 
           # Reset root password completely
           mysql -u root -e "FLUSH PRIVILEGES;" 2>/dev/null
-          mysql -u root -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'YourStrong!Passw0rd';" 2>/dev/null
+          mysql -u root -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '$MSSQL_SA_PASSWORD';" 2>/dev/null
           mysql -u root -e "FLUSH PRIVILEGES;" 2>/dev/null
 
           # Re-enable authentication
@@ -116,7 +116,7 @@ jobs:
           sleep 3
 
           # Final verification
-          if echo "SELECT 1;" | mysql -h 127.0.0.1 -u root -p'YourStrong!Passw0rd' &>/dev/null; then
+          if echo "SELECT 1;" | mysql -h 127.0.0.1 -u root -p"$MSSQL_SA_PASSWORD" &>/dev/null; then
             echo "✓ MySQL password authentication recovered successfully"
           else
             echo "❌ MySQL password authentication still failing"
@@ -175,7 +175,7 @@ jobs:
           echo "✓ Tests/$proj/TestDatabases.xml exists"
 
           # Verify MySQL section contains correct password
-          if grep -q "Password=YourStrong!Passw0rd" "Tests/$proj/TestDatabases.xml"; then
+          if grep -q "Password=$MSSQL_SA_PASSWORD" "Tests/$proj/TestDatabases.xml"; then
             echo "✓ Tests/$proj/TestDatabases.xml has correct MySQL password"
           else
             echo "ERROR: Tests/$proj/TestDatabases.xml missing correct MySQL password"
