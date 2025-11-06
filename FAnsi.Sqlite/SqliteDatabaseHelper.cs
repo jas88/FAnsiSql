@@ -68,7 +68,8 @@ public sealed class SqliteDatabaseHelper : DiscoveredDatabaseHelper
         if (col.Default != MandatoryScalarFunctions.None)
         {
             var defaultValue = syntaxHelper.GetScalarFunctionSql(col.Default);
-            parts.Add($"DEFAULT {defaultValue}");
+            // SQLite requires function calls in DEFAULT to be wrapped in parentheses
+            parts.Add($"DEFAULT ({defaultValue})");
         }
 
         // Add collation if specified
