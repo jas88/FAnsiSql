@@ -110,10 +110,13 @@ public sealed class SqliteServerHelper : DiscoveredServerHelper
     {
         var builder = new SqliteConnectionStringBuilder();
 
-        // For SQLite, server and database are the same (file path)
-        // Treat whitespace database the same as null
-        var dataSource = string.IsNullOrWhiteSpace(database) ? connectionString : database;
-        builder.DataSource = dataSource;
+        // For SQLite, the database parameter represents the file path (DataSource)
+        // Only set DataSource if an explicit database is provided
+        // When database is null/whitespace, we leave DataSource empty so GetCurrentDatabase() returns null
+        if (!string.IsNullOrWhiteSpace(database))
+        {
+            builder.DataSource = database;
+        }
 
         // SQLite doesn't use username/password authentication, but we accept them
         return builder;

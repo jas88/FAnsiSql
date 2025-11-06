@@ -122,6 +122,9 @@ public abstract partial class DiscoveredServerHelper(DatabaseType databaseType) 
 
     public async IAsyncEnumerable<string> ListDatabasesAsync(DbConnectionStringBuilder builder, [EnumeratorCancellation] CancellationToken token)
     {
+        // Check if cancellation was already requested before any async work
+        token.ThrowIfCancellationRequested();
+
         //list the database on the server
         await using var con = GetConnection(builder);
 

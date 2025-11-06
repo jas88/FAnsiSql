@@ -115,7 +115,7 @@ jobs:
 
         # Wait for SQL Server to start up (can take 30+ seconds)
         echo "Waiting for SQL Server to start..."
-        for i in {1..45}; do
+        for i in {1..60}; do
           if /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -Q "SELECT 1" &>/dev/null; then
             echo "SQL Server is ready"
             # Additional verification - test database creation
@@ -126,8 +126,8 @@ jobs:
             fi
             break
           fi
-          echo "Waiting for SQL Server... ($i/45)"
-          sleep 2
+          echo "Waiting for SQL Server... ($i/60)"
+          sleep 3
         done
 
         # Replace test configuration for CI

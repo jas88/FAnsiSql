@@ -59,7 +59,25 @@ internal sealed class SQLiteDataAdapterWrapper : DbDataAdapter
             var dataRow = dataTable.NewRow();
             for (int i = 0; i < reader.FieldCount; i++)
             {
-                dataRow[i] = reader.IsDBNull(i) ? DBNull.Value : reader.GetValue(i);
+                if (reader.IsDBNull(i))
+                {
+                    dataRow[i] = DBNull.Value;
+                }
+                else
+                {
+                    var readerValue = reader.GetValue(i);
+                    var dataColumn = dataTable.Columns[i];
+
+                    // Convert string value to the expected column type if needed
+                    if (dataColumn != null && dataColumn.DataType != typeof(string) && readerValue is string stringValue)
+                    {
+                        dataRow[i] = SqliteTableHelper.ConvertStringToTypedValue(stringValue, dataColumn.DataType);
+                    }
+                    else
+                    {
+                        dataRow[i] = readerValue;
+                    }
+                }
             }
             dataTable.Rows.Add(dataRow);
         }

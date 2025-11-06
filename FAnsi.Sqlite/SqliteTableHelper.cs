@@ -332,7 +332,7 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
     /// <param name="stringValue">The string value from SQLite</param>
     /// <param name="targetType">The target C# type expected by the DataTable column</param>
     /// <returns>The converted value or null if conversion fails</returns>
-    private static object? ConvertStringToTypedValue(string stringValue, Type targetType)
+    internal static object? ConvertStringToTypedValue(string stringValue, Type targetType)
     {
         if (stringValue == null || string.IsNullOrEmpty(stringValue))
             return null;
@@ -346,6 +346,14 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
             if (targetType == typeof(DateTime))
             {
                 return DateTime.Parse(stringValue);
+            }
+            if (targetType == typeof(DateOnly))
+            {
+                return DateOnly.Parse(stringValue);
+            }
+            if (targetType == typeof(TimeOnly))
+            {
+                return TimeOnly.Parse(stringValue);
             }
             if (targetType == typeof(bool))
             {
