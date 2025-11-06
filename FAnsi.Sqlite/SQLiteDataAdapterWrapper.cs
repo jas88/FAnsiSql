@@ -48,6 +48,18 @@ internal sealed class SQLiteDataAdapterWrapper : DbDataAdapter
             {
                 var columnName = row["ColumnName"].ToString();
                 var dataType = (Type)row["DataType"];
+
+                // SQLite DATE() returns TEXT ('YYYY-MM-DD'), but calendar aggregation Day tests expect DateTime
+                // Detect date columns by naming convention: ends with "Date" or equals "joinDt" (axis column)
+                // Only applies to TEXT columns - numeric columns (Year) and formatted strings (Month, Quarter) stay as-is
+                if (dataType == typeof(string) && columnName != null &&
+                    (columnName.EndsWith("Date", StringComparison.OrdinalIgnoreCase) ||
+                     columnName.Equals("joinDt", StringComparison.OrdinalIgnoreCase)))
+                {
+                    // Set column type to DateTime - conversion happens during Fill when we parse YYYY-MM-DD strings
+                    dataType = typeof(DateTime);
+                }
+
                 var column = new DataColumn(columnName, dataType);
                 dataTable.Columns.Add(column);
             }
