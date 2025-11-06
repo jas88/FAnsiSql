@@ -61,6 +61,13 @@ public sealed class AggregateCustomLineCollection
     public CustomLine? TopXOrderBy => Lines.SingleOrDefault(static l => l.LocationToInsert == QueryComponent.OrderBy && l.Role == CustomLineRole.TopX);
 
     /// <summary>
+    /// The (optional) single line of Postfix SQL which contains the LIMIT/TOP clause for TopX aggregations
+    /// e.g. "LIMIT 5" or "TOP 5"
+    /// </summary>
+    public CustomLine? TopXPostfix => Lines.SingleOrDefault(static l =>
+        l.LocationToInsert == QueryComponent.Postfix && l.Role == CustomLineRole.TopX);
+
+    /// <summary>
     /// Returns all concatenated SQL for all <see cref="Lines"/> between the inclusive boundaries from/to
     /// </summary>
     /// <param name="from">inclusive start section from which to return rows</param>

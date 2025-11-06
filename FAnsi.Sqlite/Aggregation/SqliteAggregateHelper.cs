@@ -69,6 +69,17 @@ public sealed class SqliteAggregateHelper : AggregateHelper
         var endDate = query.Axis.EndDate;
         var increment = query.Axis.AxisIncrement;
 
+        // Map AxisIncrement enum to SQLite-compatible date modifier strings
+        // Note: Quarter uses "+3 months" directly (not "+1 3 months")
+        var sqliteModifier = increment switch
+        {
+            AxisIncrement.Day => "+1 day",
+            AxisIncrement.Month => "+1 month",
+            AxisIncrement.Year => "+1 year",
+            AxisIncrement.Quarter => "+3 months",  // SQLite workaround - no native quarter support
+            _ => throw new ArgumentOutOfRangeException(nameof(increment), increment, "Unsupported AxisIncrement value for SQLite calendar aggregation")
+        };
+
         // For the final SELECT, cast to appropriate types for expected data types, but keep TEXT in JOIN condition
         // Year: INTEGER, others: TEXT (which is what they already return)
         var selectExpression = increment == AxisIncrement.Year
@@ -79,7 +90,7 @@ public sealed class SqliteAggregateHelper : AggregateHelper
                WITH RECURSIVE dateAxis AS (
                    SELECT DATE({startDate}) AS dt
                    UNION ALL
-                   SELECT DATE(dt, '+1 {increment}')
+                   SELECT DATE(dt, '{sqliteModifier}')
                    FROM dateAxis
                    WHERE dt < DATE({endDate})
                )

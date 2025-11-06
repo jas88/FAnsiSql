@@ -283,6 +283,19 @@ public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
         if (query.TopXOrderBy != null)
             orderBy = query.TopXOrderBy.Text;
 
+        // Extract TopX LIMIT clause and convert to MSSQL TOP syntax
+        var topXClause = "";
+        if (query.TopXPostfix != null)
+        {
+            // Convert "LIMIT n" to "TOP n" for MSSQL
+            var limitText = query.TopXPostfix.Text.Trim();
+            if (limitText.StartsWith("LIMIT ", StringComparison.OrdinalIgnoreCase))
+            {
+                var topN = limitText.Substring(6).Trim(); // Extract number after "LIMIT "
+                topXClause = $"TOP {topN}";
+            }
+        }
+
         var havingSqlIfAny = string.Join(Environment.NewLine,
             query.Lines.Where(static l => l.LocationToInsert == QueryComponent.Having).Select(static l => l.Text));
 
@@ -295,8 +308,11 @@ public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
 
             /*Get distinct values of the PIVOT Column if you have columns with values T and F and Z this will produce [T],[F],[Z] and you will end up with a pivot against these values*/
             set @Columns = (
-            {1}
+            SELECT {10}
              ',' + QUOTENAME({2}) as [text()]
+            FROM (
+            {1}
+             {2}
             {3}
             {4}
             {5} ( {2} IS NOT NULL and {2} <> '' {7})
@@ -305,6 +321,7 @@ public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
             {8}
             order by
             {6}
+            ) AS PivotValues
             FOR XML PATH(''), root('MyString'),type
             ).value('/MyString[1]','varchar(max)')
 
@@ -351,7 +368,8 @@ public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
             orderBy,
             axisColumnWithoutAlias == null ? "" : $"AND  {axisColumnWithoutAlias} is not null",
             havingSqlIfAny,
-            query.Axis != null ? "'joinDt'" : "''"
+            query.Axis != null ? "'joinDt'" : "''",
+            topXClause
         );
         return part1;
     }
