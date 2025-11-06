@@ -178,6 +178,15 @@ public sealed class MySqlAggregateHelper : AggregateHelper
 
         var joinAlias = nonPivotColumn.GetAliasFromText(query.SyntaxHelper);
 
+        // Get HAVING clause
+        var havingSqlIfAny = query.SyntaxHelper.Escape(string.Join(Environment.NewLine,
+            query.Lines.Where(static c => c.LocationToInsert == QueryComponent.Having)));
+
+        // Get LIMIT clause from TopX postfix
+        var topXLimitLine = query.Lines.SingleOrDefault(static c =>
+            c.LocationToInsert == QueryComponent.Postfix && c.Role == CustomLineRole.TopX);
+        var topXLimitSqlIfAny = topXLimitLine != null ? query.SyntaxHelper.Escape(topXLimitLine.Text) : "";
+
         return string.Format("""
 
                              {0}
@@ -194,9 +203,10 @@ public sealed class MySqlAggregateHelper : AggregateHelper
                              {3}
                              GROUP BY
                              {4}
+                             {5}
                              ORDER BY
                              {4}
-                             {5}
+                             {6}
                              ');
 
                              PREPARE stmt FROM @sql;
@@ -211,9 +221,8 @@ public sealed class MySqlAggregateHelper : AggregateHelper
             query.SyntaxHelper.Escape(string.Join(Environment.NewLine, query.Lines.Where(static c => c.LocationToInsert is >= QueryComponent.FROM and < QueryComponent.GroupBy))),
 
             joinAlias,
-
-            //any HAVING SQL
-            query.SyntaxHelper.Escape(string.Join(Environment.NewLine, query.Lines.Where(static c => c.LocationToInsert == QueryComponent.Having)))
+            havingSqlIfAny,     // HAVING comes after GROUP BY
+            topXLimitSqlIfAny   // LIMIT comes after ORDER BY
         );
     }
 
