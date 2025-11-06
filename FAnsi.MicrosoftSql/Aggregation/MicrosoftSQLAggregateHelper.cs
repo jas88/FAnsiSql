@@ -285,6 +285,7 @@ public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
 
         // Extract TopX LIMIT clause and convert to MSSQL TOP syntax
         var topXClause = "";
+        var orderByClause = "";
         if (query.TopXPostfix != null)
         {
             // Convert "LIMIT n" to "TOP n" for MSSQL
@@ -293,6 +294,8 @@ public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
             {
                 var topN = limitText.Substring(6).Trim(); // Extract number after "LIMIT "
                 topXClause = $"TOP {topN}";
+                // Only include ORDER BY when TOP is present (SQL Server requirement)
+                orderByClause = $"\norder by\n{orderBy}";
             }
         }
 
@@ -318,9 +321,7 @@ public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
             {5} ( {2} IS NOT NULL and {2} <> '' {7})
             group by
             {2}
-            {8}
-            order by
-            {6}
+            {8}{11}
             ) AS PivotValues
             FOR XML PATH(''), root('MyString'),type
             ).value('/MyString[1]','varchar(max)')
@@ -369,7 +370,8 @@ public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
             axisColumnWithoutAlias == null ? "" : $"AND  {axisColumnWithoutAlias} is not null",
             havingSqlIfAny,
             query.Axis != null ? "'joinDt'" : "''",
-            topXClause
+            topXClause,
+            orderByClause
         );
         return part1;
     }
