@@ -190,7 +190,7 @@ public sealed class SqliteQuerySyntaxHelper : QuerySyntaxHelper
     public override string GetScalarFunctionSql(MandatoryScalarFunctions function) =>
         function switch
         {
-            MandatoryScalarFunctions.GetTodaysDate => "date('now')",
+            MandatoryScalarFunctions.GetTodaysDate => "datetime('now')",  // Use datetime() to include time portion
             MandatoryScalarFunctions.GetGuid => "lower(hex(randomblob(16)))",  // SQLite doesn't have native UUID
             MandatoryScalarFunctions.Len => "LENGTH",
             _ => throw new ArgumentOutOfRangeException(nameof(function))

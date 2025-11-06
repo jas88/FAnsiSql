@@ -51,8 +51,10 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
     public override IEnumerable<DiscoveredColumn> DiscoverColumns(DiscoveredTable discoveredTable, IManagedConnection connection, string database)
     {
         var tableName = discoveredTable.GetRuntimeName();
+        var syntaxHelper = discoveredTable.Database.Server.GetQuerySyntaxHelper();
+        var wrappedTableName = syntaxHelper.EnsureWrapped(tableName);
 
-        using var cmd = discoveredTable.Database.Server.Helper.GetCommand($"PRAGMA table_info({tableName})", connection.Connection);
+        using var cmd = discoveredTable.Database.Server.Helper.GetCommand($"PRAGMA table_info({wrappedTableName})", connection.Connection);
         cmd.Transaction = connection.Transaction;
 
         using var r = cmd.ExecuteReader();
