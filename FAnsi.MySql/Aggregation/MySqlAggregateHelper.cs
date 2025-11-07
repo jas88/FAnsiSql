@@ -102,7 +102,7 @@ public sealed class MySqlAggregateHelper : AggregateHelper
             countAlias,
 
             //the entire query
-            string.Join(Environment.NewLine, query.Lines.Where(static c => c.LocationToInsert is >= QueryComponent.SELECT and <= QueryComponent.Having)),
+            string.Join(Environment.NewLine, query.Lines.Where(static c => c.LocationToInsert >= QueryComponent.SELECT && c.LocationToInsert <= QueryComponent.Having)),
             axisColumnAlias
         ).Trim();
 
@@ -167,8 +167,8 @@ public sealed class MySqlAggregateHelper : AggregateHelper
             //the from including all table joins and where but no calendar table join
             query.SyntaxHelper.Escape(GetDatePartOfColumn(query.Axis.AxisIncrement, axisColumnWithoutAlias)),
 
-            //the order by (should be count so that heavy populated columns come first)
-            string.Join(Environment.NewLine, query.Lines.Where(static c => c.LocationToInsert is >= QueryComponent.FROM and <= QueryComponent.WHERE).Select(x => query.SyntaxHelper.Escape(x.Text)))
+            //the FROM, WHERE, and HAVING clauses for proper aggregation (ORDER BY is handled by GetPivotPart1)
+            string.Join(Environment.NewLine, query.Lines.Where(static c => c.LocationToInsert >= QueryComponent.FROM && c.LocationToInsert <= QueryComponent.Having).Select(x => query.SyntaxHelper.Escape(x.Text)))
         );
     }
 
@@ -178,14 +178,22 @@ public sealed class MySqlAggregateHelper : AggregateHelper
 
         var joinAlias = nonPivotColumn.GetAliasFromText(query.SyntaxHelper);
 
-        // Get HAVING clause
-        var havingSqlIfAny = query.SyntaxHelper.Escape(string.Join(Environment.NewLine,
-            query.Lines.Where(static c => c.LocationToInsert == QueryComponent.Having)));
+        // Get HAVING clause - properly formatted
+        var havingLines = query.Lines.Where(static c => c.LocationToInsert == QueryComponent.Having).ToList();
+        var havingSqlIfAny = havingLines.Any() ?
+            query.SyntaxHelper.Escape(string.Join(Environment.NewLine, havingLines.Select(l => l.Text))) : "";
 
-        // Get LIMIT clause from TopX postfix
+        // Get ORDER BY clause for the final query (if specified), excluding TopX ORDER BY lines
+        var orderByLines = query.Lines.Where(static c => c.LocationToInsert == QueryComponent.OrderBy && c.Role != CustomLineRole.TopX).ToList();
+        var finalOrderBySql = orderByLines.Any() ?
+            query.SyntaxHelper.Escape(string.Join(Environment.NewLine, orderByLines.Select(l => l.Text))) : joinAlias;
+
+        // Get LIMIT clause from TopX postfix - this should NOT be used in the final query since it's handled in the CTE
         var topXLimitLine = query.Lines.SingleOrDefault(static c =>
             c.LocationToInsert == QueryComponent.Postfix && c.Role == CustomLineRole.TopX);
-        var topXLimitSqlIfAny = topXLimitLine != null ? query.SyntaxHelper.Escape(topXLimitLine.Text) : "";
+
+        // Note: For MySQL, LIMIT is handled in the CTE (GetPivotPart1), not in the final query
+        // This is because we need to limit the number of pivot columns generated dynamically
 
         return string.Format("""
 
@@ -205,7 +213,6 @@ public sealed class MySqlAggregateHelper : AggregateHelper
                              {4}
                              {5}
                              ORDER BY
-                             {4}
                              {6}
                              ');
 
@@ -218,11 +225,11 @@ public sealed class MySqlAggregateHelper : AggregateHelper
             nonPivotColumn,
 
             //everything inclusive of FROM but stopping before GROUP BY
-            query.SyntaxHelper.Escape(string.Join(Environment.NewLine, query.Lines.Where(static c => c.LocationToInsert is >= QueryComponent.FROM and < QueryComponent.GroupBy))),
+            query.SyntaxHelper.Escape(string.Join(Environment.NewLine, query.Lines.Where(static c => c.LocationToInsert >= QueryComponent.FROM && c.LocationToInsert < QueryComponent.GroupBy))),
 
             joinAlias,
-            havingSqlIfAny,     // HAVING comes after GROUP BY
-            topXLimitSqlIfAny   // LIMIT comes after ORDER BY
+            havingSqlIfAny,     // HAVING comes after GROUP BY if present
+            finalOrderBySql    // ORDER BY comes after HAVING
         );
     }
 
@@ -259,7 +266,7 @@ public sealed class MySqlAggregateHelper : AggregateHelper
             whereDateColumnNotNull += $"{axisColumnWithoutAlias} IS NOT NULL";
         }
 
-        // Work out how to order the pivot columns
+        // Work out how to order the pivot columns - this should NOT include LIMIT
         var orderBy = $"{countSqlWithoutAlias} desc";
 
         var topXOrderByLine =
@@ -274,6 +281,18 @@ public sealed class MySqlAggregateHelper : AggregateHelper
         var havingSqlIfAny = string.Join(Environment.NewLine,
             query.Lines.Where(static l => l.LocationToInsert == QueryComponent.Having).Select(static l => l.Text));
 
+        // Build the FROM and WHERE clauses first
+        var fromAndWhereClauses = string.Join(Environment.NewLine,
+            query.Lines.Where(static l =>
+                l.LocationToInsert >= QueryComponent.FROM && l.LocationToInsert <= QueryComponent.WHERE &&
+                l.Role != CustomLineRole.Axis));
+
+        // Add the WHERE clause for axis if present
+        if (!string.IsNullOrEmpty(whereDateColumnNotNull))
+        {
+            fromAndWhereClauses += Environment.NewLine + whereDateColumnNotNull;
+        }
+
         return string.Format("""
 
                              /* Get unique pivot values and build both column lists in a single query */
@@ -282,7 +301,6 @@ public sealed class MySqlAggregateHelper : AggregateHelper
                                  {1} as piv,
                                  ROW_NUMBER() OVER (ORDER BY {6}) as rn
                                  {3}
-                                 {4}
                                  GROUP BY
                                  {1}
                                  {7}
@@ -305,11 +323,8 @@ public sealed class MySqlAggregateHelper : AggregateHelper
             aggregateMethod,
             pivotSqlWithoutAlias,
             aggregateParameter,
-            string.Join(Environment.NewLine,
-                query.Lines.Where(static l =>
-                    l.LocationToInsert is >= QueryComponent.FROM and <= QueryComponent.WHERE &&
-                    l.Role != CustomLineRole.Axis)),
-            whereDateColumnNotNull,
+            fromAndWhereClauses,
+            // whereDateColumnNotNull is now included in fromAndWhereClauses above
             topXLimitSqlIfAny,
             orderBy,
             havingSqlIfAny

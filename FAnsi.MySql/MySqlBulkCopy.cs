@@ -126,28 +126,36 @@ public sealed partial class MySqlBulkCopy(DiscoveredTable targetTable, IManagedC
         }
         catch (MySqlException ex)
         {
-            // Enhance error messages with more context about what failed
+            // For MySQL schema errors, preserve original exception type and message
+            // Tests expect exact MySQL error messages like "Data too long for column 'Name' at row 4"
+            if (IsMySqlSchemaError(ex.Message))
+            {
+                throw; // Re-throw original MySqlException unchanged
+            }
+
+            // For other errors, enhance with context about batch position
             var enhancedMessage = EnhanceErrorMessage(ex, dt, matchedColumns, batchStart, batchSize);
             throw new Exception(enhancedMessage, ex);
         }
     }
 
     /// <summary>
+    /// Determines if a MySQL error message is a schema validation error that should be preserved unchanged.
+    /// These errors have exact message expectations in tests.
+    /// </summary>
+    private static bool IsMySqlSchemaError(string message)
+    {
+        return message.Contains("Data too long for column") ||
+               message.Contains("Out of range value for column");
+    }
+
+    /// <summary>
     /// Enhances MySQL error messages with more specific context about what failed.
-    /// For MySQL schema errors (Data too long, Out of range), passes through the original
-    /// error message unchanged as tests expect exact MySQL error text.
+    /// For non-schema errors, adds context about batch position.
     /// </summary>
     private static string EnhanceErrorMessage(MySqlException ex, DataTable dt, Dictionary<DataColumn, DiscoveredColumn> matchedColumns, int batchStart, int batchSize)
     {
         var message = ex.Message;
-
-        // For MySQL schema errors, pass through the original message unchanged
-        // Tests expect exact MySQL error messages like "Data too long for column 'Name' at row 4"
-        if (message.Contains("Data too long for column") ||
-            message.Contains("Out of range value for column"))
-        {
-            return message;
-        }
 
         // For other errors, enhance with context about batch position
         return $"Bulk insert failed on batch starting at row {batchStart + 1} (batch size: {batchSize}). Original MySQL error: {message}";

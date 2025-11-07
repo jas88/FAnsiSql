@@ -1,6 +1,7 @@
 using System;
 using System.Data;
 using System.Data.Common;
+using System.Threading;
 using FAnsi.Discovery;
 
 namespace FAnsi.Connections;
@@ -30,6 +31,11 @@ internal sealed class ServerPooledConnection : IDisposable
     /// The server helper for executing database-specific operations
     /// </summary>
     private readonly IDiscoveredServerHelper _serverHelper;
+
+    /// <summary>
+    /// Lock object for ensuring atomic validation of connection state
+    /// </summary>
+    private readonly Lock _validationLock = new();
 
     public ServerPooledConnection(IManagedConnection managedConnection, DatabaseType databaseType, IDiscoveredServerHelper serverHelper, string? initialDatabase = null)
     {
@@ -83,14 +89,51 @@ internal sealed class ServerPooledConnection : IDisposable
     }
 
     /// <summary>
-    /// Validates that the connection is still alive and safe to reuse
+    /// Validates that the connection is still alive and safe to reuse.
+    /// All validation checks are performed atomically within a lock to prevent race conditions.
     /// </summary>
     public bool IsValid()
     {
-        return ManagedConnection.Connection.State == ConnectionState.Open &&
-               ManagedConnection.Transaction == null &&
-               _serverHelper.IsConnectionAlive(ManagedConnection.Connection) &&
-               !_serverHelper.HasDanglingTransaction(ManagedConnection.Connection);
+        lock (_validationLock)
+        {
+            try
+            {
+                // Capture all validation data within the lock to ensure consistency
+                var connection = ManagedConnection?.Connection;
+                if (connection == null)
+                    return false;
+
+                // Check connection state first
+                var connectionState = connection.State;
+                if (connectionState != ConnectionState.Open)
+                    return false;
+
+                // Check for active transaction
+                var transaction = ManagedConnection?.Transaction;
+                if (transaction != null)
+                    return false;
+
+                // Perform database-specific health checks
+                if (!_serverHelper.IsConnectionAlive(connection))
+                    return false;
+
+                // Check for dangling transactions (database-specific check)
+                if (_serverHelper.HasDanglingTransaction(connection))
+                    return false;
+
+                // All checks passed - connection is valid
+                return true;
+            }
+            catch (Exception ex)
+            {
+                // Log validation failure for debugging purposes
+                // In production environments, you might want to use proper logging
+                System.Diagnostics.Debug.WriteLine($"Connection validation failed for {DatabaseType}: {ex.Message}");
+
+                // Any exception during validation means the connection is not valid
+                return false;
+            }
+        }
     }
 
     public void Dispose()
