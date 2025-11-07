@@ -314,15 +314,13 @@ public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
             SELECT
              ',' + QUOTENAME({2}) as [text()]
             FROM (
-            SELECT {10}
-             {2}
+            SELECT {10} {2}
             {3}
             {4}
             {5} ( {2} IS NOT NULL and {2} <> '' {7})
             group by
             {2}
-            {8}
-            {11}
+            {8}{11}
             ) AS PivotValues
             FOR XML PATH(''), root('MyString'),type
             ).value('/MyString[1]','varchar(max)')
