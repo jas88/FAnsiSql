@@ -324,4 +324,26 @@ public sealed class SqliteServerHelper : DiscoveredServerHelper
         // For SQLite, just return the DataSource since that's the database file
         return builder.TryGetValue("Data Source", out var dataSource) ? dataSource?.ToString() : null;
     }
+
+    /// <summary>
+    /// Changes the database in the connection string builder to point to a new database file.
+    /// </summary>
+    /// <param name="builder">The connection string builder to modify</param>
+    /// <param name="newDatabase">The new database file path</param>
+    /// <returns>The modified connection string builder</returns>
+    /// <remarks>
+    /// For SQLite, changing the database means changing the DataSource to a different file path.
+    /// </remarks>
+    public override DbConnectionStringBuilder ChangeDatabase(DbConnectionStringBuilder builder, string newDatabase)
+    {
+        if (builder is SqliteConnectionStringBuilder sqliteBuilder)
+        {
+            sqliteBuilder.DataSource = newDatabase;
+        }
+        else
+        {
+            builder["Data Source"] = newDatabase;
+        }
+        return builder;
+    }
 }
