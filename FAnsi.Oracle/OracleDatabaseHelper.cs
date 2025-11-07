@@ -18,10 +18,22 @@ public sealed class OracleDatabaseHelper : DiscoveredDatabaseHelper
 
     public override void DropDatabase(DiscoveredDatabase database)
     {
-        using var con = (OracleConnection)database.Server.GetConnection();
-        con.Open();
-        using var cmd = new OracleCommand($"DROP USER \"{database.GetRuntimeName()}\" CASCADE ", con);
-        cmd.ExecuteNonQuery();
+        var oracleHelper = OracleServerHelper.Instance;
+
+        oracleHelper.ExecuteWithRetry(() =>
+        {
+            using var con = (OracleConnection)database.Server.GetConnection();
+            con.UseHourOffsetForUnsupportedTimezone = true;
+
+            // Use enhanced connection opening with retry logic
+            oracleHelper.OpenConnectionWithRetry(con, validateServiceFirst: true);
+
+            using var cmd = new OracleCommand($"DROP USER \"{database.GetRuntimeName()}\" CASCADE", con);
+            cmd.CommandTimeout = DiscoveredServerHelper.CreateDatabaseTimeoutInSeconds;
+            cmd.ExecuteNonQuery();
+
+            return true;
+        });
     }
 
     public override Dictionary<string, string> DescribeDatabase(DbConnectionStringBuilder builder, string database) => throw new NotImplementedException();
@@ -49,6 +61,7 @@ public sealed class OracleDatabaseHelper : DiscoveredDatabaseHelper
         using (var cmd = new OracleCommand($"SELECT table_name FROM all_tables where owner='{database}'", (OracleConnection)connection))
         {
             cmd.Transaction = transaction as OracleTransaction;
+            cmd.CommandTimeout = 60; // Increased timeout for Docker environments
 
             using var r = cmd.ExecuteReader();
 
@@ -65,6 +78,7 @@ public sealed class OracleDatabaseHelper : DiscoveredDatabaseHelper
                    (OracleConnection)connection))
         {
             cmd.Transaction = transaction as OracleTransaction;
+            cmd.CommandTimeout = 60; // Increased timeout for Docker environments
             using var r = cmd.ExecuteReader();
 
             while (r.Read())
