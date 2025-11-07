@@ -111,7 +111,15 @@ public sealed class DiscoveredDatabase : IHasRuntimeName, IMightNotExist
     }
 
     /// <inheritdoc cref="ExpectTable"/>
-    public DiscoveredTableValuedFunction ExpectTableValuedFunction(string tableName, string? schema = null) => new(this, tableName, _querySyntaxHelper, schema);
+    public DiscoveredTableValuedFunction ExpectTableValuedFunction(string tableName, string? schema = null)
+    {
+        // PostgreSQL requires schema="public" instead of null for proper discovery
+        // Schema=null causes "relation does not exist" errors in information_schema queries
+        if (Server.DatabaseType == DatabaseType.PostgreSql && string.IsNullOrWhiteSpace(schema))
+            schema = "public";
+
+        return new DiscoveredTableValuedFunction(this, tableName, _querySyntaxHelper, schema);
+    }
 
     /// <summary>
     /// Connects to the database and returns a list of stored proceedures found as <see cref="DiscoveredStoredprocedure"/> objects
