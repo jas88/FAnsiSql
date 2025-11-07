@@ -611,6 +611,10 @@ public sealed class CrossPlatformTests : DatabaseTests
         if (type == DatabaseType.MicrosoftSQLServer)
             fieldsToAlter.Remove("Field1");
 
+        //SQLite doesn't support ALTER COLUMN at all - would need table recreation
+        if (type == DatabaseType.Sqlite)
+            fieldsToAlter.Clear();
+
         foreach (var fieldName in fieldsToAlter)
         {
 
