@@ -40,11 +40,30 @@ public sealed class MySqlDatabaseHelper : DiscoveredDatabaseHelper
         };
     }
 
-    protected override string GetCreateTableSqlLineForColumn(DatabaseColumnRequest col, string datatype, IQuerySyntaxHelper syntaxHelper) =>
-        //if it is not unicode then that's fine
-        col.TypeRequested?.Unicode != true ? base.GetCreateTableSqlLineForColumn(col, datatype, syntaxHelper) :
-            //MySql unicode is not a data type it's a character set/collation only
-            $"{syntaxHelper.EnsureWrapped(col.ColumnName)} {datatype} CHARACTER SET utf8mb4 {(col.Default != MandatoryScalarFunctions.None ? $"default {syntaxHelper.GetScalarFunctionSql(col.Default)}" : "")} COLLATE {col.Collation ?? "utf8mb4_bin"} {(col is { AllowNulls: true, IsPrimaryKey: false } ? " NULL" : " NOT NULL")} {(col.IsAutoIncrement ? syntaxHelper.GetAutoIncrementKeywordIfAny() : "")}";
+    protected override string GetCreateTableSqlLineForColumn(DatabaseColumnRequest col, string datatype, IQuerySyntaxHelper syntaxHelper)
+    {
+        // MySQL requires CHARACTER SET to be specified when using non-default collations
+        // Unicode columns use utf8mb4 character set
+        if (col.TypeRequested?.Unicode == true)
+        {
+            return $"{syntaxHelper.EnsureWrapped(col.ColumnName)} {datatype} CHARACTER SET utf8mb4 {(col.Default != MandatoryScalarFunctions.None ? $"default {syntaxHelper.GetScalarFunctionSql(col.Default)}" : "")} COLLATE {col.Collation ?? "utf8mb4_bin"} {(col is { AllowNulls: true, IsPrimaryKey: false } ? " NULL" : " NOT NULL")} {(col.IsAutoIncrement ? syntaxHelper.GetAutoIncrementKeywordIfAny() : "")}";
+        }
+
+        // Non-Unicode columns with explicit collations need CHARACTER SET specified
+        // Extract character set from collation (e.g., "latin1_german1_ci" -> "latin1")
+        if (!string.IsNullOrWhiteSpace(col.Collation))
+        {
+            var underscoreIndex = col.Collation.IndexOf('_');
+            if (underscoreIndex > 0)
+            {
+                var charset = col.Collation.Substring(0, underscoreIndex);
+                return $"{syntaxHelper.EnsureWrapped(col.ColumnName)} {datatype} CHARACTER SET {charset} {(col.Default != MandatoryScalarFunctions.None ? $"default {syntaxHelper.GetScalarFunctionSql(col.Default)}" : "")} COLLATE {col.Collation} {(col is { AllowNulls: true, IsPrimaryKey: false } ? " NULL" : " NOT NULL")} {(col.IsAutoIncrement ? syntaxHelper.GetAutoIncrementKeywordIfAny() : "")}";
+            }
+        }
+
+        // Default case - no special CHARACTER SET handling needed
+        return base.GetCreateTableSqlLineForColumn(col, datatype, syntaxHelper);
+    }
 
     public override DirectoryInfo Detach(DiscoveredDatabase database) => throw new NotImplementedException();
 
