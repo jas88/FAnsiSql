@@ -103,8 +103,8 @@ public abstract class DatabaseTests
     {
         var server = GetTestServer(type);
 
-        // For SQLite file-based databases, use the database name from the connection string
-        var databaseName = type == DatabaseType.Sqlite ? "FAnsiTests.db" : _testScratchDatabase;
+        // For SQLite file-based databases, extract database name from connection string
+        var databaseName = type == DatabaseType.Sqlite ? GetSqliteDatabaseName(TestConnectionStrings[type]) : _testScratchDatabase;
         var db = server.ExpectDatabase(databaseName);
 
         try
@@ -186,5 +186,28 @@ public abstract class DatabaseTests
             Assert.That(match, $"Couldn't find match for row:{string.Join(",", row1.ItemArray)}");
         }
 
+    }
+
+    private static string GetSqliteDatabaseName(string connectionString)
+    {
+        try
+        {
+            var builder = new Microsoft.Data.Sqlite.SqliteConnectionStringBuilder(connectionString);
+            var dataSource = builder.DataSource;
+
+            // Handle |DataDirectory| substitution
+            if (dataSource?.Contains("|DataDirectory|") == true)
+            {
+                var dataDirectory = AppDomain.CurrentDomain.GetData("DataDirectory") as string
+                    ?? TestContext.CurrentContext.TestDirectory;
+                return dataSource.Replace("|DataDirectory|", dataDirectory);
+            }
+
+            return dataSource ?? "FAnsiTests.db";
+        }
+        catch
+        {
+            return "FAnsiTests.db"; // Fallback
+        }
     }
 }
