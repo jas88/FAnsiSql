@@ -175,10 +175,9 @@ public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
             syntaxHelper.Escape(string.Join(Environment.NewLine, query.Lines.Where(static c => c.LocationToInsert < QueryComponent.SELECT))),
             syntaxHelper.Escape(GetDateAxisTableDeclaration(query.Axis!)),
 
-            //the entire select query up to the end of the group by (omitting any Top X)
+            //the entire select query up to the end of the group by (including Top X and ORDER BY when required)
             syntaxHelper.Escape(string.Join(Environment.NewLine, query.Lines.Where(static c =>
-                c.LocationToInsert is >= QueryComponent.SELECT and < QueryComponent.OrderBy &&
-                c.Role != CustomLineRole.TopX))),
+                c.LocationToInsert is >= QueryComponent.SELECT and < QueryComponent.OrderBy))),
 
             syntaxHelper.Escape(countAlias),
             syntaxHelper.Escape(pivotAlias),
@@ -235,10 +234,9 @@ public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
                 query.Lines.Where(static c => c.LocationToInsert < QueryComponent.SELECT))),
             syntaxHelper.Escape(nonPivotColumnAlias),
 
-            //the entire select query up to the end of the group by (omitting any Top X)
+            //the entire select query up to the end of the group by (including Top X and ORDER BY when required)
             syntaxHelper.Escape(string.Join(Environment.NewLine, query.Lines.Where(static c =>
-                c.LocationToInsert is >= QueryComponent.SELECT and < QueryComponent.OrderBy &&
-                c.Role != CustomLineRole.TopX))),
+                c.LocationToInsert is >= QueryComponent.SELECT and < QueryComponent.OrderBy))),
 
             syntaxHelper.Escape(countAlias),
             syntaxHelper.Escape(pivotAlias));
