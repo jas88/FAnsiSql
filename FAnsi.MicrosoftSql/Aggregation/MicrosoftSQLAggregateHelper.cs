@@ -311,17 +311,18 @@ public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
 
             /*Get distinct values of the PIVOT Column if you have columns with values T and F and Z this will produce [T],[F],[Z] and you will end up with a pivot against these values*/
             set @Columns = (
-            SELECT {10}
+            SELECT
              ',' + QUOTENAME({2}) as [text()]
             FROM (
-            {1}
+            SELECT {10}
              {2}
             {3}
             {4}
             {5} ( {2} IS NOT NULL and {2} <> '' {7})
             group by
             {2}
-            {8}{11}
+            {8}
+            {11}
             ) AS PivotValues
             FOR XML PATH(''), root('MyString'),type
             ).value('/MyString[1]','varchar(max)')

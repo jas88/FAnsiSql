@@ -76,16 +76,19 @@ public sealed class PostgreSqlTableHelper : DiscoveredTableHelper
 
     private static IEnumerable<string> ListPrimaryKeys(IManagedConnection con, DiscoveredTable table)
     {
+        // Modified query to handle non-existent tables gracefully (returns empty instead of throwing)
+        // Uses explicit JOINs with pg_namespace instead of ::regclass which throws on missing tables
         const string query = """
                              SELECT
                                          pg_attribute.attname,
                                          format_type(pg_attribute.atttypid, pg_attribute.atttypmod)
-                                         FROM pg_index, pg_class, pg_attribute
-                                         WHERE
-                                         pg_class.oid = @tableName::regclass AND
-                                             indrelid = pg_class.oid AND
-                                         pg_attribute.attrelid = pg_class.oid AND
-                                         pg_attribute.attnum = any(pg_index.indkey)
+                                         FROM pg_index
+                                         INNER JOIN pg_class ON pg_class.oid = indrelid
+                                         INNER JOIN pg_namespace ON pg_namespace.oid = pg_class.relnamespace
+                                         INNER JOIN pg_attribute ON pg_attribute.attrelid = pg_class.oid
+                                             AND pg_attribute.attnum = any(pg_index.indkey)
+                                         WHERE pg_class.relname = @tableName
+                                         AND pg_namespace.nspname = @schemaName
                                          AND indisprimary
                              """;
 
@@ -94,8 +97,13 @@ public sealed class PostgreSqlTableHelper : DiscoveredTableHelper
 
         var p = cmd.CreateParameter();
         p.ParameterName = "@tableName";
-        p.Value = table.GetFullyQualifiedName();
+        p.Value = table.GetRuntimeName();
         cmd.Parameters.Add(p);
+
+        var p2 = cmd.CreateParameter();
+        p2.ParameterName = "@schemaName";
+        p2.Value = string.IsNullOrWhiteSpace(table.Schema) ? PostgreSqlSyntaxHelper.DefaultPostgresSchema : table.Schema;
+        cmd.Parameters.Add(p2);
 
         using var r = cmd.ExecuteReader();
         while (r.Read())
