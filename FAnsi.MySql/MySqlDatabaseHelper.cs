@@ -42,33 +42,22 @@ public sealed class MySqlDatabaseHelper : DiscoveredDatabaseHelper
 
     protected override string GetCreateTableSqlLineForColumn(DatabaseColumnRequest col, string datatype, IQuerySyntaxHelper syntaxHelper)
     {
-        // Unicode columns use utf8mb4 character set - but only add CHARACTER SET when no explicit collation is provided
         // If user provides explicit collation, let MySQL handle the character set automatically
+        // Do not add CHARACTER SET as it can conflict with explicit collations
+        if (!string.IsNullOrWhiteSpace(col.Collation))
+        {
+            return $"{syntaxHelper.EnsureWrapped(col.ColumnName)} {datatype} {(col.Default != MandatoryScalarFunctions.None ? $"default {syntaxHelper.GetScalarFunctionSql(col.Default)}" : "")} COLLATE {col.Collation} {(col is { AllowNulls: true, IsPrimaryKey: false } ? " NULL" : " NOT NULL")} {(col.IsAutoIncrement ? syntaxHelper.GetAutoIncrementKeywordIfAny() : "")}";
+        }
+
+        // Unicode columns use utf8mb4 character set when no explicit collation is provided
         if (col.TypeRequested?.Unicode == true)
         {
-            // If no explicit collation, use utf8mb4 with default binary collation for MySQL 8.0+ compatibility
-            if (string.IsNullOrWhiteSpace(col.Collation))
-            {
-                return $"{syntaxHelper.EnsureWrapped(col.ColumnName)} {datatype} CHARACTER SET utf8mb4 {(col.Default != MandatoryScalarFunctions.None ? $"default {syntaxHelper.GetScalarFunctionSql(col.Default)}" : "")} COLLATE utf8mb4_bin {(col is { AllowNulls: true, IsPrimaryKey: false } ? " NULL" : " NOT NULL")} {(col.IsAutoIncrement ? syntaxHelper.GetAutoIncrementKeywordIfAny() : "")}";
-            }
-            else
-            {
-                // User provided explicit collation, let MySQL handle the character set automatically
-                return $"{syntaxHelper.EnsureWrapped(col.ColumnName)} {datatype} {(col.Default != MandatoryScalarFunctions.None ? $"default {syntaxHelper.GetScalarFunctionSql(col.Default)}" : "")} COLLATE {col.Collation} {(col is { AllowNulls: true, IsPrimaryKey: false } ? " NULL" : " NOT NULL")} {(col.IsAutoIncrement ? syntaxHelper.GetAutoIncrementKeywordIfAny() : "")}";
-            }
+            // Use utf8mb4 with default binary collation for MySQL 8.0+ compatibility
+            return $"{syntaxHelper.EnsureWrapped(col.ColumnName)} {datatype} CHARACTER SET utf8mb4 {(col.Default != MandatoryScalarFunctions.None ? $"default {syntaxHelper.GetScalarFunctionSql(col.Default)}" : "")} COLLATE utf8mb4_bin {(col is { AllowNulls: true, IsPrimaryKey: false } ? " NULL" : " NOT NULL")} {(col.IsAutoIncrement ? syntaxHelper.GetAutoIncrementKeywordIfAny() : "")}";
         }
 
-        // For non-Unicode columns, only add CHARACTER SET when we need to override MySQL defaults
-        // and no explicit collation is provided by the user
-        if (string.IsNullOrWhiteSpace(col.Collation))
-        {
-            // No explicit collation - use base class behavior which may add collation if needed
-            return base.GetCreateTableSqlLineForColumn(col, datatype, syntaxHelper);
-        }
-
-        // User provided explicit collation - let MySQL handle the character set automatically
-        // Do not force CHARACTER SET as this can cause conflicts with explicit collations
-        return $"{syntaxHelper.EnsureWrapped(col.ColumnName)} {datatype} {(col.Default != MandatoryScalarFunctions.None ? $"default {syntaxHelper.GetScalarFunctionSql(col.Default)}" : "")} COLLATE {col.Collation} {(col is { AllowNulls: true, IsPrimaryKey: false } ? " NULL" : " NOT NULL")} {(col.IsAutoIncrement ? syntaxHelper.GetAutoIncrementKeywordIfAny() : "")}";
+        // For non-Unicode columns without explicit collation, use base class behavior
+        return base.GetCreateTableSqlLineForColumn(col, datatype, syntaxHelper);
     }
 
     public override DirectoryInfo Detach(DiscoveredDatabase database) => throw new NotImplementedException();
