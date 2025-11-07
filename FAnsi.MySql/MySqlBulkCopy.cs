@@ -196,52 +196,84 @@ public sealed partial class MySqlBulkCopy(DiscoveredTable targetTable, IManagedC
 
         var normalizedType = sqlType.ToUpperInvariant().Split('(')[0].Trim();
 
-        return normalizedType switch
+        switch (normalizedType)
         {
             // Integer types
-            "TINYINT" => MySqlDbType.Byte,
-            "SMALLINT" => MySqlDbType.Int16,
-            "INT" or "INTEGER" => MySqlDbType.Int32,
-            "MEDIUMINT" => MySqlDbType.Int24,
-            "BIGINT" => MySqlDbType.Int64,
+            case "TINYINT":
+                return MySqlDbType.Byte;
+            case "SMALLINT":
+                return MySqlDbType.Int16;
+            case "INT":
+            case "INTEGER":
+                return MySqlDbType.Int32;
+            case "MEDIUMINT":
+                return MySqlDbType.Int24;
+            case "BIGINT":
+                return MySqlDbType.Int64;
 
             // Floating point types
-            "FLOAT" => MySqlDbType.Float,
-            "DOUBLE" => MySqlDbType.Double,
-            "DECIMAL" or "NUMERIC" => MySqlDbType.Decimal,
+            case "FLOAT":
+                return MySqlDbType.Float;
+            case "DOUBLE":
+                return MySqlDbType.Double;
+            case "DECIMAL":
+            case "NUMERIC":
+                return MySqlDbType.Decimal;
 
             // String types
-            "CHAR" => MySqlDbType.String,
-            "VARCHAR" => MySqlDbType.VarChar,
-            "TEXT" => MySqlDbType.Text,
-            "TINYTEXT" => MySqlDbType.TinyText,
-            "MEDIUMTEXT" => MySqlDbType.MediumText,
-            "LONGTEXT" => MySqlDbType.LongText,
+            case "CHAR":
+                return MySqlDbType.String;
+            case "VARCHAR":
+                return MySqlDbType.VarChar;
+            case "TEXT":
+                return MySqlDbType.Text;
+            case "TINYTEXT":
+                return MySqlDbType.TinyText;
+            case "MEDIUMTEXT":
+                return MySqlDbType.MediumText;
+            case "LONGTEXT":
+                return MySqlDbType.LongText;
 
             // Binary types
-            "BINARY" => MySqlDbType.Binary,
-            "VARBINARY" => MySqlDbType.VarBinary,
-            "BLOB" => MySqlDbType.Blob,
-            "TINYBLOB" => MySqlDbType.TinyBlob,
-            "MEDIUMBLOB" => MySqlDbType.MediumBlob,
-            "LONGBLOB" => MySqlDbType.LongBlob,
+            case "BINARY":
+                return MySqlDbType.Binary;
+            case "VARBINARY":
+                return MySqlDbType.VarBinary;
+            case "BLOB":
+                return MySqlDbType.Blob;
+            case "TINYBLOB":
+                return MySqlDbType.TinyBlob;
+            case "MEDIUMBLOB":
+                return MySqlDbType.MediumBlob;
+            case "LONGBLOB":
+                return MySqlDbType.LongBlob;
 
             // Date/Time types
-            "DATE" => MySqlDbType.Date,
-            "DATETIME" => MySqlDbType.DateTime,
-            "TIMESTAMP" => MySqlDbType.Timestamp,
-            "TIME" => MySqlDbType.Time,
-            "YEAR" => MySqlDbType.Year,
+            case "DATE":
+                return MySqlDbType.Date;
+            case "DATETIME":
+                return MySqlDbType.DateTime;
+            case "TIMESTAMP":
+                return MySqlDbType.Timestamp;
+            case "TIME":
+                return MySqlDbType.Time;
+            case "YEAR":
+                return MySqlDbType.Year;
 
             // Boolean/Bit
-            "BIT" or "BOOLEAN" => MySqlDbType.Bit,
+            case "BIT":
+            case "BOOLEAN":
+                return MySqlDbType.Bit;
 
             // Special types
-            "ENUM" or "SET" => MySqlDbType.VarChar,
+            case "ENUM":
+            case "SET":
+                return MySqlDbType.VarChar;
 
             // Default fallback
-            _ => MySqlDbType.VarChar
-        };
+            default:
+                return MySqlDbType.VarChar;
+        }
     }
 
     private void ThrowIfDisposed()
