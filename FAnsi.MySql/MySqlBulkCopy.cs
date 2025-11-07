@@ -134,62 +134,22 @@ public sealed partial class MySqlBulkCopy(DiscoveredTable targetTable, IManagedC
 
     /// <summary>
     /// Enhances MySQL error messages with more specific context about what failed.
+    /// For MySQL schema errors (Data too long, Out of range), passes through the original
+    /// error message unchanged as tests expect exact MySQL error text.
     /// </summary>
     private static string EnhanceErrorMessage(MySqlException ex, DataTable dt, Dictionary<DataColumn, DiscoveredColumn> matchedColumns, int batchStart, int batchSize)
     {
         var message = ex.Message;
 
-        // Try to provide more specific context for common MySQL errors
-        if (message.Contains("Data too long for column"))
+        // For MySQL schema errors, pass through the original message unchanged
+        // Tests expect exact MySQL error messages like "Data too long for column 'Name' at row 4"
+        if (message.Contains("Data too long for column") ||
+            message.Contains("Out of range value for column"))
         {
-            // Try to identify which column and row caused the issue
-            for (int rowIndex = 0; rowIndex < batchSize; rowIndex++)
-            {
-                var actualRow = batchStart + rowIndex;
-                if (actualRow >= dt.Rows.Count) break;
-
-                var dataRow = dt.Rows[actualRow];
-                foreach (var kvp in matchedColumns)
-                {
-                    var dataColumn = kvp.Key;
-                    var discoveredColumn = kvp.Value;
-                    var value = dataRow[dataColumn];
-
-                    if (value != null && value != DBNull.Value && value is string stringValue)
-                    {
-                        var maxLength = discoveredColumn.DataType?.GetLengthIfString();
-                        if (maxLength.HasValue && stringValue.Length > maxLength.Value)
-                        {
-                            return $"Bulk insert failed on data row {actualRow + 1} the complaint was about source column <<{dataColumn.ColumnName}>> which had value <<{stringValue}>> destination data type was <<{discoveredColumn.DataType?.SQLType}>>. Original MySQL error: {message}";
-                        }
-                    }
-                }
-            }
+            return message;
         }
 
-        if (message.Contains("Out of range value for column"))
-        {
-            // Try to identify numeric overflow issues
-            for (int rowIndex = 0; rowIndex < batchSize; rowIndex++)
-            {
-                var actualRow = batchStart + rowIndex;
-                if (actualRow >= dt.Rows.Count) break;
-
-                var dataRow = dt.Rows[actualRow];
-                foreach (var kvp in matchedColumns)
-                {
-                    var dataColumn = kvp.Key;
-                    var discoveredColumn = kvp.Value;
-                    var value = dataRow[dataColumn];
-
-                    if (value != null && value != DBNull.Value)
-                    {
-                        return $"Bulk insert failed on data row {actualRow + 1} the complaint was about source column <<{dataColumn.ColumnName}>> which had value <<{value}>> destination data type was <<{discoveredColumn.DataType?.SQLType}>>. Original MySQL error: {message}";
-                    }
-                }
-            }
-        }
-
+        // For other errors, enhance with context about batch position
         return $"Bulk insert failed on batch starting at row {batchStart + 1} (batch size: {batchSize}). Original MySQL error: {message}";
     }
 
