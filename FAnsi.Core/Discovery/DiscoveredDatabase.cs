@@ -102,6 +102,11 @@ public sealed class DiscoveredDatabase : IHasRuntimeName, IMightNotExist
         if (tableType == TableType.TableValuedFunction)
             return ExpectTableValuedFunction(tableName, schema);
 
+        // PostgreSQL requires schema="public" instead of null for proper discovery
+        // Schema=null causes "relation does not exist" errors in information_schema queries
+        if (Server.DatabaseType == DatabaseType.PostgreSql && string.IsNullOrWhiteSpace(schema))
+            schema = "public";
+
         return new DiscoveredTable(this, tableName, _querySyntaxHelper, schema, tableType);
     }
 
