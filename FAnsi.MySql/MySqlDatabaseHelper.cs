@@ -40,26 +40,11 @@ public sealed class MySqlDatabaseHelper : DiscoveredDatabaseHelper
         };
     }
 
-    protected override string GetCreateTableSqlLineForColumn(DatabaseColumnRequest col, string datatype, IQuerySyntaxHelper syntaxHelper)
-    {
-        // For Unicode string columns, specify character set and collation
-        if (col.TypeRequested?.Unicode == true)
-        {
-            return $"{syntaxHelper.EnsureWrapped(col.ColumnName)} {datatype} CHARACTER SET utf8mb4 {(col.Default != MandatoryScalarFunctions.None ? $"default {syntaxHelper.GetScalarFunctionSql(col.Default)}" : "")} COLLATE {col.Collation ?? "utf8mb4_bin"} {(col is { AllowNulls: true, IsPrimaryKey: false } ? " NULL" : " NOT NULL")} {(col.IsAutoIncrement ? syntaxHelper.GetAutoIncrementKeywordIfAny() : "")}";
-        }
-
-        // For non-Unicode string columns in MySQL 8.0+, add explicit collation to avoid
-        // "Illegal mix of collations" errors when comparing with user variables
-        if (datatype.Contains("VARCHAR", StringComparison.OrdinalIgnoreCase) ||
-            datatype.Contains("CHAR", StringComparison.OrdinalIgnoreCase) ||
-            datatype.Contains("TEXT", StringComparison.OrdinalIgnoreCase))
-        {
-            return $"{syntaxHelper.EnsureWrapped(col.ColumnName)} {datatype} CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci {(col.Default != MandatoryScalarFunctions.None ? $"default {syntaxHelper.GetScalarFunctionSql(col.Default)}" : "")} {(col is { AllowNulls: true, IsPrimaryKey: false } ? " NULL" : " NOT NULL")} {(col.IsAutoIncrement ? syntaxHelper.GetAutoIncrementKeywordIfAny() : "")}";
-        }
-
-        // For non-string types, use base implementation
-        return base.GetCreateTableSqlLineForColumn(col, datatype, syntaxHelper);
-    }
+    protected override string GetCreateTableSqlLineForColumn(DatabaseColumnRequest col, string datatype, IQuerySyntaxHelper syntaxHelper) =>
+        //if it is not unicode then that's fine
+        col.TypeRequested?.Unicode != true ? base.GetCreateTableSqlLineForColumn(col, datatype, syntaxHelper) :
+            //MySql unicode is not a data type it's a character set/collation only
+            $"{syntaxHelper.EnsureWrapped(col.ColumnName)} {datatype} CHARACTER SET utf8mb4 {(col.Default != MandatoryScalarFunctions.None ? $"default {syntaxHelper.GetScalarFunctionSql(col.Default)}" : "")} COLLATE {col.Collation ?? "utf8mb4_bin"} {(col is { AllowNulls: true, IsPrimaryKey: false } ? " NULL" : " NOT NULL")} {(col.IsAutoIncrement ? syntaxHelper.GetAutoIncrementKeywordIfAny() : "")}";
 
     public override DirectoryInfo Detach(DiscoveredDatabase database) => throw new NotImplementedException();
 
