@@ -288,12 +288,12 @@ public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
         var orderByClause = "";
         if (query.TopXPostfix != null)
         {
-            // Convert "LIMIT n" to "TOP n" for MSSQL
+            // Convert "LIMIT n" to "TOP n" for MSSQL with proper spacing
             var limitText = query.TopXPostfix.Text.Trim();
             if (limitText.StartsWith("LIMIT ", StringComparison.OrdinalIgnoreCase))
             {
                 var topN = limitText.Substring(6).Trim(); // Extract number after "LIMIT "
-                topXClause = $"TOP {topN}";
+                topXClause = $" TOP {topN} "; // Add spaces for proper inline formatting
                 // Only include ORDER BY when TOP is present (SQL Server requirement)
                 orderByClause = $"\norder by\n{orderBy}";
             }
@@ -314,8 +314,7 @@ public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
             SELECT
              ',' + QUOTENAME({2}) as [text()]
             FROM (
-            SELECT {10}
-             {2}
+            SELECT{12} {2}
             {3}
             {4}
             {5} ( {2} IS NOT NULL and {2} <> '' {7})
