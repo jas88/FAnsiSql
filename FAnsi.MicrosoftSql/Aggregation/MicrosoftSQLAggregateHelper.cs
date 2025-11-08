@@ -175,9 +175,10 @@ public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
             syntaxHelper.Escape(string.Join(Environment.NewLine, query.Lines.Where(static c => c.LocationToInsert < QueryComponent.SELECT))),
             syntaxHelper.Escape(GetDateAxisTableDeclaration(query.Axis!)),
 
-            //the entire select query up to the end of the group by (including Top X and ORDER BY when required)
+            //the entire select query up to the end of the group by (omitting any Top X)
             syntaxHelper.Escape(string.Join(Environment.NewLine, query.Lines.Where(static c =>
-                c.LocationToInsert is >= QueryComponent.SELECT and < QueryComponent.OrderBy))),
+                c.LocationToInsert is >= QueryComponent.SELECT and < QueryComponent.OrderBy &&
+                c.Role != CustomLineRole.TopX))),
 
             syntaxHelper.Escape(countAlias),
             syntaxHelper.Escape(pivotAlias),
@@ -234,9 +235,10 @@ public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
                 query.Lines.Where(static c => c.LocationToInsert < QueryComponent.SELECT))),
             syntaxHelper.Escape(nonPivotColumnAlias),
 
-            //the entire select query up to the end of the group by (including Top X and ORDER BY when required)
+            //the entire select query up to the end of the group by (omitting any Top X)
             syntaxHelper.Escape(string.Join(Environment.NewLine, query.Lines.Where(static c =>
-                c.LocationToInsert is >= QueryComponent.SELECT and < QueryComponent.OrderBy))),
+                c.LocationToInsert is >= QueryComponent.SELECT and < QueryComponent.OrderBy &&
+                c.Role != CustomLineRole.TopX))),
 
             syntaxHelper.Escape(countAlias),
             syntaxHelper.Escape(pivotAlias));
@@ -312,13 +314,15 @@ public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
             SELECT
              ',' + QUOTENAME({2}) as [text()]
             FROM (
-            SELECT {10} {2}
+            SELECT {10}
+             {2}
             {3}
             {4}
             {5} ( {2} IS NOT NULL and {2} <> '' {7})
             group by
             {2}
-            {8}{11}
+            {8}
+            {11}
             ) AS PivotValues
             FOR XML PATH(''), root('MyString'),type
             ).value('/MyString[1]','varchar(max)')
