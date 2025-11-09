@@ -66,7 +66,7 @@ public abstract class AggregateHelper : IAggregateHelper
             throw new ArgumentNullException(nameof(axisColumnAlias));
 
         var axisGroupBy = query.AxisGroupBy;
-        var axisColumnWithoutAlias = query.AxisSelect!.GetTextWithoutAlias(query.SyntaxHelper!);
+        var axisColumnWithoutAlias = query.AxisSelect.GetTextWithoutAlias(query.SyntaxHelper);
 
         var axisColumnEndedWithComma = query.AxisSelect.Text.EndsWith(',');
         query.AxisSelect.Text =

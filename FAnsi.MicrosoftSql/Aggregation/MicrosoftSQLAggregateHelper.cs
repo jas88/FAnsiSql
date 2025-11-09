@@ -298,6 +298,11 @@ public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
         if (query.TopXOrderBy != null)
             orderBy = query.TopXOrderBy.Text;
 
+        // Extract TopX SELECT clause for SQL Server (e.g., "TOP 2")
+        var topXLimitLine =
+            query.Lines.SingleOrDefault(static c => c.LocationToInsert == QueryComponent.SELECT && c.Role == CustomLineRole.TopX);
+        var topXSelectSqlIfAny = topXLimitLine != null ? $" {topXLimitLine.Text}" : "";
+
         var havingSqlIfAny = string.Join(Environment.NewLine,
             query.Lines.Where(static l => l.LocationToInsert == QueryComponent.Having).Select(static l => l.Text));
 
@@ -310,7 +315,7 @@ public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
 
             /*Get distinct values of the PIVOT Column if you have columns with values T and F and Z this will produce [T],[F],[Z] and you will end up with a pivot against these values*/
             set @Columns = (
-            {1}
+            {1}{10}
              ',' + QUOTENAME({2}) as [text()]
             {3}
             {4}
@@ -366,7 +371,8 @@ public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
             orderBy,
             axisColumnWithoutAlias == null ? "" : $"AND  {axisColumnWithoutAlias} is not null",
             havingSqlIfAny,
-            query.Axis != null ? "'joinDt'" : "''"
+            query.Axis != null ? "'joinDt'" : "''",
+            topXSelectSqlIfAny
         );
         return part1;
     }
