@@ -235,11 +235,11 @@ public sealed class MySqlAggregateHelper : AggregateHelper
 
     /// <summary>
     /// Returns the section of the PIVOT which identifies unique values.
-    /// For MySQL 8.0+ this uses a CTE instead of a temporary table and builds dynamic CASE statements.
+    /// Uses a query-first approach with SELECT DISTINCT to get pivot values, then builds dynamic CASE statements.
+    /// This replaces the complex CTE implementation with a simpler, more reliable approach.
     ///
-    /// IMPORTANT: When using TOP X (LIMIT), the LIMIT clause must be placed at the CTE level
-    /// AFTER the GROUP BY and HAVING clauses, NOT inside the ROW_NUMBER() OVER() window function.
-    /// MySQL does not allow LIMIT inside window function OVER() clauses (GitHub Issue #38).
+    /// IMPORTANT: When using TOP X (LIMIT), the LIMIT clause is applied to the SELECT DISTINCT subquery
+    /// to limit the number of pivot columns generated dynamically.
     /// </summary>
     private static string GetPivotPart1(AggregateCustomLineCollection query)
     {
@@ -257,15 +257,6 @@ public sealed class MySqlAggregateHelper : AggregateHelper
         if (aggregateParameter.Equals("*"))
             aggregateParameter = "1";
 
-        // If there is an axis, only pull pivot values where the values appear in that axis range
-        var whereDateColumnNotNull = "";
-        if (query.AxisSelect != null)
-        {
-            var axisColumnWithoutAlias = query.AxisSelect.GetTextWithoutAlias(query.SyntaxHelper);
-            whereDateColumnNotNull += query.Lines.Any(static l => l.LocationToInsert == QueryComponent.WHERE) ? "AND " : "WHERE ";
-            whereDateColumnNotNull += $"{axisColumnWithoutAlias} IS NOT NULL";
-        }
-
         // Work out how to order the pivot columns - this should NOT include LIMIT
         var orderBy = $"{countSqlWithoutAlias} desc";
 
@@ -281,53 +272,51 @@ public sealed class MySqlAggregateHelper : AggregateHelper
         var havingSqlIfAny = string.Join(Environment.NewLine,
             query.Lines.Where(static l => l.LocationToInsert == QueryComponent.Having).Select(static l => l.Text));
 
-        // Build the FROM and WHERE clauses first
-        var fromAndWhereClauses = string.Join(Environment.NewLine,
+        // Build the FROM, WHERE, and HAVING clauses for the subquery
+        var fromClauses = string.Join(Environment.NewLine,
             query.Lines.Where(static l =>
                 l.LocationToInsert >= QueryComponent.FROM && l.LocationToInsert <= QueryComponent.WHERE &&
                 l.Role != CustomLineRole.Axis));
 
-        // Add the WHERE clause for axis if present
-        if (!string.IsNullOrEmpty(whereDateColumnNotNull))
+        // Add WHERE clause for axis if present
+        if (query.AxisSelect != null)
         {
-            fromAndWhereClauses += Environment.NewLine + whereDateColumnNotNull;
+            var axisColumnWithoutAlias = query.AxisSelect.GetTextWithoutAlias(query.SyntaxHelper);
+            var axisWhereClause = query.Lines.Any(static l => l.LocationToInsert == QueryComponent.WHERE) ?
+                $"AND {axisColumnWithoutAlias} IS NOT NULL" :
+                $"WHERE {axisColumnWithoutAlias} IS NOT NULL";
+            fromClauses += Environment.NewLine + axisWhereClause;
         }
+
+        // Build the complete SELECT DISTINCT subquery to get pivot values
+        var pivotValuesSubquery = $"""
+            SELECT DISTINCT {pivotSqlWithoutAlias} as piv
+            {fromClauses}
+            {(!string.IsNullOrEmpty(havingSqlIfAny) ? havingSqlIfAny : "")}
+            ORDER BY {orderBy}
+            {topXLimitSqlIfAny}
+            """;
 
         return string.Format("""
 
-                             /* Get unique pivot values and build both column lists in a single query */
-                             WITH pivotValues AS (
-                                 SELECT
-                                 {1} as piv,
-                                 ROW_NUMBER() OVER (ORDER BY {6}) as rn
-                                 {3}
-                                 GROUP BY
-                                 {1}
-                                 {7}
-                                 ORDER BY {6}
-                                 {5}
-                             )
+                             /* Query-first approach: Get distinct pivot values and build column lists */
                              SELECT
                                GROUP_CONCAT(
                                  CONCAT(
                                    '{0}(CASE WHEN {1} = ', QUOTE(piv), ' THEN {2} ELSE NULL END) AS `', piv,'`'
-                                 ) ORDER BY rn
+                                 ) ORDER BY piv
                                ),
                                GROUP_CONCAT(
-                                 CONCAT('dataset.`', piv,'`') ORDER BY rn
+                                 CONCAT('dataset.`', piv,'`') ORDER BY piv
                                )
                              INTO @columnsSelectCases, @columnsSelectFromDataset
-                             FROM pivotValues;
+                             FROM ({3}) AS distinctPivotValues;
 
                              """,
             aggregateMethod,
             pivotSqlWithoutAlias,
             aggregateParameter,
-            fromAndWhereClauses,
-            // whereDateColumnNotNull is now included in fromAndWhereClauses above
-            topXLimitSqlIfAny,
-            orderBy,
-            havingSqlIfAny
+            pivotValuesSubquery
         );
     }
 
