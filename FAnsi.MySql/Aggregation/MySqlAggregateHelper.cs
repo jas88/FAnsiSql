@@ -288,12 +288,30 @@ public sealed class MySqlAggregateHelper : AggregateHelper
             fromClauses += Environment.NewLine + axisWhereClause;
         }
 
-        // Build the complete SELECT DISTINCT subquery to get pivot values
-        var pivotValuesSubquery = $"""
-            SELECT DISTINCT {pivotSqlWithoutAlias} as piv
+        // Determine if we need aggregation (HAVING clause or aggregate functions in ORDER BY)
+        // MySQL's ONLY_FULL_GROUP_BY mode requires GROUP BY when using aggregates in HAVING or ORDER BY
+        var needsAggregation = !string.IsNullOrEmpty(havingSqlIfAny) ||
+                               orderBy.Contains("count(", StringComparison.OrdinalIgnoreCase) ||
+                               orderBy.Contains("sum(", StringComparison.OrdinalIgnoreCase) ||
+                               orderBy.Contains("avg(", StringComparison.OrdinalIgnoreCase) ||
+                               orderBy.Contains("max(", StringComparison.OrdinalIgnoreCase) ||
+                               orderBy.Contains("min(", StringComparison.OrdinalIgnoreCase);
+
+        // Build the complete subquery to get pivot values
+        // Use GROUP BY when aggregation is needed, otherwise use SELECT DISTINCT
+        var pivotValuesSubquery = needsAggregation
+            ? $"""
+            SELECT {pivotSqlWithoutAlias} as piv, {countSqlWithoutAlias} as agg_count
             {fromClauses}
+            GROUP BY {pivotSqlWithoutAlias}
             {(!string.IsNullOrEmpty(havingSqlIfAny) ? havingSqlIfAny : "")}
             ORDER BY {orderBy}
+            {topXLimitSqlIfAny}
+            """
+            : $"""
+            SELECT DISTINCT {pivotSqlWithoutAlias} as piv
+            {fromClauses}
+            ORDER BY {pivotSqlWithoutAlias}
             {topXLimitSqlIfAny}
             """;
 
