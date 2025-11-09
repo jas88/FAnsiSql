@@ -77,6 +77,12 @@ public sealed class MicrosoftQuerySyntaxHelper : QuerySyntaxHelper
 
     public override bool SupportsEmbeddedParameters() => true;
 
+    /// <summary>
+    /// SQL Server supports Unicode characters in identifiers, so we override to be more permissive
+    /// Only block characters that are truly illegal in SQL Server identifiers
+    /// </summary>
+    public override char[] IllegalNameChars { get; } = ['\0', '\'', '"'];
+
     public override string EnsureWrappedImpl(string databaseOrTableName) => $"[{GetRuntimeNameWithDoubledClosingSquareBrackets(databaseOrTableName)}]";
 
 

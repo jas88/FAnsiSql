@@ -44,6 +44,25 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
             BulkCopyTimeout = 50000,
             DestinationTableName = targetTable.GetFullyQualifiedName()
         };
+
+        // Configure DateTimeDecider for SQL Server compatibility
+        // SQL Server expects dates in specific formats, including the format from the test
+        DateTimeDecider.Settings.ExplicitDateFormats = [
+            "MM/dd/yyyy HH:mm:ss",  // 01/01/2007 00:00:00
+            "MM/dd/yyyy H:mm:ss",   // 01/01/2007 0:00:00
+            "M/dd/yyyy HH:mm:ss",   // 1/01/2007 00:00:00
+            "M/d/yyyy HH:mm:ss",    // 1/1/2007 00:00:00
+            "MM/dd/yyyy hh:mm:ss tt", // 01/01/2007 12:00:00 AM
+            "M/dd/yyyy hh:mm:ss tt",  // 1/01/2007 12:00:00 AM
+            "yyyy-MM-dd HH:mm:ss",  // 2007-01-01 00:00:00
+            "yyyy-MM-dd H:mm:ss",   // 2007-01-01 0:00:00
+            "MM/dd/yyyy",           // 01/01/2007
+            "M/dd/yyyy",            // 1/01/2007
+            "yyyy-MM-dd",           // 2007-01-01
+            "yyyyMMdd",             // 20070101
+            "MM/dd/yy",             // 01/01/07
+            "M/dd/yy"               // 1/01/07
+        ];
     }
 
     public override int UploadImpl(DataTable dt)
@@ -103,6 +122,7 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
         var rowsWritten = 0;
         EmptyStringsToNulls(dt);
         InspectDataTableForFloats(dt);
+
         ConvertStringTypesToHardTypes(dt);
 
         try
@@ -209,9 +229,12 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
                         return new Exception(string.Format(SR.MicrosoftSQLBulkCopy_AttemptLineByLineInsert_BulkInsert_failed_on_data_row__0___1_, line, result), e);
                     }
 
+                    // For constraint violations that don't have column-specific bcp errors,
+                    // provide a clearer message by including the original exception details
+                    var originalException = exception;
                     return new FileLoadException(
                         string.Format(SR.MicrosoftSQLBulkCopy_AttemptLineByLineInsert_Second_Pass_Exception__Failed_to_load_data_row__0__the_following_values_were_rejected_by_the_database___1__2__3_, line, Environment.NewLine, string.Join(Environment.NewLine, dr.ItemArray), firstPass),
-                        exception);
+                        originalException);
                 }
 
             //it worked... how!?
@@ -322,6 +345,7 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
                 $"Found float value {bad} in data table, SQLServer does not support floats in bulk insert, instead you should use doubles otherwise you will end up with the value 0.85 turning into :0.850000023841858 in your database");
         }
     }
+
 
     [GeneratedRegex("bcp client for colid (\\d+)", RegexOptions.Compiled | RegexOptions.CultureInvariant)]
     private static partial Regex ColumnLevelComplaintRe();

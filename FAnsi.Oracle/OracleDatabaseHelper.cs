@@ -18,22 +18,11 @@ public sealed class OracleDatabaseHelper : DiscoveredDatabaseHelper
 
     public override void DropDatabase(DiscoveredDatabase database)
     {
-        var oracleHelper = OracleServerHelper.Instance;
-
-        oracleHelper.ExecuteWithRetry(() =>
-        {
-            using var con = (OracleConnection)database.Server.GetConnection();
-            con.UseHourOffsetForUnsupportedTimezone = true;
-
-            // Use enhanced connection opening with retry logic
-            oracleHelper.OpenConnectionWithRetry(con, validateServiceFirst: true);
-
-            using var cmd = new OracleCommand($"DROP USER \"{database.GetRuntimeName()}\" CASCADE", con);
-            cmd.CommandTimeout = DiscoveredServerHelper.CreateDatabaseTimeoutInSeconds;
-            cmd.ExecuteNonQuery();
-
-            return true;
-        });
+        using var con = (OracleConnection)database.Server.GetConnection();
+        con.UseHourOffsetForUnsupportedTimezone = true;
+        con.Open();
+        using var cmd = new OracleCommand($"DROP USER \"{database.GetRuntimeName()}\" CASCADE ", con);
+        cmd.ExecuteNonQuery();
     }
 
     public override Dictionary<string, string> DescribeDatabase(DbConnectionStringBuilder builder, string database) => throw new NotImplementedException();

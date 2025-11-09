@@ -90,8 +90,17 @@ public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
 
     protected override string BuildAxisAggregate(AggregateCustomLineCollection query)
     {
-        var countAlias = query.CountSelect!.GetAliasFromText(query.SyntaxHelper)!;
-        var axisColumnAlias = query.AxisSelect!.GetAliasFromText(query.SyntaxHelper) ?? "joinDt";
+        if (query.CountSelect == null)
+            throw new ArgumentNullException(nameof(query.CountSelect), "CountSelect cannot be null in BuildAxisAggregate");
+
+        var countAlias = query.CountSelect.GetAliasFromText(query.SyntaxHelper);
+        if (string.IsNullOrEmpty(countAlias))
+            throw new InvalidOperationException("CountSelect must have a valid alias");
+
+        if (query.AxisSelect == null)
+            throw new ArgumentNullException(nameof(query.AxisSelect), "AxisSelect cannot be null in BuildAxisAggregate");
+
+        var axisColumnAlias = query.AxisSelect.GetAliasFromText(query.SyntaxHelper) ?? "joinDt";
 
         WrapAxisColumnWithDatePartFunction(query, axisColumnAlias);
 
@@ -117,9 +126,9 @@ public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
             """
             ,
             string.Join(Environment.NewLine, query.Lines.Where(static c => c.LocationToInsert < QueryComponent.SELECT)),
-            GetDateAxisTableDeclaration(query.Axis!),
+            GetDateAxisTableDeclaration(query.Axis ?? throw new ArgumentNullException(nameof(query.Axis), "Axis cannot be null in BuildAxisAggregate")),
 
-            GetDatePartOfColumn(query.Axis!.AxisIncrement, "axis.dt"),
+            GetDatePartOfColumn((query.Axis ?? throw new ArgumentNullException(nameof(query.Axis), "Axis cannot be null in BuildAxisAggregate")).AxisIncrement, "axis.dt"),
             countAlias,
 
             //the entire query
@@ -173,7 +182,7 @@ public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
 
                                   """,
             syntaxHelper.Escape(string.Join(Environment.NewLine, query.Lines.Where(static c => c.LocationToInsert < QueryComponent.SELECT))),
-            syntaxHelper.Escape(GetDateAxisTableDeclaration(query.Axis!)),
+            syntaxHelper.Escape(GetDateAxisTableDeclaration(query.Axis ?? throw new ArgumentNullException(nameof(query.Axis), "Axis cannot be null in BuildPivotAndAxisAggregate"))),
 
             //the entire select query up to the end of the group by (omitting any Top X)
             syntaxHelper.Escape(string.Join(Environment.NewLine, query.Lines.Where(static c =>
@@ -182,7 +191,7 @@ public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
 
             syntaxHelper.Escape(countAlias),
             syntaxHelper.Escape(pivotAlias),
-            syntaxHelper.Escape(GetDatePartOfColumn(query.Axis!.AxisIncrement, "axis.dt")),
+            syntaxHelper.Escape(GetDatePartOfColumn((query.Axis ?? throw new ArgumentNullException(nameof(query.Axis), "Axis cannot be null in BuildPivotAndAxisAggregate")).AxisIncrement, "axis.dt")),
             axisColumnAlias
         );
 
@@ -251,16 +260,22 @@ public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
         var syntaxHelper = query.SyntaxHelper;
 
         //find the pivot column e.g. 'hb_extract AS Healthboard'
-        var pivotSelectLine = query.PivotSelect!;
+        var pivotSelectLine = query.PivotSelect ?? throw new ArgumentNullException(nameof(query.PivotSelect), "PivotSelect cannot be null in GetPivotPart1");
         var pivotSqlWithoutAlias = pivotSelectLine.GetTextWithoutAlias(syntaxHelper);
-        pivotAlias = pivotSelectLine.GetAliasFromText(syntaxHelper)!;
+        pivotAlias = pivotSelectLine.GetAliasFromText(syntaxHelper) ?? string.Empty;
 
         //ensure it has an RHS
         if (string.IsNullOrWhiteSpace(pivotAlias))
             pivotAlias = syntaxHelper.GetRuntimeName(pivotSqlWithoutAlias);
 
-        var countSqlWithoutAlias = query.CountSelect!.GetTextWithoutAlias(syntaxHelper);
-        countAlias = query.CountSelect.GetAliasFromText(syntaxHelper)!;
+        if (query.CountSelect == null)
+            throw new ArgumentNullException(nameof(query.CountSelect), "CountSelect cannot be null in GetPivotPart1");
+
+        var countSqlWithoutAlias = query.CountSelect.GetTextWithoutAlias(syntaxHelper);
+        countAlias = query.CountSelect.GetAliasFromText(syntaxHelper) ?? string.Empty;
+
+        if (string.IsNullOrEmpty(countAlias))
+            throw new InvalidOperationException("CountSelect must have a valid alias");
 
         var axisColumnWithoutAlias = query.AxisSelect?.GetTextWithoutAlias(query.SyntaxHelper);
         axisColumnAlias = query.AxisSelect?.GetAliasFromText(query.SyntaxHelper) ?? "joinDt";
@@ -283,22 +298,6 @@ public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
         if (query.TopXOrderBy != null)
             orderBy = query.TopXOrderBy.Text;
 
-        // Extract TopX LIMIT clause and convert to MSSQL TOP syntax
-        var topXClause = "";
-        var orderByClause = "";
-        if (query.TopXPostfix != null)
-        {
-            // Convert "LIMIT n" to "TOP n" for MSSQL with proper spacing
-            var limitText = query.TopXPostfix.Text.Trim();
-            if (limitText.StartsWith("LIMIT ", StringComparison.OrdinalIgnoreCase))
-            {
-                var topN = limitText.Substring(6).Trim(); // Extract number after "LIMIT "
-                topXClause = $" TOP {topN} "; // Add spaces for proper inline formatting
-                // Only include ORDER BY when TOP is present (SQL Server requirement)
-                orderByClause = $"\norder by\n{orderBy}";
-            }
-        }
-
         var havingSqlIfAny = string.Join(Environment.NewLine,
             query.Lines.Where(static l => l.LocationToInsert == QueryComponent.Having).Select(static l => l.Text));
 
@@ -311,18 +310,16 @@ public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
 
             /*Get distinct values of the PIVOT Column if you have columns with values T and F and Z this will produce [T],[F],[Z] and you will end up with a pivot against these values*/
             set @Columns = (
-            SELECT
+            {1}
              ',' + QUOTENAME({2}) as [text()]
-            FROM (
-            SELECT{12} {2}
             {3}
             {4}
             {5} ( {2} IS NOT NULL and {2} <> '' {7})
             group by
             {2}
             {8}
-            {11}
-            ) AS PivotValues
+            order by
+            {6}
             FOR XML PATH(''), root('MyString'),type
             ).value('/MyString[1]','varchar(max)')
 
@@ -369,9 +366,7 @@ public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
             orderBy,
             axisColumnWithoutAlias == null ? "" : $"AND  {axisColumnWithoutAlias} is not null",
             havingSqlIfAny,
-            query.Axis != null ? "'joinDt'" : "''",
-            topXClause,
-            orderByClause
+            query.Axis != null ? "'joinDt'" : "''"
         );
         return part1;
     }
