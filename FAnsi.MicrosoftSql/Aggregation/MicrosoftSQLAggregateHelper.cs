@@ -298,10 +298,26 @@ public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
         if (query.TopXOrderBy != null)
             orderBy = query.TopXOrderBy.Text;
 
-        // Extract TopX SELECT clause for SQL Server (e.g., "TOP 2")
-        var topXLimitLine =
-            query.Lines.SingleOrDefault(static c => c.LocationToInsert == QueryComponent.SELECT && c.Role == CustomLineRole.TopX);
-        var topXSelectSqlIfAny = topXLimitLine != null ? $" {topXLimitLine.Text}" : "";
+        // Extract TopX - SQL Server uses TOP in SELECT, but tests may use LIMIT in Postfix
+        // Check SELECT first (native SQL Server syntax), then Postfix (for converted syntax)
+        var topXSelectLine = query.Lines.SingleOrDefault(static c => c.LocationToInsert == QueryComponent.SELECT && c.Role == CustomLineRole.TopX);
+        var topXPostfixLine = query.Lines.SingleOrDefault(static c => c.LocationToInsert == QueryComponent.Postfix && c.Role == CustomLineRole.TopX);
+
+        var topXSelectSqlIfAny = "";
+        if (topXSelectLine != null)
+        {
+            topXSelectSqlIfAny = $" {topXSelectLine.Text}";
+        }
+        else if (topXPostfixLine != null)
+        {
+            // Convert LIMIT/FETCH syntax to SQL Server TOP syntax
+            // Extract number from "LIMIT N" or "FETCH FIRST N ROWS ONLY"
+            var match = System.Text.RegularExpressions.Regex.Match(topXPostfixLine.Text, @"\d+");
+            if (match.Success)
+            {
+                topXSelectSqlIfAny = $" TOP {match.Value}";
+            }
+        }
 
         var havingSqlIfAny = string.Join(Environment.NewLine,
             query.Lines.Where(static l => l.LocationToInsert == QueryComponent.Having).Select(static l => l.Text));
