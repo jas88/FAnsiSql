@@ -304,3 +304,4 @@ claude-*.json
 **/CLAUDE.*
 **/claude.*
 packages.lock.json
+sqlite_test_output.txt

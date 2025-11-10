@@ -244,7 +244,7 @@ internal sealed class QuerySyntaxHelperTests
                 Assert.That(name, Is.EqualTo("\"mydb\".public.\"Troll\".\",,,\""));
                 break;
             case DatabaseType.Sqlite:
-                Assert.That(name, Is.EqualTo("[Troll].[,,,]"));
+                Assert.That(name, Is.EqualTo("\"Troll\".\",,,\""));
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(dbType), dbType, null);
@@ -275,7 +275,7 @@ internal sealed class QuerySyntaxHelperTests
                     Assert.That(name, Is.EqualTo("\"mydb\".public.\"Troll\".\"MyCol\""));
                     break;
                 case DatabaseType.Sqlite:
-                    Assert.That(name, Is.EqualTo("[Troll].[MyCol]"));
+                    Assert.That(name, Is.EqualTo("\"Troll\".\"MyCol\""));
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(dbType), dbType, null);

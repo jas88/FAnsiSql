@@ -92,7 +92,7 @@ public sealed class SqliteAggregateHelper : AggregateHelper
                    UNION ALL
                    SELECT DATE(dt, '{sqliteModifier}')
                    FROM dateAxis
-                   WHERE dt < DATE({endDate})
+                   WHERE DATE(dt, '{sqliteModifier}') <= DATE({endDate})
                )
                SELECT
                {selectExpression} AS joinDt,
