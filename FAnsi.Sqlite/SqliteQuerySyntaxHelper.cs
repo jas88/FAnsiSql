@@ -47,10 +47,11 @@ public sealed class SqliteQuerySyntaxHelper : QuerySyntaxHelper
     /// </summary>
     /// <remarks>
     /// SQLite database names are file paths, so dots are allowed for file extensions.
-    /// Only parentheses are restricted as they can cause SQL syntax issues.
-    /// Other special characters like colons and commas work fine when properly quoted.
+    /// Only parentheses and null characters are restricted.
+    /// Parentheses can cause SQL syntax issues, and null characters are invalid in SQLite identifiers.
+    /// Other special characters like colons, commas, and dots work fine when properly quoted.
     /// </remarks>
-    public override char[] IllegalNameChars => ['(', ')'];
+    public override char[] IllegalNameChars => ['(', ')', '\0'];
 
     /// <summary>
     /// Gets the opening qualifier character for identifiers (double quote).

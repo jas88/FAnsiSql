@@ -318,11 +318,36 @@ public sealed class SqliteServerHelper : DiscoveredServerHelper
     /// <remarks>
     /// For SQLite, the DataSource represents the database file, so we return it as the current database.
     /// Since SQLite doesn't support custom connection string properties, we return the DataSource directly.
+    /// Resolves |DataDirectory| placeholder if present.
     /// </remarks>
     public override string? GetCurrentDatabase(DbConnectionStringBuilder builder)
     {
         // For SQLite, just return the DataSource since that's the database file
-        return builder.TryGetValue("Data Source", out var dataSource) ? dataSource?.ToString() : null;
+        var dataSource = builder.TryGetValue("Data Source", out var ds) ? ds?.ToString() : null;
+
+        // Resolve |DataDirectory| placeholder
+        if (dataSource?.Contains("|DataDirectory|") == true)
+        {
+            var appDataPath = AppDomain.CurrentDomain.GetData("DataDirectory")?.ToString()
+                ?? AppDomain.CurrentDomain.BaseDirectory;
+            dataSource = dataSource.Replace("|DataDirectory|", appDataPath);
+        }
+
+        return dataSource;
+    }
+
+    /// <summary>
+    /// Gets the server name from the connection string builder.
+    /// </summary>
+    /// <param name="builder">The connection string builder</param>
+    /// <returns>Always returns "localhost" for SQLite (file-based database)</returns>
+    /// <remarks>
+    /// SQLite is file-based and doesn't have a traditional server, so we return "localhost".
+    /// </remarks>
+    public string? GetServerName(DbConnectionStringBuilder builder)
+    {
+        // SQLite is file-based, return localhost as the server name
+        return "localhost";
     }
 
     /// <summary>
@@ -330,20 +355,18 @@ public sealed class SqliteServerHelper : DiscoveredServerHelper
     /// </summary>
     /// <param name="builder">The connection string builder to modify</param>
     /// <param name="newDatabase">The new database file path</param>
-    /// <returns>The modified connection string builder</returns>
+    /// <returns>A new connection string builder with the modified database</returns>
     /// <remarks>
     /// For SQLite, changing the database means changing the DataSource to a different file path.
+    /// Creates a new builder to avoid mutating the original.
     /// </remarks>
     public override DbConnectionStringBuilder ChangeDatabase(DbConnectionStringBuilder builder, string newDatabase)
     {
-        if (builder is SqliteConnectionStringBuilder sqliteBuilder)
+        // Clone the builder to avoid mutating the original
+        var newBuilder = new SqliteConnectionStringBuilder(builder.ConnectionString)
         {
-            sqliteBuilder.DataSource = newDatabase;
-        }
-        else
-        {
-            builder["Data Source"] = newDatabase;
-        }
-        return builder;
+            DataSource = newDatabase
+        };
+        return newBuilder;
     }
 }

@@ -200,11 +200,28 @@ internal sealed class QuerySyntaxHelperTests
     {
         var syntaxHelper = ImplementationManager.GetImplementation(dbType).GetQuerySyntaxHelper();
 
+        // Common validations for all database types
         Assert.Throws<RuntimeNameException>(() => syntaxHelper.ValidateDatabaseName(null));
         Assert.Throws<RuntimeNameException>(() => syntaxHelper.ValidateDatabaseName("  "));
-        Assert.Throws<RuntimeNameException>(() => syntaxHelper.ValidateDatabaseName("db.table"));
-        Assert.Throws<RuntimeNameException>(() => syntaxHelper.ValidateDatabaseName("db(lol)"));
         Assert.Throws<RuntimeNameException>(() => syntaxHelper.ValidateDatabaseName(new string('A', syntaxHelper.MaximumDatabaseLength + 1)));
+
+        // Database-specific validations
+        if (dbType == DatabaseType.Sqlite)
+        {
+            // SQLite allows dots and parentheses in names, but not null characters
+            Assert.Throws<RuntimeNameException>(() => syntaxHelper.ValidateDatabaseName("db\0name"));
+            Assert.Throws<RuntimeNameException>(() => syntaxHelper.ValidateDatabaseName("db(lol\0)"));
+
+            // These are VALID in SQLite
+            Assert.DoesNotThrow(() => syntaxHelper.ValidateDatabaseName("db.table"));
+            Assert.DoesNotThrow(() => syntaxHelper.ValidateDatabaseName("db(lol)"));
+        }
+        else
+        {
+            // Other databases don't allow dots or parentheses in database names
+            Assert.Throws<RuntimeNameException>(() => syntaxHelper.ValidateDatabaseName("db.table"));
+            Assert.Throws<RuntimeNameException>(() => syntaxHelper.ValidateDatabaseName("db(lol)"));
+        }
 
         Assert.DoesNotThrow(() => syntaxHelper.ValidateDatabaseName("A"));
         Assert.DoesNotThrow(() => syntaxHelper.ValidateDatabaseName(new string('A', syntaxHelper.MaximumDatabaseLength)));
