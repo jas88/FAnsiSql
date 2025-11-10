@@ -21,6 +21,24 @@ internal abstract class AggregationTests : DatabaseTests
         SetupDatabaseTable(false, "AggregateDataBasedTestsHard");
     }
 
+    [OneTimeTearDown]
+    public void TearDown()
+    {
+        // Drop both test tables to ensure clean state for next test class
+        // This prevents table conflicts when multiple derived test classes run
+        foreach (var (key, table) in _easyTables.Concat(_hardTables))
+        {
+            try
+            {
+                table?.Drop();
+            }
+            catch (Exception e)
+            {
+                TestContext.Out.WriteLine($"Could not drop test table for DatabaseType {key}: {e}");
+            }
+        }
+    }
+
     private void SetupDatabaseTable(bool easy, string name)
     {
         using var dt = new DataTable();
