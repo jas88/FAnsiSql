@@ -325,14 +325,13 @@ public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
         var part1 = string.Format(
             """
 
-            /*DYNAMICALLY FETCH COLUMN VALUES FOR USE IN PIVOT*/
-            DECLARE @Columns as VARCHAR(MAX)
+            /*DYNAMICALLY FETCH COLUMN VALUES FOR USE IN PIVOT - Using temp table approach*/
             {0}
 
-            /*Get distinct values of the PIVOT Column if you have columns with values T and F and Z this will produce [T],[F],[Z] and you will end up with a pivot against these values*/
-            set @Columns = (
+            /*Create temp table with top N distinct values of the PIVOT Column*/
             {1}{10}
-             ',' + QUOTENAME({2}) as [text()]
+            {2}
+            INTO #TopCategories
             {3}
             {4}
             {5} ( {2} IS NOT NULL and {2} <> '' {7})
@@ -341,35 +340,39 @@ public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
             {8}
             order by
             {6}
-            FOR XML PATH(''), root('MyString'),type
-            ).value('/MyString[1]','varchar(max)')
 
-            set @Columns = SUBSTRING(@Columns,2,LEN(@Columns))
+            /*Build comma-delimited column list from temp table*/
+            DECLARE @Columns as VARCHAR(MAX)
+            set @Columns = STUFF((
+                SELECT ',' + QUOTENAME({2})
+                FROM #TopCategories
+                FOR XML PATH(''), TYPE
+            ).value('.', 'VARCHAR(MAX)'), 1, 1, '')
 
+            /*Build ISNULL-wrapped column list using cursor for robustness with special characters*/
             DECLARE @FinalSelectList as VARCHAR(MAX)
             SET @FinalSelectList = {9}
 
-            --Split up that pesky string in tsql which has the column names up into array elements again
-            DECLARE @value varchar(8000)
-            DECLARE @pos INT
-            DECLARE @len INT
-            set @pos = 0
-            set @len = 0
+            DECLARE @CategoryValue VARCHAR(8000)
+            DECLARE category_cursor CURSOR LOCAL FAST_FORWARD FOR
+                SELECT {2} FROM #TopCategories
 
-            WHILE CHARINDEX('],', @Columns +',', @pos+1)>0
+            OPEN category_cursor
+            FETCH NEXT FROM category_cursor INTO @CategoryValue
+
+            WHILE @@FETCH_STATUS = 0
             BEGIN
-                set @len = CHARINDEX('],[', @Columns +'],[', @pos+1) - @pos
-                set @value = SUBSTRING(@Columns, @pos+1, @len)
-
-                --We are constructing a version that turns: '[fish],[lama]' into 'ISNULL([fish],0) as [fish], ISNULL([lama],0) as [lama]'
-                SET @FinalSelectList = @FinalSelectList + ', ISNULL(' + @value  + ',0) as ' + @value
-
-                set @pos = CHARINDEX('],[', @Columns +'],[', @pos+@len) +1
+                SET @FinalSelectList = @FinalSelectList + ', ISNULL(' + QUOTENAME(@CategoryValue) + ',0) as ' + QUOTENAME(@CategoryValue)
+                FETCH NEXT FROM category_cursor INTO @CategoryValue
             END
 
-            if LEFT(@FinalSelectList,1)  = ','
+            CLOSE category_cursor
+            DEALLOCATE category_cursor
+
+            if LEFT(@FinalSelectList,1) = ','
             	SET @FinalSelectList = RIGHT(@FinalSelectList,LEN(@FinalSelectList)-1)
 
+            DROP TABLE #TopCategories
 
             """,
             //select SQL and parameter declarations
