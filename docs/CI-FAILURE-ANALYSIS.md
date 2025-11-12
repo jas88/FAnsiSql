@@ -28,22 +28,30 @@
 
 ## 🔴 REQUIRES SEPARATE FIXES
 
-### 3. DateTime Backslash Format Parsing (TypeGuesser Repository) - ✅ FIXED UPSTREAM
+### 3. DateTime Backslash Format Parsing (TypeGuesser Repository) - ❌ NOT A BUG
 **Impact**: ~20 tests across ALL databases
-**Location**: `TypeGuesser/TypeGuesser/Deciders/DateTimeTypeDecider.cs:139`
-**Root Cause**: DateSeparators array had `"\\\\"` (4 backslashes) but test data has `'Wed\5\19'` (single backslashes)
-**Fix Applied**: Changed line 139 from `"\\\\"` to `"\\"`
-**Repository**: https://github.com/jas88/TypeGuesser (separate repo)
-**Issue**: https://github.com/jas88/TypeGuesser/issues/15
-**Status**: ✅ Fixed upstream, will be in TypeGuesser v2.0.1
+**Status**: **INVESTIGATION CLOSED** - TypeGuesser behavior is correct
 **Tests Affected**:
 - Test_BulkInserting_LotsOfDates(All databases)
 - Any test using format strings with backslash separators
 
-**Next Steps**:
-1. ✅ Fix applied in TypeGuesser repo
-2. ⏳ Wait for TypeGuesser v2.0.1 release
-3. ⏳ Update FAnsiSql package reference from HIC.TypeGuesser v1.2.7 to v2.0.1
+**Analysis**:
+Initial investigation suggested TypeGuesser's `@"\\\\"` (producing 2 backslashes at runtime) was incorrect. However, the TypeGuesser maintainer correctly identified that DateTime format strings use backslash as an escape character.
+
+**Test Data Example** (from CrossPlatformTests.cs:1141):
+```csharp
+"22\\5\\19"  // C# string literal → Runtime: "22\5\19" (7 chars with single backslashes)
+```
+
+**Format String Requirement**:
+DateTime.ParseExact requires the format string to contain **literal backslashes** to match the data. Since format strings also escape backslashes:
+```csharp
+@"dd\\M\\yy"  // Verbatim string with 2 backslashes → Format sees 2 backslashes → Parses correctly
+```
+
+TypeGuesser's DateSeparators array correctly has `@"\\\\"` (4 chars → 2 runtime backslashes).
+
+**Actual Root Cause**: Investigation ongoing - likely a different issue in date format generation/guessing logic
 
 ### 4. Oracle Test Cleanup Infrastructure
 **Impact**: 21 tests
