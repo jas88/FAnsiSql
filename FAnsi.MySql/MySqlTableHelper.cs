@@ -156,7 +156,10 @@ public sealed partial class MySqlTableHelper : DiscoveredTableHelper
 
     public override bool HasPrimaryKey(DiscoveredTable table, IManagedTransaction? transaction = null)
     {
-        using var connection = table.Database.Server.GetManagedConnection(transaction);
+        // Do NOT use transaction parameter - information_schema queries must run outside transactions
+        // to avoid stale snapshot issues after DDL operations (see DiscoverColumns for detailed explanation)
+        using var connection = table.Database.Server.GetConnection();
+        connection.Open();
 
         const string sql = """
             SELECT EXISTS (
@@ -167,8 +170,8 @@ public sealed partial class MySqlTableHelper : DiscoveredTableHelper
             )
             """;
 
-        using var cmd = table.Database.Server.Helper.GetCommand(sql, connection.Connection);
-        // Do not set cmd.Transaction for information_schema queries (see DiscoverColumns for details)
+        using var cmd = table.Database.Server.Helper.GetCommand(sql, connection);
+        // No transaction set on this command
 
         var p = new MySqlParameter("@db", MySqlDbType.String)
         {
