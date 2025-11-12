@@ -167,8 +167,8 @@ public sealed class MySqlAggregateHelper : AggregateHelper
             //the from including all table joins and where but no calendar table join
             query.SyntaxHelper.Escape(GetDatePartOfColumn(query.Axis.AxisIncrement, axisColumnWithoutAlias)),
 
-            //the order by (should be count so that heavy populated columns come first)
-            string.Join(Environment.NewLine, query.Lines.Where(static c => c.LocationToInsert is >= QueryComponent.FROM and <= QueryComponent.WHERE).Select(x => query.SyntaxHelper.Escape(x.Text)))
+            //the from/where/join clauses (stopping before GROUP BY since it's hardcoded in the template)
+            string.Join(Environment.NewLine, query.Lines.Where(static c => c.LocationToInsert is >= QueryComponent.FROM and < QueryComponent.GroupBy).Select(x => query.SyntaxHelper.Escape(x.Text)))
         );
     }
 
@@ -283,7 +283,7 @@ public sealed class MySqlAggregateHelper : AggregateHelper
                              SELECT
                                GROUP_CONCAT(
                                  CONCAT(
-                                   '{0}(CASE WHEN {1} = ', QUOTE(piv), ' THEN {2} ELSE NULL END) AS `', piv,'`'
+                                   '{0}(CASE WHEN {1} = ', QUOTE(piv), ' COLLATE utf8mb4_bin THEN {2} ELSE NULL END) AS `', piv,'`'
                                  ) ORDER BY rn
                                ),
                                GROUP_CONCAT(
