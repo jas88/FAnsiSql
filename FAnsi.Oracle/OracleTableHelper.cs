@@ -4,6 +4,7 @@ using System.Data;
 using System.Data.Common;
 using System.Globalization;
 using System.Linq;
+using System.Threading;
 using FAnsi.Connections;
 using FAnsi.Discovery;
 using FAnsi.Discovery.Constraints;
@@ -205,6 +206,103 @@ public sealed class OracleTableHelper : DiscoveredTableHelper
 
     public override IDiscoveredColumnHelper GetColumnHelper() => OracleColumnHelper.Instance;
 
+    public override void DropTable(DbConnection connection, DiscoveredTable tableToDrop)
+    {
+        var oracleConnection = (OracleConnection)connection;
+        var fullyQualifiedName = tableToDrop.GetFullyQualifiedName();
+        var runtimeName = tableToDrop.GetRuntimeName();
+        var owner = tableToDrop.Database.GetRuntimeName();
+
+        // Drop any identity sequences first (Oracle 12c+ auto-generated sequences)
+        // Identity columns create implicit sequences named "ISEQ$$_{table_id}"
+        // We query ALL_TAB_IDENTITY_COLS to find them
+        try
+        {
+            const string findSequenceSql = """
+                SELECT sequence_name
+                FROM all_tab_identity_cols
+                WHERE table_name COLLATE BINARY_CI = :tableName
+                AND owner COLLATE BINARY_CI = :owner
+                """;
+
+            using var findCmd = new OracleCommand(findSequenceSql, oracleConnection);
+            findCmd.Parameters.Add(new OracleParameter(":tableName", OracleDbType.Varchar2) { Value = runtimeName });
+            findCmd.Parameters.Add(new OracleParameter(":owner", OracleDbType.Varchar2) { Value = owner });
+
+            using var reader = findCmd.ExecuteReader();
+            while (reader.Read())
+            {
+                var sequenceName = reader["sequence_name"].ToString();
+                if (!string.IsNullOrEmpty(sequenceName))
+                {
+                    try
+                    {
+                        // Drop the sequence - no PURGE needed for sequences
+                        using var dropSeqCmd = new OracleCommand(
+                            $"DROP SEQUENCE \"{owner}\".\"{sequenceName}\"", oracleConnection);
+                        dropSeqCmd.ExecuteNonQuery();
+                    }
+                    catch
+                    {
+                        // Ignore sequence drop failures - table drop will cascade them anyway
+                    }
+                }
+            }
+        }
+        catch
+        {
+            // Ignore failures in finding sequences - proceed with table drop
+        }
+
+        // Drop the table with PURGE to bypass recycle bin
+        // PURGE ensures the table is immediately removed and doesn't linger in the recycle bin
+        // This prevents ORA-00955 (name already exists) errors when recreating tables
+        var dropSql = tableToDrop.TableType switch
+        {
+            TableType.Table => $"DROP TABLE {fullyQualifiedName} PURGE",
+            TableType.View => $"DROP VIEW {fullyQualifiedName}",
+            TableType.TableValuedFunction => throw new NotSupportedException(),
+            _ => throw new ArgumentOutOfRangeException(nameof(tableToDrop), "Unknown TableType")
+        };
+
+        // Retry logic for ORA-00054 (resource busy) errors
+        const int maxRetries = 3;
+        const int retryDelayMs = 100;
+        Exception? lastException = null;
+
+        for (var attempt = 0; attempt < maxRetries; attempt++)
+        {
+            try
+            {
+                using var cmd = new OracleCommand(dropSql, oracleConnection);
+                cmd.ExecuteNonQuery();
+
+                // Success - commit to flush metadata changes
+                using var commitCmd = new OracleCommand("COMMIT", oracleConnection);
+                commitCmd.ExecuteNonQuery();
+
+                return; // Success
+            }
+            catch (OracleException ex) when (ex.Number == 54) // ORA-00054: resource busy
+            {
+                lastException = ex;
+                if (attempt < maxRetries - 1)
+                {
+                    Thread.Sleep(retryDelayMs * (attempt + 1)); // Exponential backoff
+                    continue;
+                }
+            }
+            catch (OracleException ex) when (ex.Number == 942) // ORA-00942: table or view does not exist
+            {
+                // Table already dropped - this is OK
+                return;
+            }
+        }
+
+        // If we got here, all retries failed
+        throw lastException ?? new Exception($"Failed to drop table {fullyQualifiedName}");
+    }
+
     public override void DropColumn(DbConnection connection, DiscoveredColumn columnToDrop)
     {
         using var cmd = new OracleCommand(
@@ -317,8 +415,8 @@ public sealed class OracleTableHelper : DiscoveredTableHelper
                              JOIN all_constraints  c_pk    ON (c.r_owner               = c_pk.owner                AND c.r_constraint_name = c_pk.constraint_name  )
                              JOIN all_cons_columns cc_pk   on (cc_pk.constraint_name   = c_pk.constraint_name      AND cc_pk.owner         = c_pk.owner            AND cc_pk.position = a.position)
                             WHERE c.constraint_type = 'R'
-                           AND  UPPER(c.r_owner) =  UPPER(:DatabaseName)
-                           AND  UPPER(c_pk.table_name) =  UPPER(:TableName)
+                           AND  c.r_owner COLLATE BINARY_CI = :DatabaseName
+                           AND  c_pk.table_name COLLATE BINARY_CI = :TableName
                            """;
 
 
