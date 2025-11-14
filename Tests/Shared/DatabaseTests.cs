@@ -98,7 +98,25 @@ public abstract class DatabaseTests
     protected DiscoveredServer GetTestServer(DatabaseType type)
     {
         if (!TestConnectionStrings.TryGetValue(type, out var connString))
+        {
+#if ORACLE_TESTS
+            if (type != DatabaseType.Oracle)
+                Assert.Pass($"Skipping {type} test in Oracle test project");
+#elif POSTGRESQL_TESTS
+            if (type != DatabaseType.PostgreSql)
+                Assert.Pass($"Skipping {type} test in PostgreSQL test project");
+#elif MYSQL_TESTS
+            if (type != DatabaseType.MySql)
+                Assert.Pass($"Skipping {type} test in MySQL test project");
+#elif MSSQL_TESTS
+            if (type != DatabaseType.MicrosoftSQLServer)
+                Assert.Pass($"Skipping {type} test in SQL Server test project");
+#elif SQLITE_TESTS
+            if (type != DatabaseType.Sqlite)
+                Assert.Pass($"Skipping {type} test in SQLite test project");
+#endif
             Assert.Ignore($"No connection string configured for {type} - skipping tests");
+        }
 
         return new DiscoveredServer(connString, type);
     }
