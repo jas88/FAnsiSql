@@ -157,7 +157,7 @@ public sealed class SqliteBulkCopy(DiscoveredTable targetTable, IManagedConnecti
             // Execute batch when we reach batch size or it's the last row
             if (batchRows >= BatchSize || rowIndex == lastRowIndex)
             {
-                cmd.CommandText = baseCommand + valueClauses.ToString();
+                cmd.CommandText = baseCommand + valueClauses;
                 affected += cmd.ExecuteNonQuery();
 
                 // Reset for next batch - reuse existing objects where possible

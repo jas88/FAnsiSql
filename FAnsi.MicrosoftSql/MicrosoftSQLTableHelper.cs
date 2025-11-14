@@ -238,7 +238,7 @@ public sealed partial class MicrosoftSQLTableHelper : DiscoveredTableHelper
                 args.ExecuteNonQuery(alterCmd);
             }
         }
-        catch (Exception e)
+        catch (DbException e)
         {
             throw new AlterFailedException(string.Format(CultureInfo.InvariantCulture, FAnsiStrings.DiscoveredTableHelper_CreatePrimaryKey_Failed_to_create_primary_key_on_table__0__using_columns___1__, table, string.Join(",", discoverColumns.Select(static c => c.GetRuntimeName()))), e);
         }

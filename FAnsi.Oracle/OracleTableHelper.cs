@@ -198,7 +198,7 @@ public sealed class OracleTableHelper : DiscoveredTableHelper
             using var cmd = table.Database.Server.Helper.GetCommand(sql, connection.Connection, connection.Transaction);
             args.ExecuteNonQuery(cmd);
         }
-        catch (Exception e)
+        catch (DbException e)
         {
             throw new AlterFailedException(string.Format(CultureInfo.InvariantCulture, FAnsiStrings.DiscoveredTableHelper_DropIndex_Failed, table), e);
         }
@@ -242,14 +242,14 @@ public sealed class OracleTableHelper : DiscoveredTableHelper
                             $"DROP SEQUENCE \"{owner}\".\"{sequenceName}\"", oracleConnection);
                         dropSeqCmd.ExecuteNonQuery();
                     }
-                    catch
+                    catch (OracleException)
                     {
                         // Ignore sequence drop failures - table drop will cascade them anyway
                     }
                 }
             }
         }
-        catch
+        catch (OracleException)
         {
             // Ignore failures in finding sequences - proceed with table drop
         }

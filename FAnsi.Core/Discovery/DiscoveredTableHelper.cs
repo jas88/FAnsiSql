@@ -118,14 +118,11 @@ public abstract class DiscoveredTableHelper : IDiscoveredTableHelper
             if (c.IsAutoIncrement && convertIdentityToInt)
                 sqlType = "int";
 
-            var isToDifferentDatabaseType = toCreateTable != null && toCreateTable.Database.Server.DatabaseType != table.Database.Server.DatabaseType;
-
-
-            //translate types
-            if (isToDifferentDatabaseType)
+            //translate types if going to a different database type
+            if (toCreateTable != null && toCreateTable.Database.Server.DatabaseType != table.Database.Server.DatabaseType)
             {
                 var fromtt = table.Database.Server.GetQuerySyntaxHelper().TypeTranslater;
-                var tott = toCreateTable?.Database.Server.GetQuerySyntaxHelper().TypeTranslater ?? throw new InvalidOperationException($"Unable to retrieve type translator for {toCreateTable}");
+                var tott = toCreateTable.Database.Server.GetQuerySyntaxHelper().TypeTranslater;
 
                 sqlType = fromtt.TranslateSQLDBType(c.DataType.SQLType, tott);
             }
@@ -139,7 +136,8 @@ public abstract class DiscoveredTableHelper : IDiscoveredTableHelper
             colRequest.AllowNulls = colRequest.AllowNulls && !colRequest.IsAutoIncrement;
 
             //if there is a collation
-            if (!string.IsNullOrWhiteSpace(c.Collation) && (toCreateTable == null || !isToDifferentDatabaseType))
+            if (!string.IsNullOrWhiteSpace(c.Collation) &&
+                (toCreateTable == null || toCreateTable.Database.Server.DatabaseType == table.Database.Server.DatabaseType))
                 //if the script is to be run on a database of the same type
                 //then specify that the column should use the live collation
                 colRequest.Collation = c.Collation;
@@ -182,7 +180,7 @@ public abstract class DiscoveredTableHelper : IDiscoveredTableHelper
             using var cmd = table.Database.Server.Helper.GetCommand(sql, connection.Connection, connection.Transaction);
             args.ExecuteNonQuery(cmd);
         }
-        catch (Exception e)
+        catch (DbException e)
         {
             throw new AlterFailedException(string.Format(CultureInfo.InvariantCulture, FAnsiStrings.DiscoveredTableHelper_CreateIndex_Failed, table), e);
         }
@@ -200,7 +198,7 @@ public abstract class DiscoveredTableHelper : IDiscoveredTableHelper
             using var cmd = table.Database.Server.Helper.GetCommand(sql, connection.Connection, connection.Transaction);
             args.ExecuteNonQuery(cmd);
         }
-        catch (Exception e)
+        catch (DbException e)
         {
             throw new AlterFailedException(string.Format(CultureInfo.InvariantCulture, FAnsiStrings.DiscoveredTableHelper_DropIndex_Failed, table), e);
         }
@@ -220,7 +218,7 @@ public abstract class DiscoveredTableHelper : IDiscoveredTableHelper
             using var cmd = table.Database.Server.Helper.GetCommand(sql, connection.Connection, connection.Transaction);
             args.ExecuteNonQuery(cmd);
         }
-        catch (Exception e)
+        catch (DbException e)
         {
             throw new AlterFailedException(string.Format(CultureInfo.InvariantCulture, FAnsiStrings.DiscoveredTableHelper_CreatePrimaryKey_Failed_to_create_primary_key_on_table__0__using_columns___1__, table, string.Join(",", discoverColumns.Select(static c => c.GetRuntimeName()))), e);
         }
@@ -288,9 +286,10 @@ public abstract class DiscoveredTableHelper : IDiscoveredTableHelper
         }
 
         // Manual loop optimization to avoid LINQ Single allocation and use span comparisons
+        var constraintNameSpan = constraintName.AsSpan();
         foreach (var relationship in primary.DiscoverRelationships(args.TransactionIfAny))
         {
-            if (constraintName.AsSpan().Equals(relationship.Name.AsSpan(), StringComparison.CurrentCultureIgnoreCase))
+            if (constraintNameSpan.Equals(relationship.Name.AsSpan(), StringComparison.OrdinalIgnoreCase))
                 return relationship;
         }
 

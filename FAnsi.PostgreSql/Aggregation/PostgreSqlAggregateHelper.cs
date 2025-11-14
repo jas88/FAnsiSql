@@ -14,13 +14,16 @@ public sealed class PostgreSqlAggregateHelper : AggregateHelper
 
     protected override string BuildAxisAggregate(AggregateCustomLineCollection query)
     {
-        var interval = query.Axis?.AxisIncrement switch
+        if (query.Axis == null)
+            throw new ArgumentNullException(nameof(query), "Query Axis cannot be null");
+
+        var interval = query.Axis.AxisIncrement switch
         {
             AxisIncrement.Day => "1 day",
             AxisIncrement.Month => "1 month",
             AxisIncrement.Year => "1 year",
             AxisIncrement.Quarter => "3 months",
-            _ => throw new ArgumentOutOfRangeException(nameof(query), $"Invalid AxisIncrement {query.Axis?.AxisIncrement}")
+            _ => throw new ArgumentOutOfRangeException(nameof(query), $"Invalid AxisIncrement {query.Axis.AxisIncrement}")
         };
 
         var countAlias = query.CountSelect!.GetAliasFromText(query.SyntaxHelper);
@@ -118,13 +121,16 @@ public sealed class PostgreSqlAggregateHelper : AggregateHelper
 
     protected override string BuildPivotAndAxisAggregate(AggregateCustomLineCollection query)
     {
-        var interval = query.Axis?.AxisIncrement switch
+        if (query.Axis == null)
+            throw new ArgumentNullException(nameof(query), "Query Axis cannot be null");
+
+        var interval = query.Axis.AxisIncrement switch
         {
             AxisIncrement.Day => "1 day",
             AxisIncrement.Month => "1 month",
             AxisIncrement.Year => "1 year",
             AxisIncrement.Quarter => "3 months",
-            _ => throw new ArgumentOutOfRangeException(nameof(query), $"Invalid AxisIncrement {query.Axis?.AxisIncrement}")
+            _ => throw new ArgumentOutOfRangeException(nameof(query), $"Invalid AxisIncrement {query.Axis.AxisIncrement}")
         };
 
         var pivotSqlWithoutAlias = query.PivotSelect!.GetTextWithoutAlias(query.SyntaxHelper);

@@ -143,7 +143,11 @@ public abstract class BulkCopy : IBulkCopy
                     //parse the value
                     dr[newColumn] = dr[dataColumn] is string v ? decider.Parse(v) ?? DBNull.Value : DBNull.Value;
                 }
-                catch (Exception ex)
+                catch (FormatException ex)
+                {
+                    throw new FormatException($"Failed to parse value '{dr[dataColumn]}' in column '{dataColumn}'", ex);
+                }
+                catch (InvalidCastException ex)
                 {
                     throw new FormatException($"Failed to parse value '{dr[dataColumn]}' in column '{dataColumn}'", ex);
                 }

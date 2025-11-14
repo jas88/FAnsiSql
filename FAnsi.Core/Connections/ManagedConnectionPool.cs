@@ -95,13 +95,16 @@ internal static class ManagedConnectionPool
                 {
                     // Database switch failed, remove and recreate
                     threadServerConnections.TryRemove(serverKey, out _);
-                    try
+                    if (existingServerConn != null)
                     {
-                        existingServerConn?.Dispose();
-                    }
-                    catch
-                    {
-                        // Swallow disposal errors
+                        try
+                        {
+                            existingServerConn.Dispose();
+                        }
+                        catch
+                        {
+                            // Swallow disposal errors
+                        }
                     }
                 }
             }
@@ -109,13 +112,16 @@ internal static class ManagedConnectionPool
             {
                 // Connection is invalid, remove it
                 threadServerConnections.TryRemove(serverKey, out _);
-                try
+                if (existingServerConn != null)
                 {
-                    existingServerConn?.Dispose();
-                }
-                catch
-                {
-                    // Swallow disposal errors
+                    try
+                    {
+                        existingServerConn.Dispose();
+                    }
+                    catch
+                    {
+                        // Swallow disposal errors
+                    }
                 }
             }
         }
