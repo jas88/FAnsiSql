@@ -125,7 +125,7 @@ public sealed class SqliteDatabaseHelper : DiscoveredDatabaseHelper
             if (string.IsNullOrEmpty(directory))
                 directory = Environment.CurrentDirectory;
 
-            var backupPath = Path.Combine(directory, backupName);
+            var backupPath = Path.Join(directory, backupName);
             File.Copy(filePath, backupPath, true);
         }
     }
