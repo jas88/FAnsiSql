@@ -1,7 +1,7 @@
 # FAnsiSql
 
 [![Build and test](https://github.com/jas88/FAnsiSql/actions/workflows/dotnet-core.yml/badge.svg)](https://github.com/jas88/FAnsiSql/actions/workflows/dotnet-core.yml)
-[![CodeQL](https://github.com/jas88/FAnsiSql/actions/workflows/codeql.yml/badge.svg)](https://github.com/jas88/FAnsiSql/actions/workflows/codeql.yml)
+[![CodeQL](https://github.com/jas88/FAnsiSql/actions/workflows/dotnet-core.yml/badge.svg?event=push)](https://github.com/jas88/FAnsiSql/security/code-scanning)
 [![NuGet Badge](https://buildstats.info/nuget/FAnsiSql)](https://www.nuget.org/packages/FAnsiSql/)
 
 - [Nuget](https://www.nuget.org/packages/FAnsiSql/)
