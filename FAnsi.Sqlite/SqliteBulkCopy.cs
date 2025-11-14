@@ -56,7 +56,7 @@ public sealed class SqliteBulkCopy(DiscoveredTable targetTable, IManagedConnecti
         {
             return BulkInsertImpl(dt);
         }
-        catch (Exception e)
+        catch (SqliteException e)
         {
             // Attempt line-by-line insert to identify the problematic row
             Exception better;
@@ -66,6 +66,24 @@ public sealed class SqliteBulkCopy(DiscoveredTable targetTable, IManagedConnecti
             }
             catch (Exception exception)
             {
+                // CodeQL[cs/catch-of-all-exceptions]: Intentional - wrapping any investigation failure as AggregateException
+                throw new AggregateException(
+                    "Failed to bulk insert batch. Line-by-line investigation also failed. InnerException[0] is the original Exception, InnerException[1] is the line-by-line failure.",
+                    e, exception);
+            }
+            throw better;
+        }
+        catch (System.Data.Common.DbException e)
+        {
+            // Attempt line-by-line insert to identify the problematic row
+            Exception better;
+            try
+            {
+                better = AttemptLineByLineInsert(e, dt);
+            }
+            catch (Exception exception)
+            {
+                // CodeQL[cs/catch-of-all-exceptions]: Intentional - wrapping any investigation failure as AggregateException
                 throw new AggregateException(
                     "Failed to bulk insert batch. Line-by-line investigation also failed. InnerException[0] is the original Exception, InnerException[1] is the line-by-line failure.",
                     e, exception);
@@ -209,7 +227,7 @@ public sealed class SqliteBulkCopy(DiscoveredTable targetTable, IManagedConnecti
                 cmd.ExecuteNonQuery();
                 line++;
             }
-            catch (Exception exception)
+            catch (SqliteException exception)
             {
                 // Try to identify which column caused the problem
                 var badColumnInfo = IdentifyBadColumn(exception, dr, matchedColumns);

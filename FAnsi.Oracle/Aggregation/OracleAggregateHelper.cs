@@ -152,10 +152,6 @@ order by dt*/
         if (aggregateParameter.Equals("*", StringComparison.Ordinal))
             aggregateParameter = "1";
 
-        var pivotAlias = query.PivotSelect.GetAliasFromText(query.SyntaxHelper);
-        if (string.IsNullOrWhiteSpace(pivotAlias))
-            pivotAlias = query.SyntaxHelper.GetRuntimeName(pivotSqlWithoutAlias);
-
         var nonPivotColumnAlias = nonPivotColumn.GetAliasFromText(query.SyntaxHelper);
         if (string.IsNullOrWhiteSpace(nonPivotColumnAlias))
             nonPivotColumnAlias = query.SyntaxHelper.GetRuntimeName(nonPivotColumn.GetTextWithoutAlias(query.SyntaxHelper));

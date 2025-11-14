@@ -17,6 +17,7 @@ namespace FAnsi.Discovery;
 public abstract partial class DiscoveredServerHelper(DatabaseType databaseType) : IDiscoveredServerHelper
 {
     private static readonly Dictionary<DatabaseType, ConnectionStringKeywordAccumulator> ConnectionStringKeywordAccumulators = [];
+    private static readonly object ConnectionStringKeywordAccumulatorsLock = new();
 
     /// <summary>
     /// Register a system-wide rule that all connection strings of <paramref name="databaseType"/> should include the given <paramref name="keyword"/>.
@@ -27,10 +28,13 @@ public abstract partial class DiscoveredServerHelper(DatabaseType databaseType) 
     /// <param name="priority">Resolves conflicts when multiple calls are made for the same <paramref name="keyword"/> at different times</param>
     public static void AddConnectionStringKeyword(DatabaseType databaseType, string keyword, string value, ConnectionStringKeywordPriority priority)
     {
-        if (!ConnectionStringKeywordAccumulators.ContainsKey(databaseType))
-            ConnectionStringKeywordAccumulators.Add(databaseType, new ConnectionStringKeywordAccumulator(databaseType));
+        lock (ConnectionStringKeywordAccumulatorsLock)
+        {
+            if (!ConnectionStringKeywordAccumulators.ContainsKey(databaseType))
+                ConnectionStringKeywordAccumulators.Add(databaseType, new ConnectionStringKeywordAccumulator(databaseType));
 
-        ConnectionStringKeywordAccumulators[databaseType].AddOrUpdateKeyword(keyword, value, priority);
+            ConnectionStringKeywordAccumulators[databaseType].AddOrUpdateKeyword(keyword, value, priority);
+        }
     }
 
     /// <summary>
@@ -84,8 +88,11 @@ public abstract partial class DiscoveredServerHelper(DatabaseType databaseType) 
     protected virtual void EnforceKeywords(DbConnectionStringBuilder builder)
     {
         //if we have any keywords to enforce
-        if (ConnectionStringKeywordAccumulators.TryGetValue(DatabaseType, out var accumulator))
-            accumulator.EnforceOptions(builder);
+        lock (ConnectionStringKeywordAccumulatorsLock)
+        {
+            if (ConnectionStringKeywordAccumulators.TryGetValue(DatabaseType, out var accumulator))
+                accumulator.EnforceOptions(builder);
+        }
     }
 
     protected abstract DbConnectionStringBuilder GetConnectionStringBuilderImpl(string connectionString, string? database, string username, string password);
