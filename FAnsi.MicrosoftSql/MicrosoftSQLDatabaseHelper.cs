@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.IO;
 using FAnsi.Discovery;
 using FAnsi.Discovery.QuerySyntax;
@@ -63,7 +64,7 @@ public sealed class MicrosoftSQLDatabaseHelper : DiscoveredDatabaseHelper
             {
                 var schema = r["schema_name"] as string;
 
-                if (string.Equals("dbo", schema))
+                if (string.Equals("dbo", schema, StringComparison.Ordinal))
                     schema = null;
                 var name = r["name"].ToString();
                 if (name != null)
@@ -90,7 +91,7 @@ public sealed class MicrosoftSQLDatabaseHelper : DiscoveredDatabaseHelper
 
     public override void DropDatabase(DiscoveredDatabase database)
     {
-        var userIsCurrentlyInDatabase = database.Server.GetCurrentDatabase()!.GetRuntimeName().Equals(database.GetRuntimeName());
+        var userIsCurrentlyInDatabase = database.Server.GetCurrentDatabase()!.GetRuntimeName().Equals(database.GetRuntimeName(), StringComparison.Ordinal);
 
         var serverConnectionBuilder = new SqlConnectionStringBuilder(database.Server.Builder.ConnectionString);
         if (userIsCurrentlyInDatabase)
@@ -211,7 +212,7 @@ public sealed class MicrosoftSQLDatabaseHelper : DiscoveredDatabaseHelper
         using var con = server.GetConnection();
         con.Open();
 
-        var sql = string.Format(
+        var sql = string.Format(CultureInfo.InvariantCulture,
             "BACKUP DATABASE {0} TO  DISK = '{0}.bak' WITH  INIT ,  NOUNLOAD ,  NAME = N'{1}',  NOSKIP ,  STATS = 10,  NOFORMAT",
             discoveredDatabase.GetWrappedName(), backupName);
 

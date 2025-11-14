@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using FAnsi.Discovery;
 using FAnsi.Naming;
@@ -28,12 +29,12 @@ public sealed class SqliteColumnHelper : IDiscoveredColumnHelper
 
         var sql = new StringBuilder();
 
-        sql.Append($"SELECT {syntax.EnsureWrapped(column.GetRuntimeName())} FROM {table.GetFullyQualifiedName()}");
+        sql.Append(CultureInfo.InvariantCulture, $"SELECT {syntax.EnsureWrapped(column.GetRuntimeName())} FROM {table.GetFullyQualifiedName()}");
 
         if (discardNulls)
-            sql.Append($" WHERE {syntax.EnsureWrapped(column.GetRuntimeName())} IS NOT NULL");
+            sql.Append(CultureInfo.InvariantCulture, $" WHERE {syntax.EnsureWrapped(column.GetRuntimeName())} IS NOT NULL");
 
-        sql.Append($" LIMIT {topX}");
+        sql.Append(CultureInfo.InvariantCulture, $" LIMIT {topX}");
         return sql.ToString();
     }
 

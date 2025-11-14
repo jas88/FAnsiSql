@@ -1,6 +1,7 @@
 using System;
 using System.Data;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Text.RegularExpressions;
 using TypeGuesser;
 
@@ -91,7 +92,7 @@ public abstract partial class TypeTranslater : ITypeTranslater
         if (t == typeof(Guid))
             return GetGuidDataType();
 
-        throw new TypeNotMappedException(string.Format(FAnsiStrings.TypeTranslater_GetSQLDBTypeForCSharpType_Unsure_what_SQL_type_to_use_for_CSharp_Type___0_____TypeTranslater_was___1__, t.Name, GetType().Name));
+        throw new TypeNotMappedException(string.Format(CultureInfo.InvariantCulture, FAnsiStrings.TypeTranslater_GetSQLDBTypeForCSharpType_Unsure_what_SQL_type_to_use_for_CSharp_Type___0_____TypeTranslater_was___1__, t.Name, GetType().Name));
     }
 
     protected virtual string GetByteArrayDataType() => "blob";
@@ -158,6 +159,7 @@ public abstract partial class TypeTranslater : ITypeTranslater
     public Type GetCSharpTypeForSQLDBType(string? sqlType) =>
         TryGetCSharpTypeForSQLDBType(sqlType) ??
         throw new TypeNotMappedException(string.Format(
+            CultureInfo.InvariantCulture,
             FAnsiStrings
                 .TypeTranslater_GetCSharpTypeForSQLDBType_No_CSharp_type_mapping_exists_for_SQL_type___0____TypeTranslater_was___1___,
             sqlType, GetType().Name));
@@ -247,6 +249,7 @@ public abstract partial class TypeTranslater : ITypeTranslater
             return DbType.Guid;
 
         throw new TypeNotMappedException(string.Format(
+            CultureInfo.InvariantCulture,
             FAnsiStrings
                 .TypeTranslater_GetCSharpTypeForSQLDBType_No_CSharp_type_mapping_exists_for_SQL_type___0____TypeTranslater_was___1___,
             sqlType, GetType().Name));

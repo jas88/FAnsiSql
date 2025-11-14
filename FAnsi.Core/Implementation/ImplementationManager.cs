@@ -3,6 +3,7 @@ using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Data.Common;
+using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
@@ -76,6 +77,7 @@ public sealed class ImplementationManager
         }
 
         throw new ImplementationNotFoundException(string.Format(
+            CultureInfo.InvariantCulture,
             FAnsiStrings.ImplementationManager_GetImplementation_No_implementation_found_for_DatabaseType__0_,
             databaseType));
     }
@@ -87,6 +89,7 @@ public sealed class ImplementationManager
             return implementation;
 
         throw new ImplementationNotFoundException(string.Format(
+            CultureInfo.InvariantCulture,
             FAnsiStrings
                 .ImplementationManager_GetImplementation_No_implementation_found_for_ADO_Net_object_of_Type__0_,
             connectionStringBuilder.GetType()));
@@ -99,6 +102,7 @@ public sealed class ImplementationManager
             return implementation;
 
         throw new ImplementationNotFoundException(string.Format(
+            CultureInfo.InvariantCulture,
             FAnsiStrings
                 .ImplementationManager_GetImplementation_No_implementation_found_for_ADO_Net_object_of_Type__0_,
             connection.GetType()));

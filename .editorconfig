@@ -182,3 +182,29 @@ resharper_use_positional_deconstruction_pattern_highlighting = warning
 resharper_use_throw_if_null_method_highlighting = warning
 resharper_wrong_indent_size_highlighting = hint
 resharper_wrong_metadata_use_highlighting = warning
+
+# Suppress non-actionable code analysis warnings
+[*.cs]
+# CA1707: Test methods use underscores (NUnit convention)
+dotnet_diagnostic.CA1707.severity = none
+
+# CA1051: Public fields are part of stable API
+dotnet_diagnostic.CA1051.severity = none
+
+# CA1716: Reserved keywords in API
+dotnet_diagnostic.CA1716.severity = none
+
+# CA1711: Naming suffixes in API
+dotnet_diagnostic.CA1711.severity = none
+
+# CA1725: Parameter name mismatches
+dotnet_diagnostic.CA1725.severity = none
+
+# CA1068: CancellationToken parameter order
+dotnet_diagnostic.CA1068.severity = none
+
+# CA1805: Unnecessary initialization
+dotnet_diagnostic.CA1805.severity = none
+
+# CA1822: Static method candidates
+dotnet_diagnostic.CA1822.severity = none

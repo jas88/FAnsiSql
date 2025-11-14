@@ -58,8 +58,8 @@ public sealed class DiscoveredRelationship(string fkName, DiscoveredTable pkTabl
         _fkColumns ??= ForeignKeyTable.DiscoverColumns(transaction);
 
         Keys.Add(
-            _pkColumns.Single(c => c.GetRuntimeName().Equals(primaryKeyCol, StringComparison.CurrentCultureIgnoreCase)),
-            _fkColumns.Single(c => c.GetRuntimeName().Equals(foreignKeyCol, StringComparison.CurrentCultureIgnoreCase))
+            _pkColumns.Single(c => c.GetRuntimeName().Equals(primaryKeyCol, StringComparison.OrdinalIgnoreCase)),
+            _fkColumns.Single(c => c.GetRuntimeName().Equals(foreignKeyCol, StringComparison.OrdinalIgnoreCase))
         );
     }
 }

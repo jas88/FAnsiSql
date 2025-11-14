@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using FAnsi.Connections;
@@ -17,7 +18,7 @@ public sealed class DiscoveredTableValuedFunction(DiscoveredDatabase database,
 {
     public override bool Exists(IManagedTransaction? transaction = null)
     {
-        return Database.DiscoverTableValuedFunctions(transaction).Any(f => f.GetRuntimeName().Equals(GetRuntimeName()));
+        return Database.DiscoverTableValuedFunctions(transaction).Any(f => f.GetRuntimeName().Equals(GetRuntimeName(), StringComparison.Ordinal));
     }
 
     public override string GetRuntimeName() => QuerySyntaxHelper.GetRuntimeName(TableName);

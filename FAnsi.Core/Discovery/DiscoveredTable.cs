@@ -151,7 +151,7 @@ public class DiscoveredTable : IHasFullyQualifiedNameToo, IMightNotExist, IHasQu
         }
         catch (InvalidOperationException e)
         {
-            throw new ColumnMappingException(string.Format(
+            throw new ColumnMappingException(string.Format(CultureInfo.InvariantCulture,
                 FAnsiStrings.DiscoveredTable_DiscoverColumn_DiscoverColumn_failed__could_not_find_column_called___0___in_table___1__, specificColumnName,
                 TableName), e);
         }
@@ -504,7 +504,7 @@ public class DiscoveredTable : IHasFullyQualifiedNameToo, IMightNotExist, IHasQu
             }
 
             if (match == null)
-                throw new ColumnMappingException(string.Format(
+                throw new ColumnMappingException(string.Format(CultureInfo.InvariantCulture,
                     FAnsiStrings
                         .DiscoveredTable_Insert_Insert_failed__could_not_find_column_called___0___in_table___1__, k,
                     TableName));

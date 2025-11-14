@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using FAnsi.Discovery;
 using FAnsi.Discovery.QuerySyntax;
 using FAnsi.Naming;
@@ -184,7 +185,7 @@ public sealed class MicrosoftSQLServerHelper : DiscoveredServerHelper
                 cmd.CommandText = "SELECT @@TRANCOUNT";
                 cmd.CommandTimeout = 1;
                 var result = cmd.ExecuteScalar();
-                return result != null && Convert.ToInt32(result) > 0;
+                return result != null && Convert.ToInt32(result, CultureInfo.InvariantCulture) > 0;
             }
             catch (InvalidOperationException ex) when (ex.Message.Contains("pending local transaction"))
             {
@@ -214,7 +215,7 @@ public sealed class MicrosoftSQLServerHelper : DiscoveredServerHelper
         using var con = masterServer.GetManagedConnection();
         using var cmd = new SqlCommand("SELECT CASE WHEN EXISTS(SELECT 1 FROM sys.databases WHERE name = @name) THEN 1 ELSE 0 END", (SqlConnection)con.Connection);
         cmd.Parameters.AddWithValue("@name", database.GetRuntimeName());
-        return Convert.ToInt32(cmd.ExecuteScalar()) == 1;
+        return Convert.ToInt32(cmd.ExecuteScalar(), CultureInfo.InvariantCulture) == 1;
     }
 
     public override string GetServerLevelConnectionKey(string connectionString)

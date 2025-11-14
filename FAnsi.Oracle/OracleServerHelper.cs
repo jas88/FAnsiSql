@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using FAnsi.Discovery;
 using FAnsi.Discovery.QuerySyntax;
 using FAnsi.Naming;
@@ -169,6 +170,6 @@ public sealed class OracleServerHelper : DiscoveredServerHelper
         using var con = oracleServer.GetManagedConnection();
         using var cmd = new OracleCommand("SELECT CASE WHEN EXISTS(SELECT 1 FROM ALL_USERS WHERE USERNAME = UPPER(:name)) THEN 1 ELSE 0 END FROM DUAL", (OracleConnection)con.Connection);
         cmd.Parameters.Add(new OracleParameter("name", database.GetRuntimeName()));
-        return Convert.ToInt32(cmd.ExecuteScalar()) == 1;
+        return Convert.ToInt32(cmd.ExecuteScalar(), CultureInfo.InvariantCulture) == 1;
     }
 }

@@ -52,7 +52,7 @@ public sealed partial class MySqlTableHelper : DiscoveredTableHelper
 
         using var r = cmd.ExecuteReader();
         if (!r.HasRows)
-            throw new Exception($"Could not find any columns for table {tableName} in database {database}");
+            throw new InvalidOperationException($"Could not find any columns for table {tableName} in database {database}");
 
         while (r.Read())
         {
@@ -87,7 +87,7 @@ public sealed partial class MySqlTableHelper : DiscoveredTableHelper
         {
             "NO" => false,
             "YES" => true,
-            _ => Convert.ToBoolean(o)
+            _ => Convert.ToBoolean(o, CultureInfo.InvariantCulture)
         };
     }
 
@@ -151,7 +151,7 @@ public sealed partial class MySqlTableHelper : DiscoveredTableHelper
         cmd.Parameters.Add(p);
 
         var result = cmd.ExecuteScalar();
-        return Convert.ToBoolean(result);
+        return Convert.ToBoolean(result, CultureInfo.InvariantCulture);
     }
 
     public override bool HasPrimaryKey(DiscoveredTable table, IManagedTransaction? transaction = null)
@@ -186,7 +186,7 @@ public sealed partial class MySqlTableHelper : DiscoveredTableHelper
         cmd.Parameters.Add(p);
 
         var result = cmd.ExecuteScalar();
-        return Convert.ToBoolean(result);
+        return Convert.ToBoolean(result, CultureInfo.InvariantCulture);
     }
 
     public override IDiscoveredColumnHelper GetColumnHelper() => MySqlColumnHelper.Instance;

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -50,7 +51,7 @@ public abstract class DiscoveredDatabaseHelper : IDiscoveredDatabaseHelper
             foreach (DataColumn column in args.DataTable.Columns)
             {
                 //do we have an explicit overriding column definition?
-                var overriding = customRequests.SingleOrDefault(c => c.ColumnName.Equals(column.ColumnName, StringComparison.CurrentCultureIgnoreCase));
+                var overriding = customRequests.SingleOrDefault(c => c.ColumnName.Equals(column.ColumnName, StringComparison.OrdinalIgnoreCase));
 
                 //yes
                 if (overriding != null)
@@ -72,7 +73,7 @@ public abstract class DiscoveredDatabaseHelper : IDiscoveredDatabaseHelper
                             request = tt.GetDataTypeRequestForSQLDBType(overriding.ExplicitDbType);
                         }
                         else
-                            throw new Exception(string.Format(FAnsiStrings.DiscoveredDatabaseHelper_CreateTable_DatabaseColumnRequestMustHaveEitherTypeRequestedOrExplicitDbType, column));
+                            throw new ArgumentException(string.Format(CultureInfo.InvariantCulture, FAnsiStrings.DiscoveredDatabaseHelper_CreateTable_DatabaseColumnRequestMustHaveEitherTypeRequestedOrExplicitDbType, column));
 
                     var guesser = GetGuesser(request);
                     CopySettings(guesser, args);
@@ -154,6 +155,7 @@ public abstract class DiscoveredDatabaseHelper : IDiscoveredDatabaseHelper
         if (objCol != null)
             throw new NotSupportedException(
                 string.Format(
+                    CultureInfo.InvariantCulture,
                     FAnsiStrings.DataTable_Column__0__was_of_DataType__1___this_is_not_allowed___Use_String_for_untyped_data,
                     objCol.ColumnName,
                     objCol.DataType

@@ -57,14 +57,14 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
 
         using var r = cmd.ExecuteReader();
         if (!r.HasRows)
-            throw new Exception($"Could not find any columns for table {tableName} in database {database}");
+            throw new InvalidOperationException($"Could not find any columns for table {tableName} in database {database}");
 
         while (r.Read())
         {
             var columnName = (string)r["name"];
             var dataType = (string)r["type"];
-            var notNull = Convert.ToInt64(r["notnull"]) == 1;
-            var isPrimaryKey = Convert.ToInt64(r["pk"]) > 0;
+            var notNull = Convert.ToInt64(r["notnull"], CultureInfo.InvariantCulture) == 1;
+            var isPrimaryKey = Convert.ToInt64(r["pk"], CultureInfo.InvariantCulture) > 0;
 
             var toAdd = new DiscoveredColumn(discoveredTable, columnName, !notNull)
             {
@@ -114,7 +114,7 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
         // Get the last inserted rowid
         using var identityCmd = discoveredTable.Database.Server.GetCommand("SELECT last_insert_rowid()", cmd.Connection!);
         identityCmd.Transaction = transaction?.Transaction;
-        return Convert.ToInt32(identityCmd.ExecuteScalar());
+        return Convert.ToInt32(identityCmd.ExecuteScalar(), CultureInfo.InvariantCulture);
     }
 
     public override IEnumerable<DiscoveredParameter> DiscoverTableValuedFunctionParameters(DbConnection connection, DiscoveredTableValuedFunction discoveredTableValuedFunction, DbTransaction? transaction)
@@ -164,7 +164,7 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
     {
         using var connection = args.GetManagedConnection(discoveredTable);
         using var cmd = discoveredTable.Database.Server.GetCommand($"SELECT COUNT(*) FROM {discoveredTable.GetFullyQualifiedName()} LIMIT 1", connection);
-        return Convert.ToInt32(args.ExecuteScalar(cmd)) == 0;
+        return Convert.ToInt32(args.ExecuteScalar(cmd), CultureInfo.InvariantCulture) == 0;
     }
 
     public override void RenameTable(DiscoveredTable discoveredTable, string newName, IManagedConnection connection)

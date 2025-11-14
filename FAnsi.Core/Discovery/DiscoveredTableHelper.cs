@@ -56,7 +56,7 @@ public abstract class DiscoveredTableHelper : IDiscoveredTableHelper
             _ => throw new ArgumentOutOfRangeException(nameof(tableToDrop), "Unknown TableType")
         };
 
-        using var cmd = tableToDrop.GetCommand(string.Format(sql, tableToDrop.GetFullyQualifiedName()), connection);
+        using var cmd = tableToDrop.GetCommand(string.Format(CultureInfo.InvariantCulture, sql, tableToDrop.GetFullyQualifiedName()), connection);
         cmd.ExecuteNonQuery();
     }
 
@@ -77,7 +77,7 @@ public abstract class DiscoveredTableHelper : IDiscoveredTableHelper
     {
         using var connection = args.GetManagedConnection(table);
         using var cmd = table.Database.Server.GetCommand($"SELECT count(*) FROM {table.GetFullyQualifiedName()}", connection);
-        return Convert.ToInt32(args.ExecuteScalar(cmd));
+        return Convert.ToInt32(args.ExecuteScalar(cmd), CultureInfo.InvariantCulture);
     }
 
     public abstract IEnumerable<DiscoveredParameter> DiscoverTableValuedFunctionParameters(DbConnection connection, DiscoveredTableValuedFunction discoveredTableValuedFunction, DbTransaction? transaction);
@@ -159,7 +159,7 @@ public abstract class DiscoveredTableHelper : IDiscoveredTableHelper
     public virtual void RenameTable(DiscoveredTable discoveredTable, string newName, IManagedConnection connection)
     {
         if (discoveredTable.TableType != TableType.Table)
-            throw new NotSupportedException(string.Format(FAnsiStrings.DiscoveredTableHelper_RenameTable_Rename_is_not_supported_for_TableType__0_, discoveredTable.TableType));
+            throw new NotSupportedException(string.Format(CultureInfo.InvariantCulture, FAnsiStrings.DiscoveredTableHelper_RenameTable_Rename_is_not_supported_for_TableType__0_, discoveredTable.TableType));
 
         discoveredTable.GetQuerySyntaxHelper().ValidateTableName(newName);
 
@@ -184,7 +184,7 @@ public abstract class DiscoveredTableHelper : IDiscoveredTableHelper
         }
         catch (Exception e)
         {
-            throw new AlterFailedException(string.Format(FAnsiStrings.DiscoveredTableHelper_CreateIndex_Failed, table), e);
+            throw new AlterFailedException(string.Format(CultureInfo.InvariantCulture, FAnsiStrings.DiscoveredTableHelper_CreateIndex_Failed, table), e);
         }
     }
 
@@ -202,7 +202,7 @@ public abstract class DiscoveredTableHelper : IDiscoveredTableHelper
         }
         catch (Exception e)
         {
-            throw new AlterFailedException(string.Format(FAnsiStrings.DiscoveredTableHelper_DropIndex_Failed, table), e);
+            throw new AlterFailedException(string.Format(CultureInfo.InvariantCulture, FAnsiStrings.DiscoveredTableHelper_DropIndex_Failed, table), e);
         }
     }
 
@@ -222,7 +222,7 @@ public abstract class DiscoveredTableHelper : IDiscoveredTableHelper
         }
         catch (Exception e)
         {
-            throw new AlterFailedException(string.Format(FAnsiStrings.DiscoveredTableHelper_CreatePrimaryKey_Failed_to_create_primary_key_on_table__0__using_columns___1__, table, string.Join(",", discoverColumns.Select(static c => c.GetRuntimeName()))), e);
+            throw new AlterFailedException(string.Format(CultureInfo.InvariantCulture, FAnsiStrings.DiscoveredTableHelper_CreatePrimaryKey_Failed_to_create_primary_key_on_table__0__using_columns___1__, table, string.Join(",", discoverColumns.Select(static c => c.GetRuntimeName()))), e);
         }
     }
 
@@ -235,7 +235,7 @@ public abstract class DiscoveredTableHelper : IDiscoveredTableHelper
         if (result == DBNull.Value || result == null)
             return 0;
 
-        return Convert.ToInt32(result);
+        return Convert.ToInt32(result, CultureInfo.InvariantCulture);
     }
 
     public abstract IEnumerable<DiscoveredRelationship> DiscoverRelationships(DiscoveredTable table, DbConnection connection, IManagedTransaction? transaction = null);
@@ -317,7 +317,7 @@ public abstract class DiscoveredTableHelper : IDiscoveredTableHelper
             args.GetManagedConnection(server);
         using (var cmdDistinct =
                server.GetCommand(
-                   string.Format("CREATE TABLE {1} AS SELECT distinct * FROM {0}", tableName, tempTable), con))
+                   string.Format(CultureInfo.InvariantCulture, "CREATE TABLE {1} AS SELECT distinct * FROM {0}", tableName, tempTable), con))
             args.ExecuteNonQuery(cmdDistinct);
 
         //this is the point of no return so don't cancel after this point

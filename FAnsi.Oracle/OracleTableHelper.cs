@@ -48,7 +48,7 @@ public sealed class OracleTableHelper : DiscoveredTableHelper
 
             using var r = cmd.ExecuteReader();
             if (!r.HasRows)
-                throw new Exception($"Could not find any columns for table {tableName} in database {database}");
+                throw new InvalidOperationException($"Could not find any columns for table {tableName} in database {database}");
 
             while (r.Read())
             {
@@ -79,7 +79,7 @@ public sealed class OracleTableHelper : DiscoveredTableHelper
             while (r.Read())
             {
                 var colName = r["column_name"].ToString();
-                var match = columns.Single(c => c.GetRuntimeName().Equals(colName, StringComparison.CurrentCultureIgnoreCase));
+                var match = columns.Single(c => c.GetRuntimeName().Equals(colName, StringComparison.OrdinalIgnoreCase));
                 match.IsAutoIncrement = true;
             }
         }
@@ -154,7 +154,7 @@ public sealed class OracleTableHelper : DiscoveredTableHelper
         });
 
         var result = cmd.ExecuteScalar();
-        return Convert.ToInt32(result) == 1;
+        return Convert.ToInt32(result, CultureInfo.InvariantCulture) == 1;
     }
 
     public override bool HasPrimaryKey(DiscoveredTable table, IManagedTransaction? transaction = null)
@@ -183,7 +183,7 @@ public sealed class OracleTableHelper : DiscoveredTableHelper
         });
 
         var result = cmd.ExecuteScalar();
-        return Convert.ToInt32(result) == 1;
+        return Convert.ToInt32(result, CultureInfo.InvariantCulture) == 1;
     }
 
     public override void DropIndex(DatabaseOperationArgs args, DiscoveredTable table, string indexName)
@@ -200,7 +200,7 @@ public sealed class OracleTableHelper : DiscoveredTableHelper
         }
         catch (Exception e)
         {
-            throw new AlterFailedException(string.Format(FAnsiStrings.DiscoveredTableHelper_DropIndex_Failed, table), e);
+            throw new AlterFailedException(string.Format(CultureInfo.InvariantCulture, FAnsiStrings.DiscoveredTableHelper_DropIndex_Failed, table), e);
         }
     }
 
@@ -300,7 +300,7 @@ public sealed class OracleTableHelper : DiscoveredTableHelper
         }
 
         // If we got here, all retries failed
-        throw lastException ?? new Exception($"Failed to drop table {fullyQualifiedName}");
+        throw lastException ?? new InvalidOperationException($"Failed to drop table {fullyQualifiedName}");
     }
 
     public override void DropColumn(DbConnection connection, DiscoveredColumn columnToDrop)
@@ -317,11 +317,11 @@ public sealed class OracleTableHelper : DiscoveredTableHelper
         int? dataLength = null; //in bytes
 
         if (r["DATA_SCALE"] != DBNull.Value)
-            scale = Convert.ToInt32(r["DATA_SCALE"]);
+            scale = Convert.ToInt32(r["DATA_SCALE"], CultureInfo.InvariantCulture);
         if (r["DATA_PRECISION"] != DBNull.Value)
-            precision = Convert.ToInt32(r["DATA_PRECISION"]);
+            precision = Convert.ToInt32(r["DATA_PRECISION"], CultureInfo.InvariantCulture);
         if (r["DATA_LENGTH"] != DBNull.Value)
-            dataLength = Convert.ToInt32(r["DATA_LENGTH"]);
+            dataLength = Convert.ToInt32(r["DATA_LENGTH"], CultureInfo.InvariantCulture);
 
         switch (r["DATA_TYPE"] as string)
         {
@@ -334,13 +334,13 @@ public sealed class OracleTableHelper : DiscoveredTableHelper
 
                 if (dataLength == null)
                     throw new InvalidOperationException(
-                        $"Found Oracle NUMBER datatype with scale {(scale != null ? scale.ToString() : "DBNull.Value")} and precision {(precision != null ? precision.ToString() : "DBNull.Value")}, did not know what datatype to use to represent it");
+                        $"Found Oracle NUMBER datatype with scale {(scale != null ? scale.Value.ToString(CultureInfo.InvariantCulture) : "DBNull.Value")} and precision {(precision != null ? precision.Value.ToString(CultureInfo.InvariantCulture) : "DBNull.Value")}, did not know what datatype to use to represent it");
 
                 return "double";
             case "FLOAT":
                 return "double";
             default:
-                return r["DATA_TYPE"].ToString()?.ToLower() ?? throw new InvalidOperationException("Null DATA_TYPE in db");
+                return r["DATA_TYPE"].ToString()?.ToLower(CultureInfo.InvariantCulture) ?? throw new InvalidOperationException("Null DATA_TYPE in db");
         }
     }
 
@@ -375,7 +375,7 @@ public sealed class OracleTableHelper : DiscoveredTableHelper
         var autoIncrement = discoveredTable.DiscoverColumns(transaction).SingleOrDefault(static c => c.IsAutoIncrement);
 
         if (autoIncrement == null)
-            return Convert.ToInt32(cmd.ExecuteScalar());
+            return Convert.ToInt32(cmd.ExecuteScalar(), CultureInfo.InvariantCulture);
 
         var p = discoveredTable.Database.Server.Helper.GetParameter("identityOut");
         p.Direction = ParameterDirection.Output;
@@ -391,7 +391,7 @@ public sealed class OracleTableHelper : DiscoveredTableHelper
         cmd.ExecuteNonQuery();
 
 
-        return Convert.ToInt32(p.Value);
+        return Convert.ToInt32(p.Value, CultureInfo.InvariantCulture);
     }
 
     public override DiscoveredRelationship[] DiscoverRelationships(DiscoveredTable table, DbConnection connection,
@@ -501,5 +501,5 @@ public sealed class OracleTableHelper : DiscoveredTableHelper
         return $@"alter table {discoveredTable.GetFullyQualifiedName()} rename to {newName}";
     }
 
-    public override bool RequiresLength(string columnType) => base.RequiresLength(columnType) || columnType.Equals("varchar2", StringComparison.CurrentCultureIgnoreCase);
+    public override bool RequiresLength(string columnType) => base.RequiresLength(columnType) || columnType.Equals("varchar2", StringComparison.OrdinalIgnoreCase);
 }

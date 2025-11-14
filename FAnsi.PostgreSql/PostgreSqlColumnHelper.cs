@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using FAnsi.Discovery;
 using FAnsi.Naming;
@@ -17,9 +18,9 @@ public sealed class PostgreSqlColumnHelper : IDiscoveredColumnHelper
         var sql = new StringBuilder($"SELECT {syntax.EnsureWrapped(column.GetRuntimeName())} FROM {table.GetFullyQualifiedName()}");
 
         if (discardNulls)
-            sql.Append($" WHERE {syntax.EnsureWrapped(column.GetRuntimeName())} IS NOT NULL");
+            sql.Append(CultureInfo.InvariantCulture, $" WHERE {syntax.EnsureWrapped(column.GetRuntimeName())} IS NOT NULL");
 
-        sql.Append($" fetch first {topX} rows only");
+        sql.Append(CultureInfo.InvariantCulture, $" fetch first {topX} rows only");
         return sql.ToString();
     }
 
@@ -32,7 +33,7 @@ public sealed class PostgreSqlColumnHelper : IDiscoveredColumnHelper
         var newNullability = allowNulls ? "NULL" : "NOT NULL";
 
         if (allowNulls != column.AllowNulls)
-            sb.AppendFormat(
+            sb.AppendFormat(CultureInfo.InvariantCulture,
                 $@"ALTER TABLE {column.Table.GetFullyQualifiedName()} ALTER COLUMN {syntax.EnsureWrapped(column.GetRuntimeName())} SET {newNullability}");
         return sb.ToString();
     }

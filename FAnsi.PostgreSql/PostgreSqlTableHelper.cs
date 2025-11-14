@@ -142,7 +142,7 @@ public sealed class PostgreSqlTableHelper : DiscoveredTableHelper
         cmd.Parameters.Add(p2);
 
         var result = cmd.ExecuteScalar();
-        return Convert.ToBoolean(result);
+        return Convert.ToBoolean(result, CultureInfo.InvariantCulture);
     }
 
     public override bool HasPrimaryKey(DiscoveredTable table, IManagedTransaction? transaction = null)
@@ -173,7 +173,7 @@ public sealed class PostgreSqlTableHelper : DiscoveredTableHelper
         cmd.Parameters.Add(p2);
 
         var result = cmd.ExecuteScalar();
-        return Convert.ToBoolean(result);
+        return Convert.ToBoolean(result, CultureInfo.InvariantCulture);
     }
 
     private static string GetSQLType_FromSpColumnsResult(DbDataReader r)
@@ -183,7 +183,7 @@ public sealed class PostgreSqlTableHelper : DiscoveredTableHelper
 
         if (HasPrecisionAndScale(columnType ?? string.Empty))
             lengthQualifier = $"({r["numeric_precision"]},{r["numeric_scale"]})";
-        else if (r["character_maximum_length"] != DBNull.Value) lengthQualifier = $"({Convert.ToInt32(r["character_maximum_length"])})";
+        else if (r["character_maximum_length"] != DBNull.Value) lengthQualifier = $"({Convert.ToInt32(r["character_maximum_length"], CultureInfo.InvariantCulture)})";
 
         return columnType + lengthQualifier;
     }
@@ -202,7 +202,7 @@ public sealed class PostgreSqlTableHelper : DiscoveredTableHelper
         }
         catch (Exception e)
         {
-            throw new AlterFailedException(string.Format(FAnsiStrings.DiscoveredTableHelper_DropIndex_Failed, table), e);
+            throw new AlterFailedException(string.Format(CultureInfo.InvariantCulture, FAnsiStrings.DiscoveredTableHelper_DropIndex_Failed, table), e);
         }
     }
 
@@ -240,7 +240,7 @@ public sealed class PostgreSqlTableHelper : DiscoveredTableHelper
         if (result == DBNull.Value || result == null)
             return 0;
 
-        return Convert.ToInt32(result);
+        return Convert.ToInt32(result, CultureInfo.InvariantCulture);
     }
 
     public override DiscoveredRelationship[] DiscoverRelationships(DiscoveredTable table, DbConnection connection,

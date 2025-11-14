@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using FAnsi.Discovery;
 using FAnsi.Discovery.QuerySyntax;
@@ -30,6 +31,7 @@ t1.desc = t2.desc;*/
 
 
         return string.Format(
+            CultureInfo.InvariantCulture,
             """
             MERGE INTO {1} t1
             USING

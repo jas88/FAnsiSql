@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Linq;
 using FAnsi.Discovery.QuerySyntax;
 using FAnsi.Discovery.QuerySyntax.Aggregation;
@@ -28,7 +29,7 @@ public sealed class PostgreSqlAggregateHelper : AggregateHelper
         WrapAxisColumnWithDatePartFunction(query, axisColumnAlias);
 
         var sql =
-            string.Format("""
+            string.Format(CultureInfo.InvariantCulture, """
 
                           {0}
                           SELECT
@@ -67,7 +68,7 @@ public sealed class PostgreSqlAggregateHelper : AggregateHelper
         query.SyntaxHelper.SplitLineIntoOuterMostMethodAndContents(countSqlWithoutAlias, out var aggregateMethod,
             out var aggregateParameter);
 
-        if (aggregateParameter.Equals("*"))
+        if (aggregateParameter.Equals("*", StringComparison.Ordinal))
             aggregateParameter = "1";
 
         var nonPivotColumnAlias = nonPivotColumn.GetAliasFromText(query.SyntaxHelper);
@@ -79,7 +80,7 @@ public sealed class PostgreSqlAggregateHelper : AggregateHelper
 
         // PostgreSQL doesn't have native PIVOT, so we use aggregation with FILTER or CASE statements
         // Similar to MySQL approach but using PostgreSQL syntax
-        return string.Format("""
+        return string.Format(CultureInfo.InvariantCulture, """
 
                              /* Get distinct pivot values */
                              WITH pivotValues AS (
@@ -134,14 +135,14 @@ public sealed class PostgreSqlAggregateHelper : AggregateHelper
         query.SyntaxHelper.SplitLineIntoOuterMostMethodAndContents(countSqlWithoutAlias, out var aggregateMethod,
             out var aggregateParameter);
 
-        if (aggregateParameter.Equals("*"))
+        if (aggregateParameter.Equals("*", StringComparison.Ordinal))
             aggregateParameter = "1";
 
         WrapAxisColumnWithDatePartFunction(query, axisColumnAlias);
 
         // PostgreSQL approach: Use crosstab from tablefunc extension or manual CASE statements
         // For simplicity, using FILTER clause with aggregation
-        return string.Format("""
+        return string.Format(CultureInfo.InvariantCulture, """
 
                              {0}
                              /* Get distinct pivot values */

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using FAnsi.Discovery;
 using FAnsi.Naming;
@@ -15,7 +16,7 @@ public sealed class MicrosoftSQLColumnHelper : IDiscoveredColumnHelper
             new StringBuilder($"SELECT TOP {topX} {syntax.EnsureWrapped(column.GetRuntimeName())} FROM {table.GetFullyQualifiedName()}");
 
         if (discardNulls)
-            sql.Append($" WHERE {syntax.EnsureWrapped(column.GetRuntimeName())} IS NOT NULL");
+            sql.Append(CultureInfo.InvariantCulture, $" WHERE {syntax.EnsureWrapped(column.GetRuntimeName())} IS NOT NULL");
 
         return sql.ToString();
     }
@@ -35,9 +36,9 @@ public sealed class MicrosoftSQLColumnHelper : IDiscoveredColumnHelper
              alter table T alter column A datetime2 null
              */
 
-        sb.AppendLine(
+        sb.AppendLine(CultureInfo.InvariantCulture,
             $"ALTER TABLE {column.Table.GetFullyQualifiedName()} ALTER COLUMN {column.GetWrappedName()} varchar(4000) {(allowNulls ? "NULL" : "NOT NULL")}");
-        sb.AppendLine(
+        sb.AppendLine(CultureInfo.InvariantCulture,
             $"ALTER TABLE {column.Table.GetFullyQualifiedName()} ALTER COLUMN {column.GetWrappedName()} {newType} {(allowNulls ? "NULL" : "NOT NULL")}");
 
         return sb.ToString();
