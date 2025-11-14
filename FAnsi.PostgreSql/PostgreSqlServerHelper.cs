@@ -4,6 +4,7 @@ using System.Data;
 using System.Data.Common;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using FAnsi.Connections;
 using FAnsi.Discovery;
 using FAnsi.Discovery.QuerySyntax;
 using FAnsi.Naming;
@@ -127,6 +128,20 @@ public sealed class PostgreSqlServerHelper : DiscoveredServerHelper
         return false;
     }
 
+    /// <summary>
+    /// Checks if the database exists using the provided connection.
+    /// </summary>
+    /// <param name="database">The database to check</param>
+    /// <param name="connection">The managed connection to use</param>
+    /// <returns>True if the database exists, false otherwise</returns>
+    public bool DatabaseExists(DiscoveredDatabase database, IManagedConnection connection)
+    {
+        using var cmd = new NpgsqlCommand("SELECT CASE WHEN EXISTS(SELECT 1 FROM pg_database WHERE datname = @name) THEN 1 ELSE 0 END", (NpgsqlConnection)connection.Connection);
+        cmd.Transaction = (NpgsqlTransaction?)connection.Transaction;
+        cmd.Parameters.AddWithValue("@name", database.GetRuntimeName());
+        return Convert.ToInt32(cmd.ExecuteScalar(), CultureInfo.InvariantCulture) == 1;
+    }
+
     public override bool DatabaseExists(DiscoveredDatabase database)
     {
         // Connect to postgres database to query pg_database (can't connect to target DB if it doesn't exist!)
@@ -136,8 +151,6 @@ public sealed class PostgreSqlServerHelper : DiscoveredServerHelper
         };
         var postgresServer = new DiscoveredServer(builder.ConnectionString, DatabaseType.PostgreSql);
         using var con = postgresServer.GetManagedConnection();
-        using var cmd = new NpgsqlCommand("SELECT CASE WHEN EXISTS(SELECT 1 FROM pg_database WHERE datname = @name) THEN 1 ELSE 0 END", (NpgsqlConnection)con.Connection);
-        cmd.Parameters.AddWithValue("@name", database.GetRuntimeName());
-        return Convert.ToInt32(cmd.ExecuteScalar(), CultureInfo.InvariantCulture) == 1;
+        return DatabaseExists(database, con);
     }
 }

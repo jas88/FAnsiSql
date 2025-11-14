@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data.Common;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using FAnsi.Connections;
 using FAnsi.Discovery;
 using FAnsi.Discovery.QuerySyntax;
 using FAnsi.Naming;
@@ -163,13 +164,25 @@ public sealed class OracleServerHelper : DiscoveredServerHelper
         return false;
     }
 
+    /// <summary>
+    /// Checks if the database exists using the provided connection.
+    /// </summary>
+    /// <param name="database">The database to check</param>
+    /// <param name="connection">The managed connection to use</param>
+    /// <returns>True if the database exists, false otherwise</returns>
+    public bool DatabaseExists(DiscoveredDatabase database, IManagedConnection connection)
+    {
+        using var cmd = new OracleCommand("SELECT CASE WHEN EXISTS(SELECT 1 FROM ALL_USERS WHERE USERNAME = UPPER(:name)) THEN 1 ELSE 0 END FROM DUAL", (OracleConnection)connection.Connection);
+        cmd.Transaction = (OracleTransaction?)connection.Transaction;
+        cmd.Parameters.Add(new OracleParameter("name", database.GetRuntimeName()));
+        return Convert.ToInt32(cmd.ExecuteScalar(), CultureInfo.InvariantCulture) == 1;
+    }
+
     public override bool DatabaseExists(DiscoveredDatabase database)
     {
         // In Oracle, databases are schemas/users - can query ALL_USERS from any connection
         var oracleServer = new DiscoveredServer(database.Server.Builder.ConnectionString, DatabaseType.Oracle);
         using var con = oracleServer.GetManagedConnection();
-        using var cmd = new OracleCommand("SELECT CASE WHEN EXISTS(SELECT 1 FROM ALL_USERS WHERE USERNAME = UPPER(:name)) THEN 1 ELSE 0 END FROM DUAL", (OracleConnection)con.Connection);
-        cmd.Parameters.Add(new OracleParameter("name", database.GetRuntimeName()));
-        return Convert.ToInt32(cmd.ExecuteScalar(), CultureInfo.InvariantCulture) == 1;
+        return DatabaseExists(database, con);
     }
 }
