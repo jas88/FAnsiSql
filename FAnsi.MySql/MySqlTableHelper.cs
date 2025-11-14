@@ -165,6 +165,7 @@ public sealed partial class MySqlTableHelper : DiscoveredTableHelper
         return Exists(table, connection);
     }
 
+    [Obsolete("Prefer using Exists(DiscoveredTable, IManagedConnection) to reuse connections and improve performance")]
     public override bool HasPrimaryKey(DiscoveredTable table, IManagedTransaction? transaction = null)
     {
         // Do NOT use transaction parameter - information_schema queries must run outside transactions

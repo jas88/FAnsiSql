@@ -231,7 +231,7 @@ public sealed class CrossPlatformTests : DatabaseTests
 
         tbl.Insert(new Dictionary<string, object> { { "MyTime", input } });
 
-        using (var blk = tbl.BeginBulkInsert())
+        using (var blk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture))
         {
             using var dt = new DataTable();
             dt.Columns.Add("MyTime");
@@ -327,7 +327,7 @@ public sealed class CrossPlatformTests : DatabaseTests
 
         tbl.Insert(new Dictionary<string, object> { { "MyTime", input } });
 
-        using (var blk = tbl.BeginBulkInsert())
+        using (var blk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture))
         {
             using var dt = new DataTable();
             dt.Columns.Add("MyTime");
@@ -476,7 +476,7 @@ public sealed class CrossPlatformTests : DatabaseTests
         }, true);
         try
         {
-            using (var intoParent = tblParent.BeginBulkInsert())
+            using (var intoParent = tblParent.BeginBulkInsert(CultureInfo.InvariantCulture))
             {
                 using var dt = new DataTable();
                 dt.Columns.Add("ID");
@@ -560,7 +560,7 @@ public sealed class CrossPlatformTests : DatabaseTests
             {parentIdFkCol2,parentIdPkCol2}
         }, cascadeDelete);
 
-        using (var intoParent = tblParent.BeginBulkInsert())
+        using (var intoParent = tblParent.BeginBulkInsert(CultureInfo.InvariantCulture))
         {
             using var dt = new DataTable();
             dt.Columns.Add("ID1");
@@ -809,7 +809,7 @@ public sealed class CrossPlatformTests : DatabaseTests
             Assert.That(tbl.GetRowCount(), Is.EqualTo(0));
         });
 
-        using (var insert = tbl.BeginBulkInsert())
+        using (var insert = tbl.BeginBulkInsert(CultureInfo.InvariantCulture))
             insert.Upload(dt);
 
         Assert.That(tbl.GetRowCount(), Is.EqualTo(7));

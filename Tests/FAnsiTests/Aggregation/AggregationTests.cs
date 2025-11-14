@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Globalization;
 using FAnsi;
 using FAnsi.Discovery;
 using NUnit.Framework;
@@ -95,7 +96,7 @@ internal abstract class AggregationTests : DatabaseTests
             if (aType != bType)
                 try
                 {
-                    b = Convert.ChangeType(b, aType);
+                    b = Convert.ChangeType(b, aType, CultureInfo.InvariantCulture);
                 }
                 catch (Exception)
                 {

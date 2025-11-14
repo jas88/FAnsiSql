@@ -30,8 +30,8 @@ internal sealed class DiscoverTablesTests : DatabaseTests
         Assert.That(tbls, Has.Length.EqualTo(2));
         Assert.Multiple(() =>
         {
-            Assert.That(tbls.Count(static t => t.GetRuntimeName().Equals("AA", StringComparison.CurrentCultureIgnoreCase)), Is.EqualTo(1));
-            Assert.That(tbls.Count(static t => t.GetRuntimeName().Equals("BB", StringComparison.CurrentCultureIgnoreCase)), Is.EqualTo(1));
+            Assert.That(tbls.Count(static t => t.GetRuntimeName().Equals("AA", StringComparison.OrdinalIgnoreCase)), Is.EqualTo(1));
+            Assert.That(tbls.Count(static t => t.GetRuntimeName().Equals("BB", StringComparison.OrdinalIgnoreCase)), Is.EqualTo(1));
         });
 
     }

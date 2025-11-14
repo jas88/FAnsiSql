@@ -306,7 +306,9 @@ public abstract class DiscoveredTableHelper : IDiscoveredTableHelper
         var server = discoveredTable.Database.Server;
 
         //if it's got a primary key then it's distinct! job done
+#pragma warning disable CS0618 // Type or member is obsolete - internal usage of our own obsolete method
         if (HasPrimaryKey(discoveredTable, args.TransactionIfAny))
+#pragma warning restore CS0618 // Type or member is obsolete
             return;
 
         var tableName = discoveredTable.GetFullyQualifiedName();
