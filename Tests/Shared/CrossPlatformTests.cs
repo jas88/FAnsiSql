@@ -25,15 +25,33 @@ public sealed class CrossPlatformTests : DatabaseTests
         Assert.Throws<ArgumentNullException>(() => db.CreateTable("", new DataTable()));
     }
 
+    #if MSSQL_TESTS
     [TestCase(DatabaseType.MicrosoftSQLServer, "01/01/2007 00:00:00")]
+    #endif
+    #if MYSQL_TESTS
     [TestCase(DatabaseType.MySql, "1/1/2007 00:00:00")]
+    #endif
+    #if MYSQL_TESTS
     [TestCase(DatabaseType.MySql, "01/01/2007 00:00:00")]
+    #endif
+    #if ORACLE_TESTS
     [TestCase(DatabaseType.Oracle, "01/01/2007 00:00:00")]
+    #endif
+    #if MSSQL_TESTS
     [TestCase(DatabaseType.MicrosoftSQLServer, "2007-01-01 00:00:00")]
+    #endif
+    #if MYSQL_TESTS
     [TestCase(DatabaseType.MySql, "2007-01-01 00:00:00")]
+    #endif
+    #if ORACLE_TESTS
     [TestCase(DatabaseType.Oracle, "2007-01-01 00:00:00")]
+    #endif
+    #if POSTGRESQL_TESTS
     [TestCase(DatabaseType.PostgreSql, "01/01/2007 00:00:00")]
+    #endif
+    #if POSTGRESQL_TESTS
     [TestCase(DatabaseType.PostgreSql, "2007-01-01 00:00:00")]
+    #endif
     public void DateColumnTests_NoTime(DatabaseType type, object input)
     {
         var db = GetTestDatabase(type);
@@ -59,14 +77,30 @@ public sealed class CrossPlatformTests : DatabaseTests
         });
     }
 
+    #if MSSQL_TESTS
     [TestCase(DatabaseType.MicrosoftSQLServer, "2/28/1993 5:36:27 AM", "en-US")]
+    #endif
+    #if MYSQL_TESTS
     [TestCase(DatabaseType.MySql, "2/28/1993 5:36:27 AM", "en-US")]
+    #endif
+    #if ORACLE_TESTS
     [TestCase(DatabaseType.Oracle, "2/28/1993 5:36:27 AM", "en-US")]
+    #endif
+    #if MSSQL_TESTS
     [TestCase(DatabaseType.MicrosoftSQLServer, "28/2/1993 5:36:27 AM", "en-GB")]
+    #endif
+    #if MYSQL_TESTS
     [TestCase(DatabaseType.MySql, "28/2/1993 5:36:27 AM", "en-GB")]
+    #endif
+    #if ORACLE_TESTS
     [TestCase(DatabaseType.Oracle, "28/2/1993 5:36:27 AM", "en-GB")]
+    #endif
+    #if POSTGRESQL_TESTS
     [TestCase(DatabaseType.PostgreSql, "2/28/1993 5:36:27 AM", "en-US")]
+    #endif
+    #if POSTGRESQL_TESTS
     [TestCase(DatabaseType.PostgreSql, "28/2/1993 5:36:27 AM", "en-GB")]
+    #endif
     public void DateColumnTests_UkUsFormat_Explicit(DatabaseType type, object input, string culture)
     {
         var db = GetTestDatabase(type);
@@ -104,10 +138,18 @@ public sealed class CrossPlatformTests : DatabaseTests
     /// <param name="type"></param>
     /// <param name="input"></param>
     /// <param name="culture"></param>
+    #if MSSQL_TESTS
     [TestCase(DatabaseType.MicrosoftSQLServer, "2/28/1993 5:36:27 AM", "en-US")]
+    #endif
+    #if MYSQL_TESTS
     [TestCase(DatabaseType.MySql, "2/28/1993 5:36:27 AM", "en-US")]
+    #endif
+    #if ORACLE_TESTS
     [TestCase(DatabaseType.Oracle, "2/28/1993 5:36:27 AM", "en-US")]
+    #endif
+    #if POSTGRESQL_TESTS
     [TestCase(DatabaseType.PostgreSql, "2/28/1993 5:36:27 AM", "en-US")]
+    #endif
     public void DateColumnTests_PrimaryKeyColumn(DatabaseType type, object input, string culture)
     {
         var db = GetTestDatabase(type);
@@ -137,14 +179,30 @@ public sealed class CrossPlatformTests : DatabaseTests
     }
 
 
+    #if MSSQL_TESTS
     [TestCase(DatabaseType.MicrosoftSQLServer, "00:00:00")]
+    #endif
+    #if MYSQL_TESTS
     [TestCase(DatabaseType.MySql, "00:00:00")]
+    #endif
+    #if ORACLE_TESTS
     [TestCase(DatabaseType.Oracle, "00:00:00")]
+    #endif
+    #if MSSQL_TESTS
     [TestCase(DatabaseType.MicrosoftSQLServer, "00:00")]
+    #endif
+    #if MYSQL_TESTS
     [TestCase(DatabaseType.MySql, "00:00")]
+    #endif
+    #if ORACLE_TESTS
     [TestCase(DatabaseType.Oracle, "00:00")]
+    #endif
+    #if POSTGRESQL_TESTS
     [TestCase(DatabaseType.PostgreSql, "00:00:00")]
+    #endif
+    #if POSTGRESQL_TESTS
     [TestCase(DatabaseType.PostgreSql, "00:00")]
+    #endif
     public void DateColumnTests_TimeOnly_Midnight(DatabaseType type, object input)
     {
         var db = GetTestDatabase(type);
@@ -211,14 +269,30 @@ public sealed class CrossPlatformTests : DatabaseTests
         }
     }
     */
+    #if MSSQL_TESTS
     [TestCase(DatabaseType.MicrosoftSQLServer, "13:11:10")]
+    #endif
+    #if MYSQL_TESTS
     [TestCase(DatabaseType.MySql, "13:11:10")]
+    #endif
+    #if ORACLE_TESTS
     [TestCase(DatabaseType.Oracle, "13:11:10")]
+    #endif
+    #if MSSQL_TESTS
     [TestCase(DatabaseType.MicrosoftSQLServer, "13:11")]
+    #endif
+    #if MYSQL_TESTS
     [TestCase(DatabaseType.MySql, "13:11")]
+    #endif
+    #if ORACLE_TESTS
     [TestCase(DatabaseType.Oracle, "13:11")]
+    #endif
+    #if POSTGRESQL_TESTS
     [TestCase(DatabaseType.PostgreSql, "13:11:10")]
+    #endif
+    #if POSTGRESQL_TESTS
     [TestCase(DatabaseType.PostgreSql, "13:11")]
+    #endif
     public void DateColumnTests_TimeOnly_Afternoon(DatabaseType type, object input)
     {
         var db = GetTestDatabase(type);
@@ -254,20 +328,45 @@ public sealed class CrossPlatformTests : DatabaseTests
         }
     }
 
-    [Test]
+    #if MSSQL_TESTS
     [TestCase(DatabaseType.MicrosoftSQLServer, "int", "-23.00")]
+    #endif
+    #if MSSQL_TESTS
     [TestCase(DatabaseType.MicrosoftSQLServer, "int", "23.0")]
+    #endif
+    #if MSSQL_TESTS
     [TestCase(DatabaseType.MicrosoftSQLServer, "bit", "0")]
+    #endif
+    #if MSSQL_TESTS
     [TestCase(DatabaseType.MicrosoftSQLServer, "int", "00.0")]
+    #endif
+    #if MSSQL_TESTS
     [TestCase(DatabaseType.MicrosoftSQLServer, "int", "-24")]
+    #endif
+    #if MYSQL_TESTS
     [TestCase(DatabaseType.MySql, "int", "-23.00")]
+    #endif
+    #if MYSQL_TESTS
     [TestCase(DatabaseType.MySql, "int", "-25")]
+    #endif
+    #if MYSQL_TESTS
     [TestCase(DatabaseType.MySql, "boolean", "0")]
+    #endif
+    #if POSTGRESQL_TESTS
     [TestCase(DatabaseType.PostgreSql, "int", "-23.00")]
+    #endif
+    #if POSTGRESQL_TESTS
     [TestCase(DatabaseType.PostgreSql, "int", "23.0")]
+    #endif
+    #if POSTGRESQL_TESTS
     [TestCase(DatabaseType.PostgreSql, "boolean", "0")]
+    #endif
+    #if POSTGRESQL_TESTS
     [TestCase(DatabaseType.PostgreSql, "int", "00.0")]
+    #endif
+    #if POSTGRESQL_TESTS
     [TestCase(DatabaseType.PostgreSql, "int", "-24")]
+    #endif
     public void TypeConsensusBetweenGuesserAndDiscoveredTableTest(DatabaseType dbType, string datatType, string insertValue)
     {
         var database = GetTestDatabase(dbType);
@@ -783,9 +882,15 @@ public sealed class CrossPlatformTests : DatabaseTests
         });
     }
 
+    #if MYSQL_TESTS
     [TestCase(DatabaseType.MySql, "_-o-_", ":>0<:")]
+    #endif
+    #if MSSQL_TESTS
     [TestCase(DatabaseType.MicrosoftSQLServer, "_-o-_", ":>0<:")]
+    #endif
+    #if POSTGRESQL_TESTS
     [TestCase(DatabaseType.PostgreSql, "_-o-_", ":>0<:")]
+    #endif
     public void HorribleDatabaseAndTableNames(DatabaseType type, string horribleDatabaseName, string horribleTableName)
     {
         AssertCanCreateDatabases();
@@ -856,14 +961,30 @@ public sealed class CrossPlatformTests : DatabaseTests
         }
     }
 
+    #if MYSQL_TESTS
     [TestCase(DatabaseType.MySql, "my (database)", "my (table)", "my (col)")]
+    #endif
+    #if MSSQL_TESTS
     [TestCase(DatabaseType.MicrosoftSQLServer, "my (database)", "my (table)", "my (col)")]
+    #endif
+    #if ORACLE_TESTS
     [TestCase(DatabaseType.Oracle, "my (database)", "my (table)", "my (col)")]
+    #endif
+    #if MYSQL_TESTS
     [TestCase(DatabaseType.MySql, "my.database", "my.table", "my.col")]
+    #endif
+    #if MSSQL_TESTS
     [TestCase(DatabaseType.MicrosoftSQLServer, "my.database", "my.table", "my.col")]
+    #endif
+    #if ORACLE_TESTS
     [TestCase(DatabaseType.Oracle, "my.database", "my.table", "my.col")]
+    #endif
+    #if POSTGRESQL_TESTS
     [TestCase(DatabaseType.PostgreSql, "my (database)", "my (table)", "my (col)")]
+    #endif
+    #if POSTGRESQL_TESTS
     [TestCase(DatabaseType.PostgreSql, "my.database", "my.table", "my.col")]
+    #endif
     public void UnsupportedEntityNames(DatabaseType type, string horribleDatabaseName, string horribleTableName, string columnName)
     {
 
@@ -906,16 +1027,36 @@ public sealed class CrossPlatformTests : DatabaseTests
                 ?.Message, Does.Match("Database .* contained unsupported .* characters"));
     }
 
+    #if MYSQL_TESTS
     [TestCase(DatabaseType.MySql, "_-o-_", ":>0<:", "-_")]
+    #endif
+    #if MYSQL_TESTS
     [TestCase(DatabaseType.MySql, "Comment", "SSSS", "Space Out")]
+    #endif
+    #if MSSQL_TESTS
     [TestCase(DatabaseType.MicrosoftSQLServer, "_-o-_", ":>0<:", "-_")]
+    #endif
+    #if MSSQL_TESTS
     [TestCase(DatabaseType.MicrosoftSQLServer, "Comment", "SSSS", "Space Out")]
+    #endif
+    #if ORACLE_TESTS
     [TestCase(DatabaseType.Oracle, "_-o-_", ":>0<:", "-_")]
+    #endif
+    #if ORACLE_TESTS
     [TestCase(DatabaseType.Oracle, "Comment", "Comment", "Comment")] //reserved keyword in Oracle
+    #endif
+    #if ORACLE_TESTS
     [TestCase(DatabaseType.Oracle, "Comment", "SSSS", "Space Out")]
+    #endif
+    #if POSTGRESQL_TESTS
     [TestCase(DatabaseType.PostgreSql, "_-o-_", ":>0<:", "-_")]
+    #endif
+    #if POSTGRESQL_TESTS
     [TestCase(DatabaseType.PostgreSql, "Comment", "Comment", "Comment")] //reserved keyword in Oracle
+    #endif
+    #if POSTGRESQL_TESTS
     [TestCase(DatabaseType.PostgreSql, "Comment", "SSSS", "Space Out")]
+    #endif
     public void HorribleColumnNames(DatabaseType type, string horribleDatabaseName, string horribleTableName, string columnName)
     {
         AssertCanCreateDatabases();

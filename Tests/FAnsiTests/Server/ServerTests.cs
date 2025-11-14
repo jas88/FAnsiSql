@@ -106,10 +106,18 @@ internal sealed class ServerLevelTests : DatabaseTests
 
     }
 
+    #if MYSQL_TESTS
     [TestCase(DatabaseType.MySql, false)]
+    #endif
+    #if MSSQL_TESTS
     [TestCase(DatabaseType.MicrosoftSQLServer, false)]
+    #endif
+    #if ORACLE_TESTS
     [TestCase(DatabaseType.Oracle, true)]
+    #endif
+    #if POSTGRESQL_TESTS
     [TestCase(DatabaseType.PostgreSql, false)]
+    #endif
     public void ServerHelper_ChangeDatabase(DatabaseType type, bool expectCaps)
     {
         var server = new DiscoveredServer("loco", "bob", type, "franko", "wacky");
@@ -186,10 +194,18 @@ internal sealed class ServerLevelTests : DatabaseTests
         });
     }
 
+    #if MSSQL_TESTS
     [TestCase(DatabaseType.MicrosoftSQLServer, DatabaseType.MySql)]
+    #endif
+    #if MYSQL_TESTS
     [TestCase(DatabaseType.MySql, DatabaseType.MicrosoftSQLServer)]
+    #endif
+    #if MSSQL_TESTS
     [TestCase(DatabaseType.MicrosoftSQLServer, DatabaseType.PostgreSql)]
+    #endif
+    #if POSTGRESQL_TESTS
     [TestCase(DatabaseType.PostgreSql, DatabaseType.MicrosoftSQLServer)]
+    #endif
 
     public void MoveData_BetweenServerTypes(DatabaseType from, DatabaseType to)
     {
