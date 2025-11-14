@@ -143,7 +143,11 @@ public abstract class BulkCopy : IBulkCopy
                     //parse the value
                     dr[newColumn] = dr[dataColumn] is string v ? decider.Parse(v) ?? DBNull.Value : DBNull.Value;
                 }
-                catch (Exception ex)
+                catch (FormatException ex)
+                {
+                    throw new FormatException($"Failed to parse value '{dr[dataColumn]}' in column '{dataColumn}'", ex);
+                }
+                catch (InvalidCastException ex)
                 {
                     throw new FormatException($"Failed to parse value '{dr[dataColumn]}' in column '{dataColumn}'", ex);
                 }
@@ -183,6 +187,7 @@ public abstract class BulkCopy : IBulkCopy
             DiscoveredColumn? match = null;
 
             // Manual loop optimization to avoid LINQ allocations and use span comparisons
+            // CodeQL[cs/linq/missed-where-opportunity]: Intentional - manual loop for performance (avoids LINQ allocations)
             foreach (var targetColumn in TargetTableColumns)
             {
                 if (StringComparisonHelper.RuntimeNamesEqual(targetColumn.GetRuntimeName(), colInSource.ColumnName))

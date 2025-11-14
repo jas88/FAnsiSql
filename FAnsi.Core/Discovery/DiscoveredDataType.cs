@@ -150,7 +150,7 @@ public sealed class DiscoveredDataType
                 cmd.CommandTimeout = alterTimeoutInSeconds;
                 cmd.ExecuteNonQuery();
             }
-            catch (Exception e)
+            catch (DbException e)
             {
                 throw new AlterFailedException(string.Format(CultureInfo.InvariantCulture, FAnsiStrings.DiscoveredDataType_AlterTypeTo_Failed_to_send_resize_SQL__0_, sql), e);
             }

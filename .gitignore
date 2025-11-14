@@ -304,3 +304,12 @@ claude-*.json
 **/CLAUDE.*
 **/claude.*
 packages.lock.json
+
+# SQLite database files (OpenMemory and other temp databases)
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+
+# Test output files
+*_test_output.txt
+docs/CI-FAILURE-ANALYSIS.md

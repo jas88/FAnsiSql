@@ -41,7 +41,7 @@ public sealed class CrossPlatformTests : DatabaseTests
 
         tbl.Insert(new Dictionary<string, object> { { "MyDate", input } });
 
-        using (var blk = tbl.BeginBulkInsert())
+        using (var blk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture))
         {
             using var dt = new DataTable();
             dt.Columns.Add("MyDate");
@@ -152,7 +152,7 @@ public sealed class CrossPlatformTests : DatabaseTests
 
         tbl.Insert(new Dictionary<string, object> { { "MyTime", input } });
 
-        using (var blk = tbl.BeginBulkInsert())
+        using (var blk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture))
         {
             using var dt = new DataTable();
             dt.Columns.Add("MyTime");
@@ -226,7 +226,7 @@ public sealed class CrossPlatformTests : DatabaseTests
 
         tbl.Insert(new Dictionary<string, object> { { "MyTime", input } });
 
-        using (var blk = tbl.BeginBulkInsert())
+        using (var blk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture))
         {
             using var dt = new DataTable();
             dt.Columns.Add("MyTime");
@@ -335,7 +335,7 @@ public sealed class CrossPlatformTests : DatabaseTests
         }, true);
         try
         {
-            using (var intoParent = tblParent.BeginBulkInsert())
+            using (var intoParent = tblParent.BeginBulkInsert(CultureInfo.InvariantCulture))
             {
                 using var dt = new DataTable();
                 dt.Columns.Add("ID");
@@ -419,7 +419,7 @@ public sealed class CrossPlatformTests : DatabaseTests
             {parentIdFkCol2,parentIdPkCol2}
         }, cascadeDelete);
 
-        using (var intoParent = tblParent.BeginBulkInsert())
+        using (var intoParent = tblParent.BeginBulkInsert(CultureInfo.InvariantCulture))
         {
             using var dt = new DataTable();
             dt.Columns.Add("ID1");
@@ -668,7 +668,7 @@ public sealed class CrossPlatformTests : DatabaseTests
             Assert.That(tbl.GetRowCount(), Is.EqualTo(0));
         });
 
-        using (var insert = tbl.BeginBulkInsert())
+        using (var insert = tbl.BeginBulkInsert(CultureInfo.InvariantCulture))
             insert.Upload(dt);
 
         Assert.That(tbl.GetRowCount(), Is.EqualTo(7));
@@ -704,11 +704,12 @@ public sealed class CrossPlatformTests : DatabaseTests
         var tbl = database.CreateTable("IntTestTable", dt);
 
         dt = tbl.GetDataTable();
+        var intValues = dt.Rows.OfType<DataRow>().Select(r => Convert.ToInt32(r[0], CultureInfo.InvariantCulture)).ToList();
         Assert.Multiple(() =>
         {
-            Assert.That(dt.Rows.OfType<DataRow>().Count(static r => Convert.ToInt32(r[0]) == 100), Is.EqualTo(1));
-            Assert.That(dt.Rows.OfType<DataRow>().Count(static r => Convert.ToInt32(r[0]) == 105), Is.EqualTo(1));
-            Assert.That(dt.Rows.OfType<DataRow>().Count(static r => Convert.ToInt32(r[0]) == 1), Is.EqualTo(1));
+            Assert.That(intValues.Count(v => v == 100), Is.EqualTo(1));
+            Assert.That(intValues.Count(v => v == 105), Is.EqualTo(1));
+            Assert.That(intValues.Count(v => v == 1), Is.EqualTo(1));
         });
 
         var col = tbl.DiscoverColumn("MyCol");
@@ -725,11 +726,12 @@ public sealed class CrossPlatformTests : DatabaseTests
         });
 
         dt = tbl.GetDataTable();
+        var decimalValues = dt.Rows.OfType<DataRow>().Select(r => Convert.ToDecimal(r[0], CultureInfo.InvariantCulture)).ToList();
         Assert.Multiple(() =>
         {
-            Assert.That(dt.Rows.OfType<DataRow>().Count(static r => Convert.ToDecimal(r[0]) == new decimal(100.0f)), Is.EqualTo(1));
-            Assert.That(dt.Rows.OfType<DataRow>().Count(static r => Convert.ToDecimal(r[0]) == new decimal(105.0f)), Is.EqualTo(1));
-            Assert.That(dt.Rows.OfType<DataRow>().Count(static r => Convert.ToDecimal(r[0]) == new decimal(1.0f)), Is.EqualTo(1));
+            Assert.That(decimalValues.Count(v => v == new decimal(100.0f)), Is.EqualTo(1));
+            Assert.That(decimalValues.Count(v => v == new decimal(105.0f)), Is.EqualTo(1));
+            Assert.That(decimalValues.Count(v => v == new decimal(1.0f)), Is.EqualTo(1));
         });
     }
 
@@ -748,11 +750,12 @@ public sealed class CrossPlatformTests : DatabaseTests
         var tbl = database.CreateTable("DecimalTestTable", dt);
 
         dt = tbl.GetDataTable();
+        var decimalValues2 = dt.Rows.OfType<DataRow>().Select(r => Convert.ToDecimal(r[0], CultureInfo.InvariantCulture)).ToList();
         Assert.Multiple(() =>
         {
-            Assert.That(dt.Rows.OfType<DataRow>().Count(static r => Convert.ToDecimal(r[0]) == new decimal(100.0f)), Is.EqualTo(1));
-            Assert.That(dt.Rows.OfType<DataRow>().Count(static r => Convert.ToDecimal(r[0]) == new decimal(105.0f)), Is.EqualTo(1));
-            Assert.That(dt.Rows.OfType<DataRow>().Count(static r => Convert.ToDecimal(r[0]) == new decimal(2.1f)), Is.EqualTo(1));
+            Assert.That(decimalValues2.Count(v => v == new decimal(100.0f)), Is.EqualTo(1));
+            Assert.That(decimalValues2.Count(v => v == new decimal(105.0f)), Is.EqualTo(1));
+            Assert.That(decimalValues2.Count(v => v == new decimal(2.1f)), Is.EqualTo(1));
         });
 
 
@@ -827,7 +830,7 @@ public sealed class CrossPlatformTests : DatabaseTests
                 Assert.That(tbl.GetRowCount(), Is.EqualTo(0));
             });
 
-            using (var insert = tbl.BeginBulkInsert())
+            using (var insert = tbl.BeginBulkInsert(CultureInfo.InvariantCulture))
                 insert.Upload(dt);
 
             Assert.That(tbl.GetRowCount(), Is.EqualTo(7));
@@ -971,7 +974,7 @@ public sealed class CrossPlatformTests : DatabaseTests
         dt.Columns.Add("Name");
         dt.Rows.Add("Frank");
 
-        using (var bulkInsert = tbl.BeginBulkInsert())
+        using (var bulkInsert = tbl.BeginBulkInsert(CultureInfo.InvariantCulture))
             bulkInsert.Upload(dt);
 
         Assert.That(tbl.GetRowCount(), Is.EqualTo(1));
@@ -1006,7 +1009,7 @@ public sealed class CrossPlatformTests : DatabaseTests
         ]);
         DateTime currentValue;
 
-        using (var insert = tbl.BeginBulkInsert())
+        using (var insert = tbl.BeginBulkInsert(CultureInfo.InvariantCulture))
         {
             using var dt = new DataTable();
             dt.Columns.Add("Name");
@@ -1038,8 +1041,8 @@ public sealed class CrossPlatformTests : DatabaseTests
         switch (type)
         {
             case DatabaseType.MySql when database.Server.GetVersion()?.Major < 8:
-                Assert.Inconclusive("UID defaults are only supported in MySql 8+");
-                break;
+                Assert.Pass("UID defaults are only supported in MySql 8+");
+                return;
             case DatabaseType.PostgreSql:
                 {
                     //we need this extension on the server to work
@@ -1061,7 +1064,7 @@ public sealed class CrossPlatformTests : DatabaseTests
             }
         ]);
 
-        using (var insert = tbl.BeginBulkInsert())
+        using (var insert = tbl.BeginBulkInsert(CultureInfo.InvariantCulture))
         {
             using var dt = new DataTable();
             dt.Columns.Add("Name");
@@ -1371,8 +1374,8 @@ public sealed class CrossPlatformTests : DatabaseTests
         var d = new DateTimeTypeDecider(new CultureInfo("en-gb"));
         var dt = new DateTime(2019, 5, 22, 8, 59, 36);
 
-        foreach (var f in DateTimeTypeDecider.DateFormatsDM) d.Parse(dt.ToString(f));
-        foreach (var f in DateTimeTypeDecider.TimeFormats) d.Parse(dt.ToString(f));
+        foreach (var f in DateTimeTypeDecider.DateFormatsDM) d.Parse(dt.ToString(f, CultureInfo.InvariantCulture));
+        foreach (var f in DateTimeTypeDecider.TimeFormats) d.Parse(dt.ToString(f, CultureInfo.InvariantCulture));
 
         Assert.That(d.Parse("28/2/1993 5:36:27 AM"), Is.EqualTo(new DateTime(1993, 2, 28, 5, 36, 27)));
     }

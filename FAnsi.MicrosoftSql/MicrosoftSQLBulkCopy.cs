@@ -191,6 +191,7 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
 
                         var sourceValue = dr[badMapping.SourceColumn];
                         // Manual loop optimization to avoid LINQ SingleOrDefault allocation and use span comparisons
+                        // CodeQL[cs/linq/missed-where-opportunity]: Intentional - manual loop for performance (avoids LINQ allocations)
                         DiscoveredColumn? destColumn = null;
                         foreach (var column in TargetTableColumns)
                         {

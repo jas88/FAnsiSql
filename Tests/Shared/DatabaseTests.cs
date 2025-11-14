@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Xml.Linq;
@@ -44,18 +45,18 @@ public abstract class DatabaseTests
 
         var doc = XDocument.Load(file);
 
-        var root = doc.Element("TestDatabases") ?? throw new Exception($"Missing element 'TestDatabases' in {TestFilename}");
+        var root = doc.Element("TestDatabases") ?? throw new InvalidOperationException($"Missing element 'TestDatabases' in {TestFilename}");
 
         var settings = root.Element("Settings") ??
-                       throw new Exception($"Missing element 'Settings' in {TestFilename}");
+                       throw new InvalidOperationException($"Missing element 'Settings' in {TestFilename}");
 
         var e = settings.Element("AllowDatabaseCreation") ??
-                throw new Exception($"Missing element 'AllowDatabaseCreation' in {TestFilename}");
+                throw new InvalidOperationException($"Missing element 'AllowDatabaseCreation' in {TestFilename}");
 
-        _allowDatabaseCreation = Convert.ToBoolean(e.Value);
+        _allowDatabaseCreation = Convert.ToBoolean(e.Value, CultureInfo.InvariantCulture);
 
         e = settings.Element("TestScratchDatabase") ??
-            throw new Exception($"Missing element 'TestScratchDatabase' in {TestFilename}");
+            throw new InvalidOperationException($"Missing element 'TestScratchDatabase' in {TestFilename}");
 
         _testScratchDatabase = e.Value;
 
@@ -64,10 +65,10 @@ public abstract class DatabaseTests
             var type = element.Element("DatabaseType")?.Value;
 
             if (!Enum.TryParse(type, out DatabaseType databaseType))
-                throw new Exception($"Could not parse DatabaseType {type}");
+                throw new InvalidOperationException($"Could not parse DatabaseType {type}");
 
             var constr = element.Element("ConnectionString")?.Value ??
-                         throw new Exception($"Invalid connection string for {type}");
+                         throw new InvalidOperationException($"Invalid connection string for {type}");
 
             // Test database connectivity - if it fails, ignore all tests for this database type
             try
@@ -153,17 +154,17 @@ public abstract class DatabaseTests
             return true;
 
         //if they are null but basically the same
-        var oIsNull = o == null || o == DBNull.Value || o.ToString()?.Equals("0") == true;
-        var o2IsNull = o2 == null || o2 == DBNull.Value || o2.ToString()?.Equals("0") == true;
+        var oIsNull = o == null || o == DBNull.Value || o.ToString()?.Equals("0", StringComparison.Ordinal) == true;
+        var o2IsNull = o2 == null || o2 == DBNull.Value || o2.ToString()?.Equals("0", StringComparison.Ordinal) == true;
 
         if (oIsNull || o2IsNull)
             return oIsNull == o2IsNull;
 
         //they are not null so tostring them deals with int vs long etc that DbDataAdapters can be a bit flaky on
         if (handleSlashRSlashN)
-            return string.Equals(o?.ToString()?.Replace("\r", "").Replace("\n", ""), o2?.ToString()?.Replace("\r", "").Replace("\n", ""));
+            return string.Equals(o?.ToString()?.Replace("\r", "", StringComparison.Ordinal).Replace("\n", "", StringComparison.Ordinal), o2?.ToString()?.Replace("\r", "", StringComparison.Ordinal).Replace("\n", "", StringComparison.Ordinal), StringComparison.Ordinal);
 
-        return string.Equals(o?.ToString(), o2?.ToString());
+        return string.Equals(o?.ToString(), o2?.ToString(), StringComparison.Ordinal);
     }
 
     protected static void AssertAreEqual(DataTable dt1, DataTable dt2)

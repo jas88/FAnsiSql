@@ -353,7 +353,7 @@ public abstract partial class QuerySyntaxHelper(
             else
                 p.Value = value;
         }
-        catch (Exception ex)
+        catch (DbException ex)
         {
             throw new InvalidOperationException(string.Format(CultureInfo.InvariantCulture, FAnsiStrings.QuerySyntaxHelper_GetParameter_Could_not_GetParameter_for_column___0__, discoveredColumn.GetFullyQualifiedName()), ex);
         }

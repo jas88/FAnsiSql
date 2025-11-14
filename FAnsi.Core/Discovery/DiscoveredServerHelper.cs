@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -17,7 +19,9 @@ namespace FAnsi.Discovery;
 /// </summary>
 public abstract partial class DiscoveredServerHelper(DatabaseType databaseType) : IDiscoveredServerHelper
 {
-    private static readonly ConcurrentDictionary<DatabaseType, ConnectionStringKeywordAccumulator> ConnectionStringKeywordAccumulators = new();
+    // Pre-initialize accumulators for all DatabaseType values to avoid race conditions
+    private static readonly FrozenDictionary<DatabaseType, ConnectionStringKeywordAccumulator> ConnectionStringKeywordAccumulators =
+        Enum.GetValues<DatabaseType>().ToFrozenDictionary(dt => dt, dt => new ConnectionStringKeywordAccumulator(dt));
 
     /// <summary>
     /// Register a system-wide rule that all connection strings of <paramref name="databaseType"/> should include the given <paramref name="keyword"/>.
@@ -28,8 +32,7 @@ public abstract partial class DiscoveredServerHelper(DatabaseType databaseType) 
     /// <param name="priority">Resolves conflicts when multiple calls are made for the same <paramref name="keyword"/> at different times</param>
     public static void AddConnectionStringKeyword(DatabaseType databaseType, string keyword, string value, ConnectionStringKeywordPriority priority)
     {
-        var accumulator = ConnectionStringKeywordAccumulators.GetOrAdd(databaseType,
-            static dt => new ConnectionStringKeywordAccumulator(dt));
+        var accumulator = ConnectionStringKeywordAccumulators[databaseType];
         accumulator.AddOrUpdateKeyword(keyword, value, priority);
     }
 
@@ -166,6 +169,7 @@ public abstract partial class DiscoveredServerHelper(DatabaseType databaseType) 
             exception = null;
             return true;
         }
+        // CodeQL[cs/catch-of-all-exceptions]: Intentional - try/fail pattern returns bool with out exception parameter
         catch (Exception e)
         {
             exception = e;
