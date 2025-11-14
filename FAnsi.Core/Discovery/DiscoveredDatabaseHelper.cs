@@ -192,14 +192,14 @@ public abstract class DiscoveredDatabaseHelper : IDiscoveredDatabaseHelper
         //the name fully specified e.g. [db]..[tbl] or `db`.`tbl` - See Test HorribleColumnNames
         var fullyQualifiedName = syntaxHelper.EnsureFullyQualified(database.GetRuntimeName(), schema, tableName);
 
-        bodySql.AppendLine($"CREATE TABLE {fullyQualifiedName}(");
+        bodySql.AppendLine(CultureInfo.InvariantCulture, $"CREATE TABLE {fullyQualifiedName}(");
 
         foreach (var col in columns)
         {
             var datatype = col.GetSQLDbType(syntaxHelper.TypeTranslater);
 
             //add the column name and accompanying datatype
-            bodySql.AppendLine($"{GetCreateTableSqlLineForColumn(col, datatype, syntaxHelper)},");
+            bodySql.AppendLine(CultureInfo.InvariantCulture, $"{GetCreateTableSqlLineForColumn(col, datatype, syntaxHelper)},");
         }
 
         var pks = columns.Where(static c => c.IsPrimaryKey).ToArray();
@@ -348,7 +348,7 @@ public abstract class DiscoveredDatabaseHelper : IDiscoveredDatabaseHelper
             {
                 lineNumber++;
 
-                if (line.Trim().Equals("GO", StringComparison.CurrentCultureIgnoreCase))
+                if (line.Trim().Equals("GO", StringComparison.OrdinalIgnoreCase))
                 {
                     var executeSql = sqlBatch.ToString();
                     if (string.IsNullOrWhiteSpace(executeSql))
