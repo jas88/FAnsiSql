@@ -38,18 +38,18 @@ internal sealed class EqualityTests_TableAndColumn
     }
 
 
-    #if MSSQL_TESTS
+#if MSSQL_TESTS
     [TestCase(DatabaseType.MicrosoftSQLServer, "Server=fish", "MyDb", "MyTable", null, DatabaseType.MicrosoftSQLServer, "Server=fish", "MyDb", "MyTable2", null)]
-    #endif
-    #if MSSQL_TESTS
+#endif
+#if MSSQL_TESTS
     [TestCase(DatabaseType.MicrosoftSQLServer, "Server=fish", "MyDb", "MyTable", null, DatabaseType.MicrosoftSQLServer, "Server=fish", "MyDb2", "MyTable", null)]
-    #endif
-    #if MSSQL_TESTS
+#endif
+#if MSSQL_TESTS
     [TestCase(DatabaseType.MicrosoftSQLServer, "Server=fish", "MyDb", "MyTable", null, DatabaseType.MicrosoftSQLServer, "Server=fish2", "MyDb", "MyTable", null)]
-    #endif
-    #if MSSQL_TESTS
+#endif
+#if MSSQL_TESTS
     [TestCase(DatabaseType.MicrosoftSQLServer, "Server=fish", "MyDb", "MyTable", null, DatabaseType.MySql, "Server=fish", "MyDb", "MyTable", null)]
-    #endif
+#endif
     public void EqualityTest_DiscoveredTable_AreNotEqual(DatabaseType type1, string constr1, string dbname1, string tablename1, string? schema1, DatabaseType type2, string constr2, string dbname2, string tablename2, string? schema2)
     {
         var s1 = new DiscoveredServer(constr1, type1);

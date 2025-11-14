@@ -31,11 +31,6 @@ jobs:
     - name: Replace test configuration for CI
       run: mv Tests/FAnsiTests/TestDatabases{-github,}.xml
 
-    - name: Setup .NET Core
-      uses: actions/setup-dotnet@v5
-      with:
-        cache: true
-        cache-dependency-path: Directory.Packages.props
     - name: MS repo
       run: |
         curl -sL https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
@@ -48,12 +43,6 @@ jobs:
         version: 1.0
         execute_install_scripts: true
 
-    - name: Initialize CodeQL
-      uses: github/codeql-action/init@v4
-      with:
-        languages: csharp
-        queries: +security-and-quality
-
     - name: Configure and start databases
       run: |
         # Configure SQL Server
@@ -64,6 +53,23 @@ jobs:
         sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'pgpass4291';"
         sudo systemctl start mysql.service
 
+    - name: Setup .NET Core
+      uses: actions/setup-dotnet@v5
+      with:
+        cache: true
+        cache-dependency-path: Directory.Packages.props
+
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v4
+      with:
+        languages: csharp
+        queries: +security-and-quality
+
+    - name: Build
+      run: dotnet build FAnsi.sln -c Release --nologo
+
+    - name: Wait for Oracle database
+      run: |
         # Wait for Oracle to be fully ready (container reports healthy but may not accept connections yet)
         echo "Waiting for Oracle to accept connections..."
         for i in {1..30}; do
@@ -75,8 +81,9 @@ jobs:
           echo "Attempt $i: Oracle not ready yet, waiting..."
           sleep 2
         done
+
     - name: Test
-      run: dotnet test FAnsi.sln --logger "console;verbosity=minimal" --nologo -p:TestTfmsInParallel=true
+      run: dotnet test FAnsi.sln -c Release --logger "console;verbosity=minimal" --nologo --no-build -p:TestTfmsInParallel=true
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v4

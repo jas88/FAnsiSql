@@ -195,15 +195,15 @@ internal sealed class CreateTableTests : DatabaseTests
         table.Drop();
     }
 
-    #if MSSQL_TESTS
+#if MSSQL_TESTS
     [TestCase(DatabaseType.MicrosoftSQLServer, "Latin1_General_CS_AS_KS_WS")]
-    #endif
-    #if MYSQL_TESTS
+#endif
+#if MYSQL_TESTS
     [TestCase(DatabaseType.MySql, "latin1_german1_ci")]
-    #endif
-    #if POSTGRESQL_TESTS
+#endif
+#if POSTGRESQL_TESTS
     [TestCase(DatabaseType.PostgreSql, "de-DE-x-icu")]
-    #endif
+#endif
     //[TestCase(DatabaseType.Oracle, "BINARY_CI")] //Requires 12.2+ oracle https://www.experts-exchange.com/questions/29102764/SQL-Statement-to-create-case-insensitive-columns-and-or-tables-in-Oracle.html
     public void CreateTable_CollationTest(DatabaseType type, string collation)
     {
@@ -308,24 +308,24 @@ internal sealed class CreateTableTests : DatabaseTests
 
 
 
-    #if MSSQL_TESTS
+#if MSSQL_TESTS
     [TestCase(DatabaseType.MicrosoftSQLServer, "didn’t")] //<- it's a ’ not a '
-    #endif
-    #if MSSQL_TESTS
+#endif
+#if MSSQL_TESTS
     [TestCase(DatabaseType.MicrosoftSQLServer, "Æther")]
-    #endif
-    #if MSSQL_TESTS
+#endif
+#if MSSQL_TESTS
     [TestCase(DatabaseType.MicrosoftSQLServer, "乗")]
-    #endif
-    #if ORACLE_TESTS
+#endif
+#if ORACLE_TESTS
     [TestCase(DatabaseType.Oracle, "didn’t")]
-    #endif
-    #if ORACLE_TESTS
+#endif
+#if ORACLE_TESTS
     [TestCase(DatabaseType.Oracle, "Æther")]
-    #endif
-    #if ORACLE_TESTS
+#endif
+#if ORACLE_TESTS
     [TestCase(DatabaseType.Oracle, "乗")]
-    #endif
+#endif
     //[TestCase(DatabaseType.MySql, "didn’t")]
     //[TestCase(DatabaseType.MySql, "Æther")]
     //[TestCase(DatabaseType.MySql,"乗")]
@@ -396,16 +396,16 @@ internal sealed class CreateTableTests : DatabaseTests
         Assert.That(table.GetRowCount(), Is.EqualTo(4));
     }
 
-    #if MSSQL_TESTS
+#if MSSQL_TESTS
     [TestCase(DatabaseType.MicrosoftSQLServer)]
-    #endif
+#endif
     //[TestCase(DatabaseType.Oracle)]\r\n // Oracle doesn't really support bits https://stackoverflow.com/questions/2426145/oracles-lack-of-a-bit-datatype-for-table-columns
-    #if MYSQL_TESTS
+#if MYSQL_TESTS
     [TestCase(DatabaseType.MySql)]
-    #endif
-    #if POSTGRESQL_TESTS
+#endif
+#if POSTGRESQL_TESTS
     [TestCase(DatabaseType.PostgreSql)]
-    #endif
+#endif
     public void Test_CreateTable_TF(DatabaseType dbType)
     {
         //T and F is normally True and False.  If you want to keep it as a string set DoNotRetype
@@ -509,12 +509,12 @@ internal sealed class CreateTableTests : DatabaseTests
     /// Tests how we can customize how "T" and "F" etc are interpreted (either as boolean true/false or as string). This test
     /// uses the static defaults in <see cref="GuessSettingsFactory.Defaults"/>.
     /// </summary>
-    #if MSSQL_TESTS
+#if MSSQL_TESTS
     [TestCase(DatabaseType.MicrosoftSQLServer, true)]
-    #endif
-    #if MSSQL_TESTS
+#endif
+#if MSSQL_TESTS
     [TestCase(DatabaseType.MicrosoftSQLServer, false)]
-    #endif
+#endif
     public void CreateTable_GuessSettings_StaticDefaults_TF(DatabaseType dbType, bool treatAsBoolean)
     {
         //T and F is normally True and False.  If you want to keep it as a string set DoNotRetype
@@ -584,12 +584,12 @@ internal sealed class CreateTableTests : DatabaseTests
     /// Tests how we can customize how "T" and "F" etc are interpreted (either as boolean true/false or as string). This test
     /// uses the <see cref="CreateTableArgs.GuessSettings"/> injection.
     /// </summary>
-    #if MSSQL_TESTS
+#if MSSQL_TESTS
     [TestCase(DatabaseType.MicrosoftSQLServer, true)]
-    #endif
-    #if MSSQL_TESTS
+#endif
+#if MSSQL_TESTS
     [TestCase(DatabaseType.MicrosoftSQLServer, false)]
-    #endif
+#endif
     public void CreateTable_GuessSettings_InArgs_TF(DatabaseType dbType, bool treatAsBoolean)
     {
         //T and F is normally True and False.  If you want to keep it as a string set DoNotRetype

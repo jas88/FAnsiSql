@@ -10,18 +10,18 @@ namespace FAnsiTests.Aggregation;
 
 internal sealed class CalendarWithPivotAggregationTests : AggregationTests
 {
-    #if MSSQL_TESTS
+#if MSSQL_TESTS
     [TestCase(DatabaseType.MicrosoftSQLServer, true)]
-    #endif
-    #if MYSQL_TESTS
+#endif
+#if MYSQL_TESTS
     [TestCase(DatabaseType.MySql, true)]
-    #endif
-    #if MSSQL_TESTS
+#endif
+#if MSSQL_TESTS
     [TestCase(DatabaseType.MicrosoftSQLServer, false)]
-    #endif
-    #if MYSQL_TESTS
+#endif
+#if MYSQL_TESTS
     [TestCase(DatabaseType.MySql, false)]
-    #endif
+#endif
     public void Test_Calendar_WithPivot(DatabaseType type, bool easy)
     {
         string? sql = null;

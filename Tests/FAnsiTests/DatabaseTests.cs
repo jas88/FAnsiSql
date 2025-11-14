@@ -86,7 +86,13 @@ public abstract class DatabaseTests
     protected DiscoveredServer GetTestServer(DatabaseType type)
     {
         if (!TestConnectionStrings.TryGetValue(type, out var connString))
+        {
+            // In CI, all databases must be configured and tests must not skip
+            if (Environment.GetEnvironmentVariable("GITHUB_ACTIONS") == "true")
+                Assert.Fail($"No connection string configured for {type} - all databases are required in CI");
+
             Assert.Inconclusive("No connection string configured for that server");
+        }
 
         return new DiscoveredServer(connString, type);
     }

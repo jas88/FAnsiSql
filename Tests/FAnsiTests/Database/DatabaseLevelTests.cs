@@ -23,18 +23,18 @@ internal sealed class DatabaseLevelTests : DatabaseTests
     }
 
 
-    #if MYSQL_TESTS
+#if MYSQL_TESTS
     [TestCase(DatabaseType.MySql, false)]
-    #endif
-    #if MSSQL_TESTS
+#endif
+#if MSSQL_TESTS
     [TestCase(DatabaseType.MicrosoftSQLServer, false)]
-    #endif
-    #if ORACLE_TESTS
+#endif
+#if ORACLE_TESTS
     [TestCase(DatabaseType.Oracle, true)]
-    #endif
-    #if POSTGRESQL_TESTS
+#endif
+#if POSTGRESQL_TESTS
     [TestCase(DatabaseType.PostgreSql, false)]
-    #endif
+#endif
     public void Test_ExpectDatabase(DatabaseType type, bool upperCase)
     {
         var helper = ImplementationManager.GetImplementation(type).GetServerHelper();

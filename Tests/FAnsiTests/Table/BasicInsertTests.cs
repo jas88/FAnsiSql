@@ -8,49 +8,49 @@ namespace FAnsiTests.Table;
 
 internal sealed class BasicInsertTests : DatabaseTests
 {
-    #if MSSQL_TESTS
+#if MSSQL_TESTS
     [TestCase(DatabaseType.MicrosoftSQLServer, "Dave")]
-    #endif
-    #if MYSQL_TESTS
+#endif
+#if MYSQL_TESTS
     [TestCase(DatabaseType.MySql, "Dave")]
-    #endif
-    #if ORACLE_TESTS
+#endif
+#if ORACLE_TESTS
     [TestCase(DatabaseType.Oracle, "Dave")]
-    #endif
-    #if POSTGRESQL_TESTS
+#endif
+#if POSTGRESQL_TESTS
     [TestCase(DatabaseType.PostgreSql, "Dave")]
-    #endif
+#endif
 
-    #if MSSQL_TESTS
+#if MSSQL_TESTS
     [TestCase(DatabaseType.MicrosoftSQLServer, @"].;\""ffff
 [")]
-    #endif
+#endif
 
-    #if MYSQL_TESTS
+#if MYSQL_TESTS
     [TestCase(DatabaseType.MySql, @"].;\""ffff
 [")]
-    #endif
+#endif
 
-    #if ORACLE_TESTS
+#if ORACLE_TESTS
     [TestCase(DatabaseType.Oracle, @"].;\""ffff
 [")]
-    #endif
-    #if POSTGRESQL_TESTS
+#endif
+#if POSTGRESQL_TESTS
     [TestCase(DatabaseType.PostgreSql, @"].;\""ffff
 [")]
-    #endif
-    #if MSSQL_TESTS
+#endif
+#if MSSQL_TESTS
     [TestCase(DatabaseType.MicrosoftSQLServer, 1.5)]
-    #endif
-    #if MYSQL_TESTS
+#endif
+#if MYSQL_TESTS
     [TestCase(DatabaseType.MySql, 1.5)]
-    #endif
-    #if ORACLE_TESTS
+#endif
+#if ORACLE_TESTS
     [TestCase(DatabaseType.Oracle, 1.5)]
-    #endif
-    #if POSTGRESQL_TESTS
+#endif
+#if POSTGRESQL_TESTS
     [TestCase(DatabaseType.PostgreSql, 1.5)]
-    #endif
+#endif
     public void CreateTableAndInsertAValue_ColumnOverload(DatabaseType type, object value)
     {
         var db = GetTestDatabase(type);
@@ -73,18 +73,18 @@ internal sealed class BasicInsertTests : DatabaseTests
         tbl.Drop();
     }
 
-    #if MSSQL_TESTS
+#if MSSQL_TESTS
     [TestCase(DatabaseType.MicrosoftSQLServer, 1.5)]
-    #endif
-    #if MYSQL_TESTS
+#endif
+#if MYSQL_TESTS
     [TestCase(DatabaseType.MySql, 1.5)]
-    #endif
-    #if ORACLE_TESTS
+#endif
+#if ORACLE_TESTS
     [TestCase(DatabaseType.Oracle, 1.5)]
-    #endif
-    #if POSTGRESQL_TESTS
+#endif
+#if POSTGRESQL_TESTS
     [TestCase(DatabaseType.PostgreSql, 1.5)]
-    #endif
+#endif
     public void CreateTableAndInsertAValue_StringOverload(DatabaseType type, object value)
     {
         var db = GetTestDatabase(type);

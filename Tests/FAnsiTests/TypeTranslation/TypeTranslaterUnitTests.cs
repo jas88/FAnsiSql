@@ -13,12 +13,12 @@ internal sealed class TypeTranslaterUnitTests
     /// <param name="dbType"></param>
     /// <param name="sqlDbType"></param>
     /// <param name="expectedOutcome"></param>
-    #if MSSQL_TESTS
+#if MSSQL_TESTS
     [TestCase(DatabaseType.MicrosoftSQLServer, "varchar2(10)", true)]
-    #endif
-    #if MSSQL_TESTS
+#endif
+#if MSSQL_TESTS
     [TestCase(DatabaseType.MicrosoftSQLServer, "monkeychar7", true)]
-    #endif
+#endif
     public void Test_IsSupportedType(DatabaseType dbType, string sqlDbType, bool expectedOutcome)
     {
         var tt = ImplementationManager.GetImplementation(dbType).GetQuerySyntaxHelper().TypeTranslater;

@@ -13,78 +13,78 @@ internal sealed class QuerySyntaxHelperTests
 
 
     //Oracle always uppers everything because... Oracle
-    #if ORACLE_TESTS
+#if ORACLE_TESTS
     [TestCase(DatabaseType.Oracle, "CHI", "\"TEST_ScratchArea\".public.\"Biochemistry\".\"chi\"")]
-    #endif
-    #if POSTGRESQL_TESTS
+#endif
+#if POSTGRESQL_TESTS
     [TestCase(DatabaseType.PostgreSql, "chi", "\"TEST_ScratchArea\".public.\"Biochemistry\".\"chi\"")]
-    #endif
+#endif
 
-    #if ORACLE_TESTS
+#if ORACLE_TESTS
     [TestCase(DatabaseType.Oracle, "FRANK", "count(*) as Frank")]
-    #endif
-    #if POSTGRESQL_TESTS
+#endif
+#if POSTGRESQL_TESTS
     [TestCase(DatabaseType.PostgreSql, "Frank", "count(*) as Frank")]
-    #endif
+#endif
 
-    #if ORACLE_TESTS
+#if ORACLE_TESTS
     [TestCase(DatabaseType.Oracle, "FRANK", "count(cast(1 as int)) as Frank")]
-    #endif
-    #if POSTGRESQL_TESTS
+#endif
+#if POSTGRESQL_TESTS
     [TestCase(DatabaseType.PostgreSql, "Frank", "count(cast(1 as int)) as Frank")]
-    #endif
+#endif
 
-    #if ORACLE_TESTS
+#if ORACLE_TESTS
     [TestCase(DatabaseType.Oracle, "FRANK", "count(cast(1 as int)) as \"Frank\"")]
-    #endif
-    #if POSTGRESQL_TESTS
+#endif
+#if POSTGRESQL_TESTS
     [TestCase(DatabaseType.PostgreSql, "Frank", "count(cast(1 as int)) as \"Frank\"")]
-    #endif
-    #if MYSQL_TESTS
+#endif
+#if MYSQL_TESTS
     [TestCase(DatabaseType.MySql, "Frank", "count(cast(1 as int)) as `Frank`")]
-    #endif
-    #if MSSQL_TESTS
+#endif
+#if MSSQL_TESTS
     [TestCase(DatabaseType.MicrosoftSQLServer, "Frank", "count(cast(1 as int)) as [Frank]")]
-    #endif
+#endif
 
-    #if ORACLE_TESTS
+#if ORACLE_TESTS
     [TestCase(DatabaseType.Oracle, "FRANK", "[mydb].[mytbl].[mycol] as Frank")]
-    #endif
-    #if POSTGRESQL_TESTS
+#endif
+#if POSTGRESQL_TESTS
     [TestCase(DatabaseType.PostgreSql, "Frank", "[mydb].[mytbl].[mycol] as Frank")]
-    #endif
-    #if MSSQL_TESTS
+#endif
+#if MSSQL_TESTS
     [TestCase(DatabaseType.MicrosoftSQLServer, "Frank", "[mydb].[mytbl].[mycol] as Frank")]
-    #endif
-    #if MYSQL_TESTS
+#endif
+#if MYSQL_TESTS
     [TestCase(DatabaseType.MySql, "Frank", "[mydb].[mytbl].[mycol] as Frank")]
-    #endif
+#endif
 
-    #if ORACLE_TESTS
+#if ORACLE_TESTS
     [TestCase(DatabaseType.Oracle, "ZOMBIE", "dbo.GetMyCoolThing(\"Magic Fun Times\") as zombie")]
-    #endif
-    #if MSSQL_TESTS
+#endif
+#if MSSQL_TESTS
     [TestCase(DatabaseType.MicrosoftSQLServer, "zombie", "dbo.GetMyCoolThing(\"Magic Fun Times\") as zombie")]
-    #endif
-    #if MYSQL_TESTS
+#endif
+#if MYSQL_TESTS
     [TestCase(DatabaseType.MySql, "zombie", "dbo.GetMyCoolThing(\"Magic Fun Times\") as zombie")]
-    #endif
-    #if POSTGRESQL_TESTS
+#endif
+#if POSTGRESQL_TESTS
     [TestCase(DatabaseType.PostgreSql, "zombie", "dbo.GetMyCoolThing(\"Magic Fun Times\") as zombie")]
-    #endif
+#endif
 
-    #if ORACLE_TESTS
+#if ORACLE_TESTS
     [TestCase(DatabaseType.Oracle, "MYCOL", "\"mydb\".\"mytbl\".\"mycol\"")]
-    #endif
-    #if MSSQL_TESTS
+#endif
+#if MSSQL_TESTS
     [TestCase(DatabaseType.MicrosoftSQLServer, "mycol", "[mydb].[mytbl].[mycol]")]
-    #endif
-    #if MYSQL_TESTS
+#endif
+#if MYSQL_TESTS
     [TestCase(DatabaseType.MySql, "mycol", "`mydb`.`mytbl`.`mycol`")]
-    #endif
-    #if POSTGRESQL_TESTS
+#endif
+#if POSTGRESQL_TESTS
     [TestCase(DatabaseType.PostgreSql, "mycol", "\"mydb\".\"mytbl\".\"mycol\"")]
-    #endif
+#endif
     public void SyntaxHelperTest_GetRuntimeName(DatabaseType dbType, string expected, string forInput)
     {
         var syntaxHelper = ImplementationManager.GetImplementation(dbType).GetQuerySyntaxHelper();
@@ -97,24 +97,24 @@ internal sealed class QuerySyntaxHelperTests
     /// <param name="dbType"></param>
     /// <param name="runtime"></param>
     /// <param name="wrapped"></param>
-    #if MYSQL_TESTS
+#if MYSQL_TESTS
     [TestCase(DatabaseType.MySql, "Fra`nk", "`Fra``nk`")]
-    #endif
-    #if MYSQL_TESTS
+#endif
+#if MYSQL_TESTS
     [TestCase(DatabaseType.MySql, "Fra``nk`", "`Fra````nk```")]
-    #endif
-    #if MSSQL_TESTS
+#endif
+#if MSSQL_TESTS
     [TestCase(DatabaseType.MicrosoftSQLServer, "Fra]nk", "[Fra]]nk]")]
-    #endif
-    #if MSSQL_TESTS
+#endif
+#if MSSQL_TESTS
     [TestCase(DatabaseType.MicrosoftSQLServer, "Fra]]nk]", "[Fra]]]]nk]]]")]
-    #endif
-    #if POSTGRESQL_TESTS
+#endif
+#if POSTGRESQL_TESTS
     [TestCase(DatabaseType.PostgreSql, "Fra\"nk", "\"Fra\"\"nk\"")]
-    #endif
-    #if POSTGRESQL_TESTS
+#endif
+#if POSTGRESQL_TESTS
     [TestCase(DatabaseType.PostgreSql, "Fra\"\"nk\"", "\"Fra\"\"\"\"nk\"\"\"")]
-    #endif
+#endif
     public void SyntaxHelperTest_GetRuntimeName_MultipleCalls(DatabaseType dbType, string runtime, string wrapped)
     {
         // NOTE: Oracle does not support such shenanigans https://docs.oracle.com/cd/B19306_01/server.102/b14200/sql_elements008.htm
