@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Globalization;
@@ -23,7 +24,7 @@ public sealed class ConnectionStringKeywordAccumulator(DatabaseType databaseType
     /// </summary>
     public DatabaseType DatabaseType { get; private set; } = databaseType;
 
-    private readonly Dictionary<string, Tuple<string, ConnectionStringKeywordPriority>> _keywords = new(StringComparer.CurrentCultureIgnoreCase);
+    private readonly ConcurrentDictionary<string, Tuple<string, ConnectionStringKeywordPriority>> _keywords = new(StringComparer.OrdinalIgnoreCase);
     private readonly DbConnectionStringBuilder _builder = ImplementationManager.GetImplementation(databaseType).GetBuilder();
 
     /// <summary>
@@ -40,18 +41,19 @@ public sealed class ConnectionStringKeywordAccumulator(DatabaseType databaseType
         {
             //if there is already a semantically equivalent keyword....
 
-            //if it is of lower or equal priority
-            if (_keywords[collision].Item2 <= priority)
-                _keywords[collision] = Tuple.Create(value, priority); //update it
+            //if it is of lower or equal priority, update it atomically
+            _keywords.AddOrUpdate(collision,
+                Tuple.Create(value, priority),
+                (_, existing) => existing.Item2 <= priority ? Tuple.Create(value, priority) : existing);
 
             //either way don't record it as a new keyword
             return;
         }
 
-        //if we have not got that keyword yet
-        if (!_keywords.TryAdd(keyword, Tuple.Create(value, priority)) && _keywords[keyword].Item2 <= priority)
-            //or the keyword that was previously specified had a lower priority
-            _keywords[keyword] = Tuple.Create(value, priority); //update it with the new value
+        //Add or update the keyword atomically - only update if new priority is higher
+        _keywords.AddOrUpdate(keyword,
+            Tuple.Create(value, priority),
+            (_, existing) => existing.Item2 <= priority ? Tuple.Create(value, priority) : existing);
     }
 
     /// <summary>
