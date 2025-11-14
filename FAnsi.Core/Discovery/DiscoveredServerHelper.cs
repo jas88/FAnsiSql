@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Runtime.CompilerServices;
@@ -16,7 +17,7 @@ namespace FAnsi.Discovery;
 /// </summary>
 public abstract partial class DiscoveredServerHelper(DatabaseType databaseType) : IDiscoveredServerHelper
 {
-    private static readonly Dictionary<DatabaseType, ConnectionStringKeywordAccumulator> ConnectionStringKeywordAccumulators = [];
+    private static readonly ConcurrentDictionary<DatabaseType, ConnectionStringKeywordAccumulator> ConnectionStringKeywordAccumulators = new();
 
     /// <summary>
     /// Register a system-wide rule that all connection strings of <paramref name="databaseType"/> should include the given <paramref name="keyword"/>.
@@ -27,10 +28,9 @@ public abstract partial class DiscoveredServerHelper(DatabaseType databaseType) 
     /// <param name="priority">Resolves conflicts when multiple calls are made for the same <paramref name="keyword"/> at different times</param>
     public static void AddConnectionStringKeyword(DatabaseType databaseType, string keyword, string value, ConnectionStringKeywordPriority priority)
     {
-        if (!ConnectionStringKeywordAccumulators.ContainsKey(databaseType))
-            ConnectionStringKeywordAccumulators.Add(databaseType, new ConnectionStringKeywordAccumulator(databaseType));
-
-        ConnectionStringKeywordAccumulators[databaseType].AddOrUpdateKeyword(keyword, value, priority);
+        var accumulator = ConnectionStringKeywordAccumulators.GetOrAdd(databaseType,
+            static dt => new ConnectionStringKeywordAccumulator(dt));
+        accumulator.AddOrUpdateKeyword(keyword, value, priority);
     }
 
     /// <summary>
