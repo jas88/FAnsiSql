@@ -22,6 +22,7 @@ public abstract class DiscoveredTableHelper : IDiscoveredTableHelper
     /// <para>Default fallback implementation checks existence by listing all tables and filtering in memory.</para>
     /// <para>Database-specific helpers should override this method to use direct SQL queries for better performance (80-99% faster).</para>
     /// </summary>
+    [Obsolete("Prefer using Exists(DiscoveredTable, IManagedConnection) to reuse connections and improve performance")]
     public virtual bool Exists(DiscoveredTable table, IManagedTransaction? transaction = null)
     {
         // This is an inefficient fallback implementation
@@ -34,6 +35,7 @@ public abstract class DiscoveredTableHelper : IDiscoveredTableHelper
     /// <para>Default fallback implementation checks for primary key by discovering all columns and checking IsPrimaryKey.</para>
     /// <para>Database-specific helpers should override this method to use direct SQL queries for better performance (90-99% faster).</para>
     /// </summary>
+    [Obsolete("Prefer using HasPrimaryKey(DiscoveredTable, IManagedConnection) to reuse connections and improve performance")]
     public virtual bool HasPrimaryKey(DiscoveredTable table, IManagedTransaction? transaction = null)
     {
         // This is an inefficient fallback implementation

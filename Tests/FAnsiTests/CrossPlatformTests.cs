@@ -65,7 +65,7 @@ public sealed class CrossPlatformTests : DatabaseTests
 
         tbl.Insert(new Dictionary<string, object> { { "MyDate", input } });
 
-        using (var blk = tbl.BeginBulkInsert())
+        using (var blk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture))
         {
             using var dt = new DataTable();
             dt.Columns.Add("MyDate");

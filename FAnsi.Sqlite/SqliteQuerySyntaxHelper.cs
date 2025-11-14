@@ -82,7 +82,7 @@ public sealed class SqliteQuerySyntaxHelper : QuerySyntaxHelper
     /// Ensures a table name is fully qualified with database and schema.
     /// </summary>
     /// <param name="databaseName">The database name (ignored for SQLite)</param>
-    /// <param name="schema">The schema name (ignored for SQLite)</param>
+    /// <param name="schemaName">The schema name (ignored for SQLite)</param>
     /// <param name="tableName">The table name</param>
     /// <returns>The wrapped table name</returns>
     /// <remarks>
