@@ -187,6 +187,7 @@ public abstract class BulkCopy : IBulkCopy
             DiscoveredColumn? match = null;
 
             // Manual loop optimization to avoid LINQ allocations and use span comparisons
+            // CodeQL[cs/linq/missed-where-opportunity]: Intentional - manual loop for performance (avoids LINQ allocations)
             foreach (var targetColumn in TargetTableColumns)
             {
                 if (StringComparisonHelper.RuntimeNamesEqual(targetColumn.GetRuntimeName(), colInSource.ColumnName))

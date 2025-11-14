@@ -140,6 +140,7 @@ public class DiscoveredTable : IHasFullyQualifiedNameToo, IMightNotExist, IHasQu
         try
         {
             // Manual loop optimization to avoid LINQ Single allocation and use span comparisons
+            // CodeQL[cs/linq/missed-where-opportunity]: Intentional - manual loop for performance (avoids LINQ allocations)
             var targetColumnName = QuerySyntaxHelper.GetRuntimeName(specificColumnName);
             foreach (var column in DiscoverColumns(transaction))
             {
@@ -493,6 +494,7 @@ public class DiscoveredTable : IHasFullyQualifiedNameToo, IMightNotExist, IHasQu
         foreach (var k in toInsert.Keys)
         {
             // Manual loop optimization to avoid LINQ SingleOrDefault allocation and use span comparisons
+            // CodeQL[cs/linq/missed-where-opportunity]: Intentional - manual loop for performance (avoids LINQ allocations)
             DiscoveredColumn? match = null;
             foreach (var column in cols)
             {

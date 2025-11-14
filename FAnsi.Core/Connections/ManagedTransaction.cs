@@ -35,6 +35,7 @@ public sealed class ManagedTransaction : IManagedTransaction
         {
             Transaction.Rollback();
         }
+        // CodeQL[cs/catch-of-all-exceptions]: Intentional - cleanup code must swallow all exceptions to ensure connection disposal
         catch (Exception e)
         {
             Trace.WriteLine($"Transaction rollback failed during AbandonAndCloseConnection{e.Message}");

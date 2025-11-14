@@ -279,6 +279,7 @@ public abstract class DiscoveredTableHelper : IDiscoveredTableHelper
                 using var cmd = primary.Database.Server.GetCommand(sql, con);
                 args.ExecuteNonQuery(cmd);
             }
+            // CodeQL[cs/catch-of-all-exceptions]: Intentional - wrapping any database exception with SQL context
             catch (Exception e)
             {
                 throw new AlterFailedException($"Failed to create relationship using SQL:{sql}", e);

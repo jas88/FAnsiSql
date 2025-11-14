@@ -166,6 +166,7 @@ public abstract partial class DiscoveredServerHelper(DatabaseType databaseType) 
             exception = null;
             return true;
         }
+        // CodeQL[cs/catch-of-all-exceptions]: Intentional - try/fail pattern returns bool with out exception parameter
         catch (Exception e)
         {
             exception = e;
