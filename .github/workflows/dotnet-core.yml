@@ -63,6 +63,18 @@ jobs:
         sudo systemctl start postgresql
         sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'pgpass4291';"
         sudo systemctl start mysql.service
+
+        # Wait for Oracle to be fully ready (container reports healthy but may not accept connections yet)
+        echo "Waiting for Oracle to accept connections..."
+        for i in {1..30}; do
+          if timeout 5 bash -c 'cat < /dev/null > /dev/tcp/localhost/1521' 2>/dev/null; then
+            echo "Oracle is accepting connections"
+            sleep 5  # Give it a few more seconds to fully initialize
+            break
+          fi
+          echo "Attempt $i: Oracle not ready yet, waiting..."
+          sleep 2
+        done
     - name: Test
       run: dotnet test FAnsi.sln --logger "console;verbosity=minimal" --nologo -p:TestTfmsInParallel=true
 
