@@ -234,7 +234,7 @@ public sealed class SqliteBulkCopy(DiscoveredTable targetTable, IManagedConnecti
 
         // All rows worked individually - unexpected!
         investigationTransaction.Rollback();
-        return new Exception(
+        return new InvalidOperationException(
             $"Second Pass Exception: Bulk insert failed but when we tried to repeat it a line at a time it worked{firstPass}",
             originalException);
     }
@@ -343,9 +343,9 @@ public sealed class SqliteBulkCopy(DiscoveredTable targetTable, IManagedConnecti
         // SQLite handles most types natively, but we'll handle some special cases
         return value switch
         {
-            DateTime dt => dt.ToString("yyyy-MM-dd HH:mm:ss.fff"),
-            DateOnly dateOnly => dateOnly.ToString("yyyy-MM-dd"),
-            TimeOnly timeOnly => timeOnly.ToString("HH:mm:ss.fff"),
+            DateTime dt => dt.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture),
+            DateOnly dateOnly => dateOnly.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture),
+            TimeOnly timeOnly => timeOnly.ToString("HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture),
             bool b => b ? 1 : 0,  // SQLite stores booleans as integers
             Guid g => g.ToString(),  // Store GUIDs as text
             _ => value

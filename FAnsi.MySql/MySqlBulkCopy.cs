@@ -128,7 +128,7 @@ public sealed partial class MySqlBulkCopy(DiscoveredTable targetTable, IManagedC
         {
             // Enhance error messages with more context about what failed
             var enhancedMessage = EnhanceErrorMessage(ex, dt, matchedColumns, batchStart, batchSize);
-            throw new Exception(enhancedMessage, ex);
+            throw new InvalidOperationException(enhancedMessage, ex);
         }
     }
 

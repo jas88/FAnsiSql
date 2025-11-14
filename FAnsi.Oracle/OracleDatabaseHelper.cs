@@ -46,9 +46,11 @@ public sealed class OracleDatabaseHelper : DiscoveredDatabaseHelper
     public override IEnumerable<DiscoveredTable> ListTables(DiscoveredDatabase parent, IQuerySyntaxHelper querySyntaxHelper, DbConnection connection, string database, bool includeViews, DbTransaction? transaction = null)
     {
         //find all the tables
-        using (var cmd = new OracleCommand($"SELECT table_name FROM all_tables where owner='{database}'", (OracleConnection)connection))
+        using (var cmd = new OracleCommand("SELECT table_name FROM all_tables WHERE owner COLLATE BINARY_CI = :owner", (OracleConnection)connection))
         {
             cmd.Transaction = transaction as OracleTransaction;
+            cmd.CommandTimeout = 60; // Increased timeout for Docker environments
+            cmd.Parameters.Add(new OracleParameter(":owner", OracleDbType.Varchar2) { Value = database });
 
             using var r = cmd.ExecuteReader();
 
@@ -61,10 +63,12 @@ public sealed class OracleDatabaseHelper : DiscoveredDatabaseHelper
         //find all the views
         if (!includeViews) yield break;
 
-        using (var cmd = new OracleCommand($"SELECT view_name FROM all_views where owner='{database}'",
+        using (var cmd = new OracleCommand("SELECT view_name FROM all_views WHERE owner COLLATE BINARY_CI = :owner",
                    (OracleConnection)connection))
         {
             cmd.Transaction = transaction as OracleTransaction;
+            cmd.CommandTimeout = 60; // Increased timeout for Docker environments
+            cmd.Parameters.Add(new OracleParameter(":owner", OracleDbType.Varchar2) { Value = database });
             using var r = cmd.ExecuteReader();
 
             while (r.Read())

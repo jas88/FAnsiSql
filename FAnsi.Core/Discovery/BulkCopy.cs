@@ -145,7 +145,7 @@ public abstract class BulkCopy : IBulkCopy
                 }
                 catch (Exception ex)
                 {
-                    throw new Exception($"Failed to parse value '{dr[dataColumn]}' in column '{dataColumn}'", ex);
+                    throw new FormatException($"Failed to parse value '{dr[dataColumn]}' in column '{dataColumn}'", ex);
                 }
 
             //if the DataColumn is part of the Primary Key of the DataTable (in memory)
@@ -197,7 +197,7 @@ public abstract class BulkCopy : IBulkCopy
             if (match == null)
             {
                 if (!AllowUnmatchedInputColumns)
-                    throw new ColumnMappingException(string.Format(FAnsiStrings.BulkCopy_ColumnNotInDestinationTable, colInSource.ColumnName, TargetTable));
+                    throw new ColumnMappingException(string.Format(CultureInfo.InvariantCulture, FAnsiStrings.BulkCopy_ColumnNotInDestinationTable, colInSource.ColumnName, TargetTable));
 
                 //user is ignoring the fact there are unmatched items in DataTable!
             }

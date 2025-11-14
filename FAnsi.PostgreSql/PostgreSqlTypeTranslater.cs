@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Text.RegularExpressions;
 using FAnsi.Discovery.TypeTranslation;
 using NpgsqlTypes;
@@ -63,7 +64,7 @@ public sealed partial class PostgreSqlTypeTranslater : TypeTranslater
         if (t == typeof(Guid))
             return NpgsqlDbType.Uuid;
 
-        throw new TypeNotMappedException(string.Format(FAnsiStrings.TypeTranslater_GetSQLDBTypeForCSharpType_Unsure_what_SQL_type_to_use_for_CSharp_Type___0_____TypeTranslater_was___1__, t.Name, GetType().Name));
+        throw new TypeNotMappedException(string.Format(CultureInfo.InvariantCulture, FAnsiStrings.TypeTranslater_GetSQLDBTypeForCSharpType_Unsure_what_SQL_type_to_use_for_CSharp_Type___0_____TypeTranslater_was___1__, t.Name, GetType().Name));
 
     }
 

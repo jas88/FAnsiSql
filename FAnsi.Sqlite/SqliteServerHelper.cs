@@ -206,8 +206,8 @@ public sealed class SqliteServerHelper : DiscoveredServerHelper
             var fileInfo = new System.IO.FileInfo(filePath);
             toReturn.Add("Database File", filePath);
             toReturn.Add("File Size", $"{fileInfo.Length} bytes");
-            toReturn.Add("Created", fileInfo.CreationTime.ToString());
-            toReturn.Add("Modified", fileInfo.LastWriteTime.ToString());
+            toReturn.Add("Created", fileInfo.CreationTime.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            toReturn.Add("Modified", fileInfo.LastWriteTime.ToString(System.Globalization.CultureInfo.InvariantCulture));
         }
 
         try

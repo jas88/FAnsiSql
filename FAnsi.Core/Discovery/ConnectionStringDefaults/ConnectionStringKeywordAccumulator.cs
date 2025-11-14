@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.Globalization;
 using FAnsi.Implementation;
 
 namespace FAnsi.Discovery.ConnectionStringDefaults;
@@ -76,7 +77,7 @@ public sealed class ConnectionStringKeywordAccumulator(DatabaseType databaseType
         catch (NotSupportedException ex)
         {
             //don't output the value since that could be a password
-            throw new ArgumentException(string.Format(FAnsiStrings.ConnectionStringKeyword_ValueNotSupported, keyword), ex);
+            throw new ArgumentException(string.Format(CultureInfo.InvariantCulture, FAnsiStrings.ConnectionStringKeyword_ValueNotSupported, keyword), ex);
         }
 
         //now iterate all the keys we had before and add those too, if the key count doesn't change for any of them we know it's a duplicate semantically

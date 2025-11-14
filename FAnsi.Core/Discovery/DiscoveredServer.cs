@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
@@ -250,7 +251,7 @@ public sealed class DiscoveredServer : IMightNotExist
             catch (OperationCanceledException e)
             {
                 throw new TimeoutException(
-                    string.Format(
+                    string.Format(CultureInfo.InvariantCulture,
                         FAnsiStrings
                             .DiscoveredServer_TestConnection_Could_not_connect_to_server___0___after_timeout_of__1__milliseconds_,
                         Name, timeoutInMillis), e);
@@ -259,7 +260,7 @@ public sealed class DiscoveredServer : IMightNotExist
             {
                 if (openTask.IsCanceled)
                     throw new TimeoutException(
-                        string.Format(
+                        string.Format(CultureInfo.InvariantCulture,
                             FAnsiStrings
                                 .DiscoveredServer_TestConnection_Could_not_connect_to_server___0___after_timeout_of__1__milliseconds_,
                             Name, timeoutInMillis), e);
@@ -399,7 +400,7 @@ public sealed class DiscoveredServer : IMightNotExist
         Helper.CreateDatabase(Builder, db);
 
         if (!db.Exists())
-            throw new Exception(string.Format(FAnsiStrings.DiscoveredServer_CreateDatabase_Helper___0___tried_to_create_database___1___but_the_database_didn_t_exist_after_the_creation_attempt, Helper.GetType().Name, newDatabaseName));
+            throw new InvalidOperationException(string.Format(CultureInfo.InvariantCulture, FAnsiStrings.DiscoveredServer_CreateDatabase_Helper___0___tried_to_create_database___1___but_the_database_didn_t_exist_after_the_creation_attempt, Helper.GetType().Name, newDatabaseName));
 
         return db;
     }

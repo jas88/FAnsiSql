@@ -33,7 +33,10 @@ public sealed partial class MySqlTableHelper : DiscoveredTableHelper
             WHERE table_schema = @db
               AND table_name = @tbl
             """, connection.Connection);
-        cmd.Transaction = connection.Transaction;
+        // Do not set cmd.Transaction for information_schema queries.
+        // MySQL DDL operations (like ALTER TABLE) auto-commit, invalidating any active transaction.
+        // Querying information_schema with a stale transaction reference can return empty results
+        // due to snapshot isolation seeing pre-DDL schema state.
 
         var p = new MySqlParameter("@db", MySqlDbType.String)
         {
@@ -49,7 +52,7 @@ public sealed partial class MySqlTableHelper : DiscoveredTableHelper
 
         using var r = cmd.ExecuteReader();
         if (!r.HasRows)
-            throw new Exception($"Could not find any columns for table {tableName} in database {database}");
+            throw new InvalidOperationException($"Could not find any columns for table {tableName} in database {database}");
 
         while (r.Read())
         {
@@ -84,7 +87,7 @@ public sealed partial class MySqlTableHelper : DiscoveredTableHelper
         {
             "NO" => false,
             "YES" => true,
-            _ => Convert.ToBoolean(o)
+            _ => Convert.ToBoolean(o, CultureInfo.InvariantCulture)
         };
     }
 
@@ -133,7 +136,7 @@ public sealed partial class MySqlTableHelper : DiscoveredTableHelper
             """;
 
         using var cmd = table.Database.Server.Helper.GetCommand(sql, connection.Connection);
-        cmd.Transaction = connection.Transaction;
+        // Do not set cmd.Transaction for information_schema queries (see DiscoverColumns for details)
 
         var p = new MySqlParameter("@db", MySqlDbType.String)
         {
@@ -148,12 +151,15 @@ public sealed partial class MySqlTableHelper : DiscoveredTableHelper
         cmd.Parameters.Add(p);
 
         var result = cmd.ExecuteScalar();
-        return Convert.ToBoolean(result);
+        return Convert.ToBoolean(result, CultureInfo.InvariantCulture);
     }
 
     public override bool HasPrimaryKey(DiscoveredTable table, IManagedTransaction? transaction = null)
     {
-        using var connection = table.Database.Server.GetManagedConnection(transaction);
+        // Do NOT use transaction parameter - information_schema queries must run outside transactions
+        // to avoid stale snapshot issues after DDL operations (see DiscoverColumns for detailed explanation)
+        using var connection = table.Database.Server.GetConnection();
+        connection.Open();
 
         const string sql = """
             SELECT EXISTS (
@@ -164,8 +170,8 @@ public sealed partial class MySqlTableHelper : DiscoveredTableHelper
             )
             """;
 
-        using var cmd = table.Database.Server.Helper.GetCommand(sql, connection.Connection);
-        cmd.Transaction = connection.Transaction;
+        using var cmd = table.Database.Server.Helper.GetCommand(sql, connection);
+        // No transaction set on this command
 
         var p = new MySqlParameter("@db", MySqlDbType.String)
         {
@@ -180,7 +186,7 @@ public sealed partial class MySqlTableHelper : DiscoveredTableHelper
         cmd.Parameters.Add(p);
 
         var result = cmd.ExecuteScalar();
-        return Convert.ToBoolean(result);
+        return Convert.ToBoolean(result, CultureInfo.InvariantCulture);
     }
 
     public override IDiscoveredColumnHelper GetColumnHelper() => MySqlColumnHelper.Instance;

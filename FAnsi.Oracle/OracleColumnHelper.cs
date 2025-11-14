@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using FAnsi.Discovery;
 using FAnsi.Naming;
@@ -15,9 +16,9 @@ public sealed class OracleColumnHelper : IDiscoveredColumnHelper
         var sql = new StringBuilder($"SELECT {syntax.EnsureWrapped(column.GetRuntimeName())} FROM {table.GetFullyQualifiedName()}");
 
         if (discardNulls)
-            sql.Append($" WHERE {syntax.EnsureWrapped(column.GetRuntimeName())} IS NOT NULL");
+            sql.Append(CultureInfo.InvariantCulture, $" WHERE {syntax.EnsureWrapped(column.GetRuntimeName())} IS NOT NULL");
 
-        sql.Append($" OFFSET 0 ROWS FETCH NEXT {topX} ROWS ONLY");
+        sql.Append(CultureInfo.InvariantCulture, $" OFFSET 0 ROWS FETCH NEXT {topX} ROWS ONLY");
         return sql.ToString();
     }
 

@@ -31,7 +31,7 @@ internal sealed class OracleBulkCopy(DiscoveredTable targetTable, IManagedConnec
 
         var dateColumns = new HashSet<DataColumn>();
 
-        var sql = string.Format("INSERT INTO " + TargetTable.GetFullyQualifiedName() + "({0}) VALUES ({1})",
+        var sql = string.Format(CultureInfo.InvariantCulture, "INSERT INTO " + TargetTable.GetFullyQualifiedName() + "({0}) VALUES ({1})",
             string.Join(",", mapping.Values.Select(static c => c.GetWrappedName())),
             string.Join(",", mapping.Keys.Select(c => parameterNames[c]))
         );
@@ -70,7 +70,7 @@ internal sealed class OracleBulkCopy(DiscoveredTable targetTable, IManagedConnec
                 else if (val == DBNull.Value)
                     val = null;
                 else if (dateColumns.Contains(col))
-                    val = val is string s ? (DateTime?)DateTimeDecider.Parse(s) : Convert.ToDateTime(dataRow[col]);
+                    val = val is string s ? (DateTime?)DateTimeDecider.Parse(s) : Convert.ToDateTime(dataRow[col], CultureInfo.InvariantCulture);
 
                 if (col.DataType == typeof(bool) && val is bool b)
                     values[col].Add(b ? 1 : 0);

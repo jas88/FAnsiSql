@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using FAnsi.Connections;
@@ -136,7 +137,7 @@ public sealed class DiscoveredDatabase : IHasRuntimeName, IMightNotExist
     public void Drop()
     {
         if (!Exists())
-            throw new InvalidOperationException(string.Format(FAnsiStrings.DiscoveredDatabase_DatabaseDoesNotExistSoCannotBeDropped, this));
+            throw new InvalidOperationException(string.Format(CultureInfo.InvariantCulture, FAnsiStrings.DiscoveredDatabase_DatabaseDoesNotExistSoCannotBeDropped, this));
 
         // Pass in a copy of ourself, the Drop can mutate the connection string which can cause nasty side-effects (because many classes, e.g. attachers, hold references to these objects)
         Helper.DropDatabase(new DiscoveredDatabase(Server, _database, _querySyntaxHelper));
@@ -241,7 +242,7 @@ public sealed class DiscoveredDatabase : IHasRuntimeName, IMightNotExist
         var table = Helper.CreateTable(args);
 
         if (!args.TableCreated)
-            throw new Exception(FAnsiStrings.DiscoveredDatabase_CreateTableDidNotPopulateTableCreatedProperty);
+            throw new InvalidOperationException(FAnsiStrings.DiscoveredDatabase_CreateTableDidNotPopulateTableCreatedProperty);
 
         typeDictionary = args.ColumnCreationLogic;
 

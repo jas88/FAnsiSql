@@ -73,7 +73,7 @@ public sealed class DatabaseOperationArgs
             switch (t.Status)
             {
                 case TaskStatus.Faulted:
-                    throw t.Exception ?? new Exception("Task crashed without Exception!");
+                    throw (Exception?)t.Exception ?? new InvalidOperationException("Task crashed without Exception!");
                 case TaskStatus.Canceled:
                     throw new OperationCanceledException();
                 default:
