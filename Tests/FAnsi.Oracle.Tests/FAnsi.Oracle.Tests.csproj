@@ -21,7 +21,7 @@
     <PackageReference Include="NUnit3TestAdapter" Version="5.2.0" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="TestDatabases.xml">
+    <Content Include="..\FAnsiTests\TestDatabases.xml" Link="TestDatabases.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
