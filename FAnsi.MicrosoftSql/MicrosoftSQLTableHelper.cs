@@ -33,7 +33,7 @@ public sealed partial class MicrosoftSQLTableHelper : DiscoveredTableHelper
         using var r = cmd.ExecuteReader();
         while (r.Read())
         {
-            var isNullable = Convert.ToBoolean(r["is_nullable"]);
+            var isNullable = Convert.ToBoolean(r["is_nullable"], CultureInfo.InvariantCulture);
 
             //if it is a table valued function prefix the column name with the table valued function name
             var columnName = discoveredTable is DiscoveredTableValuedFunction
@@ -42,7 +42,7 @@ public sealed partial class MicrosoftSQLTableHelper : DiscoveredTableHelper
 
             var toAdd = new DiscoveredColumn(discoveredTable, columnName, isNullable)
             {
-                IsAutoIncrement = Convert.ToBoolean(r["is_identity"]),
+                IsAutoIncrement = Convert.ToBoolean(r["is_identity"], CultureInfo.InvariantCulture),
                 Collation = r["collation_name"] as string
             };
             toAdd.DataType = new DiscoveredDataType(r, GetSQLType_FromSpColumnsResult(r), toAdd);
@@ -77,7 +77,7 @@ public sealed partial class MicrosoftSQLTableHelper : DiscoveredTableHelper
                 if (connection.Database != tableToDrop.Database.GetRuntimeName())
                     connection.ChangeDatabase(tableToDrop.GetRuntimeName());
 
-                if (!connection.Database.ToLower().Equals(tableToDrop.Database.GetRuntimeName().ToLower()))
+                if (!connection.Database.ToLower(CultureInfo.InvariantCulture).Equals(tableToDrop.Database.GetRuntimeName().ToLower(CultureInfo.InvariantCulture), StringComparison.Ordinal))
                     throw new NotSupportedException(
                         $"Cannot drop view {tableToDrop} because it exists in database {tableToDrop.Database.GetRuntimeName()} while the current current database connection is pointed at database:{connection.Database} (use .ChangeDatabase on the connection first) - SQL Server does not support cross database view dropping");
 
@@ -148,7 +148,7 @@ public sealed partial class MicrosoftSQLTableHelper : DiscoveredTableHelper
         cmd.Parameters.Add(p2);
 
         var result = cmd.ExecuteScalar();
-        return Convert.ToInt32(result) == 1;
+        return Convert.ToInt32(result, CultureInfo.InvariantCulture) == 1;
     }
 
     public override bool HasPrimaryKey(DiscoveredTable table, IManagedTransaction? transaction = null)
@@ -179,7 +179,7 @@ public sealed partial class MicrosoftSQLTableHelper : DiscoveredTableHelper
         cmd.Parameters.Add(p2);
 
         var result = cmd.ExecuteScalar();
-        return Convert.ToInt32(result) == 1;
+        return Convert.ToInt32(result, CultureInfo.InvariantCulture) == 1;
     }
 
 
@@ -240,7 +240,7 @@ public sealed partial class MicrosoftSQLTableHelper : DiscoveredTableHelper
         }
         catch (Exception e)
         {
-            throw new AlterFailedException(string.Format(FAnsiStrings.DiscoveredTableHelper_CreatePrimaryKey_Failed_to_create_primary_key_on_table__0__using_columns___1__, table, string.Join(",", discoverColumns.Select(static c => c.GetRuntimeName()))), e);
+            throw new AlterFailedException(string.Format(CultureInfo.InvariantCulture, FAnsiStrings.DiscoveredTableHelper_CreatePrimaryKey_Failed_to_create_primary_key_on_table__0__using_columns___1__, table, string.Join(",", discoverColumns.Select(static c => c.GetRuntimeName()))), e);
         }
 
         base.CreatePrimaryKey(args, table, discoverColumns);
@@ -298,7 +298,7 @@ public sealed partial class MicrosoftSQLTableHelper : DiscoveredTableHelper
 
                     var fktable = table.Database.Server.ExpectDatabase(fkdb).ExpectTable(fktableName, fkschema);
 
-                    var deleteRuleInt = Convert.ToInt32(r["DELETE_RULE"]);
+                    var deleteRuleInt = Convert.ToInt32(r["DELETE_RULE"], CultureInfo.InvariantCulture);
 
                     var deleteRule = deleteRuleInt switch
                     {
@@ -358,7 +358,7 @@ public sealed partial class MicrosoftSQLTableHelper : DiscoveredTableHelper
         var columnList = string.Join(",",
             discoveredTable.DiscoverColumns().Select(c => syntax.EnsureWrapped(c.GetRuntimeName())));
 
-        var sqlToExecute = string.Format(sql, columnList, discoveredTable.GetFullyQualifiedName());
+        var sqlToExecute = string.Format(CultureInfo.InvariantCulture, sql, columnList, discoveredTable.GetFullyQualifiedName());
 
         var server = discoveredTable.Database.Server;
 
@@ -381,7 +381,7 @@ public sealed partial class MicrosoftSQLTableHelper : DiscoveredTableHelper
 
         if (HasPrecisionAndScale(columnType ?? throw new InvalidOperationException("Null type name returned")))
             lengthQualifier = $"({r["PRECISION"]},{r["SCALE"]})";
-        else if (RequiresLength(columnType)) lengthQualifier = $"({AdjustForUnicodeAndNegativeOne(columnType, Convert.ToInt32(r["LENGTH"]))})";
+        else if (RequiresLength(columnType)) lengthQualifier = $"({AdjustForUnicodeAndNegativeOne(columnType, Convert.ToInt32(r["LENGTH"], CultureInfo.InvariantCulture))})";
 
         return columnType + lengthQualifier;
     }

@@ -43,7 +43,7 @@ public sealed partial class MySqlBulkCopy(DiscoveredTable targetTable, IManagedC
         if (dt.Rows.Count == 0)
             return 0;
 
-        var ourTrans = Connection.Transaction == null ? Connection.Connection.BeginTransaction(IsolationLevel.ReadUncommitted) : null;
+        using var ourTrans = Connection.Transaction == null ? Connection.Connection.BeginTransaction(IsolationLevel.ReadUncommitted) : null;
         var matchedColumns = GetMapping(dt.Columns.Cast<DataColumn>());
         var affected = 0;
 
@@ -58,7 +58,6 @@ public sealed partial class MySqlBulkCopy(DiscoveredTable targetTable, IManagedC
             var optimalBatchSize = Math.Min(DefaultBatchSize, MaxParameters / Math.Max(1, columnCount));
             optimalBatchSize = Math.Max(1, optimalBatchSize); // Ensure at least 1
 
-            var tableName = TargetTable.GetFullyQualifiedName();
             var columnNames = matchedColumns.Values.Select(c => $"`{c.GetRuntimeName()}`").ToArray();
             var columnList = string.Join(", ", columnNames);
 
@@ -78,13 +77,6 @@ public sealed partial class MySqlBulkCopy(DiscoveredTable targetTable, IManagedC
         {
             ourTrans?.Rollback();
             throw;
-        }
-        finally
-        {
-            if (ourTrans != null)
-            {
-                ourTrans.Dispose();
-            }
         }
     }
 
@@ -128,7 +120,7 @@ public sealed partial class MySqlBulkCopy(DiscoveredTable targetTable, IManagedC
         {
             // Enhance error messages with more context about what failed
             var enhancedMessage = EnhanceErrorMessage(ex, dt, matchedColumns, batchStart, batchSize);
-            throw new Exception(enhancedMessage, ex);
+            throw new InvalidOperationException(enhancedMessage, ex);
         }
     }
 

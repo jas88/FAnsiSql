@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Linq;
 using FAnsi.Discovery.QuerySyntax;
 using FAnsi.Discovery.QuerySyntax.Aggregation;
@@ -28,7 +29,7 @@ public sealed class PostgreSqlAggregateHelper : AggregateHelper
         WrapAxisColumnWithDatePartFunction(query, axisColumnAlias);
 
         var sql =
-            string.Format("""
+            string.Format(CultureInfo.InvariantCulture, """
 
                           {0}
                           SELECT
@@ -67,7 +68,7 @@ public sealed class PostgreSqlAggregateHelper : AggregateHelper
         query.SyntaxHelper.SplitLineIntoOuterMostMethodAndContents(countSqlWithoutAlias, out var aggregateMethod,
             out var aggregateParameter);
 
-        if (aggregateParameter.Equals("*"))
+        if (aggregateParameter.Equals("*", StringComparison.Ordinal))
             aggregateParameter = "1";
 
         var nonPivotColumnAlias = nonPivotColumn.GetAliasFromText(query.SyntaxHelper);
@@ -79,31 +80,30 @@ public sealed class PostgreSqlAggregateHelper : AggregateHelper
 
         // PostgreSQL doesn't have native PIVOT, so we use aggregation with FILTER or CASE statements
         // Similar to MySQL approach but using PostgreSQL syntax
-        return string.Format("""
+        return string.Format(CultureInfo.InvariantCulture, """
 
                              /* Get distinct pivot values */
                              WITH pivotValues AS (
-                                 SELECT DISTINCT {1} as piv
-                                 {3}
-                                 WHERE {1} IS NOT NULL
-                                 ORDER BY {1}
+                                 SELECT DISTINCT {0} as piv
+                                 {2}
+                                 WHERE {0} IS NOT NULL
+                                 ORDER BY {0}
                              ),
                              /* Build the aggregated dataset */
                              dataset AS (
-                                 {4}
+                                 {3}
                              )
                              /* Main query with dynamic columns */
                              SELECT
-                                 dataset.{2},
-                                 {5}
+                                 dataset.{1},
+                                 {4}
                              FROM dataset
                              CROSS JOIN pivotValues
-                             GROUP BY dataset.{2}
-                             ORDER BY dataset.{2}
-                             {6}
+                             GROUP BY dataset.{1}
+                             ORDER BY dataset.{1}
+                             {5}
 
                              """,
-            aggregateMethod,
             pivotSqlWithoutAlias,
             nonPivotColumnAlias,
             string.Join(Environment.NewLine,
@@ -134,14 +134,14 @@ public sealed class PostgreSqlAggregateHelper : AggregateHelper
         query.SyntaxHelper.SplitLineIntoOuterMostMethodAndContents(countSqlWithoutAlias, out var aggregateMethod,
             out var aggregateParameter);
 
-        if (aggregateParameter.Equals("*"))
+        if (aggregateParameter.Equals("*", StringComparison.Ordinal))
             aggregateParameter = "1";
 
         WrapAxisColumnWithDatePartFunction(query, axisColumnAlias);
 
         // PostgreSQL approach: Use crosstab from tablefunc extension or manual CASE statements
         // For simplicity, using FILTER clause with aggregation
-        return string.Format("""
+        return string.Format(CultureInfo.InvariantCulture, """
 
                              {0}
                              /* Get distinct pivot values */

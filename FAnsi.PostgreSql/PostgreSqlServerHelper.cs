@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using FAnsi.Discovery;
 using FAnsi.Discovery.QuerySyntax;
 using FAnsi.Naming;
@@ -114,7 +115,7 @@ public sealed class PostgreSqlServerHelper : DiscoveredServerHelper
                 cmd.CommandText = "SELECT CASE WHEN current_setting('transaction_isolation') IS NOT NULL AND txid_current_if_assigned() IS NOT NULL THEN 1 ELSE 0 END";
                 cmd.CommandTimeout = 1;
                 var result = cmd.ExecuteScalar();
-                return result != null && Convert.ToInt32(result) > 0;
+                return result != null && Convert.ToInt32(result, CultureInfo.InvariantCulture) > 0;
             }
             catch
             {
@@ -137,6 +138,6 @@ public sealed class PostgreSqlServerHelper : DiscoveredServerHelper
         using var con = postgresServer.GetManagedConnection();
         using var cmd = new NpgsqlCommand("SELECT CASE WHEN EXISTS(SELECT 1 FROM pg_database WHERE datname = @name) THEN 1 ELSE 0 END", (NpgsqlConnection)con.Connection);
         cmd.Parameters.AddWithValue("@name", database.GetRuntimeName());
-        return Convert.ToInt32(cmd.ExecuteScalar()) == 1;
+        return Convert.ToInt32(cmd.ExecuteScalar(), CultureInfo.InvariantCulture) == 1;
     }
 }

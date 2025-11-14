@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using FAnsi.Discovery;
 using FAnsi.Discovery.QuerySyntax;
 using FAnsi.Implementations.Oracle.Aggregation;
@@ -33,7 +34,7 @@ public sealed class OracleQuerySyntaxHelper : QuerySyntaxHelper
 
         return string.IsNullOrWhiteSpace(answer) ? s :
             //upper it because oracle loves uppercase stuff
-            answer.Trim('"').ToUpper();
+            answer.Trim('"').ToUpper(CultureInfo.InvariantCulture);
     }
 
     public override bool SupportsEmbeddedParameters() => false;
@@ -80,7 +81,7 @@ public sealed class OracleQuerySyntaxHelper : QuerySyntaxHelper
 
     protected override object FormatTimespanForDbParameter(TimeSpan timeSpan) =>
         //Value must be a DateTime even if DBParameter is of Type DbType.Time
-        Convert.ToDateTime(timeSpan.ToString());
+        Convert.ToDateTime(timeSpan.ToString(), CultureInfo.InvariantCulture);
 
     private static readonly HashSet<string> ReservedWords = new(new[]
     {

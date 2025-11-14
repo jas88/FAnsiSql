@@ -1,3 +1,4 @@
+using System;
 using FAnsi.Discovery.QuerySyntax;
 using FAnsi.Naming;
 using TypeGuesser;
@@ -100,7 +101,7 @@ public sealed class DiscoveredColumn(DiscoveredTable table, string name, bool al
     /// </summary>
     /// <param name="other"></param>
     /// <returns></returns>
-    private bool Equals(DiscoveredColumn other) => string.Equals(_name, other._name) && Equals(Table, other.Table);
+    private bool Equals(DiscoveredColumn other) => string.Equals(_name, other._name, StringComparison.Ordinal) && Equals(Table, other.Table);
 
     /// <summary>
     /// Based on column name and Table

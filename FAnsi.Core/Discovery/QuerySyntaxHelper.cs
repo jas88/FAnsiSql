@@ -96,7 +96,7 @@ public abstract partial class QuerySyntaxHelper(
     public static string GetParameterNameFromDeclarationSQL(string parameterSQL)
     {
         if (!ParameterNamesRegex.IsMatch(parameterSQL))
-            throw new Exception($"ParameterSQL does not match regex pattern:{ParameterNamesRegex}");
+            throw new FormatException($"ParameterSQL does not match regex pattern:{ParameterNamesRegex}");
 
         return ParameterNamesRegex.Match(parameterSQL).Value.Trim();
     }
@@ -164,7 +164,7 @@ public abstract partial class QuerySyntaxHelper(
             return databaseOrTableName;
 
         if (databaseOrTableName.Contains(DatabaseTableSeparator))
-            throw new Exception(string.Format(FAnsiStrings.QuerySyntaxHelper_EnsureWrapped_String_passed_to_EnsureWrapped___0___contained_separators__not_allowed____Prohibited_Separator_is___1__, databaseOrTableName, DatabaseTableSeparator));
+            throw new ArgumentException(string.Format(CultureInfo.InvariantCulture, FAnsiStrings.QuerySyntaxHelper_EnsureWrapped_String_passed_to_EnsureWrapped___0___contained_separators__not_allowed____Prohibited_Separator_is___1__, databaseOrTableName, DatabaseTableSeparator));
 
         return EnsureWrappedImpl(databaseOrTableName);
     }
@@ -204,7 +204,7 @@ public abstract partial class QuerySyntaxHelper(
         switch (matches.Count)
         {
             case > 1:
-                throw new SyntaxErrorException(string.Format(FAnsiStrings.QuerySyntaxHelper_SplitLineIntoSelectSQLAndAlias_, matches.Count, lineToSplit));
+                throw new SyntaxErrorException(string.Format(CultureInfo.InvariantCulture, FAnsiStrings.QuerySyntaxHelper_SplitLineIntoSelectSQLAndAlias_, matches.Count, lineToSplit));
             case 0:
                 selectSQL = lineToSplit;
                 alias = null;
@@ -273,7 +273,7 @@ public abstract partial class QuerySyntaxHelper(
             //if we are looking at a space
             if (sb[i] == ' ' && i + 1 < sb.Length && sb[i + 1] >= 'a' && sb[i + 1] <= 'z') //and there is another character
                 //and that character is a lower case letter
-                sb[i + 1] = char.ToUpper(sb[i + 1]);
+                sb[i + 1] = char.ToUpper(sb[i + 1], CultureInfo.InvariantCulture);
 
         adjustedHeader = sb.ToString().Replace(" ", "");
 
@@ -355,7 +355,7 @@ public abstract partial class QuerySyntaxHelper(
         }
         catch (Exception ex)
         {
-            throw new Exception(string.Format(FAnsiStrings.QuerySyntaxHelper_GetParameter_Could_not_GetParameter_for_column___0__, discoveredColumn.GetFullyQualifiedName()), ex);
+            throw new InvalidOperationException(string.Format(CultureInfo.InvariantCulture, FAnsiStrings.QuerySyntaxHelper_GetParameter_Could_not_GetParameter_for_column___0__, discoveredColumn.GetFullyQualifiedName()), ex);
         }
 
         return p;
@@ -407,14 +407,14 @@ public abstract partial class QuerySyntaxHelper(
     private string? ValidateName(string? candidate, string objectType, int maximumLengthAllowed)
     {
         if (string.IsNullOrWhiteSpace(candidate))
-            return string.Format(FAnsiStrings.QuerySyntaxHelper_ValidateName__0__name_cannot_be_blank, objectType);
+            return string.Format(CultureInfo.InvariantCulture, FAnsiStrings.QuerySyntaxHelper_ValidateName__0__name_cannot_be_blank, objectType);
 
         if (candidate.Length > maximumLengthAllowed)
-            return string.Format(FAnsiStrings.QuerySyntaxHelper_ValidateName__0__name___1___is_too_long_for_the_DBMS___2__supports_maximum_length_of__3__,
+            return string.Format(CultureInfo.InvariantCulture, FAnsiStrings.QuerySyntaxHelper_ValidateName__0__name___1___is_too_long_for_the_DBMS___2__supports_maximum_length_of__3__,
                 objectType, candidate[..maximumLengthAllowed], DatabaseType, maximumLengthAllowed);
 
         if (candidate.IndexOfAny(IllegalNameChars) != -1)
-            return string.Format(
+            return string.Format(CultureInfo.InvariantCulture,
                 FAnsiStrings.QuerySyntaxHelper_ValidateName__0__name___1___contained_unsupported__by_FAnsi__characters___Unsupported_characters_are__2_,
                 objectType, candidate, new string(IllegalNameChars));
 

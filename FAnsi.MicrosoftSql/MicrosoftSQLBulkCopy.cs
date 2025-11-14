@@ -134,8 +134,8 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
             }
 
             if (BcpColIdToString(insert, e as SqlException, out var result1, out _))
-                throw new Exception(
-                    string.Format(
+                throw new InvalidOperationException(
+                    string.Format(CultureInfo.InvariantCulture,
                         SR.MicrosoftSQLBulkCopy_BulkInsertWithBetterErrorMessages_Failed_to_bulk_insert__0_,
                         result1), e); //but we can still give him a better message than "bcp colid 1 was bad"!
 
@@ -183,8 +183,8 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
                     if (BcpColIdToString(investigationOneLineAtATime, exception as SqlException, out var result, out var badMapping))
                     {
                         if (badMapping is null || !dt.Columns.Contains(badMapping.SourceColumn))
-                            return new Exception(
-                                string.Format(
+                            return new InvalidOperationException(
+                                string.Format(CultureInfo.InvariantCulture,
                                     SR
                                         .MicrosoftSQLBulkCopy_AttemptLineByLineInsert_BulkInsert_failed_on_data_row__0___1_,
                                     line, result), e);
@@ -203,13 +203,13 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
 
                         if (destColumn != null)
                             return new FileLoadException(
-                                string.Format(SR.MicrosoftSQLBulkCopy_AttemptLineByLineInsert_BulkInsert_failed_on_data_row__0__the_complaint_was_about_source_column____1____which_had_value____2____destination_data_type_was____3____4__5_, line, badMapping.SourceColumn, sourceValue, destColumn.DataType, Environment.NewLine, result), exception);
+                                string.Format(CultureInfo.InvariantCulture, SR.MicrosoftSQLBulkCopy_AttemptLineByLineInsert_BulkInsert_failed_on_data_row__0__the_complaint_was_about_source_column____1____which_had_value____2____destination_data_type_was____3____4__5_, line, badMapping.SourceColumn, sourceValue, destColumn.DataType, Environment.NewLine, result), exception);
 
-                        return new Exception(string.Format(SR.MicrosoftSQLBulkCopy_AttemptLineByLineInsert_BulkInsert_failed_on_data_row__0___1_, line, result), e);
+                        return new InvalidOperationException(string.Format(CultureInfo.InvariantCulture, SR.MicrosoftSQLBulkCopy_AttemptLineByLineInsert_BulkInsert_failed_on_data_row__0___1_, line, result), e);
                     }
 
                     return new FileLoadException(
-                        string.Format(SR.MicrosoftSQLBulkCopy_AttemptLineByLineInsert_Second_Pass_Exception__Failed_to_load_data_row__0__the_following_values_were_rejected_by_the_database___1__2__3_, line, Environment.NewLine, string.Join(Environment.NewLine, dr.ItemArray), firstPass),
+                        string.Format(CultureInfo.InvariantCulture, SR.MicrosoftSQLBulkCopy_AttemptLineByLineInsert_Second_Pass_Exception__Failed_to_load_data_row__0__the_following_values_were_rejected_by_the_database___1__2__3_, line, Environment.NewLine, string.Join(Environment.NewLine, dr.ItemArray), firstPass),
                         exception);
                 }
 
@@ -218,7 +218,7 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
             con.Close();
         }
 
-        return new Exception(SR.MicrosoftSQLBulkCopy_AttemptLineByLineInsert_Second_Pass_Exception__Bulk_insert_failed_but_when_we_tried_to_repeat_it_a_line_at_a_time_it_worked + firstPass, e);
+        return new InvalidOperationException(SR.MicrosoftSQLBulkCopy_AttemptLineByLineInsert_Second_Pass_Exception__Bulk_insert_failed_but_when_we_tried_to_repeat_it_a_line_at_a_time_it_worked + firstPass, e);
     }
 
     /// <summary>
@@ -244,7 +244,7 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
         _columnMetadataCache ??= BuildColumnMetadataCache(insert);
 
         // Get colid from error message (1-based)
-        var colId = Convert.ToInt32(match.Groups[1].Value);
+        var colId = Convert.ToInt32(match.Groups[1].Value, CultureInfo.InvariantCulture);
 
         // Look up in our cache
         if (!_columnMetadataCache.TryGetValue(colId, out var metadata))
@@ -261,7 +261,7 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
 
         // Build enhanced error message (matching original format)
         newMessage = ex.Message.Insert(match.Index + match.Length,
-            $"(colid {colId}: Source Column <<{metadata.SourceColumn}>> Dest Column <<{metadata.DestinationColumn}>> which has MaxLength of {metadata.MaxLength?.ToString() ?? "unknown"})");
+            $"(colid {colId}: Source Column <<{metadata.SourceColumn}>> Dest Column <<{metadata.DestinationColumn}>> which has MaxLength of {metadata.MaxLength?.ToString(CultureInfo.InvariantCulture) ?? "unknown"})");
 
         return true;
     }

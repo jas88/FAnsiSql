@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using FAnsi.Discovery;
 using FAnsi.Discovery.QuerySyntax;
@@ -21,7 +22,7 @@ public sealed class PostgreSqlUpdateHelper : UpdateHelper
         var whereSql = string.Join(" AND ",
             lines.Where(static l => l.LocationToInsert == QueryComponent.WHERE).Select(static c => c.Text));
 
-        return string.Format(
+        return string.Format(CultureInfo.InvariantCulture,
             """
             UPDATE {1} AS t1
             SET

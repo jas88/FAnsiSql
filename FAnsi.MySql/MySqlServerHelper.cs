@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using FAnsi.Discovery;
 using FAnsi.Discovery.ConnectionStringDefaults;
 using FAnsi.Discovery.QuerySyntax;
@@ -133,7 +134,7 @@ public sealed class MySqlServerHelper : DiscoveredServerHelper
                 cmd.CommandText = "SELECT @@in_transaction";
                 cmd.CommandTimeout = 1;
                 var result = cmd.ExecuteScalar();
-                return result != null && Convert.ToInt32(result) > 0;
+                return result != null && Convert.ToInt32(result, CultureInfo.InvariantCulture) > 0;
             }
             catch
             {
@@ -156,7 +157,7 @@ public sealed class MySqlServerHelper : DiscoveredServerHelper
         using var con = serverOnly.GetManagedConnection();
         using var cmd = new MySqlCommand("SELECT CASE WHEN EXISTS(SELECT 1 FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = @name) THEN 1 ELSE 0 END", (MySqlConnection)con.Connection);
         cmd.Parameters.AddWithValue("@name", database.GetRuntimeName());
-        return Convert.ToInt32(cmd.ExecuteScalar()) == 1;
+        return Convert.ToInt32(cmd.ExecuteScalar(), CultureInfo.InvariantCulture) == 1;
     }
 
     public override string GetServerLevelConnectionKey(string connectionString)

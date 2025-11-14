@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Linq;
 using FAnsi.Discovery.QuerySyntax;
 using FAnsi.Discovery.QuerySyntax.Aggregation;
@@ -108,6 +109,7 @@ order by dt*/
         var calendar = GetDateAxisTableDeclaration(query.Axis!);
 
         return string.Format(
+            CultureInfo.InvariantCulture,
             """
 
             {0}
@@ -147,12 +149,8 @@ order by dt*/
         query.SyntaxHelper.SplitLineIntoOuterMostMethodAndContents(countSqlWithoutAlias, out var aggregateMethod,
             out var aggregateParameter);
 
-        if (aggregateParameter.Equals("*"))
+        if (aggregateParameter.Equals("*", StringComparison.Ordinal))
             aggregateParameter = "1";
-
-        var pivotAlias = query.PivotSelect.GetAliasFromText(query.SyntaxHelper);
-        if (string.IsNullOrWhiteSpace(pivotAlias))
-            pivotAlias = query.SyntaxHelper.GetRuntimeName(pivotSqlWithoutAlias);
 
         var nonPivotColumnAlias = nonPivotColumn.GetAliasFromText(query.SyntaxHelper);
         if (string.IsNullOrWhiteSpace(nonPivotColumnAlias))
@@ -164,29 +162,31 @@ order by dt*/
         // Oracle has native PIVOT syntax but requires knowing the pivot values in advance
         // We'll use a two-step approach: first get distinct values, then use dynamic SQL or CASE statements
         // For now, using CASE statements similar to MySQL approach
-        return string.Format("""
+        return string.Format(
+            CultureInfo.InvariantCulture,
+            """
 
-                             {0}
-                             /* Oracle pivot implementation using subquery */
-                             with source_data as (
-                                 {1}
-                             ),
-                             pivot_values as (
-                                 select distinct {2} as piv
-                                 from source_data
-                                 where {2} is not null
-                                 order by {2}
-                             )
-                             select
-                                 s.{3},
-                                 {4}
-                             from source_data s
-                             cross join pivot_values pv
-                             group by s.{3}
-                             order by s.{3}
-                             {5}
+            {0}
+            /* Oracle pivot implementation using subquery */
+            with source_data as (
+                {1}
+            ),
+            pivot_values as (
+                select distinct {2} as piv
+                from source_data
+                where {2} is not null
+                order by {2}
+            )
+            select
+                s.{3},
+                {4}
+            from source_data s
+            cross join pivot_values pv
+            group by s.{3}
+            order by s.{3}
+            {5}
 
-                             """,
+            """,
             string.Join(Environment.NewLine, query.Lines.Where(static l => l.LocationToInsert < QueryComponent.SELECT)),
             string.Join(Environment.NewLine,
                 query.Lines.Where(static c => c.LocationToInsert is >= QueryComponent.SELECT and < QueryComponent.GroupBy)),
@@ -206,7 +206,7 @@ order by dt*/
         query.SyntaxHelper.SplitLineIntoOuterMostMethodAndContents(countSqlWithoutAlias, out var aggregateMethod,
             out var aggregateParameter);
 
-        if (aggregateParameter.Equals("*"))
+        if (aggregateParameter.Equals("*", StringComparison.Ordinal))
             aggregateParameter = "1";
 
         WrapAxisColumnWithDatePartFunction(query, axisColumnAlias);
@@ -214,29 +214,31 @@ order by dt*/
         var calendar = GetDateAxisTableDeclaration(query.Axis!);
 
         // Oracle pivot with date axis
-        return string.Format("""
+        return string.Format(
+            CultureInfo.InvariantCulture,
+            """
 
-                             {0}
-                             {1},
-                             source_data as (
-                                 {2}
-                             ),
-                             pivot_values as (
-                                 select distinct {3} as piv
-                                 from source_data
-                                 where {3} is not null
-                                 order by {3}
-                             )
-                             select
-                                 {4} as "joinDt",
-                                 {5}
-                             from calendar
-                             cross join pivot_values
-                             left join source_data ds on ds.{6} = {4}
-                             group by calendar.dt, pivot_values.piv
-                             order by calendar.dt
+            {0}
+            {1},
+            source_data as (
+                {2}
+            ),
+            pivot_values as (
+                select distinct {3} as piv
+                from source_data
+                where {3} is not null
+                order by {3}
+            )
+            select
+                {4} as "joinDt",
+                {5}
+            from calendar
+            cross join pivot_values
+            left join source_data ds on ds.{6} = {4}
+            group by calendar.dt, pivot_values.piv
+            order by calendar.dt
 
-                             """,
+            """,
             string.Join(Environment.NewLine, query.Lines.Where(static c => c.LocationToInsert < QueryComponent.SELECT)),
             calendar,
             string.Join(Environment.NewLine,

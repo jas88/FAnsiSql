@@ -30,7 +30,7 @@ public abstract class AggregateHelper : IAggregateHelper
     {
         var nonPivotColumn = query.Lines.Where(static l => l.LocationToInsert == QueryComponent.QueryTimeColumn && l.Role == CustomLineRole.None).ToArray();
         if (nonPivotColumn.Length != 1)
-            throw new Exception("Pivot is only valid when there are 3 SELECT columns, an aggregate (e.g. count(*)), a pivot and a final column");
+            throw new InvalidOperationException("Pivot is only valid when there are 3 SELECT columns, an aggregate (e.g. count(*)), a pivot and a final column");
 
         return nonPivotColumn[0];
     }

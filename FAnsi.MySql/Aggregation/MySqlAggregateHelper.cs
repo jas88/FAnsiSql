@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Linq;
 using FAnsi.Discovery.QuerySyntax;
 using FAnsi.Discovery.QuerySyntax.Aggregation;
@@ -74,7 +75,7 @@ public sealed class MySqlAggregateHelper : AggregateHelper
         if (string.IsNullOrWhiteSpace(countAlias))
             countAlias = query.SyntaxHelper.GetRuntimeName(query.CountSelect.GetTextWithoutAlias(query.SyntaxHelper));
 
-        var sql = string.Format("""
+        var sql = string.Format(CultureInfo.InvariantCulture, """
 
                                  {0}
 
@@ -122,7 +123,7 @@ public sealed class MySqlAggregateHelper : AggregateHelper
         // Get the dateAxis CTE to include in the dynamic SQL
         var dateAxisCte = GetDateAxisTableDeclaration(query.Axis);
 
-        return string.Format("""
+        return string.Format(CultureInfo.InvariantCulture, """
 
                              SET SESSION cte_max_recursion_depth = 50000, group_concat_max_len = 1000000;
 
@@ -167,8 +168,8 @@ public sealed class MySqlAggregateHelper : AggregateHelper
             //the from including all table joins and where but no calendar table join
             query.SyntaxHelper.Escape(GetDatePartOfColumn(query.Axis.AxisIncrement, axisColumnWithoutAlias)),
 
-            //the order by (should be count so that heavy populated columns come first)
-            string.Join(Environment.NewLine, query.Lines.Where(static c => c.LocationToInsert is >= QueryComponent.FROM and <= QueryComponent.WHERE).Select(x => query.SyntaxHelper.Escape(x.Text)))
+            //the from/where/join clauses (stopping before GROUP BY since it's hardcoded in the template)
+            string.Join(Environment.NewLine, query.Lines.Where(static c => c.LocationToInsert is >= QueryComponent.FROM and < QueryComponent.GroupBy).Select(x => query.SyntaxHelper.Escape(x.Text)))
         );
     }
 
@@ -178,7 +179,7 @@ public sealed class MySqlAggregateHelper : AggregateHelper
 
         var joinAlias = nonPivotColumn.GetAliasFromText(query.SyntaxHelper);
 
-        return string.Format("""
+        return string.Format(CultureInfo.InvariantCulture, """
 
                              {0}
 
@@ -238,7 +239,7 @@ public sealed class MySqlAggregateHelper : AggregateHelper
         query.SyntaxHelper.SplitLineIntoOuterMostMethodAndContents(countSqlWithoutAlias, out var aggregateMethod,
             out var aggregateParameter);
 
-        if (aggregateParameter.Equals("*"))
+        if (aggregateParameter.Equals("*", StringComparison.Ordinal))
             aggregateParameter = "1";
 
         // If there is an axis, only pull pivot values where the values appear in that axis range
@@ -265,7 +266,7 @@ public sealed class MySqlAggregateHelper : AggregateHelper
         var havingSqlIfAny = string.Join(Environment.NewLine,
             query.Lines.Where(static l => l.LocationToInsert == QueryComponent.Having).Select(static l => l.Text));
 
-        return string.Format("""
+        return string.Format(CultureInfo.InvariantCulture, """
 
                              /* Get unique pivot values and build both column lists in a single query */
                              WITH pivotValues AS (
@@ -283,7 +284,7 @@ public sealed class MySqlAggregateHelper : AggregateHelper
                              SELECT
                                GROUP_CONCAT(
                                  CONCAT(
-                                   '{0}(CASE WHEN {1} = ', QUOTE(piv), ' THEN {2} ELSE NULL END) AS `', piv,'`'
+                                   '{0}(CASE WHEN {1} = ', QUOTE(piv), ' COLLATE utf8mb4_bin THEN {2} ELSE NULL END) AS `', piv,'`'
                                  ) ORDER BY rn
                                ),
                                GROUP_CONCAT(

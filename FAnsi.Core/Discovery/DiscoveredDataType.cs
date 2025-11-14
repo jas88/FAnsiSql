@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using FAnsi.Connections;
 using FAnsi.Discovery.TypeTranslation;
 using FAnsi.Exceptions;
@@ -86,9 +87,9 @@ public sealed class DiscoveredDataType
             return;
 
         if (newSize < toReplace)
-            throw new InvalidResizeException(string.Format(FAnsiStrings.DiscoveredDataType_Resize_CannotResizeSmaller, SQLType, newSize));
+            throw new InvalidResizeException(string.Format(CultureInfo.InvariantCulture, FAnsiStrings.DiscoveredDataType_Resize_CannotResizeSmaller, SQLType, newSize));
 
-        var newType = SQLType.Replace(toReplace.ToString(), newSize.ToString());
+        var newType = SQLType.Replace(toReplace.ToString(CultureInfo.InvariantCulture), newSize.ToString(CultureInfo.InvariantCulture));
 
         AlterTypeTo(newType, managedTransaction);
     }
@@ -109,13 +110,13 @@ public sealed class DiscoveredDataType
         var toReplace = GetDecimalSize();
 
         if (toReplace == null || toReplace.IsEmpty)
-            throw new InvalidResizeException(string.Format(FAnsiStrings.DiscoveredDataType_Resize_DataType_cannot_be_resized_to_decimal_because_it_is_of_data_type__0_, SQLType));
+            throw new InvalidResizeException(string.Format(CultureInfo.InvariantCulture, FAnsiStrings.DiscoveredDataType_Resize_DataType_cannot_be_resized_to_decimal_because_it_is_of_data_type__0_, SQLType));
 
         if (toReplace.NumbersBeforeDecimalPlace > numberOfDigitsBeforeDecimalPoint)
-            throw new InvalidResizeException(string.Format(FAnsiStrings.DiscoveredDataType_Resize_Cannot_shrink_column__number_of_digits_before_the_decimal_point_is_currently__0__and_you_asked_to_set_it_to__1___Current_SQLType_is__2__, toReplace.NumbersBeforeDecimalPlace, numberOfDigitsBeforeDecimalPoint, SQLType));
+            throw new InvalidResizeException(string.Format(CultureInfo.InvariantCulture, FAnsiStrings.DiscoveredDataType_Resize_Cannot_shrink_column__number_of_digits_before_the_decimal_point_is_currently__0__and_you_asked_to_set_it_to__1___Current_SQLType_is__2__, toReplace.NumbersBeforeDecimalPlace, numberOfDigitsBeforeDecimalPoint, SQLType));
 
         if (toReplace.NumbersAfterDecimalPlace > numberOfDigitsAfterDecimalPoint)
-            throw new InvalidResizeException(string.Format(FAnsiStrings.DiscoveredDataType_Resize_Cannot_shrink_column__number_of_digits_after_the_decimal_point_is_currently__0__and_you_asked_to_set_it_to__1___Current_SQLType_is__2__, toReplace.NumbersAfterDecimalPlace, numberOfDigitsAfterDecimalPoint, SQLType));
+            throw new InvalidResizeException(string.Format(CultureInfo.InvariantCulture, FAnsiStrings.DiscoveredDataType_Resize_Cannot_shrink_column__number_of_digits_after_the_decimal_point_is_currently__0__and_you_asked_to_set_it_to__1___Current_SQLType_is__2__, toReplace.NumbersAfterDecimalPlace, numberOfDigitsAfterDecimalPoint, SQLType));
 
         var newDataType = _column?.Table.GetQuerySyntaxHelper()
                               .TypeTranslater.GetSQLDBTypeForCSharpType(new DatabaseTypeRequest(typeof(decimal), null,
@@ -151,7 +152,7 @@ public sealed class DiscoveredDataType
             }
             catch (Exception e)
             {
-                throw new AlterFailedException(string.Format(FAnsiStrings.DiscoveredDataType_AlterTypeTo_Failed_to_send_resize_SQL__0_, sql), e);
+                throw new AlterFailedException(string.Format(CultureInfo.InvariantCulture, FAnsiStrings.DiscoveredDataType_AlterTypeTo_Failed_to_send_resize_SQL__0_, sql), e);
             }
         }
 
@@ -163,7 +164,7 @@ public sealed class DiscoveredDataType
     /// </summary>
     /// <param name="other"></param>
     /// <returns></returns>
-    private bool Equals(DiscoveredDataType other) => string.Equals(SQLType, other.SQLType);
+    private bool Equals(DiscoveredDataType other) => string.Equals(SQLType, other.SQLType, StringComparison.Ordinal);
 
     /// <summary>
     /// Equality based on <see cref="SQLType"/>

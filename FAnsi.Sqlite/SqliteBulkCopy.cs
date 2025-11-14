@@ -56,7 +56,7 @@ public sealed class SqliteBulkCopy(DiscoveredTable targetTable, IManagedConnecti
         {
             return BulkInsertImpl(dt);
         }
-        catch (Exception e)
+        catch (SqliteException e)
         {
             // Attempt line-by-line insert to identify the problematic row
             Exception better;
@@ -66,6 +66,24 @@ public sealed class SqliteBulkCopy(DiscoveredTable targetTable, IManagedConnecti
             }
             catch (Exception exception)
             {
+                // CodeQL[cs/catch-of-all-exceptions]: Intentional - wrapping any investigation failure as AggregateException
+                throw new AggregateException(
+                    "Failed to bulk insert batch. Line-by-line investigation also failed. InnerException[0] is the original Exception, InnerException[1] is the line-by-line failure.",
+                    e, exception);
+            }
+            throw better;
+        }
+        catch (System.Data.Common.DbException e)
+        {
+            // Attempt line-by-line insert to identify the problematic row
+            Exception better;
+            try
+            {
+                better = AttemptLineByLineInsert(e, dt);
+            }
+            catch (Exception exception)
+            {
+                // CodeQL[cs/catch-of-all-exceptions]: Intentional - wrapping any investigation failure as AggregateException
                 throw new AggregateException(
                     "Failed to bulk insert batch. Line-by-line investigation also failed. InnerException[0] is the original Exception, InnerException[1] is the line-by-line failure.",
                     e, exception);
@@ -209,7 +227,7 @@ public sealed class SqliteBulkCopy(DiscoveredTable targetTable, IManagedConnecti
                 cmd.ExecuteNonQuery();
                 line++;
             }
-            catch (Exception exception)
+            catch (SqliteException exception)
             {
                 // Try to identify which column caused the problem
                 var badColumnInfo = IdentifyBadColumn(exception, dr, matchedColumns);
@@ -234,7 +252,7 @@ public sealed class SqliteBulkCopy(DiscoveredTable targetTable, IManagedConnecti
 
         // All rows worked individually - unexpected!
         investigationTransaction.Rollback();
-        return new Exception(
+        return new InvalidOperationException(
             $"Second Pass Exception: Bulk insert failed but when we tried to repeat it a line at a time it worked{firstPass}",
             originalException);
     }
@@ -343,9 +361,9 @@ public sealed class SqliteBulkCopy(DiscoveredTable targetTable, IManagedConnecti
         // SQLite handles most types natively, but we'll handle some special cases
         return value switch
         {
-            DateTime dt => dt.ToString("yyyy-MM-dd HH:mm:ss.fff"),
-            DateOnly dateOnly => dateOnly.ToString("yyyy-MM-dd"),
-            TimeOnly timeOnly => timeOnly.ToString("HH:mm:ss.fff"),
+            DateTime dt => dt.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture),
+            DateOnly dateOnly => dateOnly.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture),
+            TimeOnly timeOnly => timeOnly.ToString("HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture),
             bool b => b ? 1 : 0,  // SQLite stores booleans as integers
             Guid g => g.ToString(),  // Store GUIDs as text
             _ => value

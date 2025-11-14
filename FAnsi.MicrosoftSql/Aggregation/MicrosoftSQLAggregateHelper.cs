@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Linq;
 using FAnsi.Discovery.QuerySyntax;
 using FAnsi.Discovery.QuerySyntax.Aggregation;
@@ -96,7 +97,7 @@ public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
         WrapAxisColumnWithDatePartFunction(query, axisColumnAlias);
 
 
-        return string.Format(
+        return string.Format(CultureInfo.InvariantCulture,
             """
 
             {0}
@@ -135,7 +136,7 @@ public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
         var part1 = GetPivotPart1(query, out var pivotAlias, out var countAlias, out var axisColumnAlias);
 
         //The dynamic query in which we assemble a query string and EXECUTE it
-        var part2 = string.Format("""
+        var part2 = string.Format(CultureInfo.InvariantCulture, """
 
                                   /*DYNAMIC PIVOT*/
                                   declare @Query varchar(MAX)
@@ -202,7 +203,7 @@ public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
             nonPivotColumnAlias = syntaxHelper.GetRuntimeName(nonPivotColumnSelect);
 
         //The dynamic query in which we assemble a query string and EXECUTE it
-        var part2 = string.Format("""
+        var part2 = string.Format(CultureInfo.InvariantCulture, """
 
                                   /*DYNAMIC PIVOT*/
                                   declare @Query varchar(MAX)
@@ -286,7 +287,7 @@ public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
         var havingSqlIfAny = string.Join(Environment.NewLine,
             query.Lines.Where(static l => l.LocationToInsert == QueryComponent.Having).Select(static l => l.Text));
 
-        var part1 = string.Format(
+        var part1 = string.Format(CultureInfo.InvariantCulture,
             """
 
             /*DYNAMICALLY FETCH COLUMN VALUES FOR USE IN PIVOT*/

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using FAnsi.Discovery;
@@ -78,8 +79,8 @@ public sealed class SqliteDatabaseHelper : DiscoveredDatabaseHelper
             var fileInfo = new FileInfo(filePath);
             toReturn.Add("Database File", filePath);
             toReturn.Add("File Size", $"{fileInfo.Length} bytes");
-            toReturn.Add("Created", fileInfo.CreationTime.ToString());
-            toReturn.Add("Modified", fileInfo.LastWriteTime.ToString());
+            toReturn.Add("Created", fileInfo.CreationTime.ToString(CultureInfo.InvariantCulture));
+            toReturn.Add("Modified", fileInfo.LastWriteTime.ToString(CultureInfo.InvariantCulture));
         }
 
         return toReturn;
