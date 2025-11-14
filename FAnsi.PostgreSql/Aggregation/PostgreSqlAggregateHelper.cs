@@ -84,27 +84,26 @@ public sealed class PostgreSqlAggregateHelper : AggregateHelper
 
                              /* Get distinct pivot values */
                              WITH pivotValues AS (
-                                 SELECT DISTINCT {1} as piv
-                                 {3}
-                                 WHERE {1} IS NOT NULL
-                                 ORDER BY {1}
+                                 SELECT DISTINCT {0} as piv
+                                 {2}
+                                 WHERE {0} IS NOT NULL
+                                 ORDER BY {0}
                              ),
                              /* Build the aggregated dataset */
                              dataset AS (
-                                 {4}
+                                 {3}
                              )
                              /* Main query with dynamic columns */
                              SELECT
-                                 dataset.{2},
-                                 {5}
+                                 dataset.{1},
+                                 {4}
                              FROM dataset
                              CROSS JOIN pivotValues
-                             GROUP BY dataset.{2}
-                             ORDER BY dataset.{2}
-                             {6}
+                             GROUP BY dataset.{1}
+                             ORDER BY dataset.{1}
+                             {5}
 
                              """,
-            aggregateMethod,
             pivotSqlWithoutAlias,
             nonPivotColumnAlias,
             string.Join(Environment.NewLine,

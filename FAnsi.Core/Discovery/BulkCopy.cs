@@ -180,8 +180,6 @@ public abstract class BulkCopy : IBulkCopy
 
         foreach (var colInSource in inputColumns)
         {
-            // Use optimized span-based comparison for high-performance column name matching
-            var colSourceNameSpan = colInSource.ColumnName.AsSpan();
             DiscoveredColumn? match = null;
 
             // Manual loop optimization to avoid LINQ allocations and use span comparisons

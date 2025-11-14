@@ -121,7 +121,11 @@ public sealed class SqliteDatabaseHelper : DiscoveredDatabaseHelper
         var filePath = discoveredDatabase.Server.Builder.TryGetValue("Data Source", out var dataSource) ? dataSource?.ToString() : null;
         if (!string.IsNullOrEmpty(filePath) && File.Exists(filePath))
         {
-            var backupPath = Path.Combine(Path.GetDirectoryName(filePath) ?? "", backupName);
+            var directory = Path.GetDirectoryName(filePath);
+            if (string.IsNullOrEmpty(directory))
+                directory = Environment.CurrentDirectory;
+
+            var backupPath = Path.Combine(directory, backupName);
             File.Copy(filePath, backupPath, true);
         }
     }

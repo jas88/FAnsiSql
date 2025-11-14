@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.IO;
 using FAnsi.Discovery;
 using FAnsi.Discovery.QuerySyntax;
 using FAnsi.Naming;
@@ -222,7 +223,15 @@ public sealed class SqliteServerHelper : DiscoveredServerHelper
                 toReturn.Add("SQLite Version", version);
             }
         }
-        catch (Exception ex)
+        catch (SqliteException ex)
+        {
+            toReturn.Add("Connection Error", ex.Message);
+        }
+        catch (IOException ex)
+        {
+            toReturn.Add("Connection Error", ex.Message);
+        }
+        catch (UnauthorizedAccessException ex)
         {
             toReturn.Add("Connection Error", ex.Message);
         }
@@ -278,8 +287,19 @@ public sealed class SqliteServerHelper : DiscoveredServerHelper
 
             return CreateVersionFromString(versionString ?? "");
         }
-        catch
+        catch (SqliteException)
         {
+            // Database connection or query failed
+            return null;
+        }
+        catch (IOException)
+        {
+            // File access issues
+            return null;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            // Permission issues
             return null;
         }
     }
