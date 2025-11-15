@@ -75,11 +75,16 @@ public abstract class DatabaseTests
 
             TestConnectionStrings.Add(databaseType, constr);
 
-            // Make sure our scratch db exists for PostgreSQL
-            if (databaseType != DatabaseType.PostgreSql) continue;
-
-            var server = GetTestServer(DatabaseType.PostgreSql);
-            if (server.DiscoverDatabases().All(db => db.GetWrappedName()?.Contains(_testScratchDatabase) != true)) server.CreateDatabase(_testScratchDatabase);
+            // Make sure our scratch db exists for databases that need pre-creation
+            // PostgreSQL and Oracle require the database to exist before tests run
+            // MySQL and SQL Server can create databases on demand
+            // SQLite uses in-memory databases
+            if (databaseType is DatabaseType.PostgreSql or DatabaseType.Oracle)
+            {
+                var server = GetTestServer(databaseType);
+                if (server.DiscoverDatabases().All(db => db.GetWrappedName()?.Contains(_testScratchDatabase) != true))
+                    server.CreateDatabase(_testScratchDatabase);
+            }
         }
     }
 
@@ -106,8 +111,14 @@ public abstract class DatabaseTests
             if (_allowDatabaseCreation)
                 db.Create();
             else
+            {
+                // In CI, all databases must exist and tests must not skip
+                if (Environment.GetEnvironmentVariable("GITHUB_ACTIONS") == "true")
+                    Assert.Fail($"Database {_testScratchDatabase} did not exist on server {server} and AllowDatabaseCreation was false in {TestFilename} - all databases are required in CI");
+
                 Assert.Inconclusive(
                     $"Database {_testScratchDatabase} did not exist on server {server} and AllowDatabaseCreation was false in {TestFilename}");
+            }
         else
         {
             if (!cleanDatabase) return db;
