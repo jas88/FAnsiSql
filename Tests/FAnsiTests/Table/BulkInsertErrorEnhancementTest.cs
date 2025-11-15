@@ -19,7 +19,9 @@ internal sealed class BulkInsertErrorEnhancementTest : DatabaseTests
     /// This is the primary use case for error enhancement - helping users identify which column
     /// in their DataTable is causing the problem.
     /// </summary>
+#if MSSQL_TESTS
     [TestCase(DatabaseType.MicrosoftSQLServer)]
+#endif
     public void TestBulkInsert_StringLengthViolation_EnhancedErrorMessage(DatabaseType type)
     {
         var db = GetTestDatabase(type);
@@ -102,7 +104,9 @@ internal sealed class BulkInsertErrorEnhancementTest : DatabaseTests
     /// SQL Server internally sorts column mappings by destination column name, and our cache
     /// must replicate this sorting to correctly map colid to column names.
     /// </summary>
+#if MSSQL_TESTS
     [TestCase(DatabaseType.MicrosoftSQLServer)]
+#endif
     public void TestBulkInsert_MultipleColumns_SortingWorks(DatabaseType type)
     {
         var db = GetTestDatabase(type);
@@ -160,7 +164,9 @@ internal sealed class BulkInsertErrorEnhancementTest : DatabaseTests
     /// Tests that the error enhancement works with case-insensitive column name matching,
     /// as SQL Server uses case-insensitive collation by default.
     /// </summary>
+#if MSSQL_TESTS
     [TestCase(DatabaseType.MicrosoftSQLServer)]
+#endif
     public void TestBulkInsert_CaseInsensitiveMatching(DatabaseType type)
     {
         var db = GetTestDatabase(type);
@@ -203,7 +209,9 @@ internal sealed class BulkInsertErrorEnhancementTest : DatabaseTests
     /// Tests that error enhancement gracefully handles edge cases where the column
     /// might not be found in the cache.
     /// </summary>
+#if MSSQL_TESTS
     [TestCase(DatabaseType.MicrosoftSQLServer)]
+#endif
     public void TestBulkInsert_EdgeCase_EmptyTable(DatabaseType type)
     {
         var db = GetTestDatabase(type);

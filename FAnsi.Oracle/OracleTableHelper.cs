@@ -115,12 +115,16 @@ public sealed class OracleTableHelper : DiscoveredTableHelper
         return [.. columns];
     }
 
-    public override bool Exists(DiscoveredTable table, IManagedTransaction? transaction = null)
+    /// <summary>
+    /// Checks if the table exists using the provided connection.
+    /// </summary>
+    /// <param name="table">The table to check</param>
+    /// <param name="connection">The managed connection to use</param>
+    /// <returns>True if the table exists, false otherwise</returns>
+    public bool Exists(DiscoveredTable table, IManagedConnection connection)
     {
         if (!table.Database.Exists())
             return false;
-
-        using var connection = table.Database.Server.GetManagedConnection(transaction);
 
         // Use ALL_TABLES/ALL_VIEWS to check existence with a single targeted query
         // In Oracle, the "database" is actually the owner/schema
@@ -157,10 +161,21 @@ public sealed class OracleTableHelper : DiscoveredTableHelper
         return Convert.ToInt32(result, CultureInfo.InvariantCulture) == 1;
     }
 
-    public override bool HasPrimaryKey(DiscoveredTable table, IManagedTransaction? transaction = null)
+    [Obsolete("Prefer using Exists(DiscoveredTable, IManagedConnection) to reuse connections and improve performance")]
+    public override bool Exists(DiscoveredTable table, IManagedTransaction? transaction = null)
     {
         using var connection = table.Database.Server.GetManagedConnection(transaction);
+        return Exists(table, connection);
+    }
 
+    /// <summary>
+    /// Checks if the table has a primary key using the provided connection.
+    /// </summary>
+    /// <param name="table">The table to check</param>
+    /// <param name="connection">The managed connection to use</param>
+    /// <returns>True if the table has a primary key, false otherwise</returns>
+    public bool HasPrimaryKey(DiscoveredTable table, IManagedConnection connection)
+    {
         const string sql = """
             SELECT CASE WHEN EXISTS (
                 SELECT 1 FROM ALL_CONSTRAINTS
@@ -184,6 +199,16 @@ public sealed class OracleTableHelper : DiscoveredTableHelper
 
         var result = cmd.ExecuteScalar();
         return Convert.ToInt32(result, CultureInfo.InvariantCulture) == 1;
+    }
+
+    /// <summary>
+    /// Checks if the table has a primary key. Consider using the overload that accepts IManagedConnection for better performance when calling multiple methods.
+    /// </summary>
+    [Obsolete("Prefer using HasPrimaryKey(DiscoveredTable, IManagedConnection) to reuse connections and improve performance")]
+    public override bool HasPrimaryKey(DiscoveredTable table, IManagedTransaction? transaction = null)
+    {
+        using var connection = table.Database.Server.GetManagedConnection(transaction);
+        return HasPrimaryKey(table, connection);
     }
 
     public override void DropIndex(DatabaseOperationArgs args, DiscoveredTable table, string indexName)

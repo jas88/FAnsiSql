@@ -4,6 +4,7 @@ using NUnit.Framework;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Globalization;
 
 namespace FAnsiTests.Aggregation;
 
@@ -28,7 +29,7 @@ internal sealed class BasicAggregationTests : AggregationTests
         con.Open();
 
         var cmd = svr.GetCommand(sql, con);
-        Assert.That(Convert.ToInt32(cmd.ExecuteScalar()), Is.EqualTo(14));
+        Assert.That(Convert.ToInt32(cmd.ExecuteScalar(), CultureInfo.InvariantCulture), Is.EqualTo(14));
     }
 
 

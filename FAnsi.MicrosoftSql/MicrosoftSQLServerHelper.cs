@@ -4,6 +4,7 @@ using System.Data;
 using System.Data.Common;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using FAnsi.Connections;
 using FAnsi.Discovery;
 using FAnsi.Discovery.QuerySyntax;
 using FAnsi.Naming;
@@ -204,6 +205,20 @@ public sealed class MicrosoftSQLServerHelper : DiscoveredServerHelper
         return false;
     }
 
+    /// <summary>
+    /// Checks if the database exists using the provided connection.
+    /// </summary>
+    /// <param name="database">The database to check</param>
+    /// <param name="connection">The managed connection to use</param>
+    /// <returns>True if the database exists, false otherwise</returns>
+    public bool DatabaseExists(DiscoveredDatabase database, IManagedConnection connection)
+    {
+        using var cmd = new SqlCommand("SELECT CASE WHEN EXISTS(SELECT 1 FROM sys.databases WHERE name = @name) THEN 1 ELSE 0 END", (SqlConnection)connection.Connection);
+        cmd.Transaction = (SqlTransaction?)connection.Transaction;
+        cmd.Parameters.AddWithValue("@name", database.GetRuntimeName());
+        return Convert.ToInt32(cmd.ExecuteScalar(), CultureInfo.InvariantCulture) == 1;
+    }
+
     public override bool DatabaseExists(DiscoveredDatabase database)
     {
         // Connect to master database to query sys.databases (can't connect to target DB if it doesn't exist!)
@@ -213,9 +228,7 @@ public sealed class MicrosoftSQLServerHelper : DiscoveredServerHelper
         };
         var masterServer = new DiscoveredServer(builder.ConnectionString, DatabaseType.MicrosoftSQLServer);
         using var con = masterServer.GetManagedConnection();
-        using var cmd = new SqlCommand("SELECT CASE WHEN EXISTS(SELECT 1 FROM sys.databases WHERE name = @name) THEN 1 ELSE 0 END", (SqlConnection)con.Connection);
-        cmd.Parameters.AddWithValue("@name", database.GetRuntimeName());
-        return Convert.ToInt32(cmd.ExecuteScalar(), CultureInfo.InvariantCulture) == 1;
+        return DatabaseExists(database, con);
     }
 
     public override string GetServerLevelConnectionKey(string connectionString)

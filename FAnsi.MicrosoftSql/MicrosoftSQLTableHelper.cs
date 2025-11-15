@@ -110,12 +110,16 @@ public sealed partial class MicrosoftSQLTableHelper : DiscoveredTableHelper
         cmd.ExecuteNonQuery();
     }
 
-    public override bool Exists(DiscoveredTable table, IManagedTransaction? transaction = null)
+    /// <summary>
+    /// Checks if the table exists using the provided connection.
+    /// </summary>
+    /// <param name="table">The table to check</param>
+    /// <param name="connection">The managed connection to use</param>
+    /// <returns>True if the table exists, false otherwise</returns>
+    public bool Exists(DiscoveredTable table, IManagedConnection connection)
     {
         if (!table.Database.Exists())
             return false;
-
-        using var connection = table.Database.Server.GetManagedConnection(transaction);
 
         // Use sys.objects to check for table/view existence with a single targeted query
         var objectType = table.TableType switch
@@ -151,10 +155,21 @@ public sealed partial class MicrosoftSQLTableHelper : DiscoveredTableHelper
         return Convert.ToInt32(result, CultureInfo.InvariantCulture) == 1;
     }
 
-    public override bool HasPrimaryKey(DiscoveredTable table, IManagedTransaction? transaction = null)
+    [Obsolete("Prefer using Exists(DiscoveredTable, IManagedConnection) to reuse connections and improve performance")]
+    public override bool Exists(DiscoveredTable table, IManagedTransaction? transaction = null)
     {
         using var connection = table.Database.Server.GetManagedConnection(transaction);
+        return Exists(table, connection);
+    }
 
+    /// <summary>
+    /// Checks if the table has a primary key using the provided connection.
+    /// </summary>
+    /// <param name="table">The table to check</param>
+    /// <param name="connection">The managed connection to use</param>
+    /// <returns>True if the table has a primary key, false otherwise</returns>
+    public bool HasPrimaryKey(DiscoveredTable table, IManagedConnection connection)
+    {
         const string sql = """
             SELECT CASE WHEN EXISTS (
                 SELECT 1 FROM sys.indexes i
@@ -180,6 +195,13 @@ public sealed partial class MicrosoftSQLTableHelper : DiscoveredTableHelper
 
         var result = cmd.ExecuteScalar();
         return Convert.ToInt32(result, CultureInfo.InvariantCulture) == 1;
+    }
+
+    [Obsolete("Prefer using HasPrimaryKey(DiscoveredTable, IManagedConnection) to reuse connections and improve performance")]
+    public override bool HasPrimaryKey(DiscoveredTable table, IManagedTransaction? transaction = null)
+    {
+        using var connection = table.Database.Server.GetManagedConnection(transaction);
+        return HasPrimaryKey(table, connection);
     }
 
 

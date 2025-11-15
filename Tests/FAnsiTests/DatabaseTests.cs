@@ -47,18 +47,18 @@ public abstract class DatabaseTests
 
         var doc = XDocument.Load(file);
 
-        var root = doc.Element("TestDatabases") ?? throw new Exception($"Missing element 'TestDatabases' in {TestFilename}");
+        var root = doc.Element("TestDatabases") ?? throw new InvalidOperationException($"Missing element 'TestDatabases' in {TestFilename}");
 
         var settings = root.Element("Settings") ??
-                       throw new Exception($"Missing element 'Settings' in {TestFilename}");
+                       throw new InvalidOperationException($"Missing element 'Settings' in {TestFilename}");
 
         var e = settings.Element("AllowDatabaseCreation") ??
-                throw new Exception($"Missing element 'AllowDatabaseCreation' in {TestFilename}");
+                throw new InvalidOperationException($"Missing element 'AllowDatabaseCreation' in {TestFilename}");
 
         _allowDatabaseCreation = Convert.ToBoolean(e.Value);
 
         e = settings.Element("TestScratchDatabase") ??
-            throw new Exception($"Missing element 'TestScratchDatabase' in {TestFilename}");
+            throw new InvalidOperationException($"Missing element 'TestScratchDatabase' in {TestFilename}");
 
         _testScratchDatabase = e.Value;
 
@@ -67,26 +67,31 @@ public abstract class DatabaseTests
             var type = element.Element("DatabaseType")?.Value;
 
             if (!Enum.TryParse(type, out DatabaseType databaseType))
-                throw new Exception($"Could not parse DatabaseType {type}");
+                throw new InvalidOperationException($"Could not parse DatabaseType {type}");
 
 
             var constr = element.Element("ConnectionString")?.Value ??
-                         throw new Exception($"Invalid connection string for {type}");
+                         throw new InvalidOperationException($"Invalid connection string for {type}");
 
             TestConnectionStrings.Add(databaseType, constr);
 
-            // Make sure our scratch db exists for PostgreSQL
-            if (databaseType != DatabaseType.PostgreSql) continue;
-
-            var server = GetTestServer(DatabaseType.PostgreSql);
-            if (server.DiscoverDatabases().All(db => db.GetWrappedName()?.Contains(_testScratchDatabase) != true)) server.CreateDatabase(_testScratchDatabase);
+            // Make sure our scratch db exists for databases that need pre-creation
+            // PostgreSQL and Oracle require the database to exist before tests run
+            // MySQL and SQL Server can create databases on demand
+            // SQLite uses in-memory databases
+            if (databaseType is DatabaseType.PostgreSql or DatabaseType.Oracle)
+            {
+                var server = GetTestServer(databaseType);
+                if (server.DiscoverDatabases().All(db => db.GetWrappedName()?.Contains(_testScratchDatabase) != true))
+                    server.CreateDatabase(_testScratchDatabase);
+            }
         }
     }
 
     protected DiscoveredServer GetTestServer(DatabaseType type)
     {
         if (!TestConnectionStrings.TryGetValue(type, out var connString))
-            Assert.Inconclusive("No connection string configured for that server");
+            AssertRequirement($"No connection string configured for {type}");
 
         return new DiscoveredServer(connString, type);
     }
@@ -100,8 +105,7 @@ public abstract class DatabaseTests
             if (_allowDatabaseCreation)
                 db.Create();
             else
-                Assert.Inconclusive(
-                    $"Database {_testScratchDatabase} did not exist on server {server} and AllowDatabaseCreation was false in {TestFilename}");
+                AssertRequirement($"Database {_testScratchDatabase} does not exist and AllowDatabaseCreation is false in {TestFilename}");
         else
         {
             if (!cleanDatabase) return db;
@@ -129,6 +133,18 @@ public abstract class DatabaseTests
         return db;
     }
 
+    /// <summary>
+    /// Asserts a test requirement is not met. In CI, this fails the test. On dev workstations, marks test as inconclusive.
+    /// </summary>
+    /// <param name="message">The assertion message</param>
+    protected static void AssertRequirement(string message)
+    {
+        if (Environment.GetEnvironmentVariable("GITHUB_ACTIONS") == "true")
+            Assert.Fail(message);
+        else
+            Assert.Inconclusive(message);
+    }
+
     protected void AssertCanCreateDatabases()
     {
         if (!_allowDatabaseCreation)
@@ -142,17 +158,17 @@ public abstract class DatabaseTests
             return true;
 
         //if they are null but basically the same
-        var oIsNull = o == null || o == DBNull.Value || o.ToString()?.Equals("0") == true;
-        var o2IsNull = o2 == null || o2 == DBNull.Value || o2.ToString()?.Equals("0") == true;
+        var oIsNull = o == null || o == DBNull.Value || o.ToString()?.Equals("0", StringComparison.Ordinal) == true;
+        var o2IsNull = o2 == null || o2 == DBNull.Value || o2.ToString()?.Equals("0", StringComparison.Ordinal) == true;
 
         if (oIsNull || o2IsNull)
             return oIsNull == o2IsNull;
 
         //they are not null so tostring them deals with int vs long etc that DbDataAdapters can be a bit flaky on
         if (handleSlashRSlashN)
-            return string.Equals(o?.ToString()?.Replace("\r", "").Replace("\n", ""), o2?.ToString()?.Replace("\r", "").Replace("\n", ""));
+            return string.Equals(o?.ToString()?.Replace("\r", "").Replace("\n", ""), o2?.ToString()?.Replace("\r", "").Replace("\n", ""), StringComparison.Ordinal);
 
-        return string.Equals(o?.ToString(), o2?.ToString());
+        return string.Equals(o?.ToString(), o2?.ToString(), StringComparison.Ordinal);
     }
 
     protected static void AssertAreEqual(DataTable dt1, DataTable dt2)

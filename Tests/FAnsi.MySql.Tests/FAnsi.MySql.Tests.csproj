@@ -5,6 +5,7 @@
     <Copyright>Copyright ©  2025</Copyright>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <RootNamespace>FAnsiTests</RootNamespace>
+    <DefineConstants>$(DefineConstants);MYSQL_TESTS</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="..\..\SharedAssemblyInfo.cs" Link="SharedAssemblyInfo.cs" />
@@ -20,7 +21,7 @@
     <PackageReference Include="NUnit3TestAdapter" Version="5.2.0" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="TestDatabases.xml">
+    <Content Include="../FAnsiTests/TestDatabases.xml" Link="TestDatabases.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

@@ -4,6 +4,7 @@ using System.Data;
 using System.Data.Common;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using FAnsi.Connections;
 using FAnsi.Discovery;
 using FAnsi.Discovery.ConnectionStringDefaults;
 using FAnsi.Discovery.QuerySyntax;
@@ -146,6 +147,20 @@ public sealed class MySqlServerHelper : DiscoveredServerHelper
         return false;
     }
 
+    /// <summary>
+    /// Checks if the database exists using the provided connection.
+    /// </summary>
+    /// <param name="database">The database to check</param>
+    /// <param name="connection">The managed connection to use</param>
+    /// <returns>True if the database exists, false otherwise</returns>
+    public bool DatabaseExists(DiscoveredDatabase database, IManagedConnection connection)
+    {
+        using var cmd = new MySqlCommand("SELECT CASE WHEN EXISTS(SELECT 1 FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = @name) THEN 1 ELSE 0 END", (MySqlConnection)connection.Connection);
+        cmd.Transaction = (MySqlTransaction?)connection.Transaction;
+        cmd.Parameters.AddWithValue("@name", database.GetRuntimeName());
+        return Convert.ToInt32(cmd.ExecuteScalar(), CultureInfo.InvariantCulture) == 1;
+    }
+
     public override bool DatabaseExists(DiscoveredDatabase database)
     {
         // Remove database from connection string - INFORMATION_SCHEMA is accessible from any connection
@@ -155,9 +170,7 @@ public sealed class MySqlServerHelper : DiscoveredServerHelper
         };
         var serverOnly = new DiscoveredServer(builder.ConnectionString, DatabaseType.MySql);
         using var con = serverOnly.GetManagedConnection();
-        using var cmd = new MySqlCommand("SELECT CASE WHEN EXISTS(SELECT 1 FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = @name) THEN 1 ELSE 0 END", (MySqlConnection)con.Connection);
-        cmd.Parameters.AddWithValue("@name", database.GetRuntimeName());
-        return Convert.ToInt32(cmd.ExecuteScalar(), CultureInfo.InvariantCulture) == 1;
+        return DatabaseExists(database, con);
     }
 
     public override string GetServerLevelConnectionKey(string connectionString)

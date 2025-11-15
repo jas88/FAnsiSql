@@ -223,7 +223,9 @@ internal sealed class ManagedConnectionTests : DatabaseTests
     /// catch block incorrectly returned false when the validation query itself failed due to
     /// pending transaction.
     /// </summary>
+#if MSSQL_TESTS
     [TestCase(DatabaseType.MicrosoftSQLServer)]
+#endif
     public void Test_DanglingTransaction_IsDetectedAndRejected(DatabaseType dbType)
     {
         var db = GetTestDatabase(dbType);

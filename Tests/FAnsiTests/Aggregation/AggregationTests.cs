@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Globalization;
 using FAnsi;
 using FAnsi.Discovery;
 using NUnit.Framework;
@@ -95,7 +96,7 @@ internal abstract class AggregationTests : DatabaseTests
             if (aType != bType)
                 try
                 {
-                    b = Convert.ChangeType(b, aType);
+                    b = Convert.ChangeType(b, aType, CultureInfo.InvariantCulture);
                 }
                 catch (Exception)
                 {
@@ -157,7 +158,13 @@ internal abstract class AggregationTests : DatabaseTests
         var dic = easy ? _easyTables : _hardTables;
 
         if (!dic.ContainsKey(type))
+        {
+            // In CI, all databases must be configured and tests must not skip
+            if (Environment.GetEnvironmentVariable("GITHUB_ACTIONS") == "true")
+                Assert.Fail($"No test table for {type} - all databases are required in CI");
+
             Assert.Inconclusive($"No connection string found for Test database type {type}");
+        }
 
         return dic[type];
     }

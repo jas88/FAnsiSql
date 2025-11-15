@@ -10,6 +10,7 @@ using System.Threading;
 using FAnsi.Connections;
 using FAnsi.Discovery.ConnectionStringDefaults;
 using FAnsi.Discovery.QuerySyntax;
+using FAnsi.Exceptions;
 using FAnsi.Naming;
 
 namespace FAnsi.Discovery;
@@ -19,9 +20,26 @@ namespace FAnsi.Discovery;
 /// </summary>
 public abstract partial class DiscoveredServerHelper(DatabaseType databaseType) : IDiscoveredServerHelper
 {
-    // Pre-initialize accumulators for all DatabaseType values to avoid race conditions
-    private static readonly FrozenDictionary<DatabaseType, ConnectionStringKeywordAccumulator> ConnectionStringKeywordAccumulators =
-        Enum.GetValues<DatabaseType>().ToFrozenDictionary(dt => dt, dt => new ConnectionStringKeywordAccumulator(dt));
+    // Lazy-initialize accumulators for all DatabaseType values to avoid race conditions
+    // Uses Lazy<T> to defer creation until implementations are loaded
+    // Only creates accumulators for database types that have loaded implementations
+    private static readonly Lazy<FrozenDictionary<DatabaseType, ConnectionStringKeywordAccumulator>> ConnectionStringKeywordAccumulators =
+        new(() =>
+        {
+            var dict = new Dictionary<DatabaseType, ConnectionStringKeywordAccumulator>();
+            foreach (var dt in Enum.GetValues<DatabaseType>())
+            {
+                try
+                {
+                    dict[dt] = new ConnectionStringKeywordAccumulator(dt);
+                }
+                catch (ImplementationNotFoundException)
+                {
+                    // Skip database types without loaded implementations
+                }
+            }
+            return dict.ToFrozenDictionary();
+        }, LazyThreadSafetyMode.ExecutionAndPublication);
 
     /// <summary>
     /// Register a system-wide rule that all connection strings of <paramref name="databaseType"/> should include the given <paramref name="keyword"/>.
@@ -32,7 +50,7 @@ public abstract partial class DiscoveredServerHelper(DatabaseType databaseType) 
     /// <param name="priority">Resolves conflicts when multiple calls are made for the same <paramref name="keyword"/> at different times</param>
     public static void AddConnectionStringKeyword(DatabaseType databaseType, string keyword, string value, ConnectionStringKeywordPriority priority)
     {
-        var accumulator = ConnectionStringKeywordAccumulators[databaseType];
+        var accumulator = ConnectionStringKeywordAccumulators.Value[databaseType];
         accumulator.AddOrUpdateKeyword(keyword, value, priority);
     }
 
@@ -87,7 +105,7 @@ public abstract partial class DiscoveredServerHelper(DatabaseType databaseType) 
     protected virtual void EnforceKeywords(DbConnectionStringBuilder builder)
     {
         //if we have any keywords to enforce
-        if (ConnectionStringKeywordAccumulators.TryGetValue(DatabaseType, out var accumulator))
+        if (ConnectionStringKeywordAccumulators.Value.TryGetValue(DatabaseType, out var accumulator))
             accumulator.EnforceOptions(builder);
     }
 

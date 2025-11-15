@@ -111,12 +111,16 @@ public sealed partial class MySqlTableHelper : DiscoveredTableHelper
         return type;
     }
 
-    public override bool Exists(DiscoveredTable table, IManagedTransaction? transaction = null)
+    /// <summary>
+    /// Checks if the table exists using the provided connection.
+    /// </summary>
+    /// <param name="table">The table to check</param>
+    /// <param name="connection">The managed connection to use</param>
+    /// <returns>True if the table exists, false otherwise</returns>
+    public bool Exists(DiscoveredTable table, IManagedConnection connection)
     {
         if (!table.Database.Exists())
             return false;
-
-        using var connection = table.Database.Server.GetManagedConnection(transaction);
 
         // Use INFORMATION_SCHEMA.TABLES to check for table/view existence with a single targeted query
         var tableType = table.TableType switch
@@ -154,6 +158,14 @@ public sealed partial class MySqlTableHelper : DiscoveredTableHelper
         return Convert.ToBoolean(result, CultureInfo.InvariantCulture);
     }
 
+    [Obsolete("Prefer using Exists(DiscoveredTable, IManagedConnection) to reuse connections and improve performance")]
+    public override bool Exists(DiscoveredTable table, IManagedTransaction? transaction = null)
+    {
+        using var connection = table.Database.Server.GetManagedConnection(transaction);
+        return Exists(table, connection);
+    }
+
+    [Obsolete("Prefer using Exists(DiscoveredTable, IManagedConnection) to reuse connections and improve performance")]
     public override bool HasPrimaryKey(DiscoveredTable table, IManagedTransaction? transaction = null)
     {
         // Do NOT use transaction parameter - information_schema queries must run outside transactions

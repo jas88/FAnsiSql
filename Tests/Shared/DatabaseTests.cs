@@ -70,7 +70,7 @@ public abstract class DatabaseTests
             var constr = element.Element("ConnectionString")?.Value ??
                          throw new InvalidOperationException($"Invalid connection string for {type}");
 
-            // Test database connectivity - if it fails, ignore all tests for this database type
+            // Test database connectivity - if it fails, skip this database type
             try
             {
                 var server = new DiscoveredServer(constr, databaseType);
@@ -80,25 +80,46 @@ public abstract class DatabaseTests
 
                 TestConnectionStrings.Add(databaseType, constr);
 
-                // Make sure our scratch db exists for PostgreSQL
-                if (databaseType == DatabaseType.PostgreSql)
+                // Make sure our scratch db exists for databases that need pre-creation
+                // PostgreSQL and Oracle require the database to exist before tests run
+                // MySQL and SQL Server can create databases on demand
+                // SQLite uses in-memory databases
+                if (databaseType is DatabaseType.PostgreSql or DatabaseType.Oracle)
                 {
                     if (server.DiscoverDatabases().All(db => db.GetWrappedName()?.Contains(_testScratchDatabase) != true))
                         server.CreateDatabase(_testScratchDatabase);
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                // Database not available - ignore all tests for this type
-                Assert.Ignore($"Cannot connect to {databaseType} ({ex.GetType().Name}: {ex.Message}) - skipping all tests for this database type");
+                // Database not available - don't add to TestConnectionStrings
+                // Tests will handle this via conditional compilation or AssertRequirement
             }
         }
     }
 
     protected DiscoveredServer GetTestServer(DatabaseType type)
     {
+        // In RDBMS-specific test projects, ignore tests for other database types
+#if ORACLE_TESTS
+        if (type != DatabaseType.Oracle)
+            Assert.Ignore($"Skipping {type} test in Oracle test project");
+#elif POSTGRESQL_TESTS
+        if (type != DatabaseType.PostgreSql)
+            Assert.Ignore($"Skipping {type} test in PostgreSQL test project");
+#elif MYSQL_TESTS
+        if (type != DatabaseType.MySql)
+            Assert.Ignore($"Skipping {type} test in MySQL test project");
+#elif MSSQL_TESTS
+        if (type != DatabaseType.MicrosoftSQLServer)
+            Assert.Ignore($"Skipping {type} test in SQL Server test project");
+#elif SQLITE_TESTS
+        if (type != DatabaseType.Sqlite)
+            Assert.Ignore($"Skipping {type} test in SQLite test project");
+#endif
+
         if (!TestConnectionStrings.TryGetValue(type, out var connString))
-            Assert.Ignore($"No connection string configured for {type} - skipping tests");
+            AssertRequirement($"No connection string configured for {type}");
 
         return new DiscoveredServer(connString, type);
     }
@@ -112,8 +133,7 @@ public abstract class DatabaseTests
             if (_allowDatabaseCreation)
                 db.Create();
             else
-                Assert.Ignore(
-                    $"Database {_testScratchDatabase} does not exist and AllowDatabaseCreation is false - skipping tests");
+                AssertRequirement($"Database {_testScratchDatabase} does not exist and AllowDatabaseCreation is false");
         else
         {
             if (!cleanDatabase) return db;
@@ -139,6 +159,18 @@ public abstract class DatabaseTests
         }
 
         return db;
+    }
+
+    /// <summary>
+    /// Asserts a test requirement is not met. In CI, this fails the test. On dev workstations, marks test as ignored.
+    /// </summary>
+    /// <param name="message">The assertion message</param>
+    protected static void AssertRequirement(string message)
+    {
+        if (Environment.GetEnvironmentVariable("GITHUB_ACTIONS") == "true")
+            Assert.Fail(message);
+        else
+            Assert.Ignore(message);
     }
 
     protected void AssertCanCreateDatabases()

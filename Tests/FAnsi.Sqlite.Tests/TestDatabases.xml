@@ -1,7 +1,0 @@
-<TestDatabases>
-  <Settings>
-    <AllowDatabaseCreation>True</AllowDatabaseCreation>
-    <TestScratchDatabase>:memory:</TestScratchDatabase>
-  </Settings>
-  <!-- SQLite will use in-memory database for testing -->
-</TestDatabases>

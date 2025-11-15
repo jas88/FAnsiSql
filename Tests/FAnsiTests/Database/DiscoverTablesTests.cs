@@ -30,8 +30,8 @@ internal sealed class DiscoverTablesTests : DatabaseTests
         Assert.That(tbls, Has.Length.EqualTo(2));
         Assert.Multiple(() =>
         {
-            Assert.That(tbls.Count(static t => t.GetRuntimeName().Equals("AA", StringComparison.CurrentCultureIgnoreCase)), Is.EqualTo(1));
-            Assert.That(tbls.Count(static t => t.GetRuntimeName().Equals("BB", StringComparison.CurrentCultureIgnoreCase)), Is.EqualTo(1));
+            Assert.That(tbls.Count(static t => t.GetRuntimeName().Equals("AA", StringComparison.OrdinalIgnoreCase)), Is.EqualTo(1));
+            Assert.That(tbls.Count(static t => t.GetRuntimeName().Equals("BB", StringComparison.OrdinalIgnoreCase)), Is.EqualTo(1));
         });
 
     }
@@ -66,7 +66,7 @@ internal sealed class DiscoverTablesTests : DatabaseTests
         var tbls = db.DiscoverTables(false);
 
         Assert.That(tbls, Has.Length.EqualTo(1));
-        Assert.That(tbls.Count(static t => t.GetRuntimeName().Equals("FF", StringComparison.CurrentCultureIgnoreCase)), Is.EqualTo(1));
+        Assert.That(tbls.Count(static t => t.GetRuntimeName().Equals("FF", StringComparison.OrdinalIgnoreCase)), Is.EqualTo(1));
 
         DropBadTable(db, false);
     }
@@ -106,7 +106,7 @@ internal sealed class DiscoverTablesTests : DatabaseTests
         {
             //view should not be returned because it is bad
             Assert.That(tbls.Count(static t => t.TableType == TableType.View), Is.EqualTo(0));
-            Assert.That(tbls.Count(static t => t.GetRuntimeName().Equals("FF", StringComparison.CurrentCultureIgnoreCase)), Is.EqualTo(1));
+            Assert.That(tbls.Count(static t => t.GetRuntimeName().Equals("FF", StringComparison.OrdinalIgnoreCase)), Is.EqualTo(1));
         });
 
         DropBadView(db, false);
