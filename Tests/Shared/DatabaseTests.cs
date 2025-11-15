@@ -80,8 +80,11 @@ public abstract class DatabaseTests
 
                 TestConnectionStrings.Add(databaseType, constr);
 
-                // Make sure our scratch db exists for PostgreSQL
-                if (databaseType == DatabaseType.PostgreSql)
+                // Make sure our scratch db exists for databases that need pre-creation
+                // PostgreSQL and Oracle require the database to exist before tests run
+                // MySQL and SQL Server can create databases on demand
+                // SQLite uses in-memory databases
+                if (databaseType is DatabaseType.PostgreSql or DatabaseType.Oracle)
                 {
                     if (server.DiscoverDatabases().All(db => db.GetWrappedName()?.Contains(_testScratchDatabase) != true))
                         server.CreateDatabase(_testScratchDatabase);
