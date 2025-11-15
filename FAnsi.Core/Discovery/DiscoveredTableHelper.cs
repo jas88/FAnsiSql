@@ -289,6 +289,7 @@ public abstract class DiscoveredTableHelper : IDiscoveredTableHelper
         }
 
         // Manual loop optimization to avoid LINQ Single allocation and use span comparisons
+        // CodeQL[cs/linq/missed-where-opportunity]: Intentional - manual loop for performance (avoids LINQ allocations and uses span comparisons)
         var constraintNameSpan = constraintName.AsSpan();
         foreach (var relationship in primary.DiscoverRelationships(args.TransactionIfAny))
         {
@@ -306,9 +307,8 @@ public abstract class DiscoveredTableHelper : IDiscoveredTableHelper
         var server = discoveredTable.Database.Server;
 
         //if it's got a primary key then it's distinct! job done
-#pragma warning disable CS0618 // Type or member is obsolete - internal usage of our own obsolete method
-        if (HasPrimaryKey(discoveredTable, args.TransactionIfAny))
-#pragma warning restore CS0618 // Type or member is obsolete
+        // Use direct column check to avoid obsolete method - this is performance-optimized for internal use
+        if (discoveredTable.DiscoverColumns(args.TransactionIfAny).Any(static c => c.IsPrimaryKey))
             return;
 
         var tableName = discoveredTable.GetFullyQualifiedName();

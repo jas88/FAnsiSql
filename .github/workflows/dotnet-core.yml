@@ -83,7 +83,26 @@ jobs:
         done
 
     - name: Test
-      run: dotnet test FAnsi.sln -c Release --logger "console;verbosity=normal" --nologo --no-build -p:TestTfmsInParallel=true
+      run: |
+        dotnet test FAnsi.sln -c Release \
+          --logger "console;verbosity=normal" \
+          --nologo \
+          --no-build \
+          -p:TestTfmsInParallel=true \
+          --collect:"XPlat Code Coverage" \
+          --results-directory coverage \
+          -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=lcov
+
+    - name: Consolidate coverage
+      shell: bash
+      run: |
+        find coverage -name "coverage.info" -exec cat {} \; > lcov.info
+
+    - name: Coveralls
+      uses: coverallsapp/github-action@v2.3.6
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        path-to-lcov: lcov.info
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v4

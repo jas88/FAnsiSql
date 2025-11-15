@@ -95,16 +95,14 @@ internal static class ManagedConnectionPool
                 {
                     // Database switch failed, remove and recreate
                     threadServerConnections.TryRemove(serverKey, out _);
-                    if (existingServerConn != null)
+                    try
                     {
-                        try
-                        {
-                            existingServerConn.Dispose();
-                        }
-                        catch
-                        {
-                            // Swallow disposal errors
-                        }
+                        existingServerConn.Dispose();
+                    }
+                    // CodeQL[cs/catch-of-all-exceptions]: Intentional - swallowing disposal errors during connection pool cleanup
+                    catch
+                    {
+                        // Swallow disposal errors - connection may already be invalid
                     }
                 }
             }
@@ -118,9 +116,10 @@ internal static class ManagedConnectionPool
                     {
                         existingServerConn.Dispose();
                     }
+                    // CodeQL[cs/catch-of-all-exceptions]: Intentional - swallowing disposal errors during connection pool cleanup
                     catch
                     {
-                        // Swallow disposal errors
+                        // Swallow disposal errors - connection is already invalid
                     }
                 }
             }

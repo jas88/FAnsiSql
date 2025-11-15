@@ -847,9 +847,9 @@ public sealed class CrossPlatformTests : DatabaseTests
         dt = tbl.GetDataTable();
         Assert.Multiple(() =>
         {
-            Assert.That(dt.Rows.OfType<DataRow>().Count(static r => Convert.ToInt32(r[0]) == 100), Is.EqualTo(1));
-            Assert.That(dt.Rows.OfType<DataRow>().Count(static r => Convert.ToInt32(r[0]) == 105), Is.EqualTo(1));
-            Assert.That(dt.Rows.OfType<DataRow>().Count(static r => Convert.ToInt32(r[0]) == 1), Is.EqualTo(1));
+            Assert.That(dt.Rows.OfType<DataRow>().Count(static r => Convert.ToInt32(r[0], CultureInfo.InvariantCulture) == 100), Is.EqualTo(1));
+            Assert.That(dt.Rows.OfType<DataRow>().Count(static r => Convert.ToInt32(r[0], CultureInfo.InvariantCulture) == 105), Is.EqualTo(1));
+            Assert.That(dt.Rows.OfType<DataRow>().Count(static r => Convert.ToInt32(r[0], CultureInfo.InvariantCulture) == 1), Is.EqualTo(1));
         });
 
         var col = tbl.DiscoverColumn("MyCol");
@@ -868,9 +868,9 @@ public sealed class CrossPlatformTests : DatabaseTests
         dt = tbl.GetDataTable();
         Assert.Multiple(() =>
         {
-            Assert.That(dt.Rows.OfType<DataRow>().Count(static r => Convert.ToDecimal(r[0]) == new decimal(100.0f)), Is.EqualTo(1));
-            Assert.That(dt.Rows.OfType<DataRow>().Count(static r => Convert.ToDecimal(r[0]) == new decimal(105.0f)), Is.EqualTo(1));
-            Assert.That(dt.Rows.OfType<DataRow>().Count(static r => Convert.ToDecimal(r[0]) == new decimal(1.0f)), Is.EqualTo(1));
+            Assert.That(dt.Rows.OfType<DataRow>().Count(static r => Convert.ToDecimal(r[0], CultureInfo.InvariantCulture) == new decimal(100.0f)), Is.EqualTo(1));
+            Assert.That(dt.Rows.OfType<DataRow>().Count(static r => Convert.ToDecimal(r[0], CultureInfo.InvariantCulture) == new decimal(105.0f)), Is.EqualTo(1));
+            Assert.That(dt.Rows.OfType<DataRow>().Count(static r => Convert.ToDecimal(r[0], CultureInfo.InvariantCulture) == new decimal(1.0f)), Is.EqualTo(1));
         });
     }
 
@@ -891,9 +891,9 @@ public sealed class CrossPlatformTests : DatabaseTests
         dt = tbl.GetDataTable();
         Assert.Multiple(() =>
         {
-            Assert.That(dt.Rows.OfType<DataRow>().Count(static r => Convert.ToDecimal(r[0]) == new decimal(100.0f)), Is.EqualTo(1));
-            Assert.That(dt.Rows.OfType<DataRow>().Count(static r => Convert.ToDecimal(r[0]) == new decimal(105.0f)), Is.EqualTo(1));
-            Assert.That(dt.Rows.OfType<DataRow>().Count(static r => Convert.ToDecimal(r[0]) == new decimal(2.1f)), Is.EqualTo(1));
+            Assert.That(dt.Rows.OfType<DataRow>().Count(static r => Convert.ToDecimal(r[0], CultureInfo.InvariantCulture) == new decimal(100.0f)), Is.EqualTo(1));
+            Assert.That(dt.Rows.OfType<DataRow>().Count(static r => Convert.ToDecimal(r[0], CultureInfo.InvariantCulture) == new decimal(105.0f)), Is.EqualTo(1));
+            Assert.That(dt.Rows.OfType<DataRow>().Count(static r => Convert.ToDecimal(r[0], CultureInfo.InvariantCulture) == new decimal(2.1f)), Is.EqualTo(1));
         });
 
 
@@ -977,7 +977,7 @@ public sealed class CrossPlatformTests : DatabaseTests
                 Assert.That(tbl.GetRowCount(), Is.EqualTo(0));
             });
 
-            using (var insert = tbl.BeginBulkInsert())
+            using (var insert = tbl.BeginBulkInsert(CultureInfo.InvariantCulture))
                 insert.Upload(dt);
 
             Assert.That(tbl.GetRowCount(), Is.EqualTo(7));
