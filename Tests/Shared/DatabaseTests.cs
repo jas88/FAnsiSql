@@ -70,7 +70,7 @@ public abstract class DatabaseTests
             var constr = element.Element("ConnectionString")?.Value ??
                          throw new InvalidOperationException($"Invalid connection string for {type}");
 
-            // Test database connectivity - if it fails, ignore all tests for this database type
+            // Test database connectivity - if it fails, skip this database type
             try
             {
                 var server = new DiscoveredServer(constr, databaseType);
@@ -90,10 +90,10 @@ public abstract class DatabaseTests
                         server.CreateDatabase(_testScratchDatabase);
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                // Database not available - ignore all tests for this type
-                Assert.Ignore($"Cannot connect to {databaseType} ({ex.GetType().Name}: {ex.Message}) - skipping all tests for this database type");
+                // Database not available - don't add to TestConnectionStrings
+                // Tests will handle this via conditional compilation or AssertRequirement
             }
         }
     }
