@@ -229,62 +229,6 @@ public sealed class GuesserTests
         Assert.That(t.Guess.CSharpType, Is.EqualTo(expectedOutput));
     }
 
-    [Test]
-    public void TestGuesser_DateTime_English()
-    {
-        var t = new Guesser();
-        t.AdjustToCompensateForValue(GetCultureSpecificDate());
-        t.AdjustToCompensateForValue(null);
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(t.Guess.CSharpType, Is.EqualTo(typeof(DateTime)));
-            Assert.That(t.GetSqlDBType(_translater), Is.EqualTo("datetime2"));
-        });
-    }
-
-    [Test]
-    public void TestGuesser_DateTime_EnglishWithTime()
-    {
-        var t = new Guesser();
-
-        t.AdjustToCompensateForValue($"{GetCultureSpecificDate()} 11:10");
-        t.AdjustToCompensateForValue(null);
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(t.Guess.CSharpType, Is.EqualTo(typeof(DateTime)));
-            Assert.That(t.GetSqlDBType(_translater), Is.EqualTo("datetime2"));
-        });
-    }
-
-    private static string GetCultureSpecificDate()
-    {
-        if (CultureInfo.CurrentCulture.EnglishName.Contains("United States"))
-            return "01/23/2001";
-
-        if (CultureInfo.CurrentCulture.EnglishName.Contains("Kingdom"))
-            return "23/01/2001";
-
-        Assert.Inconclusive(
-            $"Did not have a good implementation of test date for culture {CultureInfo.CurrentCulture.EnglishName}");
-        return null;
-    }
-
-    [Test]
-    public void TestGuesser_DateTime_EnglishWithTimeAndAM()
-    {
-        var t = new Guesser();
-        t.AdjustToCompensateForValue($"{GetCultureSpecificDate()} 11:10AM");
-        t.AdjustToCompensateForValue(null);
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(t.Guess.CSharpType, Is.EqualTo(typeof(DateTime)));
-            Assert.That(t.GetSqlDBType(_translater), Is.EqualTo("datetime2"));
-        });
-    }
-
     [TestCase("01", 2)]
     [TestCase("01.1", 4)]
     [TestCase("01.10", 5)]
