@@ -118,7 +118,7 @@ public abstract class DatabaseTests
             if (type != DatabaseType.Sqlite)
                 Assert.Pass($"Skipping {type} test in SQLite test project");
 #endif
-            Assert.Ignore($"No connection string configured for {type} - skipping tests");
+            AssertRequirement($"No connection string configured for {type}");
         }
 
         return new DiscoveredServer(connString, type);
@@ -133,8 +133,7 @@ public abstract class DatabaseTests
             if (_allowDatabaseCreation)
                 db.Create();
             else
-                Assert.Ignore(
-                    $"Database {_testScratchDatabase} does not exist and AllowDatabaseCreation is false - skipping tests");
+                AssertRequirement($"Database {_testScratchDatabase} does not exist and AllowDatabaseCreation is false");
         else
         {
             if (!cleanDatabase) return db;
@@ -160,6 +159,18 @@ public abstract class DatabaseTests
         }
 
         return db;
+    }
+
+    /// <summary>
+    /// Asserts a test requirement is not met. In CI, this fails the test. On dev workstations, marks test as ignored.
+    /// </summary>
+    /// <param name="message">The assertion message</param>
+    protected static void AssertRequirement(string message)
+    {
+        if (Environment.GetEnvironmentVariable("GITHUB_ACTIONS") == "true")
+            Assert.Fail(message);
+        else
+            Assert.Ignore(message);
     }
 
     protected void AssertCanCreateDatabases()

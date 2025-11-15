@@ -91,13 +91,7 @@ public abstract class DatabaseTests
     protected DiscoveredServer GetTestServer(DatabaseType type)
     {
         if (!TestConnectionStrings.TryGetValue(type, out var connString))
-        {
-            // In CI, all databases must be configured and tests must not skip
-            if (Environment.GetEnvironmentVariable("GITHUB_ACTIONS") == "true")
-                Assert.Fail($"No connection string configured for {type} - all databases are required in CI");
-
-            Assert.Inconclusive("No connection string configured for that server");
-        }
+            AssertRequirement($"No connection string configured for {type}");
 
         return new DiscoveredServer(connString, type);
     }
@@ -111,14 +105,7 @@ public abstract class DatabaseTests
             if (_allowDatabaseCreation)
                 db.Create();
             else
-            {
-                // In CI, all databases must exist and tests must not skip
-                if (Environment.GetEnvironmentVariable("GITHUB_ACTIONS") == "true")
-                    Assert.Fail($"Database {_testScratchDatabase} did not exist on server {server} and AllowDatabaseCreation was false in {TestFilename} - all databases are required in CI");
-
-                Assert.Inconclusive(
-                    $"Database {_testScratchDatabase} did not exist on server {server} and AllowDatabaseCreation was false in {TestFilename}");
-            }
+                AssertRequirement($"Database {_testScratchDatabase} does not exist and AllowDatabaseCreation is false in {TestFilename}");
         else
         {
             if (!cleanDatabase) return db;
@@ -144,6 +131,18 @@ public abstract class DatabaseTests
         }
 
         return db;
+    }
+
+    /// <summary>
+    /// Asserts a test requirement is not met. In CI, this fails the test. On dev workstations, marks test as inconclusive.
+    /// </summary>
+    /// <param name="message">The assertion message</param>
+    protected static void AssertRequirement(string message)
+    {
+        if (Environment.GetEnvironmentVariable("GITHUB_ACTIONS") == "true")
+            Assert.Fail(message);
+        else
+            Assert.Inconclusive(message);
     }
 
     protected void AssertCanCreateDatabases()
