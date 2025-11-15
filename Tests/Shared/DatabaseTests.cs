@@ -100,26 +100,26 @@ public abstract class DatabaseTests
 
     protected DiscoveredServer GetTestServer(DatabaseType type)
     {
-        if (!TestConnectionStrings.TryGetValue(type, out var connString))
-        {
+        // In RDBMS-specific test projects, ignore tests for other database types
 #if ORACLE_TESTS
-            if (type != DatabaseType.Oracle)
-                Assert.Pass($"Skipping {type} test in Oracle test project");
+        if (type != DatabaseType.Oracle)
+            Assert.Ignore($"Skipping {type} test in Oracle test project");
 #elif POSTGRESQL_TESTS
-            if (type != DatabaseType.PostgreSql)
-                Assert.Pass($"Skipping {type} test in PostgreSQL test project");
+        if (type != DatabaseType.PostgreSql)
+            Assert.Ignore($"Skipping {type} test in PostgreSQL test project");
 #elif MYSQL_TESTS
-            if (type != DatabaseType.MySql)
-                Assert.Pass($"Skipping {type} test in MySQL test project");
+        if (type != DatabaseType.MySql)
+            Assert.Ignore($"Skipping {type} test in MySQL test project");
 #elif MSSQL_TESTS
-            if (type != DatabaseType.MicrosoftSQLServer)
-                Assert.Pass($"Skipping {type} test in SQL Server test project");
+        if (type != DatabaseType.MicrosoftSQLServer)
+            Assert.Ignore($"Skipping {type} test in SQL Server test project");
 #elif SQLITE_TESTS
-            if (type != DatabaseType.Sqlite)
-                Assert.Pass($"Skipping {type} test in SQLite test project");
+        if (type != DatabaseType.Sqlite)
+            Assert.Ignore($"Skipping {type} test in SQLite test project");
 #endif
+
+        if (!TestConnectionStrings.TryGetValue(type, out var connString))
             AssertRequirement($"No connection string configured for {type}");
-        }
 
         return new DiscoveredServer(connString, type);
     }

@@ -83,7 +83,7 @@ jobs:
         done
 
     - name: Test
-      run: dotnet test FAnsi.sln -c Release --logger "console;verbosity=minimal" --nologo --no-build -p:TestTfmsInParallel=true
+      run: dotnet test FAnsi.sln -c Release --logger "console;verbosity=normal" --nologo --no-build -p:TestTfmsInParallel=true
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v4
