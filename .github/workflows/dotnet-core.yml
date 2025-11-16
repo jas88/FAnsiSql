@@ -93,26 +93,11 @@ jobs:
           --results-directory coverage \
           --settings coverage.runsettings
 
-    - name: Consolidate coverage
-      run: |
-        # Coverlet generates coverage.info files in lcov format when Format=lcov is specified
-        # Consolidate all coverage files into a single lcov.info file
-        find coverage -name "coverage.info" -exec cat {} \; > lcov.info
-
-        if [ ! -s lcov.info ]; then
-          echo "ERROR: No coverage data found!"
-          echo "Coverage directory contents:"
-          find coverage -type f
-          exit 1
-        fi
-
-        echo "Coverage file created: $(wc -l < lcov.info) lines"
-
     - name: Coveralls
-      uses: coverallsapp/github-action@v2.3.6
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        path-to-lcov: lcov.info
+      run: |
+        curl -sL https://coveralls.io/coveralls-linux.tar.gz | sudo tar -xz -C /usr/local/bin
+        find coverage -name "coverage.info" -print0 | xargs -0 -I% coveralls report % --format=lcov -p -n --build-number="${GITHUB_RUN_NUMBER}" -r ${{ secrets.COVERALLS_REPO_TOKEN }}
+        coveralls done --build-number="${GITHUB_RUN_NUMBER}" -r ${{ secrets.COVERALLS_REPO_TOKEN }}
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v4
