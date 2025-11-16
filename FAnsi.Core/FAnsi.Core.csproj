@@ -33,12 +33,12 @@
     <None Include="Discovery\TypeTranslation\TypeTranslation.cd" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="TypeGuesser" Version="2.0.1" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="System.Linq.Async" Version="6.0.3" />
+    <PackageReference Include="TypeGuesser" Version="2.0.2" />
   </ItemGroup>
 
   <!-- Source generation removed - analyzer DLL references cleaned up -->

@@ -346,7 +346,7 @@ public sealed class GuesserTests
         t.AdjustToCompensateForValue((short)5);
         var ex = Assert.Throws<MixedTypingException>(() => t.AdjustToCompensateForValue(1000));
 
-        Assert.That(ex?.Message, Does.Contain("We were adjusting to compensate for object '1000' which is of Type 'System.Int32', we were previously passed a 'System.Int16' type"));
+        Assert.That(ex?.Message, Does.Contain("Cannot process int value when already primed with type System.Int16"));
     }
     [Test]
     public void TestGuesser_Int16s()
