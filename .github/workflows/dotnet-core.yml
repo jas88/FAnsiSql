@@ -95,9 +95,10 @@ jobs:
 
     - name: Coveralls
       run: |
+        set -x
         curl -sL https://coveralls.io/coveralls-linux.tar.gz | sudo tar -xz -C /usr/local/bin
-        find coverage -type f -print0 | xargs -0I% | ls -lh %
-        find coverage -type f -print0 | xargs -0I% coveralls report % --format=lcov -p -n --build-number=1 -r ${{ secrets.COVERALLS_REPO_TOKEN }}
+        find coverage -type f -print0 | xargs -0 -I% | ls -lh %
+        find coverage -type f -print0 | xargs -0 -I% coveralls report % --format=lcov -p -n --build-number=1 -r ${{ secrets.COVERALLS_REPO_TOKEN }}
         coveralls done -n --build-number=1 -r ${{ secrets.COVERALLS_REPO_TOKEN }}
 
     - name: Perform CodeQL Analysis
