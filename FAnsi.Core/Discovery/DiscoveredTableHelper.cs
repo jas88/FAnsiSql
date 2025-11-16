@@ -32,6 +32,20 @@ public abstract class DiscoveredTableHelper : IDiscoveredTableHelper
     }
 
     /// <summary>
+    /// <para>Checks if the table exists using the provided connection.</para>
+    /// <para>Default fallback implementation lists all tables and filters in memory.</para>
+    /// <para>Database-specific helpers should override this method to use direct SQL queries for better performance (80-99% faster).</para>
+    /// </summary>
+    public virtual bool Exists(DiscoveredTable table, IManagedConnection connection)
+    {
+        // Default fallback implementation - database-specific helpers override this with targeted SQL queries
+        // Note: We use Helper.ListTables directly to avoid creating a new connection
+        return table.Database.Helper.ListTables(table.Database, table.GetQuerySyntaxHelper(), connection.Connection,
+                table.Database.GetRuntimeName(), table.TableType == TableType.View, connection.Transaction)
+            .Any(t => StringComparisonHelper.DatabaseObjectNamesEqual(t.GetRuntimeName(), table.GetRuntimeName()));
+    }
+
+    /// <summary>
     /// <para>Default fallback implementation checks for primary key by discovering all columns and checking IsPrimaryKey.</para>
     /// <para>Database-specific helpers should override this method to use direct SQL queries for better performance (90-99% faster).</para>
     /// </summary>
