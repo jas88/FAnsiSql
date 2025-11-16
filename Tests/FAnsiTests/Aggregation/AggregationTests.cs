@@ -60,7 +60,7 @@ internal abstract class AggregationTests : DatabaseTests
             try
             {
                 var db = GetTestDatabase(key);
-                var tbl = db.CreateTable("AggregateDataBasedTests", dt);
+                var tbl = db.CreateTable(name, dt);
 
                 var dic = easy ? _easyTables : _hardTables;
                 dic.Add(key, tbl);
