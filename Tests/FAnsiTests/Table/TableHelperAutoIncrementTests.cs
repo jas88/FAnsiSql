@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Globalization;
 using FAnsi;
 using FAnsi.Discovery;
 using NUnit.Framework;
@@ -205,7 +206,7 @@ internal sealed class TableHelperAutoIncrementTests : DatabaseTests
             {
                 Assert.That(dt.Rows, Has.Count.EqualTo(1));
                 Assert.That(dt.Rows[0]["Id"], Is.Not.EqualTo(DBNull.Value));
-                Assert.That(Convert.ToInt32(dt.Rows[0]["Id"]), Is.GreaterThan(0));
+                Assert.That(Convert.ToInt32(dt.Rows[0]["Id"], CultureInfo.InvariantCulture), Is.GreaterThan(0));
             });
         }
         finally
@@ -241,9 +242,9 @@ internal sealed class TableHelperAutoIncrementTests : DatabaseTests
             var dt = table.GetDataTable();
             Assert.That(dt.Rows, Has.Count.EqualTo(3));
 
-            var id1 = Convert.ToInt32(dt.Rows[0]["Id"]);
-            var id2 = Convert.ToInt32(dt.Rows[1]["Id"]);
-            var id3 = Convert.ToInt32(dt.Rows[2]["Id"]);
+            var id1 = Convert.ToInt32(dt.Rows[0]["Id"], CultureInfo.InvariantCulture);
+            var id2 = Convert.ToInt32(dt.Rows[1]["Id"], CultureInfo.InvariantCulture);
+            var id3 = Convert.ToInt32(dt.Rows[2]["Id"], CultureInfo.InvariantCulture);
 
             Assert.Multiple(() =>
             {
@@ -284,7 +285,7 @@ internal sealed class TableHelperAutoIncrementTests : DatabaseTests
                 dt.Rows.Add($"Bulk{i}");
             }
 
-            using (var bulk = table.BeginBulkInsert())
+            using (var bulk = table.BeginBulkInsert(CultureInfo.InvariantCulture))
             {
                 bulk.Upload(dt);
             }

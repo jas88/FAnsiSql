@@ -1,6 +1,7 @@
 using System;
 using System.Data;
 using System.Data.Common;
+using System.Globalization;
 using FAnsi;
 using FAnsi.Discovery;
 using FAnsi.Exceptions;
@@ -310,7 +311,7 @@ internal sealed class TableHelperErrorHandlingTests : DatabaseTests
                 var ids = new System.Collections.Generic.HashSet<int>();
                 foreach (DataRow row in dt.Rows)
                 {
-                    ids.Add(Convert.ToInt32(row["Id"]));
+                    ids.Add(Convert.ToInt32(row["Id"], CultureInfo.InvariantCulture));
                 }
                 Assert.That(ids, Has.Count.EqualTo(10), "All IDs should be unique");
             });

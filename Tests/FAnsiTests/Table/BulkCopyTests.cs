@@ -671,8 +671,8 @@ internal sealed class BulkCopyTests : DatabaseTests
         using var result = tbl.GetDataTable();
         Assert.Multiple(() =>
         {
-            Assert.That(((DateTime)result.Rows[0]["EventDate"]).ToString("yyyy-MM-dd HH:mm:ss"),
-                Is.EqualTo(date1.ToString("yyyy-MM-dd HH:mm:ss")));
+            Assert.That(((DateTime)result.Rows[0]["EventDate"]).ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
+                Is.EqualTo(date1.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)));
             Assert.That(((DateTime)result.Rows[1]["EventDate"]).Date, Is.EqualTo(date2.Date));
         });
     }
