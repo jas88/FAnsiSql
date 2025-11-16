@@ -46,4 +46,13 @@
     <MinVerMinimumMajorMinor>3.3</MinVerMinimumMajorMinor>
     <!-- Remove hardcoded version from individual .csproj files - MinVer handles it -->
   </PropertyGroup>
+
+  <!-- Add coverlet.collector to all test projects for code coverage -->
+  <!-- Applies to all projects in Tests folder -->
+  <ItemGroup Condition="$(MSBuildProjectDirectory.Contains('Tests'))">
+    <PackageReference Include="coverlet.collector" Version="6.0.2">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
 </Project>

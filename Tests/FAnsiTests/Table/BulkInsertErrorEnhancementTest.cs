@@ -1,5 +1,6 @@
 using System;
 using System.Data;
+using System.Globalization;
 using FAnsi;
 using FAnsi.Discovery;
 using FAnsi.Discovery.QuerySyntax;
@@ -61,7 +62,7 @@ internal sealed class BulkInsertErrorEnhancementTest : DatabaseTests
         // Add more good data after the bad row
         dt.Rows.Add(60, "good", "fine", "excellent");
 
-        using var bulk = tbl.BeginBulkInsert();
+        using var bulk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture);
         bulk.Timeout = 30;
 
         var ex = Assert.Catch(() => bulk.Upload(dt),
@@ -136,7 +137,7 @@ internal sealed class BulkInsertErrorEnhancementTest : DatabaseTests
         // Violate the Banana column constraint (should be sorted to colid 2 after Apple)
         dt.Rows.Add("ok", "ok", "WAYTOOLONG", "ok");
 
-        using var bulk = tbl.BeginBulkInsert();
+        using var bulk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture);
         bulk.Timeout = 30;
 
         var ex = Assert.Catch(() => bulk.Upload(dt),
@@ -187,7 +188,7 @@ internal sealed class BulkInsertErrorEnhancementTest : DatabaseTests
         dt.Columns.Add("TESTCOLUMN");
         dt.Rows.Add("FAILURE"); // Too long
 
-        using var bulk = tbl.BeginBulkInsert();
+        using var bulk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture);
         bulk.Timeout = 30;
 
         var ex = Assert.Catch(() => bulk.Upload(dt),
@@ -231,7 +232,7 @@ internal sealed class BulkInsertErrorEnhancementTest : DatabaseTests
         // Try to insert null into non-nullable primary key
         dt.Rows.Add(DBNull.Value);
 
-        using var bulk = tbl.BeginBulkInsert();
+        using var bulk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture);
         bulk.Timeout = 30;
 
         // Should throw an exception (even if error enhancement doesn't apply to this error type)

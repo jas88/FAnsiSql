@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -390,7 +391,7 @@ internal sealed class CreateTableTests : DatabaseTests
         dt2.Columns.Add("微笑");
         dt2.Rows.Add(23);
 
-        using (var bulk = table.BeginBulkInsert())
+        using (var bulk = table.BeginBulkInsert(CultureInfo.InvariantCulture))
             bulk.Upload(dt2);
 
         Assert.That(table.GetRowCount(), Is.EqualTo(4));

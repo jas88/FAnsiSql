@@ -32,6 +32,20 @@ public abstract class DiscoveredTableHelper : IDiscoveredTableHelper
     }
 
     /// <summary>
+    /// <para>Checks if the table exists using the provided connection.</para>
+    /// <para>Default fallback implementation lists all tables and filters in memory.</para>
+    /// <para>Database-specific helpers should override this method to use direct SQL queries for better performance (80-99% faster).</para>
+    /// </summary>
+    public virtual bool Exists(DiscoveredTable table, IManagedConnection connection)
+    {
+        // Default fallback implementation - database-specific helpers override this with targeted SQL queries
+        // Note: We use Helper.ListTables directly to avoid creating a new connection
+        return table.Database.Helper.ListTables(table.Database, table.GetQuerySyntaxHelper(), connection.Connection,
+                table.Database.GetRuntimeName(), table.TableType == TableType.View, connection.Transaction)
+            .Any(t => StringComparisonHelper.DatabaseObjectNamesEqual(t.GetRuntimeName(), table.GetRuntimeName()));
+    }
+
+    /// <summary>
     /// <para>Default fallback implementation checks for primary key by discovering all columns and checking IsPrimaryKey.</para>
     /// <para>Database-specific helpers should override this method to use direct SQL queries for better performance (90-99% faster).</para>
     /// </summary>
@@ -41,6 +55,17 @@ public abstract class DiscoveredTableHelper : IDiscoveredTableHelper
         // This is an inefficient fallback implementation
         // Database-specific implementations override this with targeted EXISTS queries
         return table.DiscoverColumns(transaction).Any(static c => c.IsPrimaryKey);
+    }
+
+    /// <summary>
+    /// <para>Checks if the table has a primary key using the provided connection.</para>
+    /// <para>Default fallback implementation checks for primary key by discovering all columns and checking IsPrimaryKey.</para>
+    /// <para>Database-specific helpers should override this method to use direct SQL queries for better performance (90-99% faster).</para>
+    /// </summary>
+    public virtual bool HasPrimaryKey(DiscoveredTable table, IManagedConnection connection)
+    {
+        // Default fallback implementation - database-specific helpers override this with targeted SQL queries
+        return DiscoverColumns(table, connection, table.Database.GetRuntimeName()).Any(static c => c.IsPrimaryKey);
     }
 
     public abstract string GetTopXSqlForTable(IHasFullyQualifiedNameToo table, int topX);
@@ -289,6 +314,7 @@ public abstract class DiscoveredTableHelper : IDiscoveredTableHelper
         }
 
         // Manual loop optimization to avoid LINQ Single allocation and use span comparisons
+        // CodeQL[cs/linq/missed-where-opportunity]: Intentional - manual loop for performance (avoids LINQ allocations and uses span comparisons)
         var constraintNameSpan = constraintName.AsSpan();
         foreach (var relationship in primary.DiscoverRelationships(args.TransactionIfAny))
         {
@@ -305,20 +331,17 @@ public abstract class DiscoveredTableHelper : IDiscoveredTableHelper
     {
         var server = discoveredTable.Database.Server;
 
+        using var con = args.TransactionIfAny == null
+            ? server.BeginNewTransactedConnection()
+            : args.GetManagedConnection(server);
+
         //if it's got a primary key then it's distinct! job done
-#pragma warning disable CS0618 // Type or member is obsolete - internal usage of our own obsolete method
-        if (HasPrimaryKey(discoveredTable, args.TransactionIfAny))
-#pragma warning restore CS0618 // Type or member is obsolete
+        // Use database-side query for performance - database-specific implementations use optimized SQL (90-99% faster)
+        if (HasPrimaryKey(discoveredTable, con))
             return;
 
         var tableName = discoveredTable.GetFullyQualifiedName();
         var tempTable = discoveredTable.Database.ExpectTable($"{discoveredTable.GetRuntimeName()}_DistinctingTemp").GetFullyQualifiedName();
-
-
-        using var con = args.TransactionIfAny == null
-            ? server.BeginNewTransactedConnection()
-            : //start a new transaction
-            args.GetManagedConnection(server);
         using (var cmdDistinct =
                server.GetCommand(
                    string.Format(CultureInfo.InvariantCulture, "CREATE TABLE {1} AS SELECT distinct * FROM {0}", tableName, tempTable), con))

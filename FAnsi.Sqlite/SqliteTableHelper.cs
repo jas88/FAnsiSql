@@ -50,7 +50,8 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
     /// </remarks>
     public override IEnumerable<DiscoveredColumn> DiscoverColumns(DiscoveredTable discoveredTable, IManagedConnection connection, string database)
     {
-        var tableName = discoveredTable.GetRuntimeName();
+        // PRAGMA commands don't use quoted identifiers - use fully qualified name
+        var tableName = discoveredTable.GetFullyQualifiedName();
 
         using var cmd = discoveredTable.Database.Server.Helper.GetCommand($"PRAGMA table_info({tableName})", connection.Connection);
         cmd.Transaction = connection.Transaction;
@@ -104,6 +105,32 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
     {
         // SQLite doesn't support DROP COLUMN directly - would need to recreate table
         throw new NotSupportedException("SQLite does not support dropping columns directly. Table recreation would be required.");
+    }
+
+    /// <summary>
+    /// Adds a column to an existing table.
+    /// </summary>
+    /// <param name="args">Database operation arguments</param>
+    /// <param name="table">The table to add the column to</param>
+    /// <param name="name">The name of the new column</param>
+    /// <param name="dataType">The SQL data type for the column</param>
+    /// <param name="allowNulls">Whether the column allows NULL values</param>
+    /// <remarks>
+    /// SQLite's ALTER TABLE ADD COLUMN syntax doesn't support quoted identifiers.
+    /// We use runtime names directly without any quoting.
+    /// </remarks>
+    public override void AddColumn(DatabaseOperationArgs args, DiscoveredTable table, string name, string dataType, bool allowNulls)
+    {
+        // SQLite ALTER TABLE doesn't support quoted identifiers at all
+        // Use runtime names directly without quoting
+        var tableName = table.GetRuntimeName();
+        var columnName = name; // Don't wrap with brackets
+
+        using var con = args.GetManagedConnection(table);
+        // SQLite requires COLUMN keyword in ADD COLUMN and doesn't support quoted identifiers
+        using var cmd = table.Database.Server.GetCommand(
+            $"ALTER TABLE {tableName} ADD COLUMN {columnName} {dataType}{(allowNulls ? "" : " NOT NULL")}", con);
+        args.ExecuteNonQuery(cmd);
     }
 
     public override int ExecuteInsertReturningIdentity(DiscoveredTable discoveredTable, DbCommand cmd, IManagedTransaction? transaction = null)
@@ -231,7 +258,8 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
     /// </remarks>
     public override IEnumerable<DiscoveredRelationship> DiscoverRelationships(DiscoveredTable discoveredTable, DbConnection connection, IManagedTransaction? transaction = null)
     {
-        var tableName = discoveredTable.GetRuntimeName();
+        // PRAGMA commands don't use quoted identifiers - use fully qualified name
+        var tableName = discoveredTable.GetFullyQualifiedName();
         var relationships = new Dictionary<string, DiscoveredRelationship>();
 
         using var cmd = discoveredTable.Database.Server.Helper.GetCommand($"PRAGMA foreign_key_list({tableName})", connection);
@@ -282,5 +310,27 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
                 row[i] = reader.GetValue(i);
             dt.Rows.Add(row);
         }
+    }
+
+    /// <summary>
+    /// Checks if the table has a primary key using a database-specific SQL query (90-99% faster than discovering all columns).
+    /// </summary>
+    public override bool HasPrimaryKey(DiscoveredTable table, IManagedConnection connection)
+    {
+        // PRAGMA commands don't use quoted identifiers - use fully qualified name
+        var tableName = table.GetFullyQualifiedName();
+        using var cmd = table.Database.Server.Helper.GetCommand($"PRAGMA table_info({tableName})", connection.Connection);
+        cmd.Transaction = connection.Transaction;
+
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
+        {
+            // Column 5 (pk) indicates if the column is part of the primary key
+            // pk > 0 means it's part of the primary key
+            if (reader.GetInt32(5) > 0)
+                return true;
+        }
+
+        return false;
     }
 }

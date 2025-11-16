@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Data.Common;
 using System.IO;
 using FAnsi.Discovery;
@@ -54,8 +55,8 @@ public sealed class SqliteServerHelper : DiscoveredServerHelper
     /// Gets a data adapter for the specified command.
     /// </summary>
     /// <param name="cmd">The command to create an adapter for</param>
-    /// <exception cref="NotSupportedException">SQLite does not support DbDataAdapter directly through this API</exception>
-    public override DbDataAdapter GetDataAdapter(DbCommand cmd) => throw new NotSupportedException("SQLite does not support DbDataAdapter directly");
+    /// <returns>A data adapter for the SQLite command</returns>
+    public override DbDataAdapter GetDataAdapter(DbCommand cmd) => new SqliteDataAdapter((SqliteCommand)cmd);
 
     /// <summary>
     /// Gets a command builder for the specified command.
@@ -302,5 +303,31 @@ public sealed class SqliteServerHelper : DiscoveredServerHelper
             // Permission issues
             return null;
         }
+    }
+}
+
+/// <summary>
+/// Simple DbDataAdapter implementation for SQLite that wraps SqliteCommand.
+/// </summary>
+/// <remarks>
+/// Microsoft.Data.Sqlite doesn't provide a built-in data adapter, so we create
+/// a minimal implementation that inherits from DbDataAdapter.
+/// </remarks>
+internal sealed class SqliteDataAdapter : DbDataAdapter
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SqliteDataAdapter"/> class.
+    /// </summary>
+    /// <param name="selectCommand">The SQLite command to use for selecting data</param>
+    public SqliteDataAdapter(SqliteCommand selectCommand)
+    {
+        SelectCommand = selectCommand;
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SqliteDataAdapter"/> class.
+    /// </summary>
+    public SqliteDataAdapter()
+    {
     }
 }

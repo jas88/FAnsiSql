@@ -311,7 +311,7 @@ internal sealed class QuerySyntaxHelperTests
 
         foreach (var name in new[] { null, "", " ", "\t" }.Select(emptySchemaExpression => syntaxHelper.EnsureFullyQualified("mydb", emptySchemaExpression, "Troll", "MyCol")))
         {
-            Assert.That(string.Equals("MyCol", syntaxHelper.GetRuntimeName(name), StringComparison.InvariantCultureIgnoreCase));
+            Assert.That(string.Equals("MyCol", syntaxHelper.GetRuntimeName(name), StringComparison.OrdinalIgnoreCase));
 
             switch (dbType)
             {

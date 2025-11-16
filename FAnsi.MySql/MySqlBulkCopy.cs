@@ -150,7 +150,7 @@ public sealed partial class MySqlBulkCopy(DiscoveredTable targetTable, IManagedC
                     if (value is string stringValue && !string.IsNullOrEmpty(stringValue))
                     {
                         var maxLength = discoveredColumn.DataType?.GetLengthIfString();
-                        if (maxLength > 0 && stringValue.Length > maxLength)
+                        if (maxLength.HasValue && maxLength.Value > 0 && stringValue.Length > maxLength.Value)
                         {
                             return $"Bulk insert failed on data row {actualRow + 1} the complaint was about source column <<{dataColumn.ColumnName}>> which had value <<{stringValue}>> destination data type was <<{discoveredColumn.DataType?.SQLType}>>. Original MySQL error: {message}";
                         }

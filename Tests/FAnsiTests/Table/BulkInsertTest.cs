@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using FAnsi;
@@ -35,7 +36,7 @@ internal sealed class BulkInsertTest : DatabaseTests
         dt.Rows.Add("Dave", 50);
         dt.Rows.Add("Jamie", 60);
 
-        using var bulk = tbl.BeginBulkInsert();
+        using var bulk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture);
         bulk.Timeout = 30;
         bulk.Upload(dt);
 
@@ -70,7 +71,7 @@ internal sealed class BulkInsertTest : DatabaseTests
             dt.Rows.Add("Dave", 50);
             dt.Rows.Add("Jamie", 60);
 
-            using var bulk = tbl.BeginBulkInsert();
+            using var bulk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture);
             bulk.Timeout = 30;
             bulk.Upload(dt);
 
@@ -119,7 +120,7 @@ internal sealed class BulkInsertTest : DatabaseTests
             Assert.That(dt.Columns[0].DataType, Is.EqualTo(typeof(string)));
         });
 
-        using (var bulk = tbl.BeginBulkInsert())
+        using (var bulk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture))
         {
             bulk.Timeout = 30;
             bulk.Upload(dt);
@@ -157,7 +158,7 @@ internal sealed class BulkInsertTest : DatabaseTests
             dt.Rows.Add("Jamie", 60);
 
             using var transaction = tbl.Database.Server.BeginNewTransactedConnection();
-            using (var bulk = tbl.BeginBulkInsert(transaction.ManagedTransaction))
+            using (var bulk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture, transaction.ManagedTransaction))
             {
                 bulk.Timeout = 30;
                 bulk.Upload(dt);
@@ -203,7 +204,7 @@ internal sealed class BulkInsertTest : DatabaseTests
             dt.Rows.Add("Jamie", 60);
 
             using var transaction = tbl.Database.Server.BeginNewTransactedConnection();
-            using (var bulk = tbl.BeginBulkInsert(transaction.ManagedTransaction))
+            using (var bulk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture, transaction.ManagedTransaction))
             {
                 bulk.Timeout = 30;
                 bulk.Upload(dt);
@@ -249,7 +250,7 @@ internal sealed class BulkInsertTest : DatabaseTests
             dt.Rows.Add("Jamie", 60);
 
             using var transaction = tbl.Database.Server.BeginNewTransactedConnection();
-            using (var bulk = tbl.BeginBulkInsert(transaction.ManagedTransaction))
+            using (var bulk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture, transaction.ManagedTransaction))
             {
                 bulk.Timeout = 30;
                 bulk.Upload(dt);
@@ -300,7 +301,7 @@ internal sealed class BulkInsertTest : DatabaseTests
             dt.Rows.Add("no", "yes");
             dt.Rows.Add("no", "no");
 
-            using var blk = tbl.BeginBulkInsert();
+            using var blk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture);
             blk.Upload(dt);
         }
 
@@ -334,7 +335,7 @@ internal sealed class BulkInsertTest : DatabaseTests
             dt.Columns.Add("bob");
             dt.Rows.Add("no", "yes");
 
-            using var blk = tbl.BeginBulkInsert();
+            using var blk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture);
             blk.Upload(dt);
         }
 
@@ -431,7 +432,7 @@ internal sealed class BulkInsertTest : DatabaseTests
             var sw = new Stopwatch();
             sw.Start();
 
-            using (var blk = tbl.BeginBulkInsert())
+            using (var blk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture))
             {
                 Assert.That(blk.Upload(dt), Is.EqualTo(numberOfRowsPerBatch)); //affected rows should match batch size
             }
@@ -447,7 +448,7 @@ internal sealed class BulkInsertTest : DatabaseTests
 
             sw.Restart();
 
-            using (var blk = tbl.BeginBulkInsert())
+            using (var blk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture))
             {
                 Assert.That(blk.Upload(dt), Is.EqualTo(numberOfRowsPerBatch));
             }
@@ -533,7 +534,7 @@ internal sealed class BulkInsertTest : DatabaseTests
         dt.Columns.Add("bob");
         dt.Rows.Add(DBNull.Value);
 
-        using var blk = tbl.BeginBulkInsert();
+        using var blk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture);
         Assert.Throws(Is.InstanceOf<Exception>(), () => blk.Upload(dt));
     }
 
@@ -564,7 +565,7 @@ internal sealed class BulkInsertTest : DatabaseTests
             dt.Rows.Add("fish");
             dt.Rows.Add("tank");
 
-            using var blk = tbl.BeginBulkInsert();
+            using var blk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture);
             Assert.That(blk.Upload(dt), Is.EqualTo(3));
         }
 
@@ -578,9 +579,9 @@ internal sealed class BulkInsertTest : DatabaseTests
         });
         Assert.Multiple(() =>
         {
-            Assert.That(result.Rows.Cast<DataRow>().Count(static r => Convert.ToInt32(r["bob"]) == 1), Is.EqualTo(1));
-            Assert.That(result.Rows.Cast<DataRow>().Count(static r => Convert.ToInt32(r["bob"]) == 2), Is.EqualTo(1));
-            Assert.That(result.Rows.Cast<DataRow>().Count(static r => Convert.ToInt32(r["bob"]) == 3), Is.EqualTo(1));
+            Assert.That(result.Rows.Cast<DataRow>().Count(static r => Convert.ToInt32(r["bob"], CultureInfo.InvariantCulture) == 1), Is.EqualTo(1));
+            Assert.That(result.Rows.Cast<DataRow>().Count(static r => Convert.ToInt32(r["bob"], CultureInfo.InvariantCulture) == 2), Is.EqualTo(1));
+            Assert.That(result.Rows.Cast<DataRow>().Count(static r => Convert.ToInt32(r["bob"], CultureInfo.InvariantCulture) == 3), Is.EqualTo(1));
         });
 
     }
@@ -604,7 +605,7 @@ internal sealed class BulkInsertTest : DatabaseTests
             dt.Columns.Add("num");
             dt.Rows.Add("-4.10235746055587E-05"); //-0.0000410235746055587  <- this is what the number is
             //-0.0000410235           <- this is what goes into db since we only asked for 10 digits after decimal place
-            using var blk = tbl.BeginBulkInsert();
+            using var blk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture);
             Assert.That(blk.Upload(dt), Is.EqualTo(1));
         }
 
@@ -653,7 +654,7 @@ internal sealed class BulkInsertTest : DatabaseTests
             dt2.Columns.Add("yay");
             dt2.Rows.Add("你好");
 
-            using var insert = table.BeginBulkInsert();
+            using var insert = table.BeginBulkInsert(CultureInfo.InvariantCulture);
             insert.Upload(dt2);
         }
 
@@ -698,7 +699,7 @@ internal sealed class BulkInsertTest : DatabaseTests
         dt.Rows.Add(100, "King");
         dt.Rows.Add(10, "Frog");
 
-        using var bulk = tbl.BeginBulkInsert();
+        using var bulk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture);
         bulk.Timeout = 30;
 
         var ex = Assert.Catch(() => bulk.Upload(dt), "Expected upload to fail because value on row 2 is too long");
@@ -743,7 +744,7 @@ internal sealed class BulkInsertTest : DatabaseTests
             dt.Columns.Add("MyDate");
             dt.Rows.Add("20011230");
 
-            using var bulk = tbl.BeginBulkInsert();
+            using var bulk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture);
             bulk.Timeout = 30;
             bulk.DateTimeDecider.Settings.ExplicitDateFormats = ["yyyyMMdd"];
             bulk.Upload(dt);
@@ -780,7 +781,7 @@ internal sealed class BulkInsertTest : DatabaseTests
         dt.Rows.Add(100, "King");
         dt.Rows.Add(10, "Frog");
 
-        using var bulk = tbl.BeginBulkInsert();
+        using var bulk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture);
         bulk.Timeout = 30;
 
         var ex = Assert.Catch(() => bulk.Upload(dt), "Expected upload to fail because value on row 2 is too long");
@@ -834,7 +835,7 @@ internal sealed class BulkInsertTest : DatabaseTests
         dt.Rows.Add(100, "King");
         dt.Rows.Add(10, "Frog");
 
-        using var bulk = tbl.BeginBulkInsert();
+        using var bulk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture);
         bulk.Timeout = 30;
 
         Exception? ex = null;
