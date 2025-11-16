@@ -2,7 +2,7 @@
 
 [![Build and test](https://github.com/jas88/FAnsiSql/actions/workflows/dotnet-core.yml/badge.svg)](https://github.com/jas88/FAnsiSql/actions/workflows/dotnet-core.yml)
 [![CodeQL](https://github.com/jas88/FAnsiSql/actions/workflows/dotnet-core.yml/badge.svg?event=push)](https://github.com/jas88/FAnsiSql/security/code-scanning)
-[![Coverage Status](https://coveralls.io/repos/github/jas88/FAnsiSql/badge.svg?branch=main)](https://coveralls.io/github/jas88/FAnsiSql?branch=main)
+[![codecov](https://codecov.io/gh/jas88/FAnsiSql/graph/badge.svg?token=V4G55FD1V1)](https://codecov.io/gh/jas88/FAnsiSql)
 [![NuGet](https://img.shields.io/nuget/v/FAnsiSql.Core.svg)](https://www.nuget.org/packages/FAnsiSql.Core/)
 
 - [Nuget](https://www.nuget.org/packages/FAnsiSql.Core/)
