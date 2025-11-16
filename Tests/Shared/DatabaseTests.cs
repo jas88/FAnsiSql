@@ -13,6 +13,7 @@ using FAnsi.Implementations.MySql;
 using FAnsi.Implementations.Oracle;
 using FAnsi.Implementations.MicrosoftSQL;
 using FAnsi.Implementations.PostgreSql;
+using FAnsi.Implementations.Sqlite;
 using NUnit.Framework;
 
 namespace FAnsiTests;
@@ -36,6 +37,7 @@ public abstract class DatabaseTests
         ImplementationManager.Load<MicrosoftSQLImplementation>();
         ImplementationManager.Load<MySqlImplementation>();
         ImplementationManager.Load<PostgreSqlImplementation>();
+        ImplementationManager.Load<SqliteImplementation>();
 #pragma warning restore CS0618
 
         var file = Path.Combine(TestContext.CurrentContext.TestDirectory, TestFilename);
