@@ -173,32 +173,60 @@ public sealed partial class MySqlTableHelper : DiscoveredTableHelper
     /// <returns>True if the table has a primary key, false otherwise</returns>
     public override bool HasPrimaryKey(DiscoveredTable table, IManagedConnection connection)
     {
-        const string sql = """
-            SELECT EXISTS (
-                SELECT 1 FROM information_schema.`TABLE_CONSTRAINTS`
-                WHERE table_schema = @db
-                AND table_name = @tbl
-                AND constraint_type = 'PRIMARY KEY'
-            )
-            """;
+        // information_schema queries in MySQL must run outside transactions to avoid stale snapshot issues
+        // after DDL operations (see DiscoverColumns for detailed explanation).
+        // MySqlConnector requires that if a connection has an active transaction, commands must either
+        // use that transaction OR run on a separate connection without a transaction.
+        // Since we cannot use the transaction for information_schema queries, we create a fresh connection
+        // only when needed (when a transaction is present).
 
-        using var cmd = table.Database.Server.Helper.GetCommand(sql, connection.Connection);
-        // Do not set cmd.Transaction for information_schema queries (see DiscoverColumns for details)
-
-        var p = new MySqlParameter("@db", MySqlDbType.String)
+        if (connection.Transaction != null)
         {
-            Value = table.Database.GetRuntimeName()
-        };
-        cmd.Parameters.Add(p);
+            // Connection has active transaction - create fresh connection to avoid transaction conflicts
+            using var freshConnection = table.Database.Server.GetConnection();
+            freshConnection.Open();
 
-        p = new MySqlParameter("@tbl", MySqlDbType.String)
+            const string sql = """
+                SELECT EXISTS (
+                    SELECT 1 FROM information_schema.`TABLE_CONSTRAINTS`
+                    WHERE table_schema = @db
+                    AND table_name = @tbl
+                    AND constraint_type = 'PRIMARY KEY'
+                )
+                """;
+
+            using var cmd = table.Database.Server.Helper.GetCommand(sql, freshConnection);
+
+            var p = new MySqlParameter("@db", MySqlDbType.String) { Value = table.Database.GetRuntimeName() };
+            cmd.Parameters.Add(p);
+
+            p = new MySqlParameter("@tbl", MySqlDbType.String) { Value = table.GetRuntimeName() };
+            cmd.Parameters.Add(p);
+
+            return Convert.ToBoolean(cmd.ExecuteScalar(), CultureInfo.InvariantCulture);
+        }
+        else
         {
-            Value = table.GetRuntimeName()
-        };
-        cmd.Parameters.Add(p);
+            // No transaction - safe to reuse connection
+            const string sql = """
+                SELECT EXISTS (
+                    SELECT 1 FROM information_schema.`TABLE_CONSTRAINTS`
+                    WHERE table_schema = @db
+                    AND table_name = @tbl
+                    AND constraint_type = 'PRIMARY KEY'
+                )
+                """;
 
-        var result = cmd.ExecuteScalar();
-        return Convert.ToBoolean(result, CultureInfo.InvariantCulture);
+            using var cmd = table.Database.Server.Helper.GetCommand(sql, connection.Connection);
+
+            var p = new MySqlParameter("@db", MySqlDbType.String) { Value = table.Database.GetRuntimeName() };
+            cmd.Parameters.Add(p);
+
+            p = new MySqlParameter("@tbl", MySqlDbType.String) { Value = table.GetRuntimeName() };
+            cmd.Parameters.Add(p);
+
+            return Convert.ToBoolean(cmd.ExecuteScalar(), CultureInfo.InvariantCulture);
+        }
     }
 
     [Obsolete("Prefer using HasPrimaryKey(DiscoveredTable, IManagedConnection) to reuse connections and improve performance")]
@@ -245,24 +273,57 @@ public sealed partial class MySqlTableHelper : DiscoveredTableHelper
     /// <returns>The auto-increment column, or null if none exists</returns>
     public DiscoveredColumn? GetAutoIncrementColumn(DiscoveredTable table, IManagedConnection connection)
     {
-        const string sql = """
-                           SELECT COLUMN_NAME
-                           FROM information_schema.COLUMNS
-                           WHERE table_schema = @db
-                           AND table_name = @tbl
-                           AND EXTRA = 'auto_increment'
-                           """;
+        // information_schema queries in MySQL must run outside transactions to avoid stale snapshot issues.
+        // MySqlConnector requires that if a connection has an active transaction, commands must either
+        // use that transaction OR run on a separate connection without a transaction.
 
-        using var cmd = table.GetCommand(sql, connection.Connection);
-        // Do not set cmd.Transaction for information_schema queries
+        string? columnName;
 
-        var p = new MySqlParameter("@db", MySqlDbType.String) { Value = table.Database.GetRuntimeName() };
-        cmd.Parameters.Add(p);
+        if (connection.Transaction != null)
+        {
+            // Connection has active transaction - create fresh connection to avoid transaction conflicts
+            using var freshConnection = table.Database.Server.GetConnection();
+            freshConnection.Open();
 
-        p = new MySqlParameter("@tbl", MySqlDbType.String) { Value = table.GetRuntimeName() };
-        cmd.Parameters.Add(p);
+            const string sql = """
+                               SELECT COLUMN_NAME
+                               FROM information_schema.COLUMNS
+                               WHERE table_schema = @db
+                               AND table_name = @tbl
+                               AND EXTRA = 'auto_increment'
+                               """;
 
-        var columnName = cmd.ExecuteScalar() as string;
+            using var cmd = table.GetCommand(sql, freshConnection);
+
+            var p = new MySqlParameter("@db", MySqlDbType.String) { Value = table.Database.GetRuntimeName() };
+            cmd.Parameters.Add(p);
+
+            p = new MySqlParameter("@tbl", MySqlDbType.String) { Value = table.GetRuntimeName() };
+            cmd.Parameters.Add(p);
+
+            columnName = cmd.ExecuteScalar() as string;
+        }
+        else
+        {
+            // No transaction - safe to reuse connection
+            const string sql = """
+                               SELECT COLUMN_NAME
+                               FROM information_schema.COLUMNS
+                               WHERE table_schema = @db
+                               AND table_name = @tbl
+                               AND EXTRA = 'auto_increment'
+                               """;
+
+            using var cmd = table.GetCommand(sql, connection.Connection);
+
+            var p = new MySqlParameter("@db", MySqlDbType.String) { Value = table.Database.GetRuntimeName() };
+            cmd.Parameters.Add(p);
+
+            p = new MySqlParameter("@tbl", MySqlDbType.String) { Value = table.GetRuntimeName() };
+            cmd.Parameters.Add(p);
+
+            columnName = cmd.ExecuteScalar() as string;
+        }
 
         if (columnName == null)
             return null;

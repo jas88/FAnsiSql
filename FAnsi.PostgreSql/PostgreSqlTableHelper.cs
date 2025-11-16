@@ -206,17 +206,28 @@ public sealed class PostgreSqlTableHelper : DiscoveredTableHelper
     /// <returns>The auto-increment column, or null if none exists</returns>
     public DiscoveredColumn? GetAutoIncrementColumn(DiscoveredTable table, IManagedConnection connection)
     {
-        var sql = $"""
-                   SELECT a.attname
-                   FROM pg_attribute a
-                   JOIN pg_class t ON a.attrelid = t.oid
-                   JOIN pg_namespace n ON t.relnamespace = n.oid
-                   WHERE t.relname = '{table.GetRuntimeName()}'
-                   AND n.nspname = '{table.Schema}'
-                   AND a.attidentity != ''
-                   """;
+        const string sql = """
+                           SELECT a.attname
+                           FROM pg_attribute a
+                           JOIN pg_class t ON a.attrelid = t.oid
+                           JOIN pg_namespace n ON t.relnamespace = n.oid
+                           WHERE t.relname = @tableName
+                           AND n.nspname = @schemaName
+                           AND a.attidentity != ''
+                           """;
 
         using var cmd = table.Database.Server.Helper.GetCommand(sql, connection.Connection, connection.Transaction);
+
+        var p = cmd.CreateParameter();
+        p.ParameterName = "@tableName";
+        p.Value = table.GetRuntimeName();
+        cmd.Parameters.Add(p);
+
+        var p2 = cmd.CreateParameter();
+        p2.ParameterName = "@schemaName";
+        p2.Value = string.IsNullOrWhiteSpace(table.Schema) ? PostgreSqlSyntaxHelper.DefaultPostgresSchema : table.Schema;
+        cmd.Parameters.Add(p2);
+
         using var r = cmd.ExecuteReader();
 
         if (!r.Read())
