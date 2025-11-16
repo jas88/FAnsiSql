@@ -104,10 +104,14 @@ jobs:
         echo "=== Total lines in first coverage file ==="
         find coverage -name "coverage.info" | head -1 | xargs wc -l
 
-    - name: Coveralls
-      run: |
-        curl -sL https://coveralls.io/coveralls-linux.tar.gz | sudo tar -xz -C /usr/local/bin
-        find coverage -name "coverage.info" -print0 | xargs -0 -I% coveralls report % --format=lcov --build-number="${GITHUB_RUN_NUMBER}" --debug -r ${{ secrets.COVERALLS_REPO_TOKEN }}
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v5
+      with:
+        files: ./coverage/**/coverage.info
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+        token: ${{ secrets.CODECOV_TOKEN }}
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v4
