@@ -84,22 +84,6 @@ jobs:
 
     - name: Test
       run: |
-        # Create runsettings file for lcov coverage format
-        cat > coverage.runsettings << 'EOF'
-        <?xml version="1.0" encoding="utf-8"?>
-        <RunSettings>
-          <DataCollectionRunSettings>
-            <DataCollectors>
-              <DataCollector friendlyName="XPlat Code Coverage">
-                <Configuration>
-                  <Format>lcov</Format>
-                </Configuration>
-              </DataCollector>
-            </DataCollectors>
-          </DataCollectionRunSettings>
-        </RunSettings>
-        EOF
-
         dotnet test FAnsi.sln -c Release \
           --logger "console;verbosity=normal" \
           --nologo \
@@ -112,7 +96,8 @@ jobs:
     - name: Coveralls
       run: |
         curl -sL https://coveralls.io/coveralls-linux.tar.gz | sudo tar -xz -C /usr/local/bin
-        coveralls report
+        find coverage -type f -print0 | xargs -0I% coveralls report % --parallel --build-number 1
+        coveralls done --build-number 1
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v4
