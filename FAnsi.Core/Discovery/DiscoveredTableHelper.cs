@@ -307,8 +307,10 @@ public abstract class DiscoveredTableHelper : IDiscoveredTableHelper
         var server = discoveredTable.Database.Server;
 
         //if it's got a primary key then it's distinct! job done
-        // Use direct column check to avoid obsolete method - this is performance-optimized for internal use
-        if (discoveredTable.DiscoverColumns(args.TransactionIfAny).Any(static c => c.IsPrimaryKey))
+        // Use database-side query for performance - most implementations override with targeted SQL
+#pragma warning disable CS0618 // Type or member is obsolete - we use it with transaction parameter
+        if (HasPrimaryKey(discoveredTable, args.TransactionIfAny))
+#pragma warning restore CS0618
             return;
 
         var tableName = discoveredTable.GetFullyQualifiedName();
