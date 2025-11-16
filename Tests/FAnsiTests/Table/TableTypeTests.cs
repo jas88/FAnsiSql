@@ -3,6 +3,7 @@ using FAnsi.Discovery;
 using NUnit.Framework;
 using System;
 using System.Data;
+using System.Globalization;
 
 namespace FAnsiTests.Table;
 
@@ -29,7 +30,7 @@ public sealed class TableTypeTests : DatabaseTests
         //oracle likes to create stuff under your user account not the database your actually using!
         if (dbType == DatabaseType.Oracle) viewName = syntax.EnsureFullyQualified(tbl.Database.GetRuntimeName(), null, "MyView");
 
-        var sql = string.Format(@"CREATE VIEW {0} AS
+        var sql = string.Format(CultureInfo.InvariantCulture, @"CREATE VIEW {0} AS
 SELECT {2}
 FROM {1}",
             dbType == DatabaseType.Oracle ? viewName : syntax.EnsureWrapped(viewName),

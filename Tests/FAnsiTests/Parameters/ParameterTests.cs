@@ -3,6 +3,7 @@ using FAnsi;
 using FAnsi.Implementation;
 using NUnit.Framework;
 using System.Data;
+using System.Globalization;
 using System.Text;
 using TypeGuesser;
 
@@ -64,7 +65,8 @@ internal sealed class ParameterTests : DatabaseTests
         sb.AppendLine("SET @bob='armag';");
         //set the variable
 
-        sb.AppendLine($"SELECT FF from {tbl.GetFullyQualifiedName()} WHERE FF = @bob;");
+        sb.Append(CultureInfo.InvariantCulture, $"SELECT FF from {tbl.GetFullyQualifiedName()} WHERE FF = @bob;");
+        sb.AppendLine();
 
         using var con = db.Server.GetConnection();
         con.Open();

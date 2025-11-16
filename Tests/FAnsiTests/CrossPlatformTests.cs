@@ -1163,7 +1163,7 @@ public sealed class CrossPlatformTests : DatabaseTests
         dt.Columns.Add("Name");
         dt.Rows.Add("Frank");
 
-        using (var bulkInsert = tbl.BeginBulkInsert())
+        using (var bulkInsert = tbl.BeginBulkInsert(CultureInfo.InvariantCulture))
             bulkInsert.Upload(dt);
 
         Assert.That(tbl.GetRowCount(), Is.EqualTo(1));
@@ -1198,7 +1198,7 @@ public sealed class CrossPlatformTests : DatabaseTests
         ]);
         DateTime currentValue;
 
-        using (var insert = tbl.BeginBulkInsert())
+        using (var insert = tbl.BeginBulkInsert(CultureInfo.InvariantCulture))
         {
             using var dt = new DataTable();
             dt.Columns.Add("Name");
@@ -1253,7 +1253,7 @@ public sealed class CrossPlatformTests : DatabaseTests
             }
         ]);
 
-        using (var insert = tbl.BeginBulkInsert())
+        using (var insert = tbl.BeginBulkInsert(CultureInfo.InvariantCulture))
         {
             using var dt = new DataTable();
             dt.Columns.Add("Name");
@@ -1563,8 +1563,8 @@ public sealed class CrossPlatformTests : DatabaseTests
         var d = new DateTimeTypeDecider(new CultureInfo("en-gb"));
         var dt = new DateTime(2019, 5, 22, 8, 59, 36);
 
-        foreach (var f in DateTimeTypeDecider.DateFormatsDM) d.Parse(dt.ToString(f));
-        foreach (var f in DateTimeTypeDecider.TimeFormats) d.Parse(dt.ToString(f));
+        foreach (var f in DateTimeTypeDecider.DateFormatsDM) d.Parse(dt.ToString(f, CultureInfo.InvariantCulture));
+        foreach (var f in DateTimeTypeDecider.TimeFormats) d.Parse(dt.ToString(f, CultureInfo.InvariantCulture));
 
         Assert.That(d.Parse("28/2/1993 5:36:27 AM"), Is.EqualTo(new DateTime(1993, 2, 28, 5, 36, 27)));
     }

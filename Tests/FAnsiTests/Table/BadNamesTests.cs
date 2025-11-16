@@ -6,6 +6,7 @@ using NUnit.Framework;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Globalization;
 using System.Linq;
 using TypeGuesser;
 
@@ -236,7 +237,7 @@ internal sealed class BadNamesTests : DatabaseTests
 
         dt.Rows.Add("fff", 5);
 
-        using (var insert = tbl.BeginBulkInsert())
+        using (var insert = tbl.BeginBulkInsert(CultureInfo.InvariantCulture))
         {
             insert.Upload(dt);
         }

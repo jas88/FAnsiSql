@@ -1,5 +1,6 @@
 using System;
 using System.Data;
+using System.Globalization;
 using FAnsi;
 using FAnsi.Discovery;
 using FAnsi.Implementation;
@@ -245,7 +246,7 @@ internal sealed class ServerLevelTests : DatabaseTests
         //new table should exist
         Assert.That(tblFrom.Exists());
 
-        using (var insert = toTable.BeginBulkInsert())
+        using (var insert = toTable.BeginBulkInsert(CultureInfo.InvariantCulture))
         {
             //fetch the data from the source table
             var fromData = tblFrom.GetDataTable();

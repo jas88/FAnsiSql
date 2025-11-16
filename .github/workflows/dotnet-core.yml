@@ -84,6 +84,22 @@ jobs:
 
     - name: Test
       run: |
+        # Create runsettings file for lcov coverage format
+        cat > coverage.runsettings << 'EOF'
+        <?xml version="1.0" encoding="utf-8"?>
+        <RunSettings>
+          <DataCollectionRunSettings>
+            <DataCollectors>
+              <DataCollector friendlyName="XPlat Code Coverage">
+                <Configuration>
+                  <Format>lcov</Format>
+                </Configuration>
+              </DataCollector>
+            </DataCollectors>
+          </DataCollectionRunSettings>
+        </RunSettings>
+        EOF
+
         dotnet test FAnsi.sln -c Release \
           --logger "console;verbosity=normal" \
           --nologo \
@@ -91,12 +107,23 @@ jobs:
           -p:TestTfmsInParallel=true \
           --collect:"XPlat Code Coverage" \
           --results-directory coverage \
-          -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=lcov
+          --settings coverage.runsettings
 
     - name: Consolidate coverage
       shell: bash
       run: |
-        find coverage -name "coverage.info" -exec cat {} \; > lcov.info
+        # Find all coverage files (coverage.info for lcov format, or coverage.cobertura.xml as fallback)
+        find coverage -name "coverage.info" -o -name "coverage.lcov" | while read file; do
+          cat "$file"
+        done > lcov.info
+
+        # Verify we have coverage data
+        if [ ! -s lcov.info ]; then
+          echo "Warning: No coverage data found"
+          find coverage -type f -name "coverage.*" || echo "No coverage files at all"
+        else
+          echo "Coverage file created: $(wc -l < lcov.info) lines"
+        fi
 
     - name: Coveralls
       uses: coverallsapp/github-action@v2.3.6

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Data;
+using System.Globalization;
 using FAnsi;
 using FAnsi.Discovery;
 using NUnit.Framework;
@@ -38,7 +39,7 @@ public sealed class BigIntTests : DatabaseTests
         dt.Columns.Add("Col1");
         dt.Rows.Add(9223372036854775807L);
 
-        using (var insert = tbl.BeginBulkInsert())
+        using (var insert = tbl.BeginBulkInsert(CultureInfo.InvariantCulture))
         {
             insert.Upload(dt);
         }
