@@ -108,6 +108,7 @@ jobs:
       run: |
         curl -sL https://coveralls.io/coveralls-linux.tar.gz | sudo tar -xz -C /usr/local/bin
         find coverage -name "coverage.info" -print0 | xargs -0 -I% coveralls report % --format=lcov -p -n --build-number="${GITHUB_RUN_NUMBER}" --debug -r ${{ secrets.COVERALLS_REPO_TOKEN }}
+        coveralls done --build-number="${GITHUB_RUN_NUMBER}" --debug -r ${{ secrets.COVERALLS_REPO_TOKEN }}
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v4
@@ -264,4 +265,4 @@ jobs:
         file_glob: true
         overwrite: true
     - name: Finalise Coveralls
-      run: coveralls done --build-number="${GITHUB_RUN_NUMBER}" --debug -r ${{ secrets.COVERALLS_REPO_TOKEN }}
+      run:         coveralls done -n --build-number=1 -r ${{ secrets.COVERALLS_REPO_TOKEN }}
