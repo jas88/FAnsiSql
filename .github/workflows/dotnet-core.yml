@@ -109,27 +109,10 @@ jobs:
           --results-directory coverage \
           --settings coverage.runsettings
 
-    - name: Consolidate coverage
-      shell: bash
-      run: |
-        # Find all coverage files (coverage.info for lcov format, or coverage.cobertura.xml as fallback)
-        find coverage -name "coverage.info" -o -name "coverage.lcov" | while read file; do
-          cat "$file"
-        done > lcov.info
-
-        # Verify we have coverage data
-        if [ ! -s lcov.info ]; then
-          echo "Warning: No coverage data found"
-          find coverage -type f -name "coverage.*" || echo "No coverage files at all"
-        else
-          echo "Coverage file created: $(wc -l < lcov.info) lines"
-        fi
-
     - name: Coveralls
-      uses: coverallsapp/github-action@v2.3.6
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        path-to-lcov: lcov.info
+      run: |
+        curl -sL https://coveralls.io/coveralls-linux.tar.gz | sudo tar -xz -C /usr/local/bin
+        coveralls report
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v4
