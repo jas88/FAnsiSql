@@ -105,7 +105,7 @@ jobs:
         find coverage -name "coverage.info" | head -1 | xargs wc -l
 
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v5
+      uses: codecov/codecov-action@v4
       with:
         files: ./coverage/**/coverage.info
         flags: unittests
