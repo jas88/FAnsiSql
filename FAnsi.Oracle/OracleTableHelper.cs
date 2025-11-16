@@ -174,7 +174,7 @@ public sealed class OracleTableHelper : DiscoveredTableHelper
     /// <param name="table">The table to check</param>
     /// <param name="connection">The managed connection to use</param>
     /// <returns>True if the table has a primary key, false otherwise</returns>
-    public bool HasPrimaryKey(DiscoveredTable table, IManagedConnection connection)
+    public override bool HasPrimaryKey(DiscoveredTable table, IManagedConnection connection)
     {
         const string sql = """
             SELECT CASE WHEN EXISTS (
@@ -525,6 +525,5 @@ public sealed class OracleTableHelper : DiscoveredTableHelper
         newName = discoveredTable.GetQuerySyntaxHelper().EnsureWrapped(newName);
         return $@"alter table {discoveredTable.GetFullyQualifiedName()} rename to {newName}";
     }
-
     public override bool RequiresLength(string columnType) => base.RequiresLength(columnType) || columnType.Equals("varchar2", StringComparison.OrdinalIgnoreCase);
 }

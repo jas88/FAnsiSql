@@ -165,7 +165,43 @@ public sealed partial class MySqlTableHelper : DiscoveredTableHelper
         return Exists(table, connection);
     }
 
-    [Obsolete("Prefer using Exists(DiscoveredTable, IManagedConnection) to reuse connections and improve performance")]
+    /// <summary>
+    /// Checks if the table has a primary key using the provided connection.
+    /// </summary>
+    /// <param name="table">The table to check</param>
+    /// <param name="connection">The managed connection to use</param>
+    /// <returns>True if the table has a primary key, false otherwise</returns>
+    public override bool HasPrimaryKey(DiscoveredTable table, IManagedConnection connection)
+    {
+        const string sql = """
+            SELECT EXISTS (
+                SELECT 1 FROM information_schema.`TABLE_CONSTRAINTS`
+                WHERE table_schema = @db
+                AND table_name = @tbl
+                AND constraint_type = 'PRIMARY KEY'
+            )
+            """;
+
+        using var cmd = table.Database.Server.Helper.GetCommand(sql, connection.Connection);
+        // Do not set cmd.Transaction for information_schema queries (see DiscoverColumns for details)
+
+        var p = new MySqlParameter("@db", MySqlDbType.String)
+        {
+            Value = table.Database.GetRuntimeName()
+        };
+        cmd.Parameters.Add(p);
+
+        p = new MySqlParameter("@tbl", MySqlDbType.String)
+        {
+            Value = table.GetRuntimeName()
+        };
+        cmd.Parameters.Add(p);
+
+        var result = cmd.ExecuteScalar();
+        return Convert.ToBoolean(result, CultureInfo.InvariantCulture);
+    }
+
+    [Obsolete("Prefer using HasPrimaryKey(DiscoveredTable, IManagedConnection) to reuse connections and improve performance")]
     public override bool HasPrimaryKey(DiscoveredTable table, IManagedTransaction? transaction = null)
     {
         // Do NOT use transaction parameter - information_schema queries must run outside transactions

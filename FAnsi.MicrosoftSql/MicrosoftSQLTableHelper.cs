@@ -168,7 +168,7 @@ public sealed partial class MicrosoftSQLTableHelper : DiscoveredTableHelper
     /// <param name="table">The table to check</param>
     /// <param name="connection">The managed connection to use</param>
     /// <returns>True if the table has a primary key, false otherwise</returns>
-    public bool HasPrimaryKey(DiscoveredTable table, IManagedConnection connection)
+    public override bool HasPrimaryKey(DiscoveredTable table, IManagedConnection connection)
     {
         const string sql = """
             SELECT CASE WHEN EXISTS (
