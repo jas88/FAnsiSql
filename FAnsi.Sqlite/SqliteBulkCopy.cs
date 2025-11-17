@@ -145,7 +145,16 @@ public sealed class SqliteBulkCopy(DiscoveredTable targetTable, IManagedConnecti
                 valueClauses.Append(paramName);
 
                 // Create parameter and add directly to command
-                var parameter = new SqliteParameter(paramName, ConvertValueForSQLite(dr[kvp.Key.Ordinal]));
+                var value = ConvertValueForSQLite(dr[kvp.Key.Ordinal], kvp.Value.DataType?.SQLType);
+                var parameter = new SqliteParameter(paramName, value);
+
+                // For DateTime values, explicitly set SqliteType to Text to ensure proper round-trip
+                // Microsoft.Data.Sqlite will store as ISO8601 and can retrieve as DateTime
+                if (value is DateTime)
+                {
+                    parameter.SqliteType = Microsoft.Data.Sqlite.SqliteType.Text;
+                }
+
                 cmd.Parameters.Add(parameter);
 
                 parameterIndex++;
@@ -220,8 +229,17 @@ public sealed class SqliteBulkCopy(DiscoveredTable targetTable, IManagedConnecti
                 {
                     var kvp = columnEntries[colIndex];
                     var paramName = $"@p{colIndex}";
-                    var value = ConvertValueForSQLite(dr[kvp.Key.Ordinal]);
-                    cmd.Parameters.Add(new SqliteParameter(paramName, value));
+                    var value = ConvertValueForSQLite(dr[kvp.Key.Ordinal], kvp.Value.DataType?.SQLType);
+                    var parameter = new SqliteParameter(paramName, value);
+
+                    // For DateTime values, explicitly set SqliteType to Text to ensure proper round-trip
+                    // Microsoft.Data.Sqlite will store as ISO8601 and can retrieve as DateTime
+                    if (value is DateTime)
+                    {
+                        parameter.SqliteType = Microsoft.Data.Sqlite.SqliteType.Text;
+                    }
+
+                    cmd.Parameters.Add(parameter);
                 }
 
                 cmd.ExecuteNonQuery();
@@ -353,17 +371,37 @@ public sealed class SqliteBulkCopy(DiscoveredTable targetTable, IManagedConnecti
                 row[col] = DBNull.Value;
     }
 
-    private static object ConvertValueForSQLite(object value)
+    private static object ConvertValueForSQLite(object value, string? targetSqlType = null)
     {
         if (value == null || value == DBNull.Value)
             return DBNull.Value;
 
-        // SQLite handles most types natively, but we'll handle some special cases
+        // Handle string values that should be parsed as DateTime for datetime/timestamp columns
+        if (value is string stringValue && !string.IsNullOrWhiteSpace(stringValue) && !string.IsNullOrEmpty(targetSqlType))
+        {
+            var normalizedType = targetSqlType.ToUpperInvariant().Split('(')[0].Trim();
+            // SQLite uses TEXT for datetime columns
+            if (normalizedType is "TEXT" or "DATETIME" or "TIMESTAMP" or "DATE")
+            {
+                // Try to parse as DateTime if it looks like a date
+                if (DateTime.TryParse(stringValue, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedDate))
+                {
+                    // Return the DateTime value - Microsoft.Data.Sqlite will handle it correctly
+                    return parsedDate;
+                }
+            }
+        }
+
+        // Microsoft.Data.Sqlite handles DateTime natively and will convert it appropriately
+        // for the column type. It stores as TEXT in ISO8601 format but preserves type information
+        // so it can be read back as DateTime.
+        // We do NOT convert DateTime to string manually - let the provider handle it.
         return value switch
         {
-            DateTime dt => dt.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture),
-            DateOnly dateOnly => dateOnly.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture),
-            TimeOnly timeOnly => timeOnly.ToString("HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture),
+            // DateTime is handled natively by Microsoft.Data.Sqlite - don't convert to string
+            DateTime => value,
+            DateOnly dateOnly => dateOnly.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+            TimeOnly timeOnly => timeOnly.ToString("HH:mm:ss.fff", CultureInfo.InvariantCulture),
             bool b => b ? 1 : 0,  // SQLite stores booleans as integers
             Guid g => g.ToString(),  // Store GUIDs as text
             _ => value

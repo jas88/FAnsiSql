@@ -307,7 +307,19 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
         {
             var row = dt.NewRow();
             for (var i = 0; i < reader.FieldCount; i++)
-                row[i] = reader.GetValue(i);
+            {
+                var value = reader.GetValue(i);
+
+                // SQLite stores DateTime as TEXT, but DataTable columns may be typed as DateTime
+                // If the column is DateTime and we get a string, try to parse it
+                if (i < dt.Columns.Count && dt.Columns[i].DataType == typeof(DateTime) && value is string strValue)
+                {
+                    if (DateTime.TryParse(strValue, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedDate))
+                        value = parsedDate;
+                }
+
+                row[i] = value;
+            }
             dt.Rows.Add(row);
         }
     }
