@@ -353,8 +353,8 @@ public sealed class OracleTableHelper : DiscoveredTableHelper
             }
             catch (OracleException ex) when (ex.Number == 942) // ORA-00942: table or view does not exist
             {
-                // Table already dropped - this is OK
-                return;
+                // Table does not exist - throw exception to match expected behavior
+                throw;
             }
         }
 

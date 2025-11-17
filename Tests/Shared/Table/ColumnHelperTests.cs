@@ -163,9 +163,9 @@ internal sealed class ColumnHelperTests : DatabaseTests
         using var dt = new DataTable();
         dt.Columns.Add("Id", typeof(int));
         dt.Columns.Add("EventDate", typeof(DateTime));
-        dt.Rows.Add(1, new DateTime(2024, 1, 1));
-        dt.Rows.Add(2, new DateTime(2024, 2, 1));
-        dt.Rows.Add(3, new DateTime(2024, 3, 1));
+        dt.Rows.Add(1, type == DatabaseType.PostgreSql ? DateTime.SpecifyKind(new DateTime(2024, 1, 1), DateTimeKind.Utc) : new DateTime(2024, 1, 1));
+        dt.Rows.Add(2, type == DatabaseType.PostgreSql ? DateTime.SpecifyKind(new DateTime(2024, 2, 1), DateTimeKind.Utc) : new DateTime(2024, 2, 1));
+        dt.Rows.Add(3, type == DatabaseType.PostgreSql ? DateTime.SpecifyKind(new DateTime(2024, 3, 1), DateTimeKind.Utc) : new DateTime(2024, 3, 1));
         dt.Rows.Add(4, DBNull.Value);
 
         var table = db.CreateTable("TopXDateTable", dt);
@@ -650,7 +650,7 @@ internal sealed class ColumnHelperTests : DatabaseTests
             table.Insert(new System.Collections.Generic.Dictionary<string, object>
             {
                 { "Id", 1 },
-                { "CreatedDate", new DateTime(2024, 1, 1) }
+                { "CreatedDate", type == DatabaseType.PostgreSql ? DateTime.SpecifyKind(new DateTime(2024, 1, 1), DateTimeKind.Utc) : new DateTime(2024, 1, 1) }
             });
 
             var column = table.DiscoverColumn("CreatedDate");
