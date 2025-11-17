@@ -68,6 +68,9 @@ public sealed partial class PostgreSqlTypeTranslater : TypeTranslater
 
     }
 
+    protected override bool IsByteArray(string sqlType) =>
+        sqlType?.StartsWith("bytea", StringComparison.OrdinalIgnoreCase) ?? false;
+
     [GeneratedRegex("timestamp", RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]
     private static partial Regex DateRegexImpl();
     [GeneratedRegex("^time ", RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]

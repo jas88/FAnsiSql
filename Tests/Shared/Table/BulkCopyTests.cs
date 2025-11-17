@@ -660,7 +660,7 @@ internal sealed class BulkCopyTests : DatabaseTests
         var tbl = db.CreateTable("TestUnicode",
         [
             new DatabaseColumnRequest("Id", new DatabaseTypeRequest(typeof(int))),
-            new DatabaseColumnRequest("UnicodeText", new DatabaseTypeRequest(typeof(string), 100))
+            new DatabaseColumnRequest("UnicodeText", new DatabaseTypeRequest(typeof(string), 100) { Unicode = true })
         ]);
 
         using var dt = new DataTable();

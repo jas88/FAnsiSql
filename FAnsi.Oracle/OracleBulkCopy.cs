@@ -59,6 +59,13 @@ internal sealed class OracleBulkCopy(DiscoveredTable targetTable, IManagedConnec
                 case DbType.Boolean:
                     p.DbType = DbType.Int32; // JS 2023-05-11 special case since we don't have a true boolean type in Oracle, but use 0/1 instead
                     break;
+                case DbType.Object:
+                    // DbType.Object is used for byte[] - Oracle needs OracleDbType.Blob for array binding
+                    if (dataColumn.DataType == typeof(byte[]))
+                    {
+                        ((OracleParameter)p).OracleDbType = OracleDbType.Blob;
+                    }
+                    break;
             }
         }
 
