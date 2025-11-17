@@ -67,7 +67,8 @@ internal sealed class PivotWithTopXTests : AggregationTests
 
         Assert.That(columnNames, Contains.Item("Ev"), "Should have EventDate column");
         // T has 7 records, E&, %a' mp;E has 3 records - these should be TOP 2
-        Assert.That(columnNames.Count(c => c == "T" || c.Contains("E")), Is.EqualTo(2),
+        // Count pivot columns (exclude "Ev" which contains 'E' but is the axis column, not a pivot)
+        Assert.That(columnNames.Count(c => c != "Ev"), Is.EqualTo(2),
             "Should have exactly 2 pivot category columns");
     }
 
