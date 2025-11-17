@@ -62,11 +62,11 @@ public sealed class OracleAggregateHelper : AggregateHelper
     }
 
     /// <summary>
-    /// Override BuildAggregate to wrap AVG functions with ROUND for basic aggregates
+    /// Override BuildBasicAggregate to wrap AVG functions with ROUND
     /// </summary>
-    public new string BuildAggregate(List<CustomLine> queryLines, IQueryAxis? axisIfAny)
+    protected override string BuildBasicAggregate(AggregateCustomLineCollection query)
     {
-        var result = ((AggregateHelper)this).BuildAggregate(queryLines, axisIfAny);
+        var result = base.BuildBasicAggregate(query);
         return WrapAvgWithRound(result);
     }
 
@@ -217,6 +217,11 @@ order by dt*/
         var havingSqlIfAny = string.Join(Environment.NewLine,
             query.Lines.Where(static l => l.LocationToInsert == QueryComponent.Having).Select(static l => l.Text));
 
+        // Wrap the aggregate method if it's AVG to prevent overflow
+        var wrappedAggregateMethod = aggregateMethod.Equals("AVG", StringComparison.OrdinalIgnoreCase)
+            ? $"ROUND({aggregateMethod}(case when {pivotSqlWithoutAlias} = pv.piv then {aggregateParameter} else null end), 10)"
+            : $"{aggregateMethod}(case when {pivotSqlWithoutAlias} = pv.piv then {aggregateParameter} else null end)";
+
         // Oracle has native PIVOT syntax but requires knowing the pivot values in advance
         // We'll use a two-step approach: first get distinct values, then use dynamic SQL or CASE statements
         // For now, using CASE statements similar to MySQL approach
@@ -250,7 +255,7 @@ order by dt*/
                 query.Lines.Where(static c => c.LocationToInsert is >= QueryComponent.SELECT and < QueryComponent.GroupBy)),
             pivotSqlWithoutAlias,
             nonPivotColumnAlias,
-            $"{aggregateMethod}(case when {pivotSqlWithoutAlias} = pv.piv then {aggregateParameter} else null end)",
+            wrappedAggregateMethod,
             havingSqlIfAny
         );
     }
