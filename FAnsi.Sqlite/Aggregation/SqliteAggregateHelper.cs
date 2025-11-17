@@ -75,7 +75,7 @@ public sealed class SqliteAggregateHelper : AggregateHelper
             AxisIncrement.Month => "'+1 month'",
             AxisIncrement.Year => "'+1 year'",
             AxisIncrement.Quarter => "'+3 month'",
-            _ => throw new ArgumentOutOfRangeException(nameof(increment))
+            _ => throw new ArgumentOutOfRangeException(nameof(query), $"Unsupported AxisIncrement: {increment}")
         };
 
         return $"""
