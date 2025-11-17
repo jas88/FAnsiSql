@@ -313,3 +313,4 @@ packages.lock.json
 # Test output files
 *_test_output.txt
 docs/CI-FAILURE-ANALYSIS.md
+.playwright-mcp/
