@@ -8,12 +8,7 @@ namespace FAnsiTests.Aggregation;
 
 internal sealed class PivotAggregationTests : AggregationTests
 {
-#if MSSQL_TESTS
-    [TestCase(DatabaseType.MicrosoftSQLServer)]
-#endif
-#if MYSQL_TESTS
-    [TestCase(DatabaseType.MySql)]
-#endif
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void Test_PivotOnlyCount(DatabaseType type)
     {
         var tbl = GetTestTable(type);
