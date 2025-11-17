@@ -716,7 +716,8 @@ internal sealed class ColumnHelperTests : DatabaseTests
             using (var con = db.Server.GetConnection())
             {
                 con.Open();
-                var selectSql = $"SELECT Amount FROM {table.GetFullyQualifiedName()} WHERE Id = 1";
+                var syntaxHelper = table.GetQuerySyntaxHelper();
+                var selectSql = $"SELECT {syntaxHelper.EnsureWrapped("Amount")} FROM {table.GetFullyQualifiedName()} WHERE {syntaxHelper.EnsureWrapped("Id")} = 1";
                 using var cmd = db.Server.GetCommand(selectSql, con);
                 var result = cmd.ExecuteScalar();
 
