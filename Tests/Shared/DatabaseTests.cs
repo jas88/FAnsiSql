@@ -127,6 +127,10 @@ public abstract class DatabaseTests
                 // Convert result to long for type-agnostic comparison (handles int, long, decimal, etc.)
                 if (result == null || Convert.ToInt64(result, CultureInfo.InvariantCulture) != 1L)
                     Assert.Fail($"CURRENT TEST corrupted {type} database state - health check returned unexpected result.");
+
+                // Clear connection pools to prevent lock accumulation (especially important for SQL Server)
+                if (type == DatabaseType.MicrosoftSQLServer)
+                    Microsoft.Data.SqlClient.SqlConnection.ClearAllPools();
             }
             catch (Exception ex)
             {
