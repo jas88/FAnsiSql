@@ -407,7 +407,7 @@ public abstract partial class TypeTranslater : ITypeTranslater
         if (!int.TryParse(precisionSpan, out var precision) || !int.TryParse(scaleSpan, out var scale))
             return null;
 
-        return new DecimalSize(precision - scale, scale);
+        return new DecimalSize(precision, scale);
     }
 
     public string TranslateSQLDBType(string sqlType, ITypeTranslater destinationTypeTranslater)
