@@ -22,44 +22,39 @@ internal sealed class BulkCopyTests : DatabaseTests
 {
     /// <summary>
     /// Helper method to assert that an operation throws an exception.
-    /// SQLite throws FileLoadException for constraint violations, InvalidOperationException for disposal issues.
+    /// Different databases throw different exception types:
+    /// - SQLite: FileLoadException for constraint violations, InvalidOperationException for disposal issues
+    /// - MySQL: InvalidOperationException (wraps MySqlException)
+    /// - PostgreSQL: PostgresException
+    /// - Oracle: OracleException
+    /// - SQL Server: InvalidOperationException or FileLoadException
     /// Note: SQLite doesn't enforce some constraints (e.g., string length, integer overflow) so may not throw.
     /// </summary>
     private static void AssertThrowsException(DatabaseType type, TestDelegate code, string? messageContains = null, bool sqliteMayNotThrow = false)
     {
-        if (type == DatabaseType.Sqlite)
+        if (type == DatabaseType.Sqlite && sqliteMayNotThrow)
         {
-            if (sqliteMayNotThrow)
+            // SQLite may not throw for data type violations (length, overflow) as it's dynamically typed
+            try
             {
-                // SQLite may not throw for data type violations (length, overflow) as it's dynamically typed
-                try
-                {
-                    code();
-                    // If we get here, SQLite didn't throw - that's okay for data type violations
-                    Assert.Pass("SQLite does not enforce this constraint");
-                }
-                catch (Exception ex)
-                {
-                    // But if it does throw, verify the message if required
-                    if (messageContains != null)
-                        Assert.That(ex.Message, Does.Contain(messageContains));
-                }
+                code();
+                // If we get here, SQLite didn't throw - that's okay for data type violations
+                Assert.Pass("SQLite does not enforce this constraint");
             }
-            else
+            catch (Exception ex)
             {
-                // SQLite throws various exception types (FileLoadException, InvalidOperationException, etc.)
-                // We use Assert.Catch to accept any exception type
-                var ex = Assert.Catch(code);
-                Assert.That(ex, Is.Not.Null, "Expected an exception to be thrown");
+                // But if it does throw, verify the message if required
                 if (messageContains != null)
                     Assert.That(ex.Message, Does.Contain(messageContains));
             }
         }
         else
         {
-            // Other databases throw generic Exception
-            var ex = Assert.Throws<Exception>(code);
-            if (messageContains != null && ex != null)
+            // All databases throw some exception type, but the specific type varies
+            // Use Assert.Catch to accept any exception type
+            var ex = Assert.Catch(code);
+            Assert.That(ex, Is.Not.Null, "Expected an exception to be thrown");
+            if (messageContains != null)
                 Assert.That(ex.Message, Does.Contain(messageContains));
         }
     }
