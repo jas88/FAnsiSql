@@ -177,7 +177,8 @@ internal sealed class TableHelperErrorHandlingTests : DatabaseTests
         try
         {
             // Try to rename table1 to table2 (which already exists)
-            Assert.Throws<DbException>(() => table1.Rename("Table2"));
+            // Use Catch instead of Throws to accept database-specific exceptions (OracleException, etc.) that inherit from DbException
+            Assert.Catch<DbException>(() => table1.Rename("Table2"));
         }
         finally
         {
