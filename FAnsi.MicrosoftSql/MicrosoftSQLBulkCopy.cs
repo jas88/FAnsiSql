@@ -35,9 +35,13 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
     public MicrosoftSQLBulkCopy(DiscoveredTable targetTable, IManagedConnection connection, CultureInfo culture) : base(targetTable, connection,
         culture)
     {
-        var options = SqlBulkCopyOptions.KeepIdentity | SqlBulkCopyOptions.TableLock;
+        var options = SqlBulkCopyOptions.KeepIdentity;
+
+        // Don't use TableLock with external transactions - it can hold locks beyond transaction rollback
+        // causing subsequent queries to timeout waiting for lock release
         if (connection.Transaction == null)
-            options |= SqlBulkCopyOptions.UseInternalTransaction;
+            options |= SqlBulkCopyOptions.UseInternalTransaction | SqlBulkCopyOptions.TableLock;
+
         _bulkCopy = new SqlBulkCopy((SqlConnection)connection.Connection, options, (SqlTransaction?)connection.Transaction)
         {
             BulkCopyTimeout = 50000,
