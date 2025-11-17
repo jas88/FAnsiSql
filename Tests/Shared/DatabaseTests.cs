@@ -129,7 +129,8 @@ public abstract class DatabaseTests
 
                 con.Close();
 
-                if (result == null || !result.Equals(1))
+                // Convert result to long for type-agnostic comparison (handles int, long, decimal, etc.)
+                if (result == null || Convert.ToInt64(result) != 1L)
                     Assert.Fail($"CURRENT TEST corrupted {type} database state - health check returned unexpected result.");
             }
             catch (Exception ex)
