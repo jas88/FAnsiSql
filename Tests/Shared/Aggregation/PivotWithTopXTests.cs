@@ -17,7 +17,12 @@ internal sealed class PivotWithTopXTests : AggregationTests
     /// Tests basic PIVOT with TOP 2 ordered by count descending.
     /// Expected: Top 2 most common categories (T and E&, %a' mp;E) should appear as columns.
     /// </summary>
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+#if MSSQL_TESTS
+    [TestCase(DatabaseType.MicrosoftSQLServer)]
+#endif
+#if MYSQL_TESTS
+    [TestCase(DatabaseType.MySql)]
+#endif
     public void Test_PivotWithTop2_OrderByCountDesc(DatabaseType type)
     {
         var tbl = GetTestTable(type);
@@ -70,7 +75,12 @@ internal sealed class PivotWithTopXTests : AggregationTests
     /// Tests PIVOT with TOP 2 and a HAVING clause.
     /// Expected: Only categories with count > 1, then TOP 2 of those.
     /// </summary>
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+#if MSSQL_TESTS
+    [TestCase(DatabaseType.MicrosoftSQLServer)]
+#endif
+#if MYSQL_TESTS
+    [TestCase(DatabaseType.MySql)]
+#endif
     public void Test_PivotWithTop2_WithHaving(DatabaseType type)
     {
         var tbl = GetTestTable(type);
@@ -116,7 +126,12 @@ internal sealed class PivotWithTopXTests : AggregationTests
     /// Tests PIVOT with TOP 2 and a WHERE clause.
     /// Expected: Filter data first with WHERE, then PIVOT on TOP 2.
     /// </summary>
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+#if MSSQL_TESTS
+    [TestCase(DatabaseType.MicrosoftSQLServer)]
+#endif
+#if MYSQL_TESTS
+    [TestCase(DatabaseType.MySql)]
+#endif
     public void Test_PivotWithTop2_WithWhere(DatabaseType type)
     {
         var tbl = GetTestTable(type);
@@ -162,7 +177,12 @@ internal sealed class PivotWithTopXTests : AggregationTests
     /// Tests PIVOT with TOP 2 using custom ORDER BY (alphabetical).
     /// Expected: First 2 categories alphabetically.
     /// </summary>
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+#if MSSQL_TESTS
+    [TestCase(DatabaseType.MicrosoftSQLServer)]
+#endif
+#if MYSQL_TESTS
+    [TestCase(DatabaseType.MySql)]
+#endif
     public void Test_PivotWithTop2_OrderByAlphabetical(DatabaseType type)
     {
         var tbl = GetTestTable(type);
@@ -206,7 +226,12 @@ internal sealed class PivotWithTopXTests : AggregationTests
     /// Tests PIVOT with TOP 2, combining both WHERE and HAVING clauses.
     /// Expected: Complex filtering before and after grouping, then TOP 2.
     /// </summary>
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+#if MSSQL_TESTS
+    [TestCase(DatabaseType.MicrosoftSQLServer)]
+#endif
+#if MYSQL_TESTS
+    [TestCase(DatabaseType.MySql)]
+#endif
     public void Test_PivotWithTop2_WhereAndHaving(DatabaseType type)
     {
         var tbl = GetTestTable(type);
@@ -256,7 +281,12 @@ internal sealed class PivotWithTopXTests : AggregationTests
     /// Tests PIVOT with TOP 1 to verify single-column pivot works.
     /// Edge case: TOP 1 should produce only 1 pivot column.
     /// </summary>
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+#if MSSQL_TESTS
+    [TestCase(DatabaseType.MicrosoftSQLServer)]
+#endif
+#if MYSQL_TESTS
+    [TestCase(DatabaseType.MySql)]
+#endif
     public void Test_PivotWithTop1_SingleColumn(DatabaseType type)
     {
         var tbl = GetTestTable(type);
