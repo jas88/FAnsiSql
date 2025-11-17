@@ -349,9 +349,12 @@ internal sealed class ColumnHelperTests : DatabaseTests
 
     #region GetAlterColumnToSql Tests
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypesExceptSqlite))]
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void GetAlterColumnToSql_IncreaseStringLength_Success(DatabaseType type)
     {
+        if (type == DatabaseType.Sqlite)
+            Assert.Ignore("SQLite does not support ALTER COLUMN TYPE");
+
         var db = GetTestDatabase(type);
         var table = db.CreateTable("AlterStringTable",
         [
@@ -386,9 +389,12 @@ internal sealed class ColumnHelperTests : DatabaseTests
         }
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypesExceptSqlite))]
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void GetAlterColumnToSql_ChangeNullability_AllowNullsToNotNull(DatabaseType type)
     {
+        if (type == DatabaseType.Sqlite)
+            Assert.Ignore("SQLite does not support column nullability changes");
+
         var db = GetTestDatabase(type);
         var table = db.CreateTable("AlterNullTable",
         [
@@ -428,9 +434,12 @@ internal sealed class ColumnHelperTests : DatabaseTests
         }
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypesExceptSqlite))]
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void GetAlterColumnToSql_ChangeNullability_NotNullToAllowNulls(DatabaseType type)
     {
+        if (type == DatabaseType.Sqlite)
+            Assert.Ignore("SQLite does not support column nullability changes");
+
         var db = GetTestDatabase(type);
         var table = db.CreateTable("AlterNotNullTable",
         [
@@ -468,9 +477,12 @@ internal sealed class ColumnHelperTests : DatabaseTests
         }
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypesExceptSqlite))]
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void GetAlterColumnToSql_IntToVarchar_Success(DatabaseType type)
     {
+        if (type == DatabaseType.Sqlite)
+            Assert.Ignore("SQLite does not support ALTER COLUMN TYPE");
+
         var db = GetTestDatabase(type);
         var table = db.CreateTable("AlterTypeTable",
         [
@@ -552,9 +564,12 @@ internal sealed class ColumnHelperTests : DatabaseTests
         }
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypesExceptSqlite))]
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void GetAlterColumnToSql_DecreaseStringLength_Success(DatabaseType type)
     {
+        if (type == DatabaseType.Sqlite)
+            Assert.Ignore("SQLite does not support ALTER COLUMN TYPE");
+
         var db = GetTestDatabase(type);
         var table = db.CreateTable("AlterDecreaseTable",
         [
@@ -617,9 +632,12 @@ internal sealed class ColumnHelperTests : DatabaseTests
         }
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypesExceptSqlite))]
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void GetAlterColumnToSql_DateTimeColumn_Success(DatabaseType type)
     {
+        if (type == DatabaseType.Sqlite)
+            Assert.Ignore("SQLite does not support ALTER COLUMN TYPE");
+
         var db = GetTestDatabase(type);
         var table = db.CreateTable("AlterDateTable",
         [
@@ -658,9 +676,12 @@ internal sealed class ColumnHelperTests : DatabaseTests
         }
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypesExceptSqlite))]
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void GetAlterColumnToSql_PreservesData_AfterTypeChange(DatabaseType type)
     {
+        if (type == DatabaseType.Sqlite)
+            Assert.Ignore("SQLite does not support ALTER COLUMN TYPE");
+
         var db = GetTestDatabase(type);
         var table = db.CreateTable("AlterPreserveDataTable",
         [
