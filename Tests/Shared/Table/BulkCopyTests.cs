@@ -466,7 +466,7 @@ internal sealed class BulkCopyTests : DatabaseTests
         var tbl = db.CreateTable("TestSubsetColumns",
         [
             new DatabaseColumnRequest("Id", new DatabaseTypeRequest(typeof(int))) { AllowNulls = false },
-            new DatabaseColumnRequest("WithDefault", new DatabaseTypeRequest(typeof(int)))
+            new DatabaseColumnRequest("WithDefault", new DatabaseTypeRequest(typeof(DateTime)))
             {
                 AllowNulls = false,
                 Default = MandatoryScalarFunctions.GetTodaysDate // Will use a default
