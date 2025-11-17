@@ -173,9 +173,10 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
         //have to use a new object because current one could have a broken transaction associated with it
         using var con = (SqlConnection)serverForLineByLineInvestigation.GetConnection();
         con.Open();
-        var investigationTransaction = con.BeginTransaction("Investigate BulkCopyFailure");
+        using var investigationTransaction = con.BeginTransaction("Investigate BulkCopyFailure");
         try
         {
+            // Transaction will auto-dispose and rollback on scope exit
             using (var investigationOneLineAtATime = new SqlBulkCopy(con, SqlBulkCopyOptions.KeepIdentity, investigationTransaction))
             {
                 investigationOneLineAtATime.DestinationTableName = insert.DestinationTableName;
@@ -232,9 +233,9 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
         }
         finally
         {
-            // ALWAYS rollback the transaction and close the connection, even when throwing exceptions
+            // Explicit rollback - using will auto-dispose transaction on exit (which also rolls back uncommitted transactions)
+            // But we rollback explicitly here for clarity and immediate release of locks
             investigationTransaction.Rollback();
-            con.Close();
         }
     }
 
