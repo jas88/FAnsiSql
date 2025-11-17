@@ -12,4 +12,7 @@
       </DataCollector>
     </DataCollectors>
   </DataCollectionRunSettings>
+  <NUnit>
+    <DefaultTimeout>60000</DefaultTimeout>
+  </NUnit>
 </RunSettings>
