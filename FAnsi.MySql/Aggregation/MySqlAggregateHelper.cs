@@ -195,9 +195,9 @@ public sealed class MySqlAggregateHelper : AggregateHelper
                              {3}
                              GROUP BY
                              {4}
+                             {5}
                              ORDER BY
                              {4}
-                             {5}
                              ');
 
                              PREPARE stmt FROM @sql;
