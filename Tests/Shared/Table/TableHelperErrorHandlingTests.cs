@@ -24,7 +24,7 @@ internal sealed class TableHelperErrorHandlingTests : DatabaseTests
         var db = GetTestDatabase(type);
         var table = db.ExpectTable("NonExistentTable");
 
-        Assert.Throws<DbException>(() => table.Drop());
+        Assert.Catch<DbException>(() => table.Drop());
     }
 
     #endregion
@@ -42,7 +42,7 @@ internal sealed class TableHelperErrorHandlingTests : DatabaseTests
 
         try
         {
-            Assert.Throws<DbException>(() => table.AddColumn("ExistingCol", "int", true, 30));
+            Assert.Catch<DbException>(() => table.AddColumn("ExistingCol", "int", true, 30));
         }
         finally
         {
@@ -61,7 +61,7 @@ internal sealed class TableHelperErrorHandlingTests : DatabaseTests
 
         try
         {
-            Assert.Throws<DbException>(() => table.AddColumn("BadCol", "INVALID_TYPE_XYZ", true, 30));
+            Assert.Catch<DbException>(() => table.AddColumn("BadCol", "INVALID_TYPE_XYZ", true, 30));
         }
         finally
         {
@@ -87,7 +87,7 @@ internal sealed class TableHelperErrorHandlingTests : DatabaseTests
             // Create a fake column that doesn't exist in the table
             var fakeColumn = new DiscoveredColumn(table, "NonExistentColumn", true);
 
-            Assert.Throws<DbException>(() => table.DropColumn(fakeColumn));
+            Assert.Catch<DbException>(() => table.DropColumn(fakeColumn));
         }
         finally
         {
@@ -105,7 +105,7 @@ internal sealed class TableHelperErrorHandlingTests : DatabaseTests
         var db = GetTestDatabase(type);
         var table = db.ExpectTable("NonExistentTruncateTable");
 
-        Assert.Throws<DbException>(() => table.Truncate());
+        Assert.Catch<DbException>(() => table.Truncate());
     }
 
     #endregion
@@ -129,7 +129,7 @@ internal sealed class TableHelperErrorHandlingTests : DatabaseTests
             table.CreateIndex("idx_test", [valueCol], false);
 
             // Try to create index with same name
-            Assert.Throws<AlterFailedException>(() => table.CreateIndex("idx_test", [valueCol], false));
+            Assert.Catch<AlterFailedException>(() => table.CreateIndex("idx_test", [valueCol], false));
         }
         finally
         {
@@ -148,7 +148,7 @@ internal sealed class TableHelperErrorHandlingTests : DatabaseTests
 
         try
         {
-            Assert.Throws<AlterFailedException>(() => table.DropIndex("non_existent_index"));
+            Assert.Catch<AlterFailedException>(() => table.DropIndex("non_existent_index"));
         }
         finally
         {
@@ -212,7 +212,7 @@ internal sealed class TableHelperErrorHandlingTests : DatabaseTests
             var childParentId = childTable.DiscoverColumn("ParentId");
 
             // Should fail because parent table has no primary key
-            Assert.Throws<AlterFailedException>(() => childTable.AddForeignKey(childParentId, parentId, false));
+            Assert.Catch<AlterFailedException>(() => childTable.AddForeignKey(childParentId, parentId, false));
         }
         finally
         {
@@ -242,7 +242,7 @@ internal sealed class TableHelperErrorHandlingTests : DatabaseTests
             var childParentId = childTable.DiscoverColumn("ParentId");
 
             // Should fail because types don't match
-            Assert.Throws<AlterFailedException>(() => childTable.AddForeignKey(childParentId, parentId, false));
+            Assert.Catch<AlterFailedException>(() => childTable.AddForeignKey(childParentId, parentId, false));
         }
         finally
         {
@@ -266,7 +266,7 @@ internal sealed class TableHelperErrorHandlingTests : DatabaseTests
 
         try
         {
-            Assert.Throws<Exception>(() => table.AddColumn("", "int", true, 30));
+            Assert.Catch<Exception>(() => table.AddColumn("", "int", true, 30));
         }
         finally
         {
@@ -339,7 +339,7 @@ internal sealed class TableHelperErrorHandlingTests : DatabaseTests
 
         try
         {
-            Assert.Throws<Exception>(() => table.Insert(new System.Collections.Generic.Dictionary<string, object>
+            Assert.Catch<Exception>(() => table.Insert(new System.Collections.Generic.Dictionary<string, object>
             {
                 { "Id", 1 },
                 { "NotNullCol", DBNull.Value }

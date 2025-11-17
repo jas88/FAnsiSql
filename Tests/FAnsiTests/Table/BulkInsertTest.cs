@@ -484,7 +484,7 @@ internal sealed class BulkInsertTest : DatabaseTests
             using var cts = new CancellationTokenSource();
             cts.Cancel();
             //creation should have been cancelled at the database level
-            var ex = Assert.Throws<AlterFailedException>(() => tbl.CreatePrimaryKey(con.ManagedTransaction, cts.Token, 50000, bobCol));
+            var ex = Assert.Catch<AlterFailedException>(() => tbl.CreatePrimaryKey(con.ManagedTransaction, cts.Token, 50000, bobCol));
 
             //MySql seems to be throwing null reference inside ExecuteNonQueryAsync.  No idea why but it is still cancelled
             if (type != DatabaseType.MySql)
@@ -497,7 +497,7 @@ internal sealed class BulkInsertTest : DatabaseTests
             //give it 300 ms delay (simulates user cancelling not DbCommand.Timeout expiring)
             using var cts = new CancellationTokenSource(300);
             //GetDataTable should have been cancelled at the database level
-            Assert.Throws<OperationCanceledException>(() => tbl.GetDataTable(new DatabaseOperationArgs(con.ManagedTransaction ?? throw new InvalidOperationException(), 50000,
+            Assert.Catch<OperationCanceledException>(() => tbl.GetDataTable(new DatabaseOperationArgs(con.ManagedTransaction ?? throw new InvalidOperationException(), 50000,
                 cts.Token)));
             tbl.GetDataTable(new DatabaseOperationArgs(con.ManagedTransaction ?? throw new InvalidOperationException(), 50000, default));
         }

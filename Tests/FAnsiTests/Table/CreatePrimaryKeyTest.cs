@@ -88,7 +88,7 @@ internal sealed class CreatePrimaryKeyTest : DatabaseTests
             Assert.That(colB.IsPrimaryKey, Is.False);
         });
 
-        var ex = Assert.Throws<AlterFailedException>(() => tbl.CreatePrimaryKey(colA, colB));
+        var ex = Assert.Catch<AlterFailedException>(() => tbl.CreatePrimaryKey(colA, colB));
         Assert.Multiple(() =>
         {
             Assert.That(ex?.Message.Contains("Failed to create primary key on table") ?? false);
