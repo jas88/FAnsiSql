@@ -17,12 +17,12 @@ internal abstract class AggregationTests : DatabaseTests
     [OneTimeSetUp]
     public void Setup()
     {
-        SetupDatabaseTable(true, "AggregateDataBasedTestsEasy");
+        SetupDatabaseTable(true, "AggregateDataBasedTestsEasy", cleanDatabaseFirst: true);
 
-        SetupDatabaseTable(false, "AggregateDataBasedTestsHard");
+        SetupDatabaseTable(false, "AggregateDataBasedTestsHard", cleanDatabaseFirst: false);
     }
 
-    private void SetupDatabaseTable(bool easy, string name)
+    private void SetupDatabaseTable(bool easy, string name, bool cleanDatabaseFirst)
     {
         using var dt = new DataTable();
         dt.TableName = name;
@@ -59,7 +59,7 @@ internal abstract class AggregationTests : DatabaseTests
         foreach (var (key, _) in TestConnectionStrings)
             try
             {
-                var db = GetTestDatabase(key);
+                var db = GetTestDatabase(key, cleanDatabase: cleanDatabaseFirst);
                 var tbl = db.CreateTable(name, dt);
 
                 var dic = easy ? _easyTables : _hardTables;
