@@ -27,11 +27,14 @@ public sealed class OracleColumnHelper : IDiscoveredColumnHelper
         var syntax = column.Table.Database.Server.GetQuerySyntaxHelper();
 
         var sb = new StringBuilder(
-            $"ALTER TABLE {column.Table.GetFullyQualifiedName()} MODIFY {syntax.EnsureWrapped(column.GetRuntimeName())} {newType} ");
+            $"ALTER TABLE {column.Table.GetFullyQualifiedName()} MODIFY {syntax.EnsureWrapped(column.GetRuntimeName())} {newType}");
 
         //If you are already null then Oracle will complain (https://www.techonthenet.com/oracle/errors/ora01451.php)
         if (allowNulls != column.AllowNulls)
+        {
+            sb.Append(' ');
             sb.Append(allowNulls ? "NULL" : "NOT NULL");
+        }
 
         return sb.ToString();
     }

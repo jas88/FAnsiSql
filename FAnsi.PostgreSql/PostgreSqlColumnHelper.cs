@@ -30,11 +30,12 @@ public sealed class PostgreSqlColumnHelper : IDiscoveredColumnHelper
 
         var sb = new StringBuilder($@"ALTER TABLE {column.Table.GetFullyQualifiedName()} ALTER COLUMN {syntax.EnsureWrapped(column.GetRuntimeName())} TYPE {newType};");
 
-        var newNullability = allowNulls ? "NULL" : "NOT NULL";
-
         if (allowNulls != column.AllowNulls)
+        {
+            var nullabilityClause = allowNulls ? "DROP NOT NULL" : "SET NOT NULL";
             sb.AppendFormat(CultureInfo.InvariantCulture,
-                $@"ALTER TABLE {column.Table.GetFullyQualifiedName()} ALTER COLUMN {syntax.EnsureWrapped(column.GetRuntimeName())} SET {newNullability}");
+                $@"ALTER TABLE {column.Table.GetFullyQualifiedName()} ALTER COLUMN {syntax.EnsureWrapped(column.GetRuntimeName())} {nullabilityClause}");
+        }
         return sb.ToString();
     }
 }
