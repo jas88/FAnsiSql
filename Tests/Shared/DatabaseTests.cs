@@ -100,6 +100,45 @@ public abstract class DatabaseTests
         }
     }
 
+    [TearDown]
+    public void VerifyDatabaseHealthAfterTest()
+    {
+        // Only check in CI where we control the database state
+        if (Environment.GetEnvironmentVariable("GITHUB_ACTIONS") != "true")
+            return;
+
+        foreach (var (type, connString) in TestConnectionStrings)
+        {
+            try
+            {
+                // Add command timeout to connection string if not present (for health check)
+                var healthCheckConnString = connString;
+                if (!connString.Contains("Command Timeout", StringComparison.OrdinalIgnoreCase) &&
+                    !connString.Contains("CommandTimeout", StringComparison.OrdinalIgnoreCase))
+                {
+                    healthCheckConnString += ";Command Timeout=5";
+                }
+
+                var server = new DiscoveredServer(healthCheckConnString, type);
+                using var con = server.GetConnection();
+                con.Open();
+
+                // Try a simple query to detect deadlocks/hangs
+                using var cmd = server.GetCommand("SELECT 1", con);
+                var result = cmd.ExecuteScalar();
+
+                con.Close();
+
+                if (result == null || !result.Equals(1))
+                    Assert.Fail($"CURRENT TEST corrupted {type} database state - health check returned unexpected result.");
+            }
+            catch (Exception ex)
+            {
+                Assert.Fail($"CURRENT TEST left {type} database in broken state. Likely leaked transaction or held locks. Error: {ex.Message}");
+            }
+        }
+    }
+
     protected DiscoveredServer GetTestServer(DatabaseType type)
     {
         // In RDBMS-specific test projects, ignore tests for other database types
