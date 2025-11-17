@@ -176,8 +176,7 @@ internal sealed class TableHelperCoreTests : DatabaseTests
                 cmd.ExecuteNonQuery();
             }
 
-            var view = db.ExpectTable(viewName);
-            // Note: TableType is readonly, set during construction
+            var view = db.ExpectTable(viewName, null, TableType.View);
 
             Assert.That(view.Exists(), Is.True);
 
