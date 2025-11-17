@@ -116,7 +116,9 @@ public abstract class DatabaseTests
                 con.Open();
 
                 // Try a simple query to detect deadlocks/hangs
-                using var cmd = server.GetCommand("SELECT 1", con);
+                // Oracle requires FROM DUAL for SELECT without a table
+                var healthCheckSql = type == DatabaseType.Oracle ? "SELECT 1 FROM DUAL" : "SELECT 1";
+                using var cmd = server.GetCommand(healthCheckSql, con);
                 cmd.CommandTimeout = 5; // Set timeout on command, not connection string (Oracle doesn't support it in connection string)
                 var result = cmd.ExecuteScalar();
 
