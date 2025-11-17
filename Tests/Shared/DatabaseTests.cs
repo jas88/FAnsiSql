@@ -111,20 +111,13 @@ public abstract class DatabaseTests
         {
             try
             {
-                // Add command timeout to connection string if not present (for health check)
-                var healthCheckConnString = connString;
-                if (!connString.Contains("Command Timeout", StringComparison.OrdinalIgnoreCase) &&
-                    !connString.Contains("CommandTimeout", StringComparison.OrdinalIgnoreCase))
-                {
-                    healthCheckConnString += ";Command Timeout=5";
-                }
-
-                var server = new DiscoveredServer(healthCheckConnString, type);
+                var server = new DiscoveredServer(connString, type);
                 using var con = server.GetConnection();
                 con.Open();
 
                 // Try a simple query to detect deadlocks/hangs
                 using var cmd = server.GetCommand("SELECT 1", con);
+                cmd.CommandTimeout = 5; // Set timeout on command, not connection string (Oracle doesn't support it in connection string)
                 var result = cmd.ExecuteScalar();
 
                 con.Close();
