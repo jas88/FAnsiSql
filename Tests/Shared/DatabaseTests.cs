@@ -123,6 +123,13 @@ public abstract class DatabaseTests
         if (!TestConnectionStrings.TryGetValue(type, out var connString))
             AssertRequirement($"No connection string configured for {type}");
 
+        // Increase command timeout for CI environments where queries can be slower
+        // SQL Server default is 30 seconds, increase to 120 seconds
+        if (type == DatabaseType.MicrosoftSQLServer && connString != null && !connString.Contains("Command Timeout", StringComparison.OrdinalIgnoreCase))
+        {
+            connString += ";Command Timeout=120";
+        }
+
         return new DiscoveredServer(connString, type);
     }
 
