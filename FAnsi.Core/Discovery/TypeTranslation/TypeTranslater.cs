@@ -102,14 +102,19 @@ public abstract partial class TypeTranslater : ITypeTranslater
     private static string GetFloatingPointDataType(DecimalSize decimalSize)
     {
         if (decimalSize == null || decimalSize.IsEmpty)
+        {
+            Console.WriteLine("DEBUG GetFloatingPointDataType: DecimalSize is null or empty, using default decimal(20,10)");
             return "decimal(20,10)";
+        }
 
         // DecimalSize.Precision = numbers before decimal point
         // DecimalSize.Scale = numbers after decimal point
         // SQL decimal(precision, scale) where precision = total digits, scale = digits after
         var sqlPrecision = decimalSize.Precision + decimalSize.Scale;
         var sqlScale = decimalSize.Scale;
-        return $"decimal({sqlPrecision},{sqlScale})";
+        var result = $"decimal({sqlPrecision},{sqlScale})";
+        Console.WriteLine($"DEBUG GetFloatingPointDataType: DecimalSize({decimalSize.Precision},{decimalSize.Scale}) → {result}");
+        return result;
     }
 
     protected virtual string GetDateDateTimeDataType() => "timestamp";
@@ -417,7 +422,9 @@ public abstract partial class TypeTranslater : ITypeTranslater
         // So: numbersBeforeDecimalPlace = precision - scale, numbersAfterDecimalPlace = scale
         var numbersBeforeDecimalPlace = precision - scale;
         var numbersAfterDecimalPlace = scale;
-        return new DecimalSize(numbersBeforeDecimalPlace, numbersAfterDecimalPlace);
+        var result = new DecimalSize(numbersBeforeDecimalPlace, numbersAfterDecimalPlace);
+        Console.WriteLine($"DEBUG ParseDecimalSize: decimal({precision},{scale}) → DecimalSize({numbersBeforeDecimalPlace},{numbersAfterDecimalPlace})");
+        return result;
     }
 
     public string TranslateSQLDBType(string sqlType, ITypeTranslater destinationTypeTranslater)
