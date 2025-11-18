@@ -410,21 +410,25 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
 
     /// <summary>
     /// Disposes the SqlBulkCopy instance and its internal transaction (if any), ensuring TableLock is released.
-    /// Forces actual connection close to prevent TableLock from persisting in connection pool.
+    /// For internal transactions, forces actual connection close to prevent TableLock from persisting in connection pool.
     /// </summary>
     public override void Dispose()
     {
-        ((IDisposable?)_bulkCopy)?.Dispose(); // Disposes internal transaction
+        // Only force connection close if we used an internal transaction with TableLock
+        // External transactions manage their own connection lifecycle
+        var hadInternalTransaction = Connection.Transaction == null;
+
+        ((IDisposable?)_bulkCopy)?.Dispose(); // Disposes internal transaction (if any)
 
         // CRITICAL: TableLock is connection-scoped, not transaction-scoped
-        // It persists on the physical SQL Server connection even after transaction commit/rollback
-        // We MUST actually close the connection (not just return to pool) to release TableLock
-        // Force CloseOnDispose=true to ensure connection is truly closed, not pooled
-        if (Connection.CloseOnDispose == false)
+        // When using INTERNAL transaction with TableLock, the lock persists on the physical connection
+        // even after transaction commit/rollback. We MUST close the connection (not pool it) to release TableLock.
+        // For EXTERNAL transactions, don't force close - the transaction owner manages the connection.
+        if (hadInternalTransaction && Connection.CloseOnDispose == false)
         {
-            Connection.CloseOnDispose = true; // Override pooling behavior for this connection
+            Connection.CloseOnDispose = true; // Override pooling - actually close this connection
         }
 
-        base.Dispose(); // This will now actually close the connection
+        base.Dispose(); // Closes connection if CloseOnDispose=true
     }
 }

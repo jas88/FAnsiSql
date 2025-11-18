@@ -20,9 +20,9 @@ namespace FAnsi.Implementations.Sqlite;
 /// <remarks>
 /// <para>SQLite limitations:</para>
 /// <list type="bullet">
-/// <item><description>Cannot drop columns (requires table recreation)</description></item>
+/// <item><description>Cannot alter column types or nullability (requires table recreation)</description></item>
 /// <item><description>Cannot add primary keys to existing tables</description></item>
-/// <item><description>Limited ALTER TABLE support</description></item>
+/// <item><description>DROP COLUMN supported in SQLite 3.35.0+ (2021)</description></item>
 /// <item><description>Auto-increment via INTEGER PRIMARY KEY</description></item>
 /// </list>
 /// </remarks>
@@ -94,17 +94,26 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
     }
 
     /// <summary>
-    /// Drops a column from a table.
+    /// Drops a column from a table using ALTER TABLE DROP COLUMN (requires SQLite 3.35.0+).
     /// </summary>
     /// <param name="connection">The database connection</param>
     /// <param name="columnToDrop">The column to drop</param>
-    /// <exception cref="NotSupportedException">
-    /// SQLite does not support DROP COLUMN. Column removal requires recreating the entire table.
-    /// </exception>
+    /// <remarks>
+    /// SQLite 3.35.0+ supports ALTER TABLE DROP COLUMN.
+    /// Limitations: Column cannot be referenced by foreign keys, indexes, or constraints.
+    /// </remarks>
     public override void DropColumn(DbConnection connection, DiscoveredColumn columnToDrop)
     {
-        // SQLite doesn't support DROP COLUMN directly - would need to recreate table
-        throw new NotSupportedException("SQLite does not support dropping columns directly. Table recreation would be required.");
+        var syntax = columnToDrop.Table.Database.Server.GetQuerySyntaxHelper();
+        var tableName = columnToDrop.Table.GetFullyQualifiedName();
+        var columnName = syntax.EnsureWrapped(columnToDrop.GetRuntimeName());
+
+        // SQLite 3.35.0+ supports DROP COLUMN
+        var sql = $"ALTER TABLE {tableName} DROP COLUMN {columnName}";
+
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText = sql;
+        cmd.ExecuteNonQuery();
     }
 
     /// <summary>

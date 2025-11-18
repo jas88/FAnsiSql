@@ -717,19 +717,29 @@ internal sealed class ColumnHelperTests : DatabaseTests
             // Change to bigger int type or string
             var newType = syntax.TypeTranslater.GetSQLDBTypeForCSharpType(new DatabaseTypeRequest(typeof(string), 50));
 
+            var alterSql = column.Helper.GetAlterColumnToSql(column, newType, true);
+
             // Oracle requires column to be empty when changing data type (ORA-01439)
-            // Other databases (SQL Server, MySQL, PostgreSQL) allow type changes with data
+            // This test verifies data preservation only for databases that support it
             if (type == DatabaseType.Oracle)
             {
+                // Oracle: Delete data, alter column, then skip data preservation check
                 using var con = db.Server.GetConnection();
                 con.Open();
                 var deleteSql = $"DELETE FROM {table.GetFullyQualifiedName()}";
-                using var deleteCmd = db.Server.GetCommand(deleteSql, con);
-                deleteCmd.ExecuteNonQuery();
+                using (var deleteCmd = db.Server.GetCommand(deleteSql, con))
+                    deleteCmd.ExecuteNonQuery();
+
+                using (var cmd = db.Server.GetCommand(alterSql, con))
+                    cmd.ExecuteNonQuery();
+
+                // For Oracle, just verify the column was altered successfully
+                var alteredColumn = table.DiscoverColumn("Amount");
+                Assert.That(alteredColumn, Is.Not.Null, "Column should still exist after alter");
+                return; // Skip data preservation check for Oracle
             }
 
-            var alterSql = column.Helper.GetAlterColumnToSql(column, newType, true);
-
+            // For other databases: Alter with data present
             using (var con = db.Server.GetConnection())
             {
                 con.Open();
@@ -737,7 +747,7 @@ internal sealed class ColumnHelperTests : DatabaseTests
                 cmd.ExecuteNonQuery();
             }
 
-            // Verify data is preserved
+            // Verify data is preserved (non-Oracle databases only)
             using (var con = db.Server.GetConnection())
             {
                 con.Open();
