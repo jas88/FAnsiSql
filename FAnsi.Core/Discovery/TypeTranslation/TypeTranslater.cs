@@ -104,7 +104,12 @@ public abstract partial class TypeTranslater : ITypeTranslater
         if (decimalSize == null || decimalSize.IsEmpty)
             return "decimal(20,10)";
 
-        return $"decimal({decimalSize.Precision},{decimalSize.Scale})";
+        // DecimalSize.Precision = numbers before decimal point
+        // DecimalSize.Scale = numbers after decimal point
+        // SQL decimal(precision, scale) where precision = total digits, scale = digits after
+        var sqlPrecision = decimalSize.Precision + decimalSize.Scale;
+        var sqlScale = decimalSize.Scale;
+        return $"decimal({sqlPrecision},{sqlScale})";
     }
 
     protected virtual string GetDateDateTimeDataType() => "timestamp";
