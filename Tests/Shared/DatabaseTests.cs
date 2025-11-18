@@ -116,8 +116,14 @@ public abstract class DatabaseTests
                 con.Open();
 
                 // Try a simple query to detect deadlocks/hangs
+                // SQL Server: Check for dangling transactions with @@TRANCOUNT (connection pooling can return connections with uncommitted transactions)
                 // Oracle requires FROM DUAL for SELECT without a table
-                var healthCheckSql = type == DatabaseType.Oracle ? "SELECT 1 FROM DUAL" : "SELECT 1";
+                var healthCheckSql = type switch
+                {
+                    DatabaseType.MicrosoftSQLServer => "SELECT @@TRANCOUNT",
+                    DatabaseType.Oracle => "SELECT 1 FROM DUAL",
+                    _ => "SELECT 1"
+                };
                 using var cmd = server.GetCommand(healthCheckSql, con);
                 cmd.CommandTimeout = 5; // Set timeout on command, not connection string (Oracle doesn't support it in connection string)
                 var result = cmd.ExecuteScalar();
@@ -125,8 +131,14 @@ public abstract class DatabaseTests
                 con.Close();
 
                 // Convert result to long for type-agnostic comparison (handles int, long, decimal, etc.)
-                if (result == null || Convert.ToInt64(result, CultureInfo.InvariantCulture) != 1L)
-                    Assert.Fail($"CURRENT TEST corrupted {type} database state - health check returned unexpected result.");
+                var expectedValue = type == DatabaseType.MicrosoftSQLServer ? 0L : 1L; // @@TRANCOUNT should be 0, SELECT 1 should be 1
+                if (result == null || Convert.ToInt64(result, CultureInfo.InvariantCulture) != expectedValue)
+                {
+                    var detail = type == DatabaseType.MicrosoftSQLServer && Convert.ToInt64(result, CultureInfo.InvariantCulture) > 0
+                        ? $"Dangling transaction detected: @@TRANCOUNT = {result}"
+                        : "health check returned unexpected result";
+                    Assert.Fail($"CURRENT TEST corrupted {type} database state - {detail}.");
+                }
 
                 // Clear connection pools to prevent lock accumulation (especially important for SQL Server)
                 if (type == DatabaseType.MicrosoftSQLServer)
