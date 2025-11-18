@@ -37,10 +37,11 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
     {
         var options = SqlBulkCopyOptions.KeepIdentity;
 
-        // Don't use TableLock with external transactions - it can hold locks beyond transaction rollback
+        // Don't use TableLock - it can hold locks beyond transaction lifecycle and poison connection pool
+        // Internal transactions created by SqlBulkCopy may not properly release TableLock on disposal
         // causing subsequent queries to timeout waiting for lock release
         if (connection.Transaction == null)
-            options |= SqlBulkCopyOptions.UseInternalTransaction | SqlBulkCopyOptions.TableLock;
+            options |= SqlBulkCopyOptions.UseInternalTransaction;
 
         _bulkCopy = new SqlBulkCopy((SqlConnection)connection.Connection, options, (SqlTransaction?)connection.Transaction)
         {
