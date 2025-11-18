@@ -130,6 +130,12 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
     /// </remarks>
     public override void AddColumn(DatabaseOperationArgs args, DiscoveredTable table, string name, string dataType, bool allowNulls)
     {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Column name cannot be empty", nameof(name));
+
+        if (string.IsNullOrWhiteSpace(dataType))
+            throw new ArgumentException("Data type cannot be empty", nameof(dataType));
+
         // SQLite ALTER TABLE doesn't support quoted identifiers at all
         // Use runtime names directly without quoting
         var tableName = table.GetRuntimeName();
@@ -224,7 +230,15 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
         using var con = args.GetManagedConnection(table);
         using var cmd = table.Database.Server.GetCommand(
             $"CREATE {uniqueKeyword}INDEX {syntax.EnsureWrapped(indexName)} ON {table.GetFullyQualifiedName()} ({columnNames})", con);
-        args.ExecuteNonQuery(cmd);
+
+        try
+        {
+            args.ExecuteNonQuery(cmd);
+        }
+        catch (SqliteException ex)
+        {
+            throw new FAnsi.Exceptions.AlterFailedException($"Failed to create index {indexName}", ex);
+        }
     }
 
     public override void DropIndex(DatabaseOperationArgs args, DiscoveredTable table, string indexName)
@@ -232,7 +246,15 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
         var syntax = table.GetQuerySyntaxHelper();
         using var con = args.GetManagedConnection(table);
         using var cmd = table.Database.Server.GetCommand($"DROP INDEX {syntax.EnsureWrapped(indexName)}", con);
-        args.ExecuteNonQuery(cmd);
+
+        try
+        {
+            args.ExecuteNonQuery(cmd);
+        }
+        catch (SqliteException ex)
+        {
+            throw new FAnsi.Exceptions.AlterFailedException($"Failed to drop index {indexName}", ex);
+        }
     }
 
     /// <summary>
