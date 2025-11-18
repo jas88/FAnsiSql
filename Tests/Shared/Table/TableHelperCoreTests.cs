@@ -165,9 +165,9 @@ internal sealed class TableHelperCoreTests : DatabaseTests
 
         try
         {
-            var syntax = db.Server.GetQuerySyntaxHelper();
             var viewName = "TestView";
-            var sql = $"CREATE VIEW {syntax.EnsureWrapped(viewName)} AS SELECT * FROM {baseTable.GetFullyQualifiedName()}";
+            var view = db.ExpectTable(viewName, null, TableType.View);
+            var sql = $"CREATE VIEW {view.GetFullyQualifiedName()} AS SELECT * FROM {baseTable.GetFullyQualifiedName()}";
 
             using (var con = db.Server.GetConnection())
             {
@@ -175,8 +175,6 @@ internal sealed class TableHelperCoreTests : DatabaseTests
                 using var cmd = db.Server.GetCommand(sql, con);
                 cmd.ExecuteNonQuery();
             }
-
-            var view = db.ExpectTable(viewName, null, TableType.View);
 
             Assert.That(view.Exists(), Is.True);
 
