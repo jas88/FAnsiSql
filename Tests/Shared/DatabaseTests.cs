@@ -152,6 +152,14 @@ public abstract class DatabaseTests
                         ? $"Dangling transaction detected: @@TRANCOUNT = {result}"
                         : "health check returned unexpected result";
 
+                    // CRITICAL: Rollback dangling transaction BEFORE closing connection
+                    // Otherwise connection returns to pool with active transaction
+                    if (type == DatabaseType.MicrosoftSQLServer && Convert.ToInt64(result, CultureInfo.InvariantCulture) > 0)
+                    {
+                        using var rollbackCmd = server.GetCommand("ROLLBACK TRANSACTION", con);
+                        rollbackCmd.ExecuteNonQuery();
+                    }
+
                     con.Close();
                     Assert.Fail($"CURRENT TEST corrupted {type} database state - {detail}.");
                 }
