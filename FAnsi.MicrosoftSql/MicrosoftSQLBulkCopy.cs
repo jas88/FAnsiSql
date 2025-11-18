@@ -35,9 +35,8 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
     public MicrosoftSQLBulkCopy(DiscoveredTable targetTable, IManagedConnection connection, CultureInfo culture) : base(targetTable, connection,
         culture)
     {
-        // Use CheckConstraints for validation instead of relying on TableLock behavior
-        var options = SqlBulkCopyOptions.KeepIdentity | SqlBulkCopyOptions.CheckConstraints;
-
+        // Match upstream HicServices/FAnsiSql implementation
+        var options = SqlBulkCopyOptions.KeepIdentity | SqlBulkCopyOptions.TableLock;
         if (connection.Transaction == null)
             options |= SqlBulkCopyOptions.UseInternalTransaction;
 
