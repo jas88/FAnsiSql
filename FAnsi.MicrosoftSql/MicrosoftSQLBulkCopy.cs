@@ -362,6 +362,9 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
             var maxIntegerPart = (int)Math.Pow(10, numbersBeforeDecimal) - 1;
             var maxValue = maxIntegerPart + (decimal)((Math.Pow(10, numbersAfterDecimal) - 1) / Math.Pow(10, numbersAfterDecimal));
 
+            // DEBUG: Log validation parameters
+            Console.WriteLine($"DEBUG DecimalValidation: Column={dataColumn.ColumnName}, Before={numbersBeforeDecimal}, After={numbersAfterDecimal}, MaxValue={maxValue}");
+
             for (var rowIndex = 0; rowIndex < dt.Rows.Count; rowIndex++)
             {
                 var value = dt.Rows[rowIndex][dataColumn];
@@ -369,6 +372,9 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
                     continue;
 
                 var decimalValue = Math.Abs((decimal)value);
+
+                // DEBUG: Log value check
+                Console.WriteLine($"DEBUG DecimalCheck: Row={rowIndex + 1}, Value={value}, Abs={decimalValue}, MaxValue={maxValue}, Exceeds={decimalValue > maxValue}");
 
                 // Check if value exceeds precision/scale
                 if (decimalValue > maxValue)
