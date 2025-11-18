@@ -32,47 +32,20 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
     }
 
 
-    private readonly SqlConnection? _dedicatedConnection;
-    private readonly SqlTransaction? _ownedTransaction;
-
     public MicrosoftSQLBulkCopy(DiscoveredTable targetTable, IManagedConnection connection, CultureInfo culture) : base(targetTable, connection,
         culture)
     {
-        var options = SqlBulkCopyOptions.KeepIdentity | SqlBulkCopyOptions.TableLock;
+        // Use CheckConstraints for validation instead of relying on TableLock behavior
+        var options = SqlBulkCopyOptions.KeepIdentity | SqlBulkCopyOptions.CheckConstraints;
 
-        // For operations without external transaction, create our own transaction
-        // This gives us control to rollback before line-by-line investigation (releases TableLock)
         if (connection.Transaction == null)
-        {
-            // Create non-pooled connection for TableLock operations
-            var connString = ((SqlConnection)connection.Connection).ConnectionString;
-            if (!connString.Contains("Pooling", StringComparison.OrdinalIgnoreCase))
-                connString += ";Pooling=False";
-            else
-                connString = System.Text.RegularExpressions.Regex.Replace(connString,
-                    @"Pooling\s*=\s*\w+", "Pooling=False",
-                    System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            options |= SqlBulkCopyOptions.UseInternalTransaction;
 
-            _dedicatedConnection = new SqlConnection(connString);
-            _dedicatedConnection.Open();
-            _ownedTransaction = _dedicatedConnection.BeginTransaction();
-
-            _bulkCopy = new SqlBulkCopy(_dedicatedConnection, options, _ownedTransaction)
-            {
-                BulkCopyTimeout = 50000,
-                DestinationTableName = targetTable.GetFullyQualifiedName()
-            };
-        }
-        else
+        _bulkCopy = new SqlBulkCopy((SqlConnection)connection.Connection, options, (SqlTransaction?)connection.Transaction)
         {
-            // Use provided connection with external transaction (no TableLock)
-            options &= ~SqlBulkCopyOptions.TableLock; // Remove TableLock for external transactions
-            _bulkCopy = new SqlBulkCopy((SqlConnection)connection.Connection, options, (SqlTransaction)connection.Transaction)
-            {
-                BulkCopyTimeout = 50000,
-                DestinationTableName = targetTable.GetFullyQualifiedName()
-            };
-        }
+            BulkCopyTimeout = 50000,
+            DestinationTableName = targetTable.GetFullyQualifiedName()
+        };
     }
 
     public override int UploadImpl(DataTable dt)
@@ -141,24 +114,10 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
             insert.WriteToServer(dt);
             rowsWritten += dt.Rows.Count;
 
-            // Commit our owned transaction if we created one
-            _ownedTransaction?.Commit();
-
             return rowsWritten;
         }
         catch (Exception e)
         {
-            // Rollback our owned transaction to release TableLock before line-by-line investigation
-            // This allows investigation to access the table without timeout
-            try
-            {
-                _ownedTransaction?.Rollback();
-            }
-            catch
-            {
-                // Ignore rollback errors during error handling
-            }
-
             // Don't attempt line-by-line investigation for disposal or state exceptions
             // These are usage errors, not data errors, and line-by-line will succeed with a new SqlBulkCopy instance
             if (e is ObjectDisposedException or InvalidOperationException)
@@ -449,41 +408,11 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
     private static partial Regex ColumnLevelComplaintRe();
 
     /// <summary>
-    /// Disposes the SqlBulkCopy instance and cleans up owned transaction and connection.
+    /// Disposes the SqlBulkCopy instance.
     /// </summary>
     public override void Dispose()
     {
-        try
-        {
-            _bulkCopy?.Close();
-        }
-        catch
-        {
-            // Ignore close errors
-        }
-
         ((IDisposable?)_bulkCopy)?.Dispose();
-
-        // Clean up owned transaction and connection (if we created them)
-        try
-        {
-            _ownedTransaction?.Dispose();
-        }
-        catch
-        {
-            // Ignore
-        }
-
-        try
-        {
-            _dedicatedConnection?.Close();
-            _dedicatedConnection?.Dispose();
-        }
-        catch
-        {
-            // Ignore
-        }
-
         base.Dispose();
     }
 }

@@ -119,7 +119,8 @@ public sealed class GuesserTests
 
         Assert.That(t.Guess.CSharpType, Is.EqualTo(typeof(decimal)));
         var sqlType = t.GetSqlDBType(_translater);
-        Assert.That(sqlType, Is.EqualTo("decimal(4,1)"));
+        // Guesser returns DecimalSize(4,1) = 4 before decimal, 1 after = SQL decimal(5,1)
+        Assert.That(sqlType, Is.EqualTo("decimal(5,1)"));
 
         var orig = t.Guess;
         var reverseEngineered = _translater.GetDataTypeRequestForSQLDBType(sqlType);
