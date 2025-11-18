@@ -109,11 +109,6 @@ public abstract class DatabaseTests
 
         var testName = TestContext.CurrentContext.Test.Name;
         TestContext.Out.WriteLine($"▶▶▶ STARTING TEST: {testName} at {DateTime.UtcNow:HH:mm:ss.fff}");
-
-        // CRITICAL: Clear SQL Server connection pool BEFORE each test
-        // This prevents TableLock from SqlBulkCopy persisting across tests
-        // TableLock is connection-level and survives even after SqlBulkCopy disposal
-        Microsoft.Data.SqlClient.SqlConnection.ClearAllPools();
     }
 
     [TearDown]
@@ -165,12 +160,6 @@ public abstract class DatabaseTests
                 }
 
                 con.Close();
-
-                // CRITICAL: Clear connection pools BEFORE next test to release any connection-level locks (TableLock)
-                // TableLock from SqlBulkCopy persists on the physical connection even after disposal
-                // Must clear pool to force new physical connections for next test
-                if (type == DatabaseType.MicrosoftSQLServer)
-                    Microsoft.Data.SqlClient.SqlConnection.ClearAllPools();
             }
             catch (Exception ex)
             {
