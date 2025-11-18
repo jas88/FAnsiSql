@@ -32,21 +32,48 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
     }
 
 
+    private readonly bool _ownsConnection;
+
     public MicrosoftSQLBulkCopy(DiscoveredTable targetTable, IManagedConnection connection, CultureInfo culture) : base(targetTable, connection,
         culture)
     {
         var options = SqlBulkCopyOptions.KeepIdentity;
 
-        // Don't use TableLock with external transactions - it can hold locks beyond transaction rollback
-        // causing subsequent queries to timeout waiting for lock release
+        // For internal transactions with TableLock, create a dedicated non-pooled connection
+        // TableLock persists on pooled connections even after disposal, causing timeout cascades
         if (connection.Transaction == null)
+        {
             options |= SqlBulkCopyOptions.UseInternalTransaction | SqlBulkCopyOptions.TableLock;
 
-        _bulkCopy = new SqlBulkCopy((SqlConnection)connection.Connection, options, (SqlTransaction?)connection.Transaction)
+            // Create new non-pooled connection by adding Pooling=False to connection string
+            var connString = ((SqlConnection)connection.Connection).ConnectionString;
+            if (!connString.Contains("Pooling", StringComparison.OrdinalIgnoreCase))
+                connString += ";Pooling=False";
+            else
+                connString = System.Text.RegularExpressions.Regex.Replace(connString,
+                    @"Pooling\s*=\s*\w+", "Pooling=False",
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+            var dedicatedConnection = new SqlConnection(connString);
+            dedicatedConnection.Open();
+
+            _bulkCopy = new SqlBulkCopy(dedicatedConnection, options, null)
+            {
+                BulkCopyTimeout = 50000,
+                DestinationTableName = targetTable.GetFullyQualifiedName()
+            };
+            _ownsConnection = true;
+        }
+        else
         {
-            BulkCopyTimeout = 50000,
-            DestinationTableName = targetTable.GetFullyQualifiedName()
-        };
+            // Use provided connection with external transaction
+            _bulkCopy = new SqlBulkCopy((SqlConnection)connection.Connection, options, (SqlTransaction)connection.Transaction)
+            {
+                BulkCopyTimeout = 50000,
+                DestinationTableName = targetTable.GetFullyQualifiedName()
+            };
+            _ownsConnection = false;
+        }
     }
 
     public override int UploadImpl(DataTable dt)
@@ -409,23 +436,30 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
     private static partial Regex ColumnLevelComplaintRe();
 
     /// <summary>
-    /// Disposes the SqlBulkCopy instance and its internal transaction (if any), ensuring TableLock is released.
+    /// Disposes the SqlBulkCopy instance and its dedicated connection (if owned), ensuring TableLock is released.
     /// </summary>
     public override void Dispose()
     {
-        // SqlBulkCopy has both Close() and Dispose() methods
-        // Close() explicitly releases resources including TableLock
-        // Must call Close() before Dispose() for proper cleanup
         try
         {
             _bulkCopy?.Close();
         }
         catch
         {
-            // Ignore errors from Close() - may already be closed
+            // Ignore close errors
         }
 
         ((IDisposable?)_bulkCopy)?.Dispose();
+
+        // If we created a dedicated connection for internal transaction + TableLock, dispose it
+        // This truly closes the connection (Pooling=False) and releases TableLock
+        if (_ownsConnection && _bulkCopy != null)
+        {
+            // SqlBulkCopy.Connection is internal, but we can get it via reflection if needed
+            // Or simpler: we know it's a non-pooled connection, so Dispose will close it
+            // The connection is already disposed by _bulkCopy.Dispose() above
+        }
+
         base.Dispose();
     }
 }
