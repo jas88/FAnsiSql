@@ -103,12 +103,17 @@ public abstract class DatabaseTests
     [SetUp]
     public void LogTestStart()
     {
-        // Only log in CI to help identify which test precedes timeouts
-        if (Environment.GetEnvironmentVariable("GITHUB_ACTIONS") == "true")
-        {
-            var testName = TestContext.CurrentContext.Test.Name;
-            TestContext.Out.WriteLine($"▶▶▶ STARTING TEST: {testName} at {DateTime.UtcNow:HH:mm:ss.fff}");
-        }
+        // Only in CI
+        if (Environment.GetEnvironmentVariable("GITHUB_ACTIONS") != "true")
+            return;
+
+        var testName = TestContext.CurrentContext.Test.Name;
+        TestContext.Out.WriteLine($"▶▶▶ STARTING TEST: {testName} at {DateTime.UtcNow:HH:mm:ss.fff}");
+
+        // CRITICAL: Clear SQL Server connection pool BEFORE each test
+        // This prevents TableLock from SqlBulkCopy persisting across tests
+        // TableLock is connection-level and survives even after SqlBulkCopy disposal
+        Microsoft.Data.SqlClient.SqlConnection.ClearAllPools();
     }
 
     [TearDown]
@@ -139,8 +144,6 @@ public abstract class DatabaseTests
                 cmd.CommandTimeout = 5; // Set timeout on command, not connection string (Oracle doesn't support it in connection string)
                 var result = cmd.ExecuteScalar();
 
-                con.Close();
-
                 // Convert result to long for type-agnostic comparison (handles int, long, decimal, etc.)
                 var expectedValue = type == DatabaseType.MicrosoftSQLServer ? 0L : 1L; // @@TRANCOUNT should be 0, SELECT 1 should be 1
                 if (result == null || Convert.ToInt64(result, CultureInfo.InvariantCulture) != expectedValue)
@@ -148,10 +151,16 @@ public abstract class DatabaseTests
                     var detail = type == DatabaseType.MicrosoftSQLServer && Convert.ToInt64(result, CultureInfo.InvariantCulture) > 0
                         ? $"Dangling transaction detected: @@TRANCOUNT = {result}"
                         : "health check returned unexpected result";
+
+                    con.Close();
                     Assert.Fail($"CURRENT TEST corrupted {type} database state - {detail}.");
                 }
 
-                // Clear connection pools to prevent lock accumulation (especially important for SQL Server)
+                con.Close();
+
+                // CRITICAL: Clear connection pools BEFORE next test to release any connection-level locks (TableLock)
+                // TableLock from SqlBulkCopy persists on the physical connection even after disposal
+                // Must clear pool to force new physical connections for next test
                 if (type == DatabaseType.MicrosoftSQLServer)
                     Microsoft.Data.SqlClient.SqlConnection.ClearAllPools();
             }

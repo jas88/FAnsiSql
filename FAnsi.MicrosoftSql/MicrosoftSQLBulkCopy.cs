@@ -404,10 +404,21 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
 
     /// <summary>
     /// Disposes the SqlBulkCopy instance and its internal transaction (if any), ensuring TableLock is released.
+    /// Forces actual connection close to prevent TableLock from persisting in connection pool.
     /// </summary>
     public override void Dispose()
     {
-        ((IDisposable?)_bulkCopy)?.Dispose(); // Disposes internal transaction and releases TableLock
-        base.Dispose();
+        ((IDisposable?)_bulkCopy)?.Dispose(); // Disposes internal transaction
+
+        // CRITICAL: TableLock is connection-scoped, not transaction-scoped
+        // It persists on the physical SQL Server connection even after transaction commit/rollback
+        // We MUST actually close the connection (not just return to pool) to release TableLock
+        // Force CloseOnDispose=true to ensure connection is truly closed, not pooled
+        if (Connection.CloseOnDispose == false)
+        {
+            Connection.CloseOnDispose = true; // Override pooling behavior for this connection
+        }
+
+        base.Dispose(); // This will now actually close the connection
     }
 }
