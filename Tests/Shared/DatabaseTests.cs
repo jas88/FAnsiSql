@@ -100,6 +100,17 @@ public abstract class DatabaseTests
         }
     }
 
+    [SetUp]
+    public void LogTestStart()
+    {
+        // Only log in CI to help identify which test precedes timeouts
+        if (Environment.GetEnvironmentVariable("GITHUB_ACTIONS") == "true")
+        {
+            var testName = TestContext.CurrentContext.Test.Name;
+            TestContext.Out.WriteLine($"▶▶▶ STARTING TEST: {testName} at {DateTime.UtcNow:HH:mm:ss.fff}");
+        }
+    }
+
     [TearDown]
     public void VerifyDatabaseHealthAfterTest()
     {
