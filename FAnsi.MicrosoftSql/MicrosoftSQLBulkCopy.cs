@@ -410,25 +410,22 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
 
     /// <summary>
     /// Disposes the SqlBulkCopy instance and its internal transaction (if any), ensuring TableLock is released.
-    /// For internal transactions, forces actual connection close to prevent TableLock from persisting in connection pool.
     /// </summary>
     public override void Dispose()
     {
-        // Only force connection close if we used an internal transaction with TableLock
-        // External transactions manage their own connection lifecycle
-        var hadInternalTransaction = Connection.Transaction == null;
-
-        ((IDisposable?)_bulkCopy)?.Dispose(); // Disposes internal transaction (if any)
-
-        // CRITICAL: TableLock is connection-scoped, not transaction-scoped
-        // When using INTERNAL transaction with TableLock, the lock persists on the physical connection
-        // even after transaction commit/rollback. We MUST close the connection (not pool it) to release TableLock.
-        // For EXTERNAL transactions, don't force close - the transaction owner manages the connection.
-        if (hadInternalTransaction && Connection.CloseOnDispose == false)
+        // SqlBulkCopy has both Close() and Dispose() methods
+        // Close() explicitly releases resources including TableLock
+        // Must call Close() before Dispose() for proper cleanup
+        try
         {
-            Connection.CloseOnDispose = true; // Override pooling - actually close this connection
+            _bulkCopy?.Close();
+        }
+        catch
+        {
+            // Ignore errors from Close() - may already be closed
         }
 
-        base.Dispose(); // Closes connection if CloseOnDispose=true
+        ((IDisposable?)_bulkCopy)?.Dispose();
+        base.Dispose();
     }
 }
