@@ -716,6 +716,18 @@ internal sealed class ColumnHelperTests : DatabaseTests
 
             // Change to bigger int type or string
             var newType = syntax.TypeTranslater.GetSQLDBTypeForCSharpType(new DatabaseTypeRequest(typeof(string), 50));
+
+            // Oracle requires column to be empty when changing data type (ORA-01439)
+            // Other databases (SQL Server, MySQL, PostgreSQL) allow type changes with data
+            if (type == DatabaseType.Oracle)
+            {
+                using var con = db.Server.GetConnection();
+                con.Open();
+                var deleteSql = $"DELETE FROM {table.GetFullyQualifiedName()}";
+                using var deleteCmd = db.Server.GetCommand(deleteSql, con);
+                deleteCmd.ExecuteNonQuery();
+            }
+
             var alterSql = column.Helper.GetAlterColumnToSql(column, newType, true);
 
             using (var con = db.Server.GetConnection())

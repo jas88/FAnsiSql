@@ -407,7 +407,12 @@ public abstract partial class TypeTranslater : ITypeTranslater
         if (!int.TryParse(precisionSpan, out var precision) || !int.TryParse(scaleSpan, out var scale))
             return null;
 
-        return new DecimalSize(precision, scale);
+        // DecimalSize constructor takes (numbersBeforeDecimalPlace, numbersAfterDecimalPlace)
+        // But decimal(precision, scale) means precision = total digits, scale = digits after decimal
+        // So: numbersBeforeDecimalPlace = precision - scale, numbersAfterDecimalPlace = scale
+        var numbersBeforeDecimalPlace = precision - scale;
+        var numbersAfterDecimalPlace = scale;
+        return new DecimalSize(numbersBeforeDecimalPlace, numbersAfterDecimalPlace);
     }
 
     public string TranslateSQLDBType(string sqlType, ITypeTranslater destinationTypeTranslater)
