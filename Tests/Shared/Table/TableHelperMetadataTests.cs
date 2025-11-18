@@ -296,6 +296,9 @@ internal sealed class TableHelperMetadataTests : DatabaseTests
     [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void DiscoverRelationships_WithForeignKey_ReturnsRelationship(DatabaseType type)
     {
+        if (type == DatabaseType.Sqlite)
+            Assert.Ignore("SQLite does not support ALTER TABLE ADD CONSTRAINT for foreign keys - they must be defined at table creation");
+
         var db = GetTestDatabase(type);
 
         var parentTable = db.CreateTable("ParentRelTable",

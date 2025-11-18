@@ -168,9 +168,9 @@ internal sealed class TableHelperCoreTests : DatabaseTests
             var viewName = "TestView";
             var view = db.ExpectTable(viewName, null, TableType.View);
 
-            // SQL Server doesn't allow database name prefix in CREATE VIEW
+            // SQL Server doesn't allow database name prefix in CREATE VIEW - use schema.view format
             var viewQualifier = type == DatabaseType.MicrosoftSQLServer
-                ? view.GetQuerySyntaxHelper().EnsureFullyQualified(null, view.Schema, view.GetRuntimeName())
+                ? $"{view.GetQuerySyntaxHelper().EnsureWrapped(view.Schema ?? view.GetQuerySyntaxHelper().GetDefaultSchemaIfAny())}.{view.GetWrappedName()}"
                 : view.GetFullyQualifiedName();
 
             var sql = $"CREATE VIEW {viewQualifier} AS SELECT * FROM {baseTable.GetFullyQualifiedName()}";
