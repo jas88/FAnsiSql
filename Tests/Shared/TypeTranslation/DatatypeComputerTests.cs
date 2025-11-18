@@ -274,7 +274,8 @@ public sealed class GuesserTests
         Assert.Multiple(() =>
         {
             Assert.That(t.Guess.CSharpType, Is.EqualTo(typeof(decimal)));
-            Assert.That(t.GetSqlDBType(_translater), Is.EqualTo("decimal(4,2)"));
+            // Guesser returns DecimalSize(4,2) = 4 before decimal, 2 after = SQL decimal(6,2)
+            Assert.That(t.GetSqlDBType(_translater), Is.EqualTo("decimal(6,2)"));
         });
     }
 
