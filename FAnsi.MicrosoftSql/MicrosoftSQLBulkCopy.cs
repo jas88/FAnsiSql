@@ -352,14 +352,15 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
             if (decimalSize == null)
                 continue;
 
-            var precision = decimalSize.Precision;
-            var scale = decimalSize.Scale;
+            // DecimalSize.Precision = numbers before decimal point
+            // DecimalSize.Scale = numbers after decimal point
+            // For SQL decimal(5,2), DecimalSize is (3, 2) meaning 999.99 max
+            var numbersBeforeDecimal = decimalSize.Precision;
+            var numbersAfterDecimal = decimalSize.Scale;
 
-            // Calculate max value: for decimal(5,2), max is 999.99
-            // Max integer part = 10^(precision - scale) - 1
-            // With scale decimal places
-            var maxIntegerPart = (int)Math.Pow(10, precision - scale) - 1;
-            var maxValue = maxIntegerPart + (decimal)((Math.Pow(10, scale) - 1) / Math.Pow(10, scale));
+            // Calculate max value: for DecimalSize(3,2), max is 999.99
+            var maxIntegerPart = (int)Math.Pow(10, numbersBeforeDecimal) - 1;
+            var maxValue = maxIntegerPart + (decimal)((Math.Pow(10, numbersAfterDecimal) - 1) / Math.Pow(10, numbersAfterDecimal));
 
             for (var rowIndex = 0; rowIndex < dt.Rows.Count; rowIndex++)
             {
@@ -372,10 +373,12 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
                 // Check if value exceeds precision/scale
                 if (decimalValue > maxValue)
                 {
+                    // SQL precision = numbersBeforeDecimal + numbersAfterDecimal
+                    var sqlPrecision = numbersBeforeDecimal + numbersAfterDecimal;
                     throw new InvalidOperationException(
                         string.Format(CultureInfo.InvariantCulture,
                             "Value {0} in column '{1}' (row {2}) exceeds the maximum allowed for decimal({3},{4}). Maximum value is {5}.",
-                            value, dataColumn.ColumnName, rowIndex + 1, precision, scale, maxValue));
+                            value, dataColumn.ColumnName, rowIndex + 1, sqlPrecision, numbersAfterDecimal, maxValue));
                 }
 
                 // Check scale (number of decimal places)
@@ -383,12 +386,13 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
                 if (valueString.Contains('.', StringComparison.Ordinal))
                 {
                     var decimalPlaces = valueString.Split('.')[1].TrimEnd('0').Length;
-                    if (decimalPlaces > scale)
+                    if (decimalPlaces > numbersAfterDecimal)
                     {
+                        var sqlPrecision = numbersBeforeDecimal + numbersAfterDecimal;
                         throw new InvalidOperationException(
                             string.Format(CultureInfo.InvariantCulture,
                                 "Value {0} in column '{1}' (row {2}) has {3} decimal places, but column is defined as decimal({4},{5}) which allows only {5} decimal places.",
-                                value, dataColumn.ColumnName, rowIndex + 1, decimalPlaces, precision, scale));
+                                value, dataColumn.ColumnName, rowIndex + 1, decimalPlaces, sqlPrecision, numbersAfterDecimal));
                     }
                 }
             }
@@ -397,4 +401,13 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
 
     [GeneratedRegex("bcp client for colid (\\d+)", RegexOptions.Compiled | RegexOptions.CultureInvariant)]
     private static partial Regex ColumnLevelComplaintRe();
+
+    /// <summary>
+    /// Disposes the SqlBulkCopy instance and its internal transaction (if any), ensuring TableLock is released.
+    /// </summary>
+    public override void Dispose()
+    {
+        ((IDisposable?)_bulkCopy)?.Dispose(); // Disposes internal transaction and releases TableLock
+        base.Dispose();
+    }
 }
