@@ -562,6 +562,16 @@ internal sealed class BulkCopyTests : DatabaseTests
         using var transaction = tbl.Database.Server.BeginNewTransactedConnection();
         TestContext.Out.WriteLine($"[{type}] Started transaction");
 
+        // Check isolation level for SQL Server
+        if (type == DatabaseType.MicrosoftSQLServer)
+        {
+            using var checkCon = tbl.Database.Server.GetConnection();
+            checkCon.Open();
+            using var cmd = tbl.Database.Server.GetCommand("SELECT CASE transaction_isolation_level WHEN 0 THEN 'Unspecified' WHEN 1 THEN 'ReadUncommitted' WHEN 2 THEN 'ReadCommitted' WHEN 3 THEN 'Repeatable' WHEN 4 THEN 'Serializable' WHEN 5 THEN 'Snapshot' END FROM sys.dm_exec_sessions WHERE session_id = @@SPID", checkCon);
+            var isolationLevel = cmd.ExecuteScalar();
+            TestContext.Out.WriteLine($"[{type}] Isolation level: {isolationLevel}");
+        }
+
         using (var dt = new DataTable())
         {
             dt.Columns.Add("Id", typeof(int));
