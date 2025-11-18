@@ -33,6 +33,7 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
 
 
     private readonly bool _ownsConnection;
+    private readonly SqlConnection? _dedicatedConnection;
 
     public MicrosoftSQLBulkCopy(DiscoveredTable targetTable, IManagedConnection connection, CultureInfo culture) : base(targetTable, connection,
         culture)
@@ -54,10 +55,10 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
                     @"Pooling\s*=\s*\w+", "Pooling=False",
                     System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
-            var dedicatedConnection = new SqlConnection(connString);
-            dedicatedConnection.Open();
+            _dedicatedConnection = new SqlConnection(connString);
+            _dedicatedConnection.Open();
 
-            _bulkCopy = new SqlBulkCopy(dedicatedConnection, options, null)
+            _bulkCopy = new SqlBulkCopy(_dedicatedConnection, options, null)
             {
                 BulkCopyTimeout = 50000,
                 DestinationTableName = targetTable.GetFullyQualifiedName()
@@ -451,13 +452,20 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
 
         ((IDisposable?)_bulkCopy)?.Dispose();
 
-        // If we created a dedicated connection for internal transaction + TableLock, dispose it
-        // This truly closes the connection (Pooling=False) and releases TableLock
-        if (_ownsConnection && _bulkCopy != null)
+        // If we created a dedicated non-pooled connection, dispose it
+        // SqlBulkCopy does NOT dispose connections passed to its constructor
+        // We must explicitly dispose the dedicated connection to release TableLock
+        if (_ownsConnection && _dedicatedConnection != null)
         {
-            // SqlBulkCopy.Connection is internal, but we can get it via reflection if needed
-            // Or simpler: we know it's a non-pooled connection, so Dispose will close it
-            // The connection is already disposed by _bulkCopy.Dispose() above
+            try
+            {
+                _dedicatedConnection.Close();
+                _dedicatedConnection.Dispose();
+            }
+            catch
+            {
+                // Ignore disposal errors
+            }
         }
 
         base.Dispose();
