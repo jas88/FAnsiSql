@@ -135,7 +135,7 @@ public sealed class GuesserTests
         t.AdjustToCompensateForValue(null);
         t.AdjustToCompensateForValue(DBNull.Value);
 
-        Assert.That(t.GetSqlDBType(_translater), Is.EqualTo("decimal(4,1)"));
+        Assert.That(t.GetSqlDBType(_translater), Is.EqualTo("decimal(5,1)"));
         t.AdjustToCompensateForValue("D");
         Assert.That(t.GetSqlDBType(_translater), Is.EqualTo("varchar(5)"));
     }
@@ -491,7 +491,7 @@ public sealed class GuesserTests
         Assert.That(t.GetSqlDBType(tt), Is.EqualTo("int"));
 
         t.AdjustToCompensateForValue("1.1");
-        Assert.That(t.GetSqlDBType(tt), Is.EqualTo("decimal(5,1)"));
+        Assert.That(t.GetSqlDBType(tt), Is.EqualTo("decimal(6,1)"));
 
         t.AdjustToCompensateForValue("A");
         Assert.That(t.GetSqlDBType(tt), Is.EqualTo("varchar(6)"));

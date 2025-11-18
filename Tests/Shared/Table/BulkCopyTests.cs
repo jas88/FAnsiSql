@@ -296,8 +296,8 @@ internal sealed class BulkCopyTests : DatabaseTests
         dt.Columns.Add("Id", typeof(int));
         dt.Columns.Add("SmallDecimal", typeof(decimal));
 
-        dt.Rows.Add(1, 9.99m); // Valid
-        dt.Rows.Add(2, 999.99m); // Too large!
+        dt.Rows.Add(1, 9.99m);      // Valid
+        dt.Rows.Add(2, 999999.99m); // Too large for decimal(5,2)!
 
         using var bulk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture);
 

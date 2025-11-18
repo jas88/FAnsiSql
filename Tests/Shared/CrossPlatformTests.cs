@@ -876,12 +876,12 @@ public sealed class CrossPlatformTests : DatabaseTests
 
         var col = tbl.DiscoverColumn("MyCol");
         var size = col.DataType?.GetDecimalSize();
-        Assert.That(size, Is.EqualTo(new DecimalSize(3, 1))); //3 before decimal place 2 after;
+        Assert.That(size, Is.EqualTo(new DecimalSize(4, 1))); //4 before decimal place 1 after (padded);
         Assert.Multiple(() =>
         {
-            Assert.That(size.NumbersBeforeDecimalPlace, Is.EqualTo(3));
+            Assert.That(size.NumbersBeforeDecimalPlace, Is.EqualTo(4));
             Assert.That(size.NumbersAfterDecimalPlace, Is.EqualTo(1));
-            Assert.That(size.Precision, Is.EqualTo(4));
+            Assert.That(size.Precision, Is.EqualTo(5));
             Assert.That(size.Scale, Is.EqualTo(1));
         });
 
