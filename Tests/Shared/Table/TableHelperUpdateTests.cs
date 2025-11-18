@@ -892,7 +892,7 @@ internal sealed class TableHelperUpdateTests : DatabaseTests
         using (var dt1 = new DataTable())
         {
             dt1.Columns.Add("Id", typeof(int));
-            dt1.Columns.Add("Value");
+            dt1.Columns.Add("Value", typeof(string));
 
             dt1.Rows.Add(1, "Data1");
             dt1.Rows.Add(2, "Data2");
@@ -903,8 +903,8 @@ internal sealed class TableHelperUpdateTests : DatabaseTests
         using (var dt2 = new DataTable())
         {
             dt2.Columns.Add("MainId", typeof(int));
-            dt2.Columns.Add("NewValue");
-            // No rows added
+            dt2.Columns.Add("NewValue", typeof(string));
+            // No rows added - types must be explicit for empty DataTables to avoid TypeGuesser creating wrong types
 
             tbl2 = db.CreateTable("EmptyUpdates", dt2);
         }
