@@ -757,9 +757,9 @@ internal sealed class TableHelperUpdateTests : DatabaseTests
             dt1.Columns.Add("Id", typeof(int));
             dt1.Columns.Add("Text");
 
-            // Use initial values as long as the update values to avoid VARCHAR truncation in MySQL
-            dt1.Rows.Add(1, "NormalTextThatIsLongEnough_XX");
-            dt1.Rows.Add(2, "AnotherLongTextValue_XXXXX");
+            // Use initial values as long as the update values to avoid VARCHAR truncation in MySQL/Oracle
+            dt1.Rows.Add(1, "InitialTextValue_"); // 17 chars to match "O'Reilly's \"Book\""
+            dt1.Rows.Add(2, "LineOneLineTwo___"); // 17 chars to match "Line1\r\nLine2" (13 chars)
 
             tbl1 = db.CreateTable("TextData", dt1);
         }
@@ -1233,7 +1233,7 @@ internal sealed class TableHelperUpdateTests : DatabaseTests
 
             // Concatenate FirstName and LastName using database-specific syntax
             string concatExpression;
-            if (dbType == DatabaseType.MicrosoftSQLServer || dbType == DatabaseType.Oracle)
+            if (dbType == DatabaseType.MicrosoftSQLServer)
             {
                 concatExpression = $"t2.{syntaxHelper.EnsureWrapped("FirstName")} + ' ' + t2.{syntaxHelper.EnsureWrapped("LastName")}";
             }
@@ -1244,7 +1244,7 @@ internal sealed class TableHelperUpdateTests : DatabaseTests
             }
             else
             {
-                // PostgreSQL supports || for concatenation
+                // PostgreSQL and Oracle support || for concatenation
                 concatExpression = $"t2.{syntaxHelper.EnsureWrapped("FirstName")} || ' ' || t2.{syntaxHelper.EnsureWrapped("LastName")}";
             }
 
