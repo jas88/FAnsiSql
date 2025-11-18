@@ -466,8 +466,15 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
             {
                 // Ignore disposal errors
             }
-        }
 
-        base.Dispose();
+            // Don't call base.Dispose() - it would try to dispose the ORIGINAL connection
+            // which we didn't actually use (we used our dedicated connection instead)
+            GC.SuppressFinalize(this);
+        }
+        else
+        {
+            // For external transactions, dispose normally
+            base.Dispose();
+        }
     }
 }
