@@ -107,13 +107,13 @@ public abstract partial class TypeTranslater : ITypeTranslater
             return "decimal(20,10)";
         }
 
-        // DecimalSize.Precision = numbers before decimal point
-        // DecimalSize.Scale = numbers after decimal point
+        // DecimalSize has FIELDS: NumbersBeforeDecimalPlace, NumbersAfterDecimalPlace
+        // DecimalSize has PROPERTIES: Precision (computed as Before+After), Scale (alias for After)
         // SQL decimal(precision, scale) where precision = total digits, scale = digits after
-        var sqlPrecision = decimalSize.Precision + decimalSize.Scale;
-        var sqlScale = decimalSize.Scale;
+        var sqlPrecision = decimalSize.NumbersBeforeDecimalPlace + decimalSize.NumbersAfterDecimalPlace;
+        var sqlScale = decimalSize.NumbersAfterDecimalPlace;
         var result = $"decimal({sqlPrecision},{sqlScale})";
-        Console.WriteLine($"DEBUG GetFloatingPointDataType: DecimalSize({decimalSize.Precision},{decimalSize.Scale}) → {result}");
+        Console.WriteLine($"DEBUG GetFloatingPointDataType: DecimalSize({decimalSize.NumbersBeforeDecimalPlace},{decimalSize.NumbersAfterDecimalPlace}) → {result}");
         return result;
     }
 
