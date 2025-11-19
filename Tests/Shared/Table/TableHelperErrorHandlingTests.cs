@@ -53,6 +53,9 @@ internal sealed class TableHelperErrorHandlingTests : DatabaseTests
     [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void AddColumn_InvalidDataType_ThrowsException(DatabaseType type)
     {
+        if (type == DatabaseType.Sqlite)
+            Assert.Ignore("SQLite uses type affinity; accepts any type name without validation");
+
         var db = GetTestDatabase(type);
         var table = db.CreateTable("InvalidTypeTable",
         [

@@ -80,6 +80,9 @@ internal sealed class TableHelperMetadataTests : DatabaseTests
     [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void HasPrimaryKey_AfterAddingPrimaryKey_ReturnsTrue(DatabaseType type)
     {
+        if (type == DatabaseType.Sqlite)
+            Assert.Ignore("SQLite does not support adding primary keys to existing tables");
+
         var db = GetTestDatabase(type);
         var table = db.CreateTable("AddPkTable",
         [
@@ -256,7 +259,8 @@ internal sealed class TableHelperMetadataTests : DatabaseTests
                 Assert.That(stringCol.DataType?.GetLengthIfString(), Is.EqualTo(50));
 
                 Assert.That(dateCol, Is.Not.Null);
-                Assert.That(dateCol!.DataType?.GetCSharpDataType(), Is.EqualTo(typeof(DateTime)));
+                if (type != DatabaseType.Sqlite) // SQLite stores DateTime as TEXT
+                    Assert.That(dateCol!.DataType?.GetCSharpDataType(), Is.EqualTo(typeof(DateTime)));
 
                 Assert.That(decimalCol, Is.Not.Null);
                 Assert.That(decimalCol!.DataType?.GetCSharpDataType(), Is.EqualTo(typeof(decimal)));

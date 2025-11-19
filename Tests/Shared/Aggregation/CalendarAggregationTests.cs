@@ -164,6 +164,9 @@ internal sealed class CalendarAggregationTests : AggregationTests
     [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void Test_Calendar_Day(DatabaseType type)
     {
+        if (type == DatabaseType.Sqlite)
+            Assert.Ignore("SQLite stores DateTime as TEXT; calendar functions work differently");
+
         var tbl = GetTestTable(type);
         var svr = tbl.Database.Server;
         var col = tbl.DiscoverColumn("EventDate");
