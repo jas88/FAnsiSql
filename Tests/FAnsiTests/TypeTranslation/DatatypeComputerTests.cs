@@ -121,10 +121,18 @@ public sealed class GuesserTests
         var sqlType = t.GetSqlDBType(_translater);
         Assert.That(sqlType, Is.EqualTo("decimal(4,1)"));
 
-        // Verify round-trip - DatabaseTypeRequest.Equals now works properly in TypeGuesser 2.0.3
+        // Verify round-trip with detailed reporting
         var orig = t.Guess;
         var reverseEngineered = _translater.GetDataTypeRequestForSQLDBType(sqlType);
-        Assert.That(reverseEngineered, Is.EqualTo(orig), "The computed DataTypeRequest was not the same after going via sql datatype and reverse engineering");
+
+        if (!reverseEngineered.Equals(orig))
+        {
+            var origSize = orig.Size;
+            var revSize = reverseEngineered.Size;
+            Assert.Fail($"Round-trip failed:\n" +
+                       $"  Original: CSharpType={orig.CSharpType}, Width={orig.Width}, Unicode={orig.Unicode}, Size=({origSize?.NumbersBeforeDecimalPlace},{origSize?.NumbersAfterDecimalPlace})\n" +
+                       $"  Reversed: CSharpType={reverseEngineered.CSharpType}, Width={reverseEngineered.Width}, Unicode={reverseEngineered.Unicode}, Size=({revSize?.NumbersBeforeDecimalPlace},{revSize?.NumbersAfterDecimalPlace})");
+        }
     }
     [Test]
     public void TestGuesser_IntAndDecimal_MustUseDecimalThenString()
