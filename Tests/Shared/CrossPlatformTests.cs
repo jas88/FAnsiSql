@@ -885,6 +885,15 @@ public sealed class CrossPlatformTests : DatabaseTests
             Assert.That(size.Scale, Is.EqualTo(1));
         });
 
+        // Oracle requires column to be empty when decreasing precision (ORA-01440)
+        if (type == DatabaseType.Oracle)
+        {
+            using var con = tbl.Database.Server.GetConnection();
+            con.Open();
+            using var deleteCmd = tbl.Database.Server.GetCommand($"DELETE FROM {tbl.GetFullyQualifiedName()}", con);
+            deleteCmd.ExecuteNonQuery();
+        }
+
         col.DataType?.AlterTypeTo("decimal(5,2)");
 
         size = tbl.DiscoverColumn("MyCol").DataType?.GetDecimalSize();
