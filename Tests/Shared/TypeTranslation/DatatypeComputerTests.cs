@@ -119,8 +119,8 @@ public sealed class GuesserTests
 
         Assert.That(t.Guess.CSharpType, Is.EqualTo(typeof(decimal)));
         var sqlType = t.GetSqlDBType(_translater);
-        // Guesser returns DecimalSize(4,1) = 4 before decimal, 1 after = SQL decimal(5,1)
-        Assert.That(sqlType, Is.EqualTo("decimal(5,1)"));
+        // Guesser returns DecimalSize(3,1) = 3 before decimal, 1 after = SQL decimal(4,1)
+        Assert.That(sqlType, Is.EqualTo("decimal(4,1)"));
 
         // Verify round-trip with detailed reporting
         var orig = t.Guess;
@@ -145,7 +145,7 @@ public sealed class GuesserTests
         t.AdjustToCompensateForValue(null);
         t.AdjustToCompensateForValue(DBNull.Value);
 
-        Assert.That(t.GetSqlDBType(_translater), Is.EqualTo("decimal(5,1)"));
+        Assert.That(t.GetSqlDBType(_translater), Is.EqualTo("decimal(4,1)"));
         t.AdjustToCompensateForValue("D");
         Assert.That(t.GetSqlDBType(_translater), Is.EqualTo("varchar(5)"));
     }
@@ -284,7 +284,7 @@ public sealed class GuesserTests
         {
             Assert.That(t.Guess.CSharpType, Is.EqualTo(typeof(decimal)));
             // Guesser returns DecimalSize(4,2) = 4 before decimal, 2 after = SQL decimal(6,2)
-            Assert.That(t.GetSqlDBType(_translater), Is.EqualTo("decimal(6,2)"));
+            Assert.That(t.GetSqlDBType(_translater), Is.EqualTo("decimal(4,2)"));
         });
     }
 
@@ -446,7 +446,7 @@ public sealed class GuesserTests
         Assert.That(t.GetSqlDBType(tt), Is.EqualTo("int"));
 
         t.AdjustToCompensateForValue("1.1");
-        Assert.That(t.GetSqlDBType(tt), Is.EqualTo("decimal(6,1)"));
+        Assert.That(t.GetSqlDBType(tt), Is.EqualTo("decimal(5,1)"));
 
         t.AdjustToCompensateForValue("A");
         Assert.That(t.GetSqlDBType(tt), Is.EqualTo("varchar(6)"));

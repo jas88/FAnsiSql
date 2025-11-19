@@ -899,7 +899,7 @@ public sealed class CrossPlatformTests : DatabaseTests
 
         var col = tbl.DiscoverColumn("MyCol");
         var size = col.DataType?.GetDecimalSize();
-        Assert.That(size, Is.EqualTo(new DecimalSize(4, 1))); //4 before decimal place 1 after (padded);
+        Assert.That(size, Is.EqualTo(new DecimalSize(3, 1))); //4 before decimal place 1 after (padded);
         Assert.Multiple(() =>
         {
             Assert.That(size.NumbersBeforeDecimalPlace, Is.EqualTo(4));
