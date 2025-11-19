@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Globalization;
+using System.Linq;
 using FAnsi;
 using FAnsi.Discovery;
 using FAnsi.Discovery.QuerySyntax;
@@ -911,6 +912,10 @@ internal sealed class TableHelperUpdateTests : DatabaseTests
 
             tbl2 = db.CreateTable("EmptyUpdates", dt2);
         }
+
+        // DEBUG: Check what column types were actually created
+        var tbl2Cols = tbl2.DiscoverColumns();
+        TestContext.Out.WriteLine($"DEBUG tbl2 actual columns: {string.Join(", ", tbl2Cols.Select(c => $"{c.GetRuntimeName()}={c.DataType?.SQLType}"))}");
 
         try
         {
