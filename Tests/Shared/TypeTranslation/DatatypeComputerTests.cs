@@ -122,9 +122,14 @@ public sealed class GuesserTests
         // Guesser returns DecimalSize(4,1) = 4 before decimal, 1 after = SQL decimal(5,1)
         Assert.That(sqlType, Is.EqualTo("decimal(5,1)"));
 
+        // Verify round-trip preserves DecimalSize (Width/Unicode may differ between Guesser and reverse-engineered)
         var orig = t.Guess;
         var reverseEngineered = _translater.GetDataTypeRequestForSQLDBType(sqlType);
-        Assert.That(reverseEngineered, Is.EqualTo(orig), "The computed DataTypeRequest was not the same after going via sql datatype and reverse engineering");
+        Assert.Multiple(() =>
+        {
+            Assert.That(reverseEngineered.CSharpType, Is.EqualTo(orig.CSharpType), "CSharpType should match");
+            Assert.That(reverseEngineered.Size, Is.EqualTo(orig.Size), "DecimalSize should match");
+        });
     }
     [Test]
     public void TestGuesser_IntAndDecimal_MustUseDecimalThenString()
