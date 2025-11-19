@@ -902,9 +902,9 @@ public sealed class CrossPlatformTests : DatabaseTests
         Assert.That(size, Is.EqualTo(new DecimalSize(3, 2))); //3 before decimal place 2 after;
         Assert.Multiple(() =>
         {
-            Assert.That(size.NumbersBeforeDecimalPlace, Is.EqualTo(4));
+            Assert.That(size.NumbersBeforeDecimalPlace, Is.EqualTo(3));
             Assert.That(size.NumbersAfterDecimalPlace, Is.EqualTo(2));
-            Assert.That(size.Precision, Is.EqualTo(4));
+            Assert.That(size.Precision, Is.EqualTo(5));
             Assert.That(size.Scale, Is.EqualTo(2));
         });
     }
