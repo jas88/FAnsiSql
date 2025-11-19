@@ -832,7 +832,7 @@ public sealed class CrossPlatformTests : DatabaseTests
         {
             Assert.That(size.NumbersBeforeDecimalPlace, Is.EqualTo(4));
             Assert.That(size.NumbersAfterDecimalPlace, Is.EqualTo(2));
-            Assert.That(size.Precision, Is.EqualTo(5));
+            Assert.That(size.Precision, Is.EqualTo(4));
             Assert.That(size.Scale, Is.EqualTo(2));
         });
 
@@ -881,9 +881,9 @@ public sealed class CrossPlatformTests : DatabaseTests
         // Assert.That(size, Is.EqualTo(new DecimalSize(4, 1)));
         Assert.Multiple(() =>
         {
-            Assert.That(size.NumbersBeforeDecimalPlace, Is.EqualTo(4), "Before decimal");
+            Assert.That(size.NumbersBeforeDecimalPlace, Is.EqualTo(3), "Before decimal");
             Assert.That(size.NumbersAfterDecimalPlace, Is.EqualTo(1), "After decimal");
-            Assert.That(size.Precision, Is.EqualTo(5));
+            Assert.That(size.Precision, Is.EqualTo(4));
             Assert.That(size.Scale, Is.EqualTo(1));
         });
 
@@ -904,7 +904,7 @@ public sealed class CrossPlatformTests : DatabaseTests
         {
             Assert.That(size.NumbersBeforeDecimalPlace, Is.EqualTo(4));
             Assert.That(size.NumbersAfterDecimalPlace, Is.EqualTo(2));
-            Assert.That(size.Precision, Is.EqualTo(5));
+            Assert.That(size.Precision, Is.EqualTo(4));
             Assert.That(size.Scale, Is.EqualTo(2));
         });
     }
