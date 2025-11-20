@@ -381,14 +381,11 @@ public sealed class SqliteBulkCopy(DiscoveredTable targetTable, IManagedConnecti
         {
             var normalizedType = targetSqlType.ToUpperInvariant().Split('(')[0].Trim();
             // SQLite uses TEXT for datetime columns
-            if (normalizedType is "TEXT" or "DATETIME" or "TIMESTAMP" or "DATE")
+            if (normalizedType is "TEXT" or "DATETIME" or "TIMESTAMP" or "DATE"
+                && DateTime.TryParse(stringValue, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedDate))
             {
-                // Try to parse as DateTime if it looks like a date
-                if (DateTime.TryParse(stringValue, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedDate))
-                {
-                    // Return the DateTime value - Microsoft.Data.Sqlite will handle it correctly
-                    return parsedDate;
-                }
+                // Return the DateTime value - Microsoft.Data.Sqlite will handle it correctly
+                return parsedDate;
             }
         }
 
