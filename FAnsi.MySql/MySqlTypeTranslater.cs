@@ -80,7 +80,9 @@ public sealed partial class MySqlTypeTranslater : TypeTranslater
         // Use span-based comparison for better performance
         var sqlTypeSpan = sqlType.AsSpan();
 
-        if (sqlTypeSpan.Contains("binary", StringComparison.OrdinalIgnoreCase))
+        // Exclude binary types (binary, varbinary) and blob types (blob, tinyblob, mediumblob, longblob)
+        if (sqlTypeSpan.Contains("binary", StringComparison.OrdinalIgnoreCase) ||
+            sqlTypeSpan.Contains("blob", StringComparison.OrdinalIgnoreCase))
             return false;
 
         return base.IsString(sqlType) || AlsoStringRegex.IsMatch(sqlType);
@@ -93,6 +95,8 @@ public sealed partial class MySqlTypeTranslater : TypeTranslater
     protected override string GetByteArrayDataType() => "longblob";
 
     protected override string GetGuidDataType() => "char(36)";  // MySQL stores UUIDs as char(36) for compatibility
+
+    protected override string GetDateDateTimeDataType() => "datetime";  // Use datetime instead of timestamp to support full date range (1000-01-01 to 9999-12-31)
 
     // Optimized regex patterns with ReadOnlySpan<char> compatibility and better performance
     [GeneratedRegex(@"tinyint\(1\)", RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]

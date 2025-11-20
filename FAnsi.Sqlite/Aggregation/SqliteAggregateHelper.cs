@@ -32,9 +32,9 @@ public sealed class SqliteAggregateHelper : AggregateHelper
     /// <remarks>
     /// <para>SQLite date part mappings:</para>
     /// <list type="bullet">
-    /// <item><description>Day: DATE(column)</description></item>
+    /// <item><description>Day: datetime(column, 'start of day')</description></item>
     /// <item><description>Month: strftime('%Y-%m', column)</description></item>
-    /// <item><description>Year: strftime('%Y', column)</description></item>
+    /// <item><description>Year: CAST(strftime('%Y', column) AS INTEGER)</description></item>
     /// <item><description>Quarter: Calculated from month using expression</description></item>
     /// </list>
     /// </remarks>
@@ -42,10 +42,11 @@ public sealed class SqliteAggregateHelper : AggregateHelper
     {
         return increment switch
         {
-            AxisIncrement.Day => $"DATE({columnSql})",
+            // Use datetime() with 'start of day' to include time component for ADO.NET DateTime type recognition
+            AxisIncrement.Day => $"datetime({columnSql}, 'start of day')",
             AxisIncrement.Month => $"strftime('%Y-%m', {columnSql})",
-            AxisIncrement.Year => $"strftime('%Y', {columnSql})",
-            AxisIncrement.Quarter => $"strftime('%Y', {columnSql}) || 'Q' || ((strftime('%m', {columnSql}) - 1) / 3 + 1)",
+            AxisIncrement.Year => $"CAST(strftime('%Y', {columnSql}) AS INTEGER)",
+            AxisIncrement.Quarter => $"strftime('%Y', {columnSql}) || 'Q' || CAST(((CAST(strftime('%m', {columnSql}) AS INTEGER) - 1) / 3 + 1) AS TEXT)",
             _ => throw new ArgumentOutOfRangeException(nameof(increment))
         };
     }
@@ -66,17 +67,28 @@ public sealed class SqliteAggregateHelper : AggregateHelper
         var endDate = query.Axis.EndDate;
         var increment = query.Axis.AxisIncrement;
 
+        // SQLite's DATE() function requires lowercase interval names
+        // Quarter requires special handling - use 3 months instead
+        var incrementSql = increment switch
+        {
+            AxisIncrement.Day => "'+1 day'",
+            AxisIncrement.Month => "'+1 month'",
+            AxisIncrement.Year => "'+1 year'",
+            AxisIncrement.Quarter => "'+3 month'",
+            _ => throw new ArgumentOutOfRangeException(nameof(query), $"Unsupported AxisIncrement: {increment}")
+        };
+
         return $"""
                WITH RECURSIVE dateAxis AS (
                    SELECT DATE({startDate}) AS dt
                    UNION ALL
-                   SELECT DATE(dt, '+1 {increment}')
+                   SELECT DATE(dt, {incrementSql})
                    FROM dateAxis
-                   WHERE dt < DATE({endDate})
+                   WHERE DATE(dt, {incrementSql}) <= DATE({endDate})
                )
                SELECT
                {GetDatePartOfColumn(increment, "dateAxis.dt")} AS joinDt,
-               COALESCE(dataset.{countAlias}, 0) AS {countAlias}
+               dataset.{countAlias} AS {countAlias}
                FROM dateAxis
                LEFT JOIN (
                    {string.Join(Environment.NewLine, query.Lines.Where(c => c.LocationToInsert is >= QueryComponent.SELECT and <= QueryComponent.Having).Select(l => l.Text))}

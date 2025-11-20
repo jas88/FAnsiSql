@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using FAnsi.Discovery.QuerySyntax;
@@ -12,10 +13,67 @@ public sealed class OracleAggregateHelper : AggregateHelper
     private OracleAggregateHelper() { }
     protected override IQuerySyntaxHelper GetQuerySyntaxHelper() => OracleQuerySyntaxHelper.Instance;
 
+    /// <summary>
+    /// Wraps AVG() function calls with ROUND() to prevent decimal overflow.
+    /// Oracle's NUMBER type can have up to 38 digits of precision, while .NET decimal only supports 28-29.
+    /// This limits precision to 10 decimal places which is sufficient for most use cases.
+    /// </summary>
+    private static string WrapAvgWithRound(string text)
+    {
+        if (string.IsNullOrEmpty(text) || !text.Contains("AVG(", StringComparison.OrdinalIgnoreCase))
+            return text;
+
+        // Simple approach: find AVG( and wrap the entire AVG(...) with ROUND(..., 10)
+        // Handle nested parentheses properly
+        var result = new System.Text.StringBuilder();
+        var i = 0;
+
+        while (i < text.Length)
+        {
+            // Look for AVG(
+            if (i <= text.Length - 4 &&
+                text.Substring(i, 4).Equals("AVG(", StringComparison.OrdinalIgnoreCase))
+            {
+                result.Append("ROUND(AVG(");
+                i += 4;
+
+                // Find the matching closing parenthesis
+                var depth = 1;
+                var start = i;
+                while (i < text.Length && depth > 0)
+                {
+                    if (text[i] == '(') depth++;
+                    else if (text[i] == ')') depth--;
+                    i++;
+                }
+
+                // Append the AVG content and close the ROUND
+                result.Append(text.Substring(start, i - start));
+                result.Append(", 10)");
+            }
+            else
+            {
+                result.Append(text[i]);
+                i++;
+            }
+        }
+
+        return result.ToString();
+    }
+
+    /// <summary>
+    /// Override BuildBasicAggregate to wrap AVG functions with ROUND
+    /// </summary>
+    protected override string BuildBasicAggregate(AggregateCustomLineCollection query)
+    {
+        var result = base.BuildBasicAggregate(query);
+        return WrapAvgWithRound(result);
+    }
+
     public override string GetDatePartOfColumn(AxisIncrement increment, string columnSql) =>
         increment switch
         {
-            AxisIncrement.Day => columnSql,
+            AxisIncrement.Day => $"TRUNC({columnSql})",
             AxisIncrement.Month => $"to_char({columnSql},'YYYY-MM')",
             AxisIncrement.Year => $"to_number(to_char({columnSql},'YYYY'))",
             AxisIncrement.Quarter => $"to_char({columnSql},'YYYY') || 'Q' || to_char({columnSql},'Q')",
@@ -159,6 +217,11 @@ order by dt*/
         var havingSqlIfAny = string.Join(Environment.NewLine,
             query.Lines.Where(static l => l.LocationToInsert == QueryComponent.Having).Select(static l => l.Text));
 
+        // Wrap the aggregate method if it's AVG to prevent overflow
+        var wrappedAggregateMethod = aggregateMethod.Equals("AVG", StringComparison.OrdinalIgnoreCase)
+            ? $"ROUND({aggregateMethod}(case when {pivotSqlWithoutAlias} = pv.piv then {aggregateParameter} else null end), 10)"
+            : $"{aggregateMethod}(case when {pivotSqlWithoutAlias} = pv.piv then {aggregateParameter} else null end)";
+
         // Oracle has native PIVOT syntax but requires knowing the pivot values in advance
         // We'll use a two-step approach: first get distinct values, then use dynamic SQL or CASE statements
         // For now, using CASE statements similar to MySQL approach
@@ -192,7 +255,7 @@ order by dt*/
                 query.Lines.Where(static c => c.LocationToInsert is >= QueryComponent.SELECT and < QueryComponent.GroupBy)),
             pivotSqlWithoutAlias,
             nonPivotColumnAlias,
-            $"{aggregateMethod}(case when {pivotSqlWithoutAlias} = pv.piv then {aggregateParameter} else null end)",
+            wrappedAggregateMethod,
             havingSqlIfAny
         );
     }

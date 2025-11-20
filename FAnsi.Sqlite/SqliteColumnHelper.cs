@@ -10,7 +10,14 @@ namespace FAnsi.Implementations.Sqlite;
 /// such as generating queries and handling column alterations.
 /// </summary>
 /// <remarks>
-/// SQLite has limited ALTER COLUMN support. Most column type changes require recreating the entire table.
+/// <para><strong>SQLite ALTER COLUMN Limitations:</strong></para>
+/// <para>SQLite does not support ALTER COLUMN for:</para>
+/// <list type="bullet">
+/// <item><description>Changing column data types</description></item>
+/// <item><description>Changing column nullability (NULL/NOT NULL)</description></item>
+/// <item><description>Modifying column constraints</description></item>
+/// </list>
+/// <para>These operations require recreating the entire table. Use table recreation pattern instead.</para>
 /// </remarks>
 public sealed class SqliteColumnHelper : IDiscoveredColumnHelper
 {
@@ -59,7 +66,9 @@ public sealed class SqliteColumnHelper : IDiscoveredColumnHelper
     /// </remarks>
     public string GetAlterColumnToSql(DiscoveredColumn column, string newType, bool allowNulls)
     {
-        // SQLite doesn't support ALTER COLUMN directly - would need to recreate table
-        throw new System.NotSupportedException("SQLite does not support altering column types directly. Table recreation would be required.");
+        // SQLite doesn't support ALTER COLUMN for type or nullability changes - table recreation required
+        throw new System.NotSupportedException(
+            "SQLite does not support ALTER COLUMN for type changes or nullability modifications. " +
+            "To modify a column, you must recreate the table with the desired schema.");
     }
 }

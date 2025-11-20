@@ -239,7 +239,18 @@ internal sealed class TableHelperAutoIncrementTests : DatabaseTests
                 });
             }
 
-            var dt = table.GetDataTable();
+            // Oracle doesn't guarantee row order without ORDER BY, so we need to query with explicit ordering
+            using var con = db.Server.GetConnection();
+            con.Open();
+
+            var syntax = table.GetQuerySyntaxHelper();
+            var sql = $"SELECT * FROM {table.GetFullyQualifiedName()} ORDER BY {syntax.EnsureWrapped("Id")}";
+
+            using var cmd = db.Server.GetCommand(sql, con);
+            using var adapter = db.Server.GetDataAdapter(cmd);
+            var dt = new DataTable();
+            adapter.Fill(dt);
+
             Assert.That(dt.Rows, Has.Count.EqualTo(3));
 
             var id1 = Convert.ToInt32(dt.Rows[0]["Id"], CultureInfo.InvariantCulture);

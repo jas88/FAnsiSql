@@ -100,6 +100,74 @@ public abstract class DatabaseTests
         }
     }
 
+    [SetUp]
+    public void LogTestStart()
+    {
+        // Only in CI
+        if (Environment.GetEnvironmentVariable("GITHUB_ACTIONS") != "true")
+            return;
+
+        var testName = TestContext.CurrentContext.Test.Name;
+        TestContext.Out.WriteLine($"▶▶▶ STARTING TEST: {testName} at {DateTime.UtcNow:HH:mm:ss.fff}");
+    }
+
+    [TearDown]
+    public void VerifyDatabaseHealthAfterTest()
+    {
+        // Only check in CI where we control the database state
+        if (Environment.GetEnvironmentVariable("GITHUB_ACTIONS") != "true")
+            return;
+
+        foreach (var (type, connString) in TestConnectionStrings)
+        {
+            try
+            {
+                var server = new DiscoveredServer(connString, type);
+                using var con = server.GetConnection();
+                con.Open();
+
+                // Try a simple query to detect deadlocks/hangs
+                // SQL Server: Check for dangling transactions with @@TRANCOUNT (connection pooling can return connections with uncommitted transactions)
+                // Oracle requires FROM DUAL for SELECT without a table
+                var healthCheckSql = type switch
+                {
+                    DatabaseType.MicrosoftSQLServer => "SELECT @@TRANCOUNT",
+                    DatabaseType.Oracle => "SELECT 1 FROM DUAL",
+                    _ => "SELECT 1"
+                };
+                using var cmd = server.GetCommand(healthCheckSql, con);
+                cmd.CommandTimeout = 5; // Set timeout on command, not connection string (Oracle doesn't support it in connection string)
+                var result = cmd.ExecuteScalar();
+
+                // Convert result to long for type-agnostic comparison (handles int, long, decimal, etc.)
+                var expectedValue = type == DatabaseType.MicrosoftSQLServer ? 0L : 1L; // @@TRANCOUNT should be 0, SELECT 1 should be 1
+                if (result == null || Convert.ToInt64(result, CultureInfo.InvariantCulture) != expectedValue)
+                {
+                    var detail = type == DatabaseType.MicrosoftSQLServer && Convert.ToInt64(result, CultureInfo.InvariantCulture) > 0
+                        ? $"Dangling transaction detected: @@TRANCOUNT = {result}"
+                        : "health check returned unexpected result";
+
+                    // CRITICAL: Rollback dangling transaction BEFORE closing connection
+                    // Otherwise connection returns to pool with active transaction
+                    if (type == DatabaseType.MicrosoftSQLServer && Convert.ToInt64(result, CultureInfo.InvariantCulture) > 0)
+                    {
+                        using var rollbackCmd = server.GetCommand("ROLLBACK TRANSACTION", con);
+                        rollbackCmd.ExecuteNonQuery();
+                    }
+
+                    con.Close();
+                    Assert.Fail($"CURRENT TEST corrupted {type} database state - {detail}.");
+                }
+
+                con.Close();
+            }
+            catch (Exception ex)
+            {
+                Assert.Fail($"CURRENT TEST left {type} database in broken state. Likely leaked transaction or held locks. Error: {ex.Message}");
+            }
+        }
+    }
+
     protected DiscoveredServer GetTestServer(DatabaseType type)
     {
         // In RDBMS-specific test projects, ignore tests for other database types
@@ -122,6 +190,13 @@ public abstract class DatabaseTests
 
         if (!TestConnectionStrings.TryGetValue(type, out var connString))
             AssertRequirement($"No connection string configured for {type}");
+
+        // Increase command timeout for CI environments where queries can be slower
+        // SQL Server default is 30 seconds, increase to 120 seconds
+        if (type == DatabaseType.MicrosoftSQLServer && connString != null && !connString.Contains("Command Timeout", StringComparison.OrdinalIgnoreCase))
+        {
+            connString += ";Command Timeout=120";
+        }
 
         return new DiscoveredServer(connString, type);
     }

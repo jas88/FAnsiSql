@@ -20,9 +20,9 @@ namespace FAnsi.Implementations.Sqlite;
 /// <remarks>
 /// <para>SQLite limitations:</para>
 /// <list type="bullet">
-/// <item><description>Cannot drop columns (requires table recreation)</description></item>
+/// <item><description>Cannot alter column types or nullability (requires table recreation)</description></item>
 /// <item><description>Cannot add primary keys to existing tables</description></item>
-/// <item><description>Limited ALTER TABLE support</description></item>
+/// <item><description>DROP COLUMN supported in SQLite 3.35.0+ (2021)</description></item>
 /// <item><description>Auto-increment via INTEGER PRIMARY KEY</description></item>
 /// </list>
 /// </remarks>
@@ -94,17 +94,26 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
     }
 
     /// <summary>
-    /// Drops a column from a table.
+    /// Drops a column from a table using ALTER TABLE DROP COLUMN (requires SQLite 3.35.0+).
     /// </summary>
     /// <param name="connection">The database connection</param>
     /// <param name="columnToDrop">The column to drop</param>
-    /// <exception cref="NotSupportedException">
-    /// SQLite does not support DROP COLUMN. Column removal requires recreating the entire table.
-    /// </exception>
+    /// <remarks>
+    /// SQLite 3.35.0+ supports ALTER TABLE DROP COLUMN.
+    /// Limitations: Column cannot be referenced by foreign keys, indexes, or constraints.
+    /// </remarks>
     public override void DropColumn(DbConnection connection, DiscoveredColumn columnToDrop)
     {
-        // SQLite doesn't support DROP COLUMN directly - would need to recreate table
-        throw new NotSupportedException("SQLite does not support dropping columns directly. Table recreation would be required.");
+        var syntax = columnToDrop.Table.Database.Server.GetQuerySyntaxHelper();
+        var tableName = columnToDrop.Table.GetFullyQualifiedName();
+        var columnName = syntax.EnsureWrapped(columnToDrop.GetRuntimeName());
+
+        // SQLite 3.35.0+ supports DROP COLUMN
+        var sql = $"ALTER TABLE {tableName} DROP COLUMN {columnName}";
+
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText = sql;
+        cmd.ExecuteNonQuery();
     }
 
     /// <summary>
@@ -121,6 +130,12 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
     /// </remarks>
     public override void AddColumn(DatabaseOperationArgs args, DiscoveredTable table, string name, string dataType, bool allowNulls)
     {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Column name cannot be empty", nameof(name));
+
+        if (string.IsNullOrWhiteSpace(dataType))
+            throw new ArgumentException("Data type cannot be empty", nameof(dataType));
+
         // SQLite ALTER TABLE doesn't support quoted identifiers at all
         // Use runtime names directly without quoting
         var tableName = table.GetRuntimeName();
@@ -215,7 +230,15 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
         using var con = args.GetManagedConnection(table);
         using var cmd = table.Database.Server.GetCommand(
             $"CREATE {uniqueKeyword}INDEX {syntax.EnsureWrapped(indexName)} ON {table.GetFullyQualifiedName()} ({columnNames})", con);
-        args.ExecuteNonQuery(cmd);
+
+        try
+        {
+            args.ExecuteNonQuery(cmd);
+        }
+        catch (SqliteException ex)
+        {
+            throw new FAnsi.Exceptions.AlterFailedException($"Failed to create index {indexName}", ex);
+        }
     }
 
     public override void DropIndex(DatabaseOperationArgs args, DiscoveredTable table, string indexName)
@@ -223,7 +246,15 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
         var syntax = table.GetQuerySyntaxHelper();
         using var con = args.GetManagedConnection(table);
         using var cmd = table.Database.Server.GetCommand($"DROP INDEX {syntax.EnsureWrapped(indexName)}", con);
-        args.ExecuteNonQuery(cmd);
+
+        try
+        {
+            args.ExecuteNonQuery(cmd);
+        }
+        catch (SqliteException ex)
+        {
+            throw new FAnsi.Exceptions.AlterFailedException($"Failed to drop index {indexName}", ex);
+        }
     }
 
     /// <summary>
@@ -307,7 +338,19 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
         {
             var row = dt.NewRow();
             for (var i = 0; i < reader.FieldCount; i++)
-                row[i] = reader.GetValue(i);
+            {
+                var value = reader.GetValue(i);
+
+                // SQLite stores DateTime as TEXT, but DataTable columns may be typed as DateTime
+                // If the column is DateTime and we get a string, try to parse it
+                if (i < dt.Columns.Count && dt.Columns[i].DataType == typeof(DateTime) && value is string strValue
+                    && DateTime.TryParse(strValue, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedDate))
+                {
+                    value = parsedDate;
+                }
+
+                row[i] = value;
+            }
             dt.Rows.Add(row);
         }
     }

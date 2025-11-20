@@ -165,9 +165,15 @@ internal sealed class TableHelperCoreTests : DatabaseTests
 
         try
         {
-            var syntax = db.Server.GetQuerySyntaxHelper();
             var viewName = "TestView";
-            var sql = $"CREATE VIEW {syntax.EnsureWrapped(viewName)} AS SELECT * FROM {baseTable.GetFullyQualifiedName()}";
+            var view = db.ExpectTable(viewName, null, TableType.View);
+
+            // SQL Server doesn't allow database name prefix in CREATE VIEW - use schema.view format
+            var viewQualifier = type == DatabaseType.MicrosoftSQLServer
+                ? $"{view.GetQuerySyntaxHelper().EnsureWrapped(view.Schema ?? view.GetQuerySyntaxHelper().GetDefaultSchemaIfAny())}.{view.GetWrappedName()}"
+                : view.GetFullyQualifiedName();
+
+            var sql = $"CREATE VIEW {viewQualifier} AS SELECT * FROM {baseTable.GetFullyQualifiedName()}";
 
             using (var con = db.Server.GetConnection())
             {
@@ -175,9 +181,6 @@ internal sealed class TableHelperCoreTests : DatabaseTests
                 using var cmd = db.Server.GetCommand(sql, con);
                 cmd.ExecuteNonQuery();
             }
-
-            var view = db.ExpectTable(viewName);
-            // Note: TableType is readonly, set during construction
 
             Assert.That(view.Exists(), Is.True);
 

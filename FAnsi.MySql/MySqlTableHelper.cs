@@ -32,11 +32,7 @@ public sealed partial class MySqlTableHelper : DiscoveredTableHelper
             SELECT * FROM information_schema.`COLUMNS`
             WHERE table_schema = @db
               AND table_name = @tbl
-            """, connection.Connection);
-        // Do not set cmd.Transaction for information_schema queries.
-        // MySQL DDL operations (like ALTER TABLE) auto-commit, invalidating any active transaction.
-        // Querying information_schema with a stale transaction reference can return empty results
-        // due to snapshot isolation seeing pre-DDL schema state.
+            """, connection.Connection, connection.Transaction);
 
         var p = new MySqlParameter("@db", MySqlDbType.String)
         {
@@ -139,8 +135,7 @@ public sealed partial class MySqlTableHelper : DiscoveredTableHelper
             )
             """;
 
-        using var cmd = table.Database.Server.Helper.GetCommand(sql, connection.Connection);
-        // Do not set cmd.Transaction for information_schema queries (see DiscoverColumns for details)
+        using var cmd = table.Database.Server.Helper.GetCommand(sql, connection.Connection, connection.Transaction);
 
         var p = new MySqlParameter("@db", MySqlDbType.String)
         {

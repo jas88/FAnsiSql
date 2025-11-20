@@ -35,9 +35,11 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
     public MicrosoftSQLBulkCopy(DiscoveredTable targetTable, IManagedConnection connection, CultureInfo culture) : base(targetTable, connection,
         culture)
     {
+        // Match upstream HicServices/FAnsiSql implementation
         var options = SqlBulkCopyOptions.KeepIdentity | SqlBulkCopyOptions.TableLock;
         if (connection.Transaction == null)
             options |= SqlBulkCopyOptions.UseInternalTransaction;
+
         _bulkCopy = new SqlBulkCopy((SqlConnection)connection.Connection, options, (SqlTransaction?)connection.Transaction)
         {
             BulkCopyTimeout = 50000,
@@ -103,6 +105,7 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
         EmptyStringsToNulls(dt);
         InspectDataTableForFloats(dt);
         ConvertStringTypesToHardTypes(dt);
+        ValidateDecimalPrecisionAndScale(dt);
 
         try
         {
@@ -114,6 +117,11 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
         }
         catch (Exception e)
         {
+            // Don't attempt line-by-line investigation for disposal or state exceptions
+            // These are usage errors, not data errors, and line-by-line will succeed with a new SqlBulkCopy instance
+            if (e is ObjectDisposedException or InvalidOperationException)
+                throw;
+
             //user does not want to replay the load one line at a time to get more specific error messages
             if (serverForLineByLineInvestigation != null)
             {
@@ -163,63 +171,61 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
         //have to use a new object because current one could have a broken transaction associated with it
         using var con = (SqlConnection)serverForLineByLineInvestigation.GetConnection();
         con.Open();
-        var investigationTransaction = con.BeginTransaction("Investigate BulkCopyFailure");
-        using (var investigationOneLineAtATime = new SqlBulkCopy(con, SqlBulkCopyOptions.KeepIdentity, investigationTransaction))
+        using var investigationTransaction = con.BeginTransaction("Investigate BulkCopyFailure");
+        try
         {
-            investigationOneLineAtATime.DestinationTableName = insert.DestinationTableName;
+            // Transaction will auto-dispose and rollback on scope exit
+            using (var investigationOneLineAtATime = new SqlBulkCopy(con, SqlBulkCopyOptions.KeepIdentity, investigationTransaction))
+            {
+                investigationOneLineAtATime.DestinationTableName = insert.DestinationTableName;
 
-            foreach (SqlBulkCopyColumnMapping m in insert.ColumnMappings)
-                investigationOneLineAtATime.ColumnMappings.Add(m);
+                foreach (SqlBulkCopyColumnMapping m in insert.ColumnMappings)
+                    investigationOneLineAtATime.ColumnMappings.Add(m);
 
-            //try a line at a time
-            foreach (DataRow dr in dt.Rows)
-                try
-                {
-                    investigationOneLineAtATime.WriteToServer(new[] { dr }); //try one line
-                    line++;
-                }
-                catch (Exception exception)
-                {
-                    if (BcpColIdToString(investigationOneLineAtATime, exception as SqlException, out var result, out var badMapping))
+                //try a line at a time
+                foreach (DataRow dr in dt.Rows)
+                    try
                     {
-                        if (badMapping is null || !dt.Columns.Contains(badMapping.SourceColumn))
-                            return new InvalidOperationException(
-                                string.Format(CultureInfo.InvariantCulture,
-                                    SR
-                                        .MicrosoftSQLBulkCopy_AttemptLineByLineInsert_BulkInsert_failed_on_data_row__0___1_,
-                                    line, result), e);
-
-                        var sourceValue = dr[badMapping.SourceColumn];
-                        // Manual loop optimization to avoid LINQ SingleOrDefault allocation and use span comparisons
-                        // CodeQL[cs/linq/missed-where-opportunity]: Intentional - manual loop for performance (avoids LINQ allocations)
-                        DiscoveredColumn? destColumn = null;
-                        foreach (var column in TargetTableColumns)
+                        investigationOneLineAtATime.WriteToServer(new[] { dr }); //try one line
+                        line++;
+                    }
+                    catch (Exception exception) when (exception is SqlException or DataException)
+                    {
+                        if (BcpColIdToString(investigationOneLineAtATime, exception as SqlException, out var result, out var badMapping))
                         {
-                            if (StringComparisonHelper.ColumnNamesEqual(column.GetRuntimeName(), badMapping.DestinationColumn))
-                            {
-                                destColumn = column;
-                                break;
-                            }
+                            if (badMapping is null || !dt.Columns.Contains(badMapping.SourceColumn))
+                                return new InvalidOperationException(
+                                    string.Format(CultureInfo.InvariantCulture,
+                                        SR
+                                            .MicrosoftSQLBulkCopy_AttemptLineByLineInsert_BulkInsert_failed_on_data_row__0___1_,
+                                        line, result), e);
+
+                            var sourceValue = dr[badMapping.SourceColumn];
+                            var destColumn = TargetTableColumns.SingleOrDefault(c =>
+                                StringComparisonHelper.ColumnNamesEqual(c.GetRuntimeName(), badMapping.DestinationColumn));
+
+                            if (destColumn != null)
+                                return new FileLoadException(
+                                    string.Format(CultureInfo.InvariantCulture, SR.MicrosoftSQLBulkCopy_AttemptLineByLineInsert_BulkInsert_failed_on_data_row__0__the_complaint_was_about_source_column____1____which_had_value____2____destination_data_type_was____3____4__5_, line, badMapping.SourceColumn, sourceValue, destColumn.DataType, Environment.NewLine, result), exception);
+
+                            return new InvalidOperationException(string.Format(CultureInfo.InvariantCulture, SR.MicrosoftSQLBulkCopy_AttemptLineByLineInsert_BulkInsert_failed_on_data_row__0___1_, line, result), e);
                         }
 
-                        if (destColumn != null)
-                            return new FileLoadException(
-                                string.Format(CultureInfo.InvariantCulture, SR.MicrosoftSQLBulkCopy_AttemptLineByLineInsert_BulkInsert_failed_on_data_row__0__the_complaint_was_about_source_column____1____which_had_value____2____destination_data_type_was____3____4__5_, line, badMapping.SourceColumn, sourceValue, destColumn.DataType, Environment.NewLine, result), exception);
-
-                        return new InvalidOperationException(string.Format(CultureInfo.InvariantCulture, SR.MicrosoftSQLBulkCopy_AttemptLineByLineInsert_BulkInsert_failed_on_data_row__0___1_, line, result), e);
+                        return new FileLoadException(
+                            string.Format(CultureInfo.InvariantCulture, SR.MicrosoftSQLBulkCopy_AttemptLineByLineInsert_Second_Pass_Exception__Failed_to_load_data_row__0__the_following_values_were_rejected_by_the_database___1__2__3_, line, Environment.NewLine, string.Join(Environment.NewLine, dr.ItemArray), firstPass),
+                            exception);
                     }
 
-                    return new FileLoadException(
-                        string.Format(CultureInfo.InvariantCulture, SR.MicrosoftSQLBulkCopy_AttemptLineByLineInsert_Second_Pass_Exception__Failed_to_load_data_row__0__the_following_values_were_rejected_by_the_database___1__2__3_, line, Environment.NewLine, string.Join(Environment.NewLine, dr.ItemArray), firstPass),
-                        exception);
-                }
-
-            //it worked... how!?
-            investigationTransaction.Rollback();
-            con.Close();
+                //it worked... how!?
+                return new InvalidOperationException(SR.MicrosoftSQLBulkCopy_AttemptLineByLineInsert_Second_Pass_Exception__Bulk_insert_failed_but_when_we_tried_to_repeat_it_a_line_at_a_time_it_worked + firstPass, e);
+            }
         }
-
-        return new InvalidOperationException(SR.MicrosoftSQLBulkCopy_AttemptLineByLineInsert_Second_Pass_Exception__Bulk_insert_failed_but_when_we_tried_to_repeat_it_a_line_at_a_time_it_worked + firstPass, e);
+        finally
+        {
+            // Explicit rollback - using will auto-dispose transaction on exit (which also rolls back uncommitted transactions)
+            // But we rollback explicitly here for clarity and immediate release of locks
+            investigationTransaction.Rollback();
+        }
     }
 
     /// <summary>
@@ -316,6 +322,81 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
         }
     }
 
+    /// <summary>
+    /// Validates that decimal values in the DataTable fit within the precision and scale constraints
+    /// of their target database columns. Throws exception if any value exceeds the allowed precision or scale.
+    /// </summary>
+    /// <param name="dt">DataTable to validate</param>
+    private void ValidateDecimalPrecisionAndScale(DataTable dt)
+    {
+        var mapping = GetMapping(dt.Columns.Cast<DataColumn>());
+
+        foreach (var (dataColumn, discoveredColumn) in mapping)
+        {
+            // Only check decimal columns
+            if (dataColumn.DataType != typeof(decimal) && dataColumn.DataType != typeof(decimal?))
+                continue;
+
+            var decimalSize = discoveredColumn.DataType?.GetDecimalSize();
+            if (decimalSize == null)
+                continue;
+
+            // DecimalSize.Precision = numbers before decimal point
+            // DecimalSize.Scale = numbers after decimal point
+            // For SQL decimal(5,2), DecimalSize is (3, 2) meaning 999.99 max
+            var numbersBeforeDecimal = decimalSize.Precision;
+            var numbersAfterDecimal = decimalSize.Scale;
+
+            // Calculate max value: for DecimalSize(3,2), max is 999.99
+            var maxIntegerPart = (int)Math.Pow(10, numbersBeforeDecimal) - 1;
+            var maxValue = maxIntegerPart + (decimal)((Math.Pow(10, numbersAfterDecimal) - 1) / Math.Pow(10, numbersAfterDecimal));
+
+            for (var rowIndex = 0; rowIndex < dt.Rows.Count; rowIndex++)
+            {
+                var value = dt.Rows[rowIndex][dataColumn];
+                if (value == DBNull.Value || value == null)
+                    continue;
+
+                var decimalValue = Math.Abs((decimal)value);
+
+                // Check if value exceeds precision/scale
+                if (decimalValue > maxValue)
+                {
+                    // SQL precision = numbersBeforeDecimal + numbersAfterDecimal
+                    var sqlPrecision = numbersBeforeDecimal + numbersAfterDecimal;
+                    throw new InvalidOperationException(
+                        string.Format(CultureInfo.InvariantCulture,
+                            "Value {0} in column '{1}' (row {2}) exceeds the maximum allowed for decimal({3},{4}). Maximum value is {5}.",
+                            value, dataColumn.ColumnName, rowIndex + 1, sqlPrecision, numbersAfterDecimal, maxValue));
+                }
+
+                // Check scale (number of decimal places)
+                var valueString = decimalValue.ToString(CultureInfo.InvariantCulture);
+                if (valueString.Contains('.', StringComparison.Ordinal))
+                {
+                    var decimalPlaces = valueString.Split('.')[1].TrimEnd('0').Length;
+                    if (decimalPlaces > numbersAfterDecimal)
+                    {
+                        var sqlPrecision = numbersBeforeDecimal + numbersAfterDecimal;
+                        throw new InvalidOperationException(
+                            string.Format(CultureInfo.InvariantCulture,
+                                "Value {0} in column '{1}' (row {2}) has {3} decimal places, but column is defined as decimal({4},{5}) which allows only {5} decimal places.",
+                                value, dataColumn.ColumnName, rowIndex + 1, decimalPlaces, sqlPrecision, numbersAfterDecimal));
+                    }
+                }
+            }
+        }
+    }
+
     [GeneratedRegex("bcp client for colid (\\d+)", RegexOptions.Compiled | RegexOptions.CultureInvariant)]
     private static partial Regex ColumnLevelComplaintRe();
+
+    /// <summary>
+    /// Disposes the SqlBulkCopy instance.
+    /// </summary>
+    public override void Dispose()
+    {
+        ((IDisposable?)_bulkCopy)?.Dispose();
+        base.Dispose();
+    }
 }

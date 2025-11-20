@@ -29,6 +29,10 @@ WHEN MATCHED THEN UPDATE SET
 t1.name = t2.name,
 t1.desc = t2.desc;*/
 
+        var whereConditions = lines.Where(static l => l.LocationToInsert == QueryComponent.WHERE).Select(static c => c.Text).ToList();
+        var whereClause = whereConditions.Count != 0
+            ? $"{Environment.NewLine}WHERE {string.Join(" AND ", whereConditions)}"
+            : string.Empty;
 
         return string.Format(
             CultureInfo.InvariantCulture,
@@ -40,14 +44,12 @@ t1.desc = t2.desc;*/
             )t2
             on ({3})
             WHEN MATCHED THEN UPDATE SET
-                {0}
-            WHERE
-            {4}
+                {0}{4}
             """,
             string.Join($", {Environment.NewLine}", lines.Where(static l => l.LocationToInsert == QueryComponent.SET).Select(static c => c.Text)),
             table1.GetFullyQualifiedName(),
             table2.GetFullyQualifiedName(),
             string.Join(" AND ", lines.Where(static l => l.LocationToInsert == QueryComponent.JoinInfoJoin).Select(static c => c.Text)),
-            string.Join(" AND ", lines.Where(static l => l.LocationToInsert == QueryComponent.WHERE).Select(static c => c.Text)));
+            whereClause);
     }
 }

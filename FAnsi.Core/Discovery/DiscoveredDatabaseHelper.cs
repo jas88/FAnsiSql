@@ -89,13 +89,24 @@ public abstract class DiscoveredDatabaseHelper : IDiscoveredDatabaseHelper
 
                     guesser.AdjustToCompensateForValues(column);
 
+                    // Get Guess ONCE - it's a getter that builds fresh each time!
+                    var guess = guesser.Guess;
+
+                    // If column has no rows, use DataColumn.DataType instead of Guesser default
+                    // Guesser defaults to bool when no data, causing PostgreSQL type mismatches
+                    if ((column.Table?.Rows.Count ?? 0) == 0)
+                    {
+                        Console.WriteLine($"DEBUG EmptyTable: Column {column.ColumnName} has {column.Table?.Rows.Count ?? -1} rows, overriding Guesser type {guess.CSharpType} with DataColumn type {column.DataType}");
+                        guess.CSharpType = column.DataType;
+                    }
+
                     //if DoNotRetype is set on the column adjust the requested CSharpType to be the original type
                     if (column.GetDoNotReType())
-                        guesser.Guess.CSharpType = column.DataType;
+                        guess.CSharpType = column.DataType;
 
                     typeDictionary.Add(column.ColumnName, guesser);
 
-                    columns.Add(new DatabaseColumnRequest(column.ColumnName, guesser.Guess, column.AllowDBNull) { IsPrimaryKey = args.DataTable.PrimaryKey.Contains(column) });
+                    columns.Add(new DatabaseColumnRequest(column.ColumnName, guess, column.AllowDBNull) { IsPrimaryKey = args.DataTable.PrimaryKey.Contains(column) });
                 }
             }
         }

@@ -189,4 +189,12 @@ public sealed class SqliteDatabaseHelper : DiscoveredDatabaseHelper
 
         return tables;
     }
+
+    /// <summary>
+    /// Generates the SQL for a column definition in a CREATE TABLE statement.
+    /// SQLite requires DEFAULT function calls to be wrapped in parentheses.
+    /// </summary>
+    protected override string GetCreateTableSqlLineForColumn(DatabaseColumnRequest col, string datatype, IQuerySyntaxHelper syntaxHelper) =>
+        // SQLite requires DEFAULT functions to be wrapped in parentheses: DEFAULT (date('now'))
+        $"{syntaxHelper.EnsureWrapped(col.ColumnName)} {datatype} {(col.Default != MandatoryScalarFunctions.None ? $"default ({syntaxHelper.GetScalarFunctionSql(col.Default)})" : "")} {(string.IsNullOrWhiteSpace(col.Collation) ? "" : $"COLLATE {col.Collation}")} {(col.AllowNulls && !col.IsPrimaryKey ? " NULL" : " NOT NULL")} {(col.IsAutoIncrement ? syntaxHelper.GetAutoIncrementKeywordIfAny() : "")}";
 }

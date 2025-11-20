@@ -85,13 +85,15 @@ jobs:
     - name: Test
       run: |
         dotnet test FAnsi.sln -c Release \
-          --logger "console;verbosity=normal" \
+          --logger "console;verbosity=detailed" \
           --nologo \
           --no-build \
           -p:TestTfmsInParallel=true \
           --collect:"XPlat Code Coverage" \
           --results-directory coverage \
-          --settings coverage.runsettings
+          --settings coverage.runsettings \
+          --blame-hang-timeout 5m \
+          --blame-hang-dump-type full
 
     - name: Debug coverage files
       run: |

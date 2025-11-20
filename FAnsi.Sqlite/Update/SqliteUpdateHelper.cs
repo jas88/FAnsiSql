@@ -12,8 +12,8 @@ namespace FAnsi.Implementations.Sqlite.Update;
 /// UPDATE statements with JOIN conditions.
 /// </summary>
 /// <remarks>
-/// SQLite doesn't support multi-table UPDATE with JOIN syntax like MySQL.
-/// This implementation uses subqueries with EXISTS for cross-table updates.
+/// SQLite supports UPDATE...FROM syntax for multi-table updates since version 3.33.0 (2020-08-14).
+/// This implementation uses the UPDATE...FROM pattern for cross-table updates.
 /// </remarks>
 public sealed class SqliteUpdateHelper : UpdateHelper
 {
@@ -30,33 +30,60 @@ public sealed class SqliteUpdateHelper : UpdateHelper
     /// <param name="table1">The table to update</param>
     /// <param name="table2">The table to join with</param>
     /// <param name="lines">The custom lines containing JOIN, SET, and WHERE clauses</param>
-    /// <returns>SQL UPDATE statement using EXISTS subquery</returns>
+    /// <returns>SQL UPDATE statement using UPDATE...FROM syntax</returns>
     /// <remarks>
-    /// <para>SQLite doesn't support UPDATE...FROM or UPDATE...JOIN syntax.</para>
+    /// <para>SQLite supports UPDATE...FROM syntax since version 3.33.0 (2020-08-14).</para>
     /// <para>This implementation uses:</para>
     /// <code>
     /// UPDATE table1
     /// SET column = value
-    /// WHERE EXISTS (SELECT 1 FROM table2 WHERE join_conditions)
+    /// FROM table2 AS t2
+    /// WHERE join_conditions AND where_conditions
     /// </code>
     /// </remarks>
     protected override string BuildUpdateImpl(DiscoveredTable table1, DiscoveredTable table2, List<CustomLine> lines)
     {
-        // SQLite doesn't support multi-table UPDATE with JOIN syntax like MySQL
-        // We'll need to use a more compatible syntax with subqueries
-        var joinConditions = lines.Where(l => l.LocationToInsert == QueryComponent.JoinInfoJoin).Select(c => c.Text);
-        var setStatements = lines.Where(l => l.LocationToInsert == QueryComponent.SET).Select(c => c.Text);
-        var whereConditions = lines.Where(l => l.LocationToInsert == QueryComponent.WHERE).Select(c => c.Text);
+        // SQLite supports UPDATE...FROM syntax since version 3.33.0 (2020-08-14)
+        // Syntax: UPDATE table1 SET col = expr FROM table2 AS t2 WHERE conditions
+        // Note: table1 is NOT aliased, but table2 can be aliased as t2
+
+        var table1Name = table1.GetFullyQualifiedName();
+        var joinConditions = lines.Where(l => l.LocationToInsert == QueryComponent.JoinInfoJoin)
+            .Select(c => c.Text.Replace("t1.", $"{table1Name}."))
+            .ToList();
+
+        // For SET statements, handle LHS and RHS differently to support self-joins:
+        // LHS (column name): must be unqualified in SQLite
+        // RHS (expression): replace t1. with fully qualified name to avoid ambiguity
+        var setStatements = lines.Where(l => l.LocationToInsert == QueryComponent.SET)
+            .Select(c =>
+            {
+                var parts = c.Text.Split(['='], 2);
+                if (parts.Length != 2) return c.Text;
+
+                var lhs = parts[0].Trim().Replace("t1.", "");
+                var rhs = parts[1].Trim().Replace("t1.", $"{table1Name}.");
+                return $"{lhs} = {rhs}";
+            });
+
+        var whereConditions = lines.Where(l => l.LocationToInsert == QueryComponent.WHERE)
+            .Select(c => c.Text.Replace("t1.", $"{table1Name}."))
+            .ToList();
+
+        // Combine join and where conditions for the WHERE clause
+        // Wrap where conditions in parentheses to preserve operator precedence
+        var allConditions = joinConditions
+            .Concat(whereConditions.Select(w => $"({w})"))
+            .ToList();
+        var whereClause = allConditions.Count != 0
+            ? $"{Environment.NewLine}WHERE {string.Join(" AND ", allConditions)}"
+            : string.Empty;
 
         return $"""
-               UPDATE {table1.GetFullyQualifiedName()}
+               UPDATE {table1Name}
                SET
                    {string.Join($", {Environment.NewLine}", setStatements)}
-               WHERE EXISTS (
-                   SELECT 1 FROM {table2.GetFullyQualifiedName()} t2
-                   WHERE {string.Join(" AND ", joinConditions.Select(c => c.Replace("t1.", $"{table1.GetFullyQualifiedName()}.").Replace("t2.", "t2.")))}
-                   {(whereConditions.Any() ? $"AND {string.Join(" AND ", whereConditions)}" : "")}
-               )
+               FROM {table2.GetFullyQualifiedName()} AS t2{whereClause}
                """;
     }
 }

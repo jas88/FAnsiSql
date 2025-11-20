@@ -34,6 +34,9 @@ public sealed partial class PostgreSqlTypeTranslater : TypeTranslater
             return NpgsqlDbType.Boolean;
 
         if (t == typeof(byte))
+            return NpgsqlDbType.Smallint;
+
+        if (t == typeof(byte[]))
             return NpgsqlDbType.Bytea;
 
         if (t == typeof(short) || t == typeof(short) || t == typeof(ushort) || t == typeof(short?) || t == typeof(ushort?))
@@ -67,6 +70,9 @@ public sealed partial class PostgreSqlTypeTranslater : TypeTranslater
         throw new TypeNotMappedException(string.Format(CultureInfo.InvariantCulture, FAnsiStrings.TypeTranslater_GetSQLDBTypeForCSharpType_Unsure_what_SQL_type_to_use_for_CSharp_Type___0_____TypeTranslater_was___1__, t.Name, GetType().Name));
 
     }
+
+    protected override bool IsByteArray(string sqlType) =>
+        sqlType?.StartsWith("bytea", StringComparison.OrdinalIgnoreCase) ?? false;
 
     [GeneratedRegex("timestamp", RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]
     private static partial Regex DateRegexImpl();

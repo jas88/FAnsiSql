@@ -5,11 +5,14 @@
       <DataCollector friendlyName="XPlat Code Coverage">
         <Configuration>
           <Format>lcov</Format>
-          <Exclude>[*.Tests]*,[*]*.g.cs</Exclude>
+          <Exclude>[*]*.g.cs</Exclude>
           <ExcludeByFile>**/obj/**,**/bin/**,**/*.g.cs,**/*Designer.cs</ExcludeByFile>
           <UseSourceLink>true</UseSourceLink>
         </Configuration>
       </DataCollector>
     </DataCollectors>
   </DataCollectionRunSettings>
+  <NUnit>
+    <DefaultTimeout>60000</DefaultTimeout>
+  </NUnit>
 </RunSettings>

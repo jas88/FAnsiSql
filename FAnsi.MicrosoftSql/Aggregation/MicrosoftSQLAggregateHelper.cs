@@ -287,6 +287,22 @@ public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
         var havingSqlIfAny = string.Join(Environment.NewLine,
             query.Lines.Where(static l => l.LocationToInsert == QueryComponent.Having).Select(static l => l.Text));
 
+        // Get the TOP X limit if specified and convert LIMIT N to TOP (N) for SQL Server
+        var topXLimitLine = query.Lines.SingleOrDefault(static c =>
+            c.LocationToInsert == QueryComponent.Postfix && c.Role == CustomLineRole.TopX);
+
+        var topXSqlIfAny = "";
+        if (topXLimitLine != null)
+        {
+            // Convert LIMIT N to TOP (N) for SQL Server
+            var limitText = topXLimitLine.Text.Trim();
+            if (limitText.StartsWith("LIMIT ", StringComparison.OrdinalIgnoreCase))
+            {
+                var limitValue = limitText.Substring(6).Trim();
+                topXSqlIfAny = $"TOP ({limitValue})";
+            }
+        }
+
         var part1 = string.Format(CultureInfo.InvariantCulture,
             """
 
@@ -297,6 +313,7 @@ public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
             /*Get distinct values of the PIVOT Column if you have columns with values T and F and Z this will produce [T],[F],[Z] and you will end up with a pivot against these values*/
             set @Columns = (
             {1}
+             {10}
              ',' + QUOTENAME({2}) as [text()]
             {3}
             {4}
@@ -352,7 +369,8 @@ public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
             orderBy,
             axisColumnWithoutAlias == null ? "" : $"AND  {axisColumnWithoutAlias} is not null",
             havingSqlIfAny,
-            query.Axis != null ? "'joinDt'" : "''"
+            query.Axis != null ? "'joinDt'" : "''",
+            topXSqlIfAny
         );
         return part1;
     }

@@ -102,9 +102,19 @@ public abstract partial class TypeTranslater : ITypeTranslater
     private static string GetFloatingPointDataType(DecimalSize decimalSize)
     {
         if (decimalSize == null || decimalSize.IsEmpty)
+        {
+            Console.WriteLine("DEBUG GetFloatingPointDataType: DecimalSize is null or empty, using default decimal(20,10)");
             return "decimal(20,10)";
+        }
 
-        return $"decimal({decimalSize.Precision},{decimalSize.Scale})";
+        // DecimalSize has FIELDS: NumbersBeforeDecimalPlace, NumbersAfterDecimalPlace
+        // DecimalSize has PROPERTIES: Precision (computed as Before+After), Scale (alias for After)
+        // SQL decimal(precision, scale) where precision = total digits, scale = digits after
+        var sqlPrecision = decimalSize.NumbersBeforeDecimalPlace + decimalSize.NumbersAfterDecimalPlace;
+        var sqlScale = decimalSize.NumbersAfterDecimalPlace;
+        var result = $"decimal({sqlPrecision},{sqlScale})";
+        Console.WriteLine($"DEBUG GetFloatingPointDataType: DecimalSize({decimalSize.NumbersBeforeDecimalPlace},{decimalSize.NumbersAfterDecimalPlace}) → {result}");
+        return result;
     }
 
     protected virtual string GetDateDateTimeDataType() => "timestamp";
@@ -407,7 +417,14 @@ public abstract partial class TypeTranslater : ITypeTranslater
         if (!int.TryParse(precisionSpan, out var precision) || !int.TryParse(scaleSpan, out var scale))
             return null;
 
-        return new DecimalSize(precision - scale, scale);
+        // DecimalSize constructor takes (numbersBeforeDecimalPlace, numbersAfterDecimalPlace)
+        // But decimal(precision, scale) means precision = total digits, scale = digits after decimal
+        // So: numbersBeforeDecimalPlace = precision - scale, numbersAfterDecimalPlace = scale
+        var numbersBeforeDecimalPlace = precision - scale;
+        var numbersAfterDecimalPlace = scale;
+        var result = new DecimalSize(numbersBeforeDecimalPlace, numbersAfterDecimalPlace);
+        Console.WriteLine($"DEBUG ParseDecimalSize: decimal({precision},{scale}) → DecimalSize({numbersBeforeDecimalPlace},{numbersAfterDecimalPlace})");
+        return result;
     }
 
     public string TranslateSQLDBType(string sqlType, ITypeTranslater destinationTypeTranslater)

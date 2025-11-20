@@ -42,6 +42,7 @@ public sealed class ManagedTransaction : IManagedTransaction
         }
         finally
         {
+            Transaction.Dispose(); // Must dispose transaction to release locks
             Connection.Close();
             Connection.Dispose();
         }
@@ -63,6 +64,7 @@ public sealed class ManagedTransaction : IManagedTransaction
         }
         finally
         {
+            Transaction.Dispose(); // Must dispose transaction to release locks
             Connection.Close();
             Connection.Dispose();
         }

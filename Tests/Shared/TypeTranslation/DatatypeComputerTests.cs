@@ -119,11 +119,21 @@ public sealed class GuesserTests
 
         Assert.That(t.Guess.CSharpType, Is.EqualTo(typeof(decimal)));
         var sqlType = t.GetSqlDBType(_translater);
+        // Guesser returns DecimalSize(3,1) = 3 before decimal, 1 after = SQL decimal(4,1)
         Assert.That(sqlType, Is.EqualTo("decimal(4,1)"));
 
+        // Verify round-trip with detailed reporting
         var orig = t.Guess;
         var reverseEngineered = _translater.GetDataTypeRequestForSQLDBType(sqlType);
-        Assert.That(reverseEngineered, Is.EqualTo(orig), "The computed DataTypeRequest was not the same after going via sql datatype and reverse engineering");
+
+        if (!reverseEngineered.Equals(orig))
+        {
+            var origSize = orig.Size;
+            var revSize = reverseEngineered.Size;
+            Assert.Fail($"Round-trip failed:\n" +
+                       $"  Original: CSharpType={orig.CSharpType}, Width={orig.Width}, Unicode={orig.Unicode}, Size=({origSize?.NumbersBeforeDecimalPlace},{origSize?.NumbersAfterDecimalPlace})\n" +
+                       $"  Reversed: CSharpType={reverseEngineered.CSharpType}, Width={reverseEngineered.Width}, Unicode={reverseEngineered.Unicode}, Size=({revSize?.NumbersBeforeDecimalPlace},{revSize?.NumbersAfterDecimalPlace})");
+        }
     }
     [Test]
     public void TestGuesser_IntAndDecimal_MustUseDecimalThenString()
@@ -273,6 +283,7 @@ public sealed class GuesserTests
         Assert.Multiple(() =>
         {
             Assert.That(t.Guess.CSharpType, Is.EqualTo(typeof(decimal)));
+            // Guesser returns DecimalSize(4,2) = 4 before decimal, 2 after = SQL decimal(6,2)
             Assert.That(t.GetSqlDBType(_translater), Is.EqualTo("decimal(4,2)"));
         });
     }

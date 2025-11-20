@@ -70,6 +70,6 @@ internal sealed class CreateIndexTest : DatabaseTests
 
         var col = tbl.DiscoverColumn("A");
 
-        Assert.Throws<AlterFailedException>(() => tbl.DropIndex("my_index"));
+        Assert.Catch<AlterFailedException>(() => tbl.DropIndex("my_index"));
     }
 }
