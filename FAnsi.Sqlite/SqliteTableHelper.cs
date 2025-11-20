@@ -343,10 +343,10 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
 
                 // SQLite stores DateTime as TEXT, but DataTable columns may be typed as DateTime
                 // If the column is DateTime and we get a string, try to parse it
-                if (i < dt.Columns.Count && dt.Columns[i].DataType == typeof(DateTime) && value is string strValue)
+                if (i < dt.Columns.Count && dt.Columns[i].DataType == typeof(DateTime) && value is string strValue
+                    && DateTime.TryParse(strValue, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedDate))
                 {
-                    if (DateTime.TryParse(strValue, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedDate))
-                        value = parsedDate;
+                    value = parsedDate;
                 }
 
                 row[i] = value;
