@@ -677,7 +677,8 @@ public sealed class CrossPlatformTests : DatabaseTests
         {
             Assert.That(syntaxHelper.TypeTranslater.GetCSharpTypeForSQLDBType(intCol.DataType?.SQLType), Is.EqualTo(typeof(int)));
             Assert.That(syntaxHelper.TypeTranslater.GetCSharpTypeForSQLDBType(stringCol.DataType?.SQLType), Is.EqualTo(typeof(string)));
-            Assert.That(syntaxHelper.TypeTranslater.GetCSharpTypeForSQLDBType(dateCol.DataType?.SQLType), Is.EqualTo(typeof(DateTime)));
+            // SQLite is dynamically typed and stores DateTime as TEXT (string)
+            Assert.That(syntaxHelper.TypeTranslater.GetCSharpTypeForSQLDBType(dateCol.DataType?.SQLType), Is.EqualTo(type == DatabaseType.Sqlite ? typeof(string) : typeof(DateTime)));
             Assert.That(syntaxHelper.TypeTranslater.GetCSharpTypeForSQLDBType(decimalCol.DataType?.SQLType), Is.EqualTo(typeof(decimal)));
             Assert.That(tbl.GetRowCount(), Is.EqualTo(0));
         });
