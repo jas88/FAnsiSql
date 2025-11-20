@@ -189,7 +189,7 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
                         investigationOneLineAtATime.WriteToServer(new[] { dr }); //try one line
                         line++;
                     }
-                    catch (Exception exception)
+                    catch (Exception exception) when (exception is SqlException or DataException)
                     {
                         if (BcpColIdToString(investigationOneLineAtATime, exception as SqlException, out var result, out var badMapping))
                         {
@@ -201,17 +201,8 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
                                         line, result), e);
 
                             var sourceValue = dr[badMapping.SourceColumn];
-                            // Manual loop optimization to avoid LINQ SingleOrDefault allocation and use span comparisons
-                            // CodeQL[cs/linq/missed-where-opportunity]: Intentional - manual loop for performance (avoids LINQ allocations)
-                            DiscoveredColumn? destColumn = null;
-                            foreach (var column in TargetTableColumns)
-                            {
-                                if (StringComparisonHelper.ColumnNamesEqual(column.GetRuntimeName(), badMapping.DestinationColumn))
-                                {
-                                    destColumn = column;
-                                    break;
-                                }
-                            }
+                            var destColumn = TargetTableColumns.SingleOrDefault(c =>
+                                StringComparisonHelper.ColumnNamesEqual(c.GetRuntimeName(), badMapping.DestinationColumn));
 
                             if (destColumn != null)
                                 return new FileLoadException(
