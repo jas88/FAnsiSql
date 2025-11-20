@@ -837,7 +837,8 @@ internal sealed class BulkCopyTests : DatabaseTests
         var tbl = db.CreateTable("TestDecimalPrecision",
         [
             new DatabaseColumnRequest("Id", new DatabaseTypeRequest(typeof(int))),
-            new DatabaseColumnRequest("Amount", new DatabaseTypeRequest(typeof(decimal), null, new DecimalSize(10, 4)))
+            // decimal(10,4) = 6 digits before decimal + 4 digits after = DecimalSize(6, 4)
+            new DatabaseColumnRequest("Amount", new DatabaseTypeRequest(typeof(decimal), null, new DecimalSize(6, 4)))
         ]);
 
         using var dt = new DataTable();
@@ -1006,7 +1007,8 @@ internal sealed class BulkCopyTests : DatabaseTests
         var tbl = db.CreateTable("TestDecimalPrecisionExceeded",
         [
             new DatabaseColumnRequest("Id", new DatabaseTypeRequest(typeof(int))),
-            new DatabaseColumnRequest("Amount", new DatabaseTypeRequest(typeof(decimal), null, new DecimalSize(5, 2)))
+            // decimal(5,2) = 3 digits before decimal + 2 digits after = DecimalSize(3, 2)
+            new DatabaseColumnRequest("Amount", new DatabaseTypeRequest(typeof(decimal), null, new DecimalSize(3, 2)))
         ]);
 
         using var dt = new DataTable();
@@ -1032,7 +1034,8 @@ internal sealed class BulkCopyTests : DatabaseTests
         var tbl = db.CreateTable("TestDecimalScaleExceeded",
         [
             new DatabaseColumnRequest("Id", new DatabaseTypeRequest(typeof(int))),
-            new DatabaseColumnRequest("Price", new DatabaseTypeRequest(typeof(decimal), null, new DecimalSize(5, 2)))
+            // decimal(5,2) = 3 digits before decimal + 2 digits after = DecimalSize(3, 2)
+            new DatabaseColumnRequest("Price", new DatabaseTypeRequest(typeof(decimal), null, new DecimalSize(3, 2)))
         ]);
 
         using var dt = new DataTable();
@@ -1059,7 +1062,8 @@ internal sealed class BulkCopyTests : DatabaseTests
         var tbl = db.CreateTable("TestDecimalMaxValid",
         [
             new DatabaseColumnRequest("Id", new DatabaseTypeRequest(typeof(int))),
-            new DatabaseColumnRequest("Value", new DatabaseTypeRequest(typeof(decimal), null, new DecimalSize(5, 2)))
+            // decimal(5,2) = 3 digits before decimal + 2 digits after = DecimalSize(3, 2)
+            new DatabaseColumnRequest("Value", new DatabaseTypeRequest(typeof(decimal), null, new DecimalSize(3, 2)))
         ]);
 
         using var dt = new DataTable();
@@ -1100,7 +1104,8 @@ internal sealed class BulkCopyTests : DatabaseTests
         var tbl = db.CreateTable("TestDecimalLargePrecision",
         [
             new DatabaseColumnRequest("Id", new DatabaseTypeRequest(typeof(int))),
-            new DatabaseColumnRequest("BigNumber", new DatabaseTypeRequest(typeof(decimal), null, new DecimalSize(10, 4)))
+            // decimal(10,4) = 6 digits before decimal + 4 digits after = DecimalSize(6, 4)
+            new DatabaseColumnRequest("BigNumber", new DatabaseTypeRequest(typeof(decimal), null, new DecimalSize(6, 4)))
         ]);
 
         using var dt = new DataTable();
@@ -1179,7 +1184,8 @@ internal sealed class BulkCopyTests : DatabaseTests
         var tbl = db.CreateTable("TestDecimalNullValidation",
         [
             new DatabaseColumnRequest("Id", new DatabaseTypeRequest(typeof(int))),
-            new DatabaseColumnRequest("NullableAmount", new DatabaseTypeRequest(typeof(decimal), null, new DecimalSize(5, 2)))
+            // decimal(5,2) = 3 digits before decimal + 2 digits after = DecimalSize(3, 2)
+            new DatabaseColumnRequest("NullableAmount", new DatabaseTypeRequest(typeof(decimal), null, new DecimalSize(3, 2)))
             {
                 AllowNulls = true
             }
