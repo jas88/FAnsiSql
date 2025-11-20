@@ -997,6 +997,216 @@ internal sealed class BulkCopyTests : DatabaseTests
 
     #endregion
 
+    #region Decimal Precision and Scale Validation
+
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    public void Upload_DecimalExceedsPrecision_ThrowsException(DatabaseType type)
+    {
+        var db = GetTestDatabase(type);
+        var tbl = db.CreateTable("TestDecimalPrecisionExceeded",
+        [
+            new DatabaseColumnRequest("Id", new DatabaseTypeRequest(typeof(int))),
+            new DatabaseColumnRequest("Amount", new DatabaseTypeRequest(typeof(decimal), null, new DecimalSize(5, 2)))
+        ]);
+
+        using var dt = new DataTable();
+        dt.Columns.Add("Id", typeof(int));
+        dt.Columns.Add("Amount", typeof(decimal));
+
+        // Valid value first
+        dt.Rows.Add(1, 999.99m);  // Valid: fits in decimal(5,2)
+        // Invalid value: 1000.00 has 4 integer digits, but decimal(5,2) allows only 3
+        dt.Rows.Add(2, 1000.00m); // Invalid: exceeds precision
+
+        using var bulk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture);
+
+        AssertThrowsException(type, () => bulk.Upload(dt),
+            messageContains: type == DatabaseType.Sqlite ? null : "1000",
+            sqliteMayNotThrow: true);
+    }
+
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    public void Upload_DecimalExceedsScale_ThrowsException(DatabaseType type)
+    {
+        var db = GetTestDatabase(type);
+        var tbl = db.CreateTable("TestDecimalScaleExceeded",
+        [
+            new DatabaseColumnRequest("Id", new DatabaseTypeRequest(typeof(int))),
+            new DatabaseColumnRequest("Price", new DatabaseTypeRequest(typeof(decimal), null, new DecimalSize(5, 2)))
+        ]);
+
+        using var dt = new DataTable();
+        dt.Columns.Add("Id", typeof(int));
+        dt.Columns.Add("Price", typeof(decimal));
+
+        // Valid values first
+        dt.Rows.Add(1, 99.99m);   // Valid: 2 decimal places
+        dt.Rows.Add(2, 10.5m);    // Valid: 1 decimal place
+        // Invalid value: too many decimal places
+        dt.Rows.Add(3, 99.999m);  // Invalid: 3 decimal places, but scale=2 allows only 2
+
+        using var bulk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture);
+
+        AssertThrowsException(type, () => bulk.Upload(dt),
+            messageContains: type == DatabaseType.Sqlite ? null : "99.999",
+            sqliteMayNotThrow: true);
+    }
+
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    public void Upload_DecimalMaxPrecisionAndScale_Success(DatabaseType type)
+    {
+        var db = GetTestDatabase(type);
+        var tbl = db.CreateTable("TestDecimalMaxValid",
+        [
+            new DatabaseColumnRequest("Id", new DatabaseTypeRequest(typeof(int))),
+            new DatabaseColumnRequest("Value", new DatabaseTypeRequest(typeof(decimal), null, new DecimalSize(5, 2)))
+        ]);
+
+        using var dt = new DataTable();
+        dt.Columns.Add("Id", typeof(int));
+        dt.Columns.Add("Value", typeof(decimal));
+
+        // Test boundary values that should succeed
+        dt.Rows.Add(1, 999.99m);   // Max positive value for decimal(5,2)
+        dt.Rows.Add(2, -999.99m);  // Max negative value for decimal(5,2)
+        dt.Rows.Add(3, 0.01m);     // Min positive value with scale=2
+        dt.Rows.Add(4, 0.00m);     // Zero
+        dt.Rows.Add(5, 123.45m);   // Mid-range value
+
+        using var bulk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture);
+        var affected = bulk.Upload(dt);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(affected, Is.EqualTo(5));
+            Assert.That(tbl.GetRowCount(), Is.EqualTo(5));
+        });
+
+        using var result = tbl.GetDataTable();
+        Assert.Multiple(() =>
+        {
+            Assert.That(Math.Round((decimal)result.Rows[0]["Value"], 2), Is.EqualTo(999.99m));
+            Assert.That(Math.Round((decimal)result.Rows[1]["Value"], 2), Is.EqualTo(-999.99m));
+            Assert.That(Math.Round((decimal)result.Rows[2]["Value"], 2), Is.EqualTo(0.01m));
+            Assert.That(Math.Round((decimal)result.Rows[3]["Value"], 2), Is.EqualTo(0.00m));
+            Assert.That(Math.Round((decimal)result.Rows[4]["Value"], 2), Is.EqualTo(123.45m));
+        });
+    }
+
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    public void Upload_DecimalLargePrecisionViolation_ThrowsException(DatabaseType type)
+    {
+        var db = GetTestDatabase(type);
+        var tbl = db.CreateTable("TestDecimalLargePrecision",
+        [
+            new DatabaseColumnRequest("Id", new DatabaseTypeRequest(typeof(int))),
+            new DatabaseColumnRequest("BigNumber", new DatabaseTypeRequest(typeof(decimal), null, new DecimalSize(10, 4)))
+        ]);
+
+        using var dt = new DataTable();
+        dt.Columns.Add("Id", typeof(int));
+        dt.Columns.Add("BigNumber", typeof(decimal));
+
+        // Valid values
+        dt.Rows.Add(1, 999999.9999m);   // Valid: fits in decimal(10,4) - 6 integer digits + 4 decimal
+        // Invalid value: too many total digits
+        dt.Rows.Add(2, 9999999.9999m);  // Invalid: 7 integer digits + 4 decimal = 11 total, exceeds precision=10
+
+        using var bulk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture);
+
+        AssertThrowsException(type, () => bulk.Upload(dt),
+            messageContains: type == DatabaseType.Sqlite ? null : "9999999",
+            sqliteMayNotThrow: true);
+    }
+
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    public void Upload_DecimalZeroScale_Success(DatabaseType type)
+    {
+        var db = GetTestDatabase(type);
+        var tbl = db.CreateTable("TestDecimalZeroScale",
+        [
+            new DatabaseColumnRequest("Id", new DatabaseTypeRequest(typeof(int))),
+            new DatabaseColumnRequest("IntegerOnly", new DatabaseTypeRequest(typeof(decimal), null, new DecimalSize(5, 0)))
+        ]);
+
+        using var dt = new DataTable();
+        dt.Columns.Add("Id", typeof(int));
+        dt.Columns.Add("IntegerOnly", typeof(decimal));
+
+        // Test integer-only decimals (scale=0)
+        dt.Rows.Add(1, 99999m);   // Valid: max value for decimal(5,0)
+        dt.Rows.Add(2, -99999m);  // Valid: min value for decimal(5,0)
+        dt.Rows.Add(3, 0m);       // Valid: zero
+
+        using var bulk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture);
+        var affected = bulk.Upload(dt);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(affected, Is.EqualTo(3));
+            Assert.That(tbl.GetRowCount(), Is.EqualTo(3));
+        });
+    }
+
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    public void Upload_DecimalZeroScale_WithDecimalPlaces_ThrowsException(DatabaseType type)
+    {
+        var db = GetTestDatabase(type);
+        var tbl = db.CreateTable("TestDecimalZeroScaleViolation",
+        [
+            new DatabaseColumnRequest("Id", new DatabaseTypeRequest(typeof(int))),
+            new DatabaseColumnRequest("IntegerOnly", new DatabaseTypeRequest(typeof(decimal), null, new DecimalSize(5, 0)))
+        ]);
+
+        using var dt = new DataTable();
+        dt.Columns.Add("Id", typeof(int));
+        dt.Columns.Add("IntegerOnly", typeof(decimal));
+
+        dt.Rows.Add(1, 12345m);   // Valid
+        dt.Rows.Add(2, 123.45m);  // Invalid: has decimal places when scale=0
+
+        using var bulk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture);
+
+        AssertThrowsException(type, () => bulk.Upload(dt),
+            messageContains: type == DatabaseType.Sqlite ? null : "123.45",
+            sqliteMayNotThrow: true);
+    }
+
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    public void Upload_DecimalNullValues_IgnoredInValidation(DatabaseType type)
+    {
+        var db = GetTestDatabase(type);
+        var tbl = db.CreateTable("TestDecimalNullValidation",
+        [
+            new DatabaseColumnRequest("Id", new DatabaseTypeRequest(typeof(int))),
+            new DatabaseColumnRequest("NullableAmount", new DatabaseTypeRequest(typeof(decimal), null, new DecimalSize(5, 2)))
+            {
+                AllowNulls = true
+            }
+        ]);
+
+        using var dt = new DataTable();
+        dt.Columns.Add("Id", typeof(int));
+        dt.Columns.Add("NullableAmount", typeof(decimal));
+
+        // Test that NULL values don't trigger validation errors
+        dt.Rows.Add(1, 99.99m);       // Valid value
+        dt.Rows.Add(2, DBNull.Value);  // NULL - should not be validated
+        dt.Rows.Add(3, null);          // NULL - should not be validated
+        dt.Rows.Add(4, 50.00m);       // Valid value
+
+        using var bulk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture);
+        var affected = bulk.Upload(dt);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(affected, Is.EqualTo(4));
+            Assert.That(tbl.GetRowCount(), Is.EqualTo(4));
+        });
+    }
+
+    #endregion
+
     #region Disposal and Resource Management
 
     [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]

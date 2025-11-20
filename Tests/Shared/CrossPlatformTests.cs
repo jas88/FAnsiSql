@@ -648,6 +648,41 @@ public sealed class CrossPlatformTests : DatabaseTests
         Assert.That(dt.Rows[0][0], Is.EqualTo(new DateTime(2001, 01, 22)));
     }
 
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    public void CreateTable_EmptyDataTable_ExplicitTypes(DatabaseType type)
+    {
+        // Test creating a table from an empty DataTable with explicit column types
+        // This covers the case where column.Table.Rows.Count == 0 in DiscoveredDatabaseHelper.cs lines 97-101
+        // The guesser would default to bool, but we want to use the DataColumn.DataType instead
+        var database = GetTestDatabase(type);
+
+        var dt = new DataTable();
+        dt.Columns.Add("IntColumn", typeof(int));
+        dt.Columns.Add("StringColumn", typeof(string));
+        dt.Columns.Add("DateColumn", typeof(DateTime));
+        dt.Columns.Add("DecimalColumn", typeof(decimal));
+        // No rows added - types must be explicit for empty DataTables
+
+        var tbl = database.CreateTable("EmptyTableWithTypes", dt);
+
+        Assert.That(tbl.Exists());
+
+        var intCol = tbl.DiscoverColumn("IntColumn");
+        var stringCol = tbl.DiscoverColumn("StringColumn");
+        var dateCol = tbl.DiscoverColumn("DateColumn");
+        var decimalCol = tbl.DiscoverColumn("DecimalColumn");
+
+        var syntaxHelper = database.Server.GetQuerySyntaxHelper();
+        Assert.Multiple(() =>
+        {
+            Assert.That(syntaxHelper.TypeTranslater.GetCSharpTypeForSQLDBType(intCol.DataType?.SQLType), Is.EqualTo(typeof(int)));
+            Assert.That(syntaxHelper.TypeTranslater.GetCSharpTypeForSQLDBType(stringCol.DataType?.SQLType), Is.EqualTo(typeof(string)));
+            Assert.That(syntaxHelper.TypeTranslater.GetCSharpTypeForSQLDBType(dateCol.DataType?.SQLType), Is.EqualTo(typeof(DateTime)));
+            Assert.That(syntaxHelper.TypeTranslater.GetCSharpTypeForSQLDBType(decimalCol.DataType?.SQLType), Is.EqualTo(typeof(decimal)));
+            Assert.That(tbl.GetRowCount(), Is.EqualTo(0));
+        });
+    }
+
     [TestCaseSource(typeof(All), nameof(All.DatabaseTypesWithBoolFlags))]
     public void AddColumnTest(DatabaseType type, bool useTransaction)
     {
