@@ -8,7 +8,6 @@ using System.Globalization;
 
 namespace FAnsiTests.Aggregation;
 
-[NonParallelizable]
 internal sealed class BasicAggregationTests : AggregationTests
 {
     [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]

@@ -8,7 +8,6 @@ using System.Data;
 
 namespace FAnsiTests.Aggregation;
 
-[NonParallelizable]
 internal sealed class CalendarWithPivotAggregationTests : AggregationTests
 {
 #if MSSQL_TESTS

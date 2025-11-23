@@ -3,7 +3,6 @@ using NUnit.Framework;
 
 namespace FAnsiTests.Table;
 
-[Parallelizable(ParallelScope.Children)]
 internal sealed class BulkCopyTests_Oracle : BulkCopyTestsBase
 {
     private const DatabaseType DbType = DatabaseType.Oracle;

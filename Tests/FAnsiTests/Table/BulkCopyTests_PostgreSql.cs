@@ -3,7 +3,6 @@ using NUnit.Framework;
 
 namespace FAnsiTests.Table;
 
-[Parallelizable(ParallelScope.Children)]
 internal sealed class BulkCopyTests_PostgreSql : BulkCopyTestsBase
 {
     private const DatabaseType DbType = DatabaseType.PostgreSql;

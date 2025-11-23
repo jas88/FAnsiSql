@@ -6,7 +6,6 @@ using System.Data;
 
 namespace FAnsiTests.Aggregation;
 
-[NonParallelizable]
 internal sealed class PivotAggregationTests : AggregationTests
 {
 #if MSSQL_TESTS

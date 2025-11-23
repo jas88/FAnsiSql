@@ -8,7 +8,6 @@ using System.Data;
 
 namespace FAnsiTests.Aggregation;
 
-[NonParallelizable]
 internal sealed class CalendarAggregationTests : AggregationTests
 {
     [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
