@@ -19,8 +19,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FAnsi.Legacy", "FAnsi.Legac
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FAnsiTests", "Tests\FAnsiTests\FAnsiTests.csproj", "{84C476DB-FD9F-4A39-86C3-D7510167F75D}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FAnsi.Core.Tests", "Tests\FAnsi.Core.Tests\FAnsi.Core.Tests.csproj", "{A1B2C3D4-E5F6-4789-A1B2-C3D4E5F67890}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{6E411B20-D0CB-4F5E-9BDC-4910373C9812}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{1904EC10-14D9-4D9A-B570-2AD159F150A5}"
@@ -80,7 +78,6 @@ Global
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{84C476DB-FD9F-4A39-86C3-D7510167F75D} = {6E411B20-D0CB-4F5E-9BDC-4910373C9812}
-		{A1B2C3D4-E5F6-4789-A1B2-C3D4E5F67890} = {6E411B20-D0CB-4F5E-9BDC-4910373C9812}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {995D3A83-EB2E-4635-87E7-9A7865A05EF0}
