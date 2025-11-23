@@ -212,6 +212,9 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
 
     public override void RenameTable(DiscoveredTable discoveredTable, string newName, IManagedConnection connection)
     {
+        if (discoveredTable.TableType == TableType.View)
+            throw new NotSupportedException($"Rename is not supported for TableType {discoveredTable.TableType}");
+
         using var cmd = discoveredTable.Database.Server.Helper.GetCommand(GetRenameTableSql(discoveredTable, newName), connection.Connection, connection.Transaction);
         cmd.ExecuteNonQuery();
     }

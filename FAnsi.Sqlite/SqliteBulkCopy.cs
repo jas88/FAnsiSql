@@ -114,9 +114,16 @@ public sealed class SqliteBulkCopy(DiscoveredTable targetTable, IManagedConnecti
         var columnCount = matchedColumns.Count;
         var columnEntries = matchedColumns.ToArray(); // Convert to array for faster enumeration
 
+        // SQLite has a limit on the number of parameters (default 999, configurable up to 32766)
+        // We'll use a conservative limit of 900 to stay well under the default limit
+        // Calculate effective batch size based on column count to avoid "too many SQL variables" error
+        const int maxSqliteParameters = 900;
+        var effectiveBatchSize = columnCount > 0 ? Math.Min(BatchSize, maxSqliteParameters / columnCount) : BatchSize;
+        effectiveBatchSize = Math.Max(1, effectiveBatchSize); // Ensure at least 1 row per batch
+
         // Pre-allocate StringBuilder with estimated capacity for better performance
         // Estimate: (parameter_placeholder + comma) * columnCount * batchSize + overhead
-        var estimatedClauseCapacity = Math.Max(1024, 3 * columnCount * BatchSize + 100); // @pX format is about 3 chars
+        var estimatedClauseCapacity = Math.Max(1024, 3 * columnCount * effectiveBatchSize + 100); // @pX format is about 3 chars
         var valueClauses = new StringBuilder(estimatedClauseCapacity);
 
         var batchRows = 0;
@@ -164,8 +171,8 @@ public sealed class SqliteBulkCopy(DiscoveredTable targetTable, IManagedConnecti
 
             batchRows++;
 
-            // Execute batch when we reach batch size or it's the last row
-            if (batchRows >= BatchSize || rowIndex == lastRowIndex)
+            // Execute batch when we reach effective batch size or it's the last row
+            if (batchRows >= effectiveBatchSize || rowIndex == lastRowIndex)
             {
                 cmd.CommandText = baseCommand + valueClauses;
                 affected += cmd.ExecuteNonQuery();
