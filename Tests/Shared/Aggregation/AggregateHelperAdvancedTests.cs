@@ -15,6 +15,7 @@ namespace FAnsiTests.Aggregation;
 /// These tests verify the BuildAggregate method's decision-making for basic, axis, pivot, and
 /// pivot+axis aggregates.
 /// </summary>
+[NonParallelizable]
 internal sealed class AggregateHelperAdvancedTests : AggregationTests
 {
     [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]

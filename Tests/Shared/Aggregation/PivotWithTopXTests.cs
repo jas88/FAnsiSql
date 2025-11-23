@@ -11,6 +11,7 @@ namespace FAnsiTests.Aggregation;
 /// Tests for PIVOT operations combined with TOP X (LIMIT) functionality.
 /// Addresses GitHub Issue #38: MySQL PIVOT+TOP query generation bug.
 /// </summary>
+[NonParallelizable]
 internal sealed class PivotWithTopXTests : AggregationTests
 {
     /// <summary>

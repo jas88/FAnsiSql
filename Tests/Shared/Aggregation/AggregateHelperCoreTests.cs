@@ -13,6 +13,7 @@ namespace FAnsiTests.Aggregation;
 /// Tests for core AggregateHelper functionality across all database types.
 /// These tests target the GetDatePartOfColumn method and basic aggregate building.
 /// </summary>
+[NonParallelizable]
 internal sealed class AggregateHelperCoreTests : AggregationTests
 {
     [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
