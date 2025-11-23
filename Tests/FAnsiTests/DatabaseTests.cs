@@ -82,34 +82,25 @@ public abstract class DatabaseTests
             if (databaseType is DatabaseType.PostgreSql or DatabaseType.Oracle)
             {
                 var server = GetTestServer(databaseType);
+                var db = server.ExpectDatabase(_testScratchDatabase);
 
-                // For Oracle, try to drop existing user first (it may persist from previous test runs)
-                // Ignore errors if user doesn't exist
-                if (databaseType == DatabaseType.Oracle)
-                {
-                    try
-                    {
-                        var existingDb = server.ExpectDatabase(_testScratchDatabase);
-                        if (existingDb.Exists())
-                            existingDb.Drop();
-                    }
-                    catch
-                    {
-                        // Ignore - user might not exist yet
-                    }
-                }
-
-                // Create database if it doesn't exist
-                // For Oracle, this creates a user (database=user in Oracle)
-                if (server.DiscoverDatabases().All(db => db.GetWrappedName()?.Contains(_testScratchDatabase) != true))
+                // Check if database already exists
+                if (!db.Exists())
                 {
                     try
                     {
                         server.CreateDatabase(_testScratchDatabase);
                     }
-                    catch (Oracle.ManagedDataAccess.Client.OracleException ex) when (ex.Number == 1920)
+                    catch (Exception ex)
                     {
-                        // ORA-01920: user already exists - that's fine, we can use it
+                        // Ignore "already exists" errors from parallel test execution
+                        // Oracle: ORA-01920 (user already exists)
+                        // PostgreSQL: 23505 (duplicate key in pg_database)
+                        var isAlreadyExists = ex.Message.Contains("ORA-01920") ||
+                                             ex.Message.Contains("23505") ||
+                                             ex.Message.Contains("already exists");
+                        if (!isAlreadyExists)
+                            throw;
                     }
                 }
             }
