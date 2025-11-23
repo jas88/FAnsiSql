@@ -40,8 +40,6 @@ internal abstract class PivotWithTopXTestsBase : AggregationTests
 
         var sql = svr.GetQuerySyntaxHelper().AggregateHelper.BuildAggregate(lines, null);
 
-        TestContext.Out.WriteLine("Generated SQL:");
-        TestContext.Out.WriteLine(sql);
 
         using var con = svr.GetConnection();
         con.Open();
@@ -95,8 +93,6 @@ internal abstract class PivotWithTopXTestsBase : AggregationTests
 
         var sql = svr.GetQuerySyntaxHelper().AggregateHelper.BuildAggregate(lines, null);
 
-        TestContext.Out.WriteLine("Generated SQL:");
-        TestContext.Out.WriteLine(sql);
 
         using var con = svr.GetConnection();
         con.Open();
@@ -140,8 +136,6 @@ internal abstract class PivotWithTopXTestsBase : AggregationTests
 
         var sql = svr.GetQuerySyntaxHelper().AggregateHelper.BuildAggregate(lines, null);
 
-        TestContext.Out.WriteLine("Generated SQL:");
-        TestContext.Out.WriteLine(sql);
 
         using var con = svr.GetConnection();
         con.Open();
@@ -183,8 +177,6 @@ internal abstract class PivotWithTopXTestsBase : AggregationTests
 
         var sql = svr.GetQuerySyntaxHelper().AggregateHelper.BuildAggregate(lines, null);
 
-        TestContext.Out.WriteLine("Generated SQL:");
-        TestContext.Out.WriteLine(sql);
 
         using var con = svr.GetConnection();
         con.Open();
@@ -230,8 +222,6 @@ internal abstract class PivotWithTopXTestsBase : AggregationTests
 
         var sql = svr.GetQuerySyntaxHelper().AggregateHelper.BuildAggregate(lines, null);
 
-        TestContext.Out.WriteLine("Generated SQL:");
-        TestContext.Out.WriteLine(sql);
 
         using var con = svr.GetConnection();
         con.Open();
@@ -275,8 +265,6 @@ internal abstract class PivotWithTopXTestsBase : AggregationTests
 
         var sql = svr.GetQuerySyntaxHelper().AggregateHelper.BuildAggregate(lines, null);
 
-        TestContext.Out.WriteLine("Generated SQL:");
-        TestContext.Out.WriteLine(sql);
 
         using var con = svr.GetConnection();
         con.Open();
