@@ -318,6 +318,10 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
         // Check each table to see if it has foreign keys referencing our table
         foreach (var otherTableName in allTables)
         {
+            // Skip tables with invalid names that cannot be wrapped (spaces, parentheses, etc.)
+            if (otherTableName.Contains(' ') || otherTableName.Contains('(') || otherTableName.Contains(')'))
+                continue;
+
             var wrappedTableName = syntax.EnsureWrapped(otherTableName);
             using var cmd = discoveredTable.Database.Server.Helper.GetCommand(
                 $"PRAGMA foreign_key_list({wrappedTableName})", connection);
@@ -351,8 +355,14 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
                     _ => CascadeRule.NoAction
                 };
 
-                // Generate a unique key for this FK relationship
-                var foreignKeyName = $"FK_{syntax.EnsureWrapped(otherTableName)}_{primaryKeyTableName}";
+                // Try to extract the constraint name from the table's SQL definition
+                // SQLite's PRAGMA foreign_key_list doesn't include the constraint name
+                var foreignKeyName = ExtractForeignKeyName(connection, otherTableName, primaryKeyTableName, foreignKeyColumn, transaction);
+                if (string.IsNullOrEmpty(foreignKeyName))
+                {
+                    // Fall back to a generated name if we can't find the constraint name
+                    foreignKeyName = $"FK_{otherTableName}_{primaryKeyTableName}";
+                }
 
                 if (!relationships.ContainsKey(foreignKeyName))
                 {
@@ -372,6 +382,38 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
         }
 
         return relationships.Values;
+    }
+
+    /// <summary>
+    /// Extracts the foreign key constraint name from a table's SQL definition.
+    /// </summary>
+    /// <param name="connection">The database connection</param>
+    /// <param name="tableName">The table containing the foreign key</param>
+    /// <param name="referencedTableName">The table being referenced</param>
+    /// <param name="foreignKeyColumn">The foreign key column name</param>
+    /// <param name="transaction">Optional transaction</param>
+    /// <returns>The constraint name if found, otherwise null</returns>
+    private static string? ExtractForeignKeyName(DbConnection connection, string tableName, string referencedTableName, string foreignKeyColumn, IManagedTransaction? transaction)
+    {
+        // Get the CREATE TABLE statement for this table
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText = "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = @tableName";
+        var param = cmd.CreateParameter();
+        param.ParameterName = "@tableName";
+        param.Value = tableName;
+        cmd.Parameters.Add(param);
+        cmd.Transaction = transaction?.Transaction;
+
+        var sql = cmd.ExecuteScalar() as string;
+        if (string.IsNullOrEmpty(sql))
+            return null;
+
+        // Look for CONSTRAINT name FOREIGN KEY pattern in the CREATE TABLE statement
+        // Example: CONSTRAINT FK_T2_T1 FOREIGN KEY (c2) REFERENCES T1(c1)
+        var pattern = $@"CONSTRAINT\s+(\w+)\s+FOREIGN\s+KEY\s*\(\s*{foreignKeyColumn}\s*\)\s+REFERENCES\s+{referencedTableName}";
+        var match = System.Text.RegularExpressions.Regex.Match(sql, pattern, System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        return match.Success ? match.Groups[1].Value : null;
     }
 
     public override void FillDataTableWithTopX(DatabaseOperationArgs args, DiscoveredTable table, int topX, DataTable dt)

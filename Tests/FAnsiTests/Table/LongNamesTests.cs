@@ -32,6 +32,9 @@ internal sealed class LongNamesTests : DatabaseTests
     [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void Test_LongDatabaseNames_CreateAndReadBack(DatabaseType dbType)
     {
+        if (dbType == DatabaseType.Sqlite)
+            Assert.Ignore("SQLite database names are file paths subject to OS path limits");
+
         AssertCanCreateDatabases();
 
         var db = GetTestDatabase(dbType);

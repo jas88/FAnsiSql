@@ -67,6 +67,9 @@ internal sealed class DatabaseLevelTests : DatabaseTests
     [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void TestListDatabasesAsync(DatabaseType type)
     {
+        if (type == DatabaseType.Sqlite)
+            Assert.Ignore("SQLite doesn't support database enumeration - databases are files");
+
         var db = GetTestDatabase(type, false);
 
         Constraint exceptionType = type switch

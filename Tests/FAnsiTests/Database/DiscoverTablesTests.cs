@@ -137,6 +137,7 @@ internal sealed class DiscoverTablesTests : DatabaseTests
             DatabaseType.MySql => "`BB (ff)`",
             DatabaseType.Oracle => $"{db.GetRuntimeName()}.\"BB (ff)\"",
             DatabaseType.PostgreSql => $"\"{db.GetRuntimeName()}\".public.\"BB (ff)\"",
+            DatabaseType.Sqlite => "\"BB (ff)\"",
             _ => throw new ArgumentOutOfRangeException(nameof(db), db.Server.DatabaseType, $"Unknown database type {db.Server.DatabaseType}")
         };
 

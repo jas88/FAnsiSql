@@ -184,6 +184,11 @@ public sealed class SqliteDatabaseHelper : DiscoveredDatabaseHelper
             if (!querySyntaxHelper.IsValidTableName(tableName, out _))
                 continue;
 
+            // SQLite allows spaces and parentheses in quoted identifiers, but GetRuntimeName() will fail
+            // if it encounters these characters in an unquoted name. Filter these out during discovery.
+            if (tableName.Contains(' ') || tableName.Contains('(') || tableName.Contains(')'))
+                continue;
+
             tables.Add(new DiscoveredTable(parent, tableName, querySyntaxHelper, null, isView ? TableType.View : TableType.Table));
         }
 

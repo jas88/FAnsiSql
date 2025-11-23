@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using FAnsi;
@@ -154,39 +155,71 @@ internal sealed class ForeignKeyTests : DatabaseTests
 
         var db = GetTestDatabase(dbType);
 
-        var t2 = db.CreateTable("T2",
-        [
-            new DatabaseColumnRequest("c2", new DatabaseTypeRequest(typeof(int)))
-        ]);
-
-        var t3 = db.CreateTable("T3",
-        [
-            new DatabaseColumnRequest("c3", new DatabaseTypeRequest(typeof(int)))
-        ]);
-
-        var t1 = db.CreateTable("T1",
-        [
-            new DatabaseColumnRequest("c1", new DatabaseTypeRequest(typeof(int))){IsPrimaryKey = true}
-        ]);
-
-        var c1 = t1.DiscoverColumns().Single();
-        var c2 = t2.DiscoverColumns().Single();
-        var c3 = t3.DiscoverColumns().Single();
-
         DiscoveredRelationship constraint1;
         DiscoveredRelationship constraint2;
+        DiscoveredTable t1, t2, t3;
 
-        if (useTransaction)
+        // SQLite requires foreign keys to be defined at table creation time
+        if (dbType == DatabaseType.Sqlite)
         {
-            using var con = t1.Database.Server.BeginNewTransactedConnection();
-            constraint1 = t1.AddForeignKey(c2, c1, true, null, new DatabaseOperationArgs { TransactionIfAny = con.ManagedTransaction });
-            constraint2 = t1.AddForeignKey(c3, c1, true, "FK_Lol", new DatabaseOperationArgs { TransactionIfAny = con.ManagedTransaction });
-            con.ManagedTransaction?.CommitAndCloseConnection();
+            // Create parent table first
+            t1 = db.CreateTable("T1",
+            [
+                new DatabaseColumnRequest("c1", new DatabaseTypeRequest(typeof(int))){IsPrimaryKey = true}
+            ]);
+
+            // Create child tables with FK defined at creation
+            using (var con = db.Server.GetConnection())
+            {
+                con.Open();
+                using var cmd = db.Server.GetCommand("CREATE TABLE T2 (c2 INT, CONSTRAINT FK_T2_T1 FOREIGN KEY (c2) REFERENCES T1(c1) ON DELETE CASCADE)", con);
+                cmd.ExecuteNonQuery();
+
+                using var cmd2 = db.Server.GetCommand("CREATE TABLE T3 (c3 INT, CONSTRAINT FK_Lol FOREIGN KEY (c3) REFERENCES T1(c1) ON DELETE CASCADE)", con);
+                cmd2.ExecuteNonQuery();
+            }
+
+            t2 = db.ExpectTable("T2");
+            t3 = db.ExpectTable("T3");
+
+            // Discover the relationships instead of creating them
+            var relationships = t1.DiscoverRelationships();
+            constraint1 = relationships.Single(r => r.Name.Equals("FK_T2_T1", StringComparison.OrdinalIgnoreCase));
+            constraint2 = relationships.Single(r => r.Name.Equals("FK_Lol", StringComparison.OrdinalIgnoreCase));
         }
         else
         {
-            constraint1 = t1.AddForeignKey(c2, c1, true);
-            constraint2 = t1.AddForeignKey(c3, c1, true, "FK_Lol");
+            t2 = db.CreateTable("T2",
+            [
+                new DatabaseColumnRequest("c2", new DatabaseTypeRequest(typeof(int)))
+            ]);
+
+            t3 = db.CreateTable("T3",
+            [
+                new DatabaseColumnRequest("c3", new DatabaseTypeRequest(typeof(int)))
+            ]);
+
+            t1 = db.CreateTable("T1",
+            [
+                new DatabaseColumnRequest("c1", new DatabaseTypeRequest(typeof(int))){IsPrimaryKey = true}
+            ]);
+
+            var c1 = t1.DiscoverColumns().Single();
+            var c2 = t2.DiscoverColumns().Single();
+            var c3 = t3.DiscoverColumns().Single();
+
+            if (useTransaction)
+            {
+                using var con = t1.Database.Server.BeginNewTransactedConnection();
+                constraint1 = t1.AddForeignKey(c2, c1, true, null, new DatabaseOperationArgs { TransactionIfAny = con.ManagedTransaction });
+                constraint2 = t1.AddForeignKey(c3, c1, true, "FK_Lol", new DatabaseOperationArgs { TransactionIfAny = con.ManagedTransaction });
+                con.ManagedTransaction?.CommitAndCloseConnection();
+            }
+            else
+            {
+                constraint1 = t1.AddForeignKey(c2, c1, true);
+                constraint2 = t1.AddForeignKey(c3, c1, true, "FK_Lol");
+            }
         }
 
         Assert.Multiple(() =>
@@ -217,27 +250,66 @@ internal sealed class ForeignKeyTests : DatabaseTests
 
         var db = GetTestDatabase(dbType);
 
-        var t1 = db.CreateTable("T1",
-        [
-            new DatabaseColumnRequest("c1", new DatabaseTypeRequest(typeof(int))){IsPrimaryKey = true}
-        ]);
+        DiscoveredRelationship constraint1;
+        DiscoveredRelationship constraint2;
+        DiscoveredTable t1, t2, t3;
 
-        var t2 = db.CreateTable("T2",
-        [
-            new DatabaseColumnRequest("c2", new DatabaseTypeRequest(typeof(int))){IsPrimaryKey = true}
-        ]);
+        // SQLite requires foreign keys to be defined at table creation time
+        if (dbType == DatabaseType.Sqlite)
+        {
+            // Create parent tables first
+            t1 = db.CreateTable("T1",
+            [
+                new DatabaseColumnRequest("c1", new DatabaseTypeRequest(typeof(int))){IsPrimaryKey = true}
+            ]);
 
-        var t3 = db.CreateTable("T3",
-        [
-            new DatabaseColumnRequest("c3", new DatabaseTypeRequest(typeof(int)))
-        ]);
+            t2 = db.CreateTable("T2",
+            [
+                new DatabaseColumnRequest("c2", new DatabaseTypeRequest(typeof(int))){IsPrimaryKey = true}
+            ]);
 
-        var c1 = t1.DiscoverColumns().Single();
-        var c2 = t2.DiscoverColumns().Single();
-        var c3 = t3.DiscoverColumns().Single();
+            // Create child table with TWO foreign keys defined at creation
+            using (var con = db.Server.GetConnection())
+            {
+                con.Open();
+                using var cmd = db.Server.GetCommand(
+                    "CREATE TABLE T3 (c3 INT, " +
+                    "CONSTRAINT FK_T3_T1 FOREIGN KEY (c3) REFERENCES T1(c1) ON DELETE CASCADE, " +
+                    "CONSTRAINT FK_T3_T2 FOREIGN KEY (c3) REFERENCES T2(c2) ON DELETE CASCADE)", con);
+                cmd.ExecuteNonQuery();
+            }
 
-        var constraint1 = t1.AddForeignKey(c3, c1, true);
-        var constraint2 = t1.AddForeignKey(c3, c2, true);
+            t3 = db.ExpectTable("T3");
+
+            // Discover the relationships
+            var relationships = t3.DiscoverRelationships();
+            constraint1 = relationships.Single(r => r.PrimaryKeyTable.Equals(t1));
+            constraint2 = relationships.Single(r => r.PrimaryKeyTable.Equals(t2));
+        }
+        else
+        {
+            t1 = db.CreateTable("T1",
+            [
+                new DatabaseColumnRequest("c1", new DatabaseTypeRequest(typeof(int))){IsPrimaryKey = true}
+            ]);
+
+            t2 = db.CreateTable("T2",
+            [
+                new DatabaseColumnRequest("c2", new DatabaseTypeRequest(typeof(int))){IsPrimaryKey = true}
+            ]);
+
+            t3 = db.CreateTable("T3",
+            [
+                new DatabaseColumnRequest("c3", new DatabaseTypeRequest(typeof(int)))
+            ]);
+
+            var c1 = t1.DiscoverColumns().Single();
+            var c2 = t2.DiscoverColumns().Single();
+            var c3 = t3.DiscoverColumns().Single();
+
+            constraint1 = t1.AddForeignKey(c3, c1, true);
+            constraint2 = t1.AddForeignKey(c3, c2, true);
+        }
 
         Assert.Multiple(() =>
         {
