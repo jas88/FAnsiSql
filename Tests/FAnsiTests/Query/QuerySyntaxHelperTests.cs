@@ -316,6 +316,10 @@ internal sealed class QuerySyntaxHelperTests
             case DatabaseType.PostgreSql:
                 Assert.That(name, Is.EqualTo("\"mydb\".public.\"Troll\".\",,,\""));
                 break;
+            case DatabaseType.Sqlite:
+                // SQLite doesn't support database/schema qualification, returns only table.column
+                Assert.That(name, Is.EqualTo("\"Troll\".\",,,\""));
+                break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(dbType), dbType, null);
         }
@@ -343,6 +347,10 @@ internal sealed class QuerySyntaxHelperTests
                     break;
                 case DatabaseType.PostgreSql:
                     Assert.That(name, Is.EqualTo("\"mydb\".public.\"Troll\".\"MyCol\""));
+                    break;
+                case DatabaseType.Sqlite:
+                    // SQLite doesn't support database/schema qualification, returns only table.column
+                    Assert.That(name, Is.EqualTo("\"Troll\".\"MyCol\""));
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(dbType), dbType, null);

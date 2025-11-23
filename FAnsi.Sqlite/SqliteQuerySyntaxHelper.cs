@@ -57,6 +57,15 @@ public sealed class SqliteQuerySyntaxHelper : QuerySyntaxHelper
     /// </summary>
     public override string CloseQualifier => "\"";
 
+    /// <summary>
+    /// Gets the characters that are illegal in database/table/column names.
+    /// </summary>
+    /// <remarks>
+    /// SQLite database names are file paths, so dots and parentheses are valid.
+    /// Returns empty array since SQLite has very permissive naming rules.
+    /// </remarks>
+    public override char[] IllegalNameChars => [];
+
     private SqliteQuerySyntaxHelper() : base(SqliteTypeTranslater.Instance, SqliteAggregateHelper.Instance, SqliteUpdateHelper.Instance, DatabaseType.Sqlite)
     {
     }
