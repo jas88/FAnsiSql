@@ -82,7 +82,13 @@ public abstract class DatabaseTests
             if (databaseType is DatabaseType.PostgreSql or DatabaseType.Oracle)
             {
                 var server = GetTestServer(databaseType);
-                if (server.DiscoverDatabases().All(db => db.GetWrappedName()?.Contains(_testScratchDatabase) != true))
+                var existingDb = server.ExpectDatabase(_testScratchDatabase);
+
+                // For Oracle, drop and recreate to ensure clean state (Oracle users can persist across test runs)
+                if (databaseType == DatabaseType.Oracle && existingDb.Exists())
+                    existingDb.Drop();
+
+                if (!existingDb.Exists())
                     server.CreateDatabase(_testScratchDatabase);
             }
         }
