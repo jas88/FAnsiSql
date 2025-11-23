@@ -484,11 +484,11 @@ internal sealed class BulkInsertTest : DatabaseTests
             using var cts = new CancellationTokenSource();
             cts.Cancel();
             //creation should have been cancelled at the database level
-            var ex = Assert.Catch<AlterFailedException>(() => tbl.CreatePrimaryKey(con.ManagedTransaction, cts.Token, 50000, bobCol));
+            var ex = Assert.Catch<OperationCanceledException>(() => tbl.CreatePrimaryKey(con.ManagedTransaction, cts.Token, 50000, bobCol));
 
-            //MySql seems to be throwing null reference inside ExecuteNonQueryAsync.  No idea why but it is still cancelled
-            if (type != DatabaseType.MySql)
-                Assert.That(ex?.InnerException?.Message, Does.Contain("cancel"));
+            //Verify the operation was actually cancelled
+            Assert.That(ex, Is.Not.Null);
+            Assert.That(ex?.Message, Does.Contain("cancel").IgnoreCase);
         }
 
         //Now let's test cancelling GetDataTable
@@ -603,35 +603,50 @@ internal sealed class BulkInsertTest : DatabaseTests
         using (var dt = new DataTable())
         {
             dt.Columns.Add("num");
-            dt.Rows.Add("-4.10235746055587E-05"); //-0.0000410235746055587  <- this is what the number is
-            //-0.0000410235           <- this is what goes into db since we only asked for 10 digits after decimal place
+            dt.Rows.Add("-4.10235746055587E-05"); //-0.0000410235746055587  <- this is what the number is (19 decimal places)
+
             using var blk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture);
-            Assert.That(blk.Upload(dt), Is.EqualTo(1));
+
+            // For SQLite, decimal validation is not enforced, so upload succeeds
+            if (type == DatabaseType.Sqlite)
+            {
+                Assert.That(blk.Upload(dt), Is.EqualTo(1));
+            }
+            else
+            {
+                // For other databases, this should fail validation because value has 19 decimal places but column allows only 10
+                var ex = Assert.Throws<InvalidOperationException>(() => blk.Upload(dt));
+                Assert.That(ex?.Message, Does.Contain("Value -0.0000410235746055587 in column 'num' (row 1) has 19 decimal places"));
+                Assert.That(ex?.Message, Does.Contain("allows only 10 decimal places"));
+            }
         }
 
-
-        tbl.Insert(new Dictionary<string, object> { { "num", "-4.10235746055587E-05" } });
-
-        //the numbers read from the database should be pretty much exactly -0.0000410235 but Decimals are always a pain so...
-        var result = tbl.GetDataTable();
-
-        Assert.Multiple(() =>
+        // Only test insert and verify for SQLite where validation didn't fail
+        if (type == DatabaseType.Sqlite)
         {
-            //right number of rows/columns?
-            Assert.That(result.Columns, Has.Count.EqualTo(1));
-            Assert.That(result.Rows, Has.Count.EqualTo(2));
-        });
+            tbl.Insert(new Dictionary<string, object> { { "num", "-4.10235746055587E-05" } });
 
-        //get cell values rounded to 9 decimal places
-        var c1 = Math.Round((decimal)result.Rows[0][0], 9);
-        var c2 = Math.Round((decimal)result.Rows[1][0], 9);
+            //the numbers read from the database should be pretty much exactly -0.0000410235 but Decimals are always a pain so...
+            var result = tbl.GetDataTable();
 
-        //make sure they are basically what we are expecting (at the 9 decimal place point)
-        if (Math.Abs(-0.0000410235 - (double)c1) >= 0.000000001)
-            Assert.Fail();
+            Assert.Multiple(() =>
+            {
+                //right number of rows/columns?
+                Assert.That(result.Columns, Has.Count.EqualTo(1));
+                Assert.That(result.Rows, Has.Count.EqualTo(2));
+            });
 
-        if (Math.Abs(-0.0000410235 - (double)c2) >= 0.000000001)
-            Assert.Fail();
+            //get cell values rounded to 9 decimal places
+            var c1 = Math.Round((decimal)result.Rows[0][0], 9);
+            var c2 = Math.Round((decimal)result.Rows[1][0], 9);
+
+            //make sure they are basically what we are expecting (at the 9 decimal place point)
+            if (Math.Abs(-0.0000410235 - (double)c1) >= 0.000000001)
+                Assert.Fail();
+
+            if (Math.Abs(-0.0000410235 - (double)c2) >= 0.000000001)
+                Assert.Fail();
+        }
     }
 
     [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
@@ -710,7 +725,8 @@ internal sealed class BulkInsertTest : DatabaseTests
                 Assert.That(ex?.Message, Does.Contain("BulkInsert failed on data row 4 the complaint was about source column <<name>> which had value <<AAAAAAAAAAA>> destination data type was <<varchar(10)>>"));
                 break;
             case DatabaseType.MySql:
-                Assert.That(ex?.Message, Is.EqualTo("Data too long for column 'Name' at row 4"));
+                Assert.That(ex?.Message, Does.Contain("Bulk insert failed on data row 4"));
+                Assert.That(ex?.Message, Does.Contain("source column <<name>>"));
                 break;
             case DatabaseType.Oracle:
                 Assert.That(ex?.Message, Does.Contain("NAME"));
@@ -789,18 +805,20 @@ internal sealed class BulkInsertTest : DatabaseTests
         switch (type)
         {
             case DatabaseType.MicrosoftSQLServer:
-                Assert.That(ex?.Message, Does.Contain("Failed to load data row 3 the following values were rejected by the database"));
-                Assert.That(ex?.Message, Does.Contain("Parameter value '111111111.1' is out of range"));
+                Assert.That(ex?.Message, Does.Contain("Value 111111111.11 in column 'score' (row 3) exceeds the maximum allowed for decimal(4,1)"));
+                Assert.That(ex?.Message, Does.Contain("Maximum value is 999.9"));
                 break;
             case DatabaseType.MySql:
-                Assert.That(ex?.Message, Is.EqualTo("Out of range value for column 'Score' at row 3"));
+                Assert.That(ex?.Message, Does.Contain("Value 111111111.11 in column 'score' (row 3) exceeds the maximum allowed for decimal(3,1)"));
+                Assert.That(ex?.Message, Does.Contain("Maximum value is 99.9"));
                 break;
             case DatabaseType.Oracle:
-                Assert.That(ex?.Message, Does.Contain("value larger than specified precision allowed for this column"));
-
+                Assert.That(ex?.Message, Does.Contain("Value 111111111.11 in column 'score' (row 3) exceeds the maximum allowed for decimal(3,1)"));
+                Assert.That(ex?.Message, Does.Contain("Maximum value is 99.9"));
                 break;
             case DatabaseType.PostgreSql:
-                Assert.That(ex?.Message, Does.Contain("numeric field overflow"));
+                Assert.That(ex?.Message, Does.Contain("Value 111111111.11 in column 'score' (row 3) exceeds the maximum allowed for decimal(3,1)"));
+                Assert.That(ex?.Message, Does.Contain("Maximum value is 99.9"));
                 break;
 
             default:
