@@ -45,8 +45,8 @@ public sealed partial class PackageListIsCorrectTests
         // Extract the named packages from csproj files
         var usedPackages = GetCsprojFiles(root).Select(File.ReadAllText).SelectMany(static s => RPackageRef.Matches(s))
             .Select(static m => m.Groups[1].Value)
-            .Where(static p => !p.Contains("CodeAnalysis", StringComparison.InvariantCultureIgnoreCase) &&
-                              !p.Equals("System.Composition", StringComparison.InvariantCultureIgnoreCase))
+            .Where(static p => !p.Contains("CodeAnalysis", StringComparison.OrdinalIgnoreCase) &&
+                              !p.Equals("System.Composition", StringComparison.OrdinalIgnoreCase))
             .ToHashSet(StringComparer.InvariantCultureIgnoreCase);
 
         // Then subtract those listed in PACKAGES.md (should be empty)
