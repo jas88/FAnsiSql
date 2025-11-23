@@ -15,10 +15,11 @@ using TypeGuesser;
 namespace FAnsiTests.Table;
 
 /// <summary>
-/// Comprehensive tests for BulkCopy implementations across all database providers.
+/// Abstract base class providing comprehensive test methods for BulkCopy implementations across all database providers.
 /// Tests cover basic operations, error handling, column mapping, transactions, and special data types.
+/// This class is inherited by database-specific test classes that call these protected methods with specific DatabaseType values.
 /// </summary>
-internal sealed class BulkCopyTests : DatabaseTests
+internal abstract class BulkCopyTestsBase : DatabaseTests
 {
     /// <summary>
     /// Helper method to assert that an operation throws an exception.
@@ -60,8 +61,7 @@ internal sealed class BulkCopyTests : DatabaseTests
     }
     #region Basic Upload Operations
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
-    public void Upload_EmptyDataTable_ReturnsZero(DatabaseType type)
+    protected void Upload_EmptyDataTable_ReturnsZero(DatabaseType type)
     {
         var db = GetTestDatabase(type);
         var tbl = db.CreateTable("TestEmpty",
@@ -84,8 +84,7 @@ internal sealed class BulkCopyTests : DatabaseTests
         });
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
-    public void Upload_SingleRow_Success(DatabaseType type)
+    protected void Upload_SingleRow_Success(DatabaseType type)
     {
         var db = GetTestDatabase(type);
         var tbl = db.CreateTable("TestSingleRow",
@@ -116,8 +115,7 @@ internal sealed class BulkCopyTests : DatabaseTests
         });
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
-    public void Upload_MultipleRows_AllInserted(DatabaseType type)
+    protected void Upload_MultipleRows_AllInserted(DatabaseType type)
     {
         var db = GetTestDatabase(type);
         var tbl = db.CreateTable("TestMultipleRows",
@@ -143,8 +141,7 @@ internal sealed class BulkCopyTests : DatabaseTests
         });
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
-    public void Upload_MultipleBatches_Success(DatabaseType type)
+    protected void Upload_MultipleBatches_Success(DatabaseType type)
     {
         var db = GetTestDatabase(type);
         var tbl = db.CreateTable("TestMultipleBatches",
@@ -184,8 +181,7 @@ internal sealed class BulkCopyTests : DatabaseTests
 
     #region NULL Value Handling
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
-    public void Upload_NullValues_InsertedCorrectly(DatabaseType type)
+    protected void Upload_NullValues_InsertedCorrectly(DatabaseType type)
     {
         var db = GetTestDatabase(type);
         var tbl = db.CreateTable("TestNulls",
@@ -227,8 +223,7 @@ internal sealed class BulkCopyTests : DatabaseTests
         });
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
-    public void Upload_EmptyStrings_ConvertedToNull(DatabaseType type)
+    protected void Upload_EmptyStrings_ConvertedToNull(DatabaseType type)
     {
         var db = GetTestDatabase(type);
         var tbl = db.CreateTable("TestEmptyStrings",
@@ -260,8 +255,7 @@ internal sealed class BulkCopyTests : DatabaseTests
 
     #region Error Handling - Data Type Violations
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
-    public void Upload_StringTooLong_ThrowsException(DatabaseType type)
+    protected void Upload_StringTooLong_ThrowsException(DatabaseType type)
     {
         var db = GetTestDatabase(type);
         var tbl = db.CreateTable("TestStringTooLong",
@@ -282,8 +276,7 @@ internal sealed class BulkCopyTests : DatabaseTests
         AssertThrowsException(type, () => bulk.Upload(dt), sqliteMayNotThrow: true);
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
-    public void Upload_DecimalOutOfRange_ThrowsException(DatabaseType type)
+    protected void Upload_DecimalOutOfRange_ThrowsException(DatabaseType type)
     {
         var db = GetTestDatabase(type);
         var tbl = db.CreateTable("TestDecimalRange",
@@ -304,8 +297,7 @@ internal sealed class BulkCopyTests : DatabaseTests
         AssertThrowsException(type, () => bulk.Upload(dt), sqliteMayNotThrow: true);
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
-    public void Upload_InvalidDecimalFormat_ThrowsFormatException(DatabaseType type)
+    protected void Upload_InvalidDecimalFormat_ThrowsFormatException(DatabaseType type)
     {
         var db = GetTestDatabase(type);
         var tbl = db.CreateTable("TestInvalidDecimal",
@@ -331,8 +323,7 @@ internal sealed class BulkCopyTests : DatabaseTests
         });
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
-    public void Upload_IntegerOverflow_ThrowsException(DatabaseType type)
+    protected void Upload_IntegerOverflow_ThrowsException(DatabaseType type)
     {
         var db = GetTestDatabase(type);
         var tbl = db.CreateTable("TestIntOverflow",
@@ -357,8 +348,7 @@ internal sealed class BulkCopyTests : DatabaseTests
 
     #region Error Handling - Constraint Violations
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
-    public void Upload_ViolateNotNullConstraint_ThrowsException(DatabaseType type)
+    protected void Upload_ViolateNotNullConstraint_ThrowsException(DatabaseType type)
     {
         var db = GetTestDatabase(type);
         var tbl = db.CreateTable("TestNotNull",
@@ -379,8 +369,7 @@ internal sealed class BulkCopyTests : DatabaseTests
         AssertThrowsException(type, () => bulk.Upload(dt));
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
-    public void Upload_DuplicatePrimaryKey_ThrowsException(DatabaseType type)
+    protected void Upload_DuplicatePrimaryKey_ThrowsException(DatabaseType type)
     {
         var db = GetTestDatabase(type);
         var tbl = db.CreateTable("TestPKDuplicate",
@@ -420,8 +409,7 @@ internal sealed class BulkCopyTests : DatabaseTests
 
     #region Column Mapping
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
-    public void Upload_ReorderedColumns_MapsCorrectly(DatabaseType type)
+    protected void Upload_ReorderedColumns_MapsCorrectly(DatabaseType type)
     {
         if (type == DatabaseType.Sqlite)
             Assert.Ignore("SQLite stores DateTime as TEXT; type casting fails");
@@ -457,8 +445,7 @@ internal sealed class BulkCopyTests : DatabaseTests
         });
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
-    public void Upload_SubsetOfColumns_UsesDefaults(DatabaseType type)
+    protected void Upload_SubsetOfColumns_UsesDefaults(DatabaseType type)
     {
         var db = GetTestDatabase(type);
         var tbl = db.CreateTable("TestSubsetColumns",
@@ -496,8 +483,7 @@ internal sealed class BulkCopyTests : DatabaseTests
         });
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
-    public void Upload_ExtraColumnsInDataTable_ThrowsException(DatabaseType type)
+    protected void Upload_ExtraColumnsInDataTable_ThrowsException(DatabaseType type)
     {
         var db = GetTestDatabase(type);
         var tbl = db.CreateTable("TestExtraColumns",
@@ -519,8 +505,7 @@ internal sealed class BulkCopyTests : DatabaseTests
         Assert.That(ex?.Message, Does.Contain("ExtraColumn"));
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
-    public void Upload_CaseMismatchedColumns_MapsCorrectly(DatabaseType type)
+    protected void Upload_CaseMismatchedColumns_MapsCorrectly(DatabaseType type)
     {
         var db = GetTestDatabase(type);
         var tbl = db.CreateTable("TestCaseColumns",
@@ -550,8 +535,7 @@ internal sealed class BulkCopyTests : DatabaseTests
 
     #region Transaction Behavior
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
-    public void Upload_WithTransaction_CommitsProperly(DatabaseType type)
+    protected void Upload_WithTransaction_CommitsProperly(DatabaseType type)
     {
         var db = GetTestDatabase(type);
         TestContext.Out.WriteLine($"[{type}] Created database");
@@ -610,8 +594,7 @@ internal sealed class BulkCopyTests : DatabaseTests
         TestContext.Out.WriteLine($"[{type}] Final row count verified");
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
-    public void Upload_WithTransaction_RollbackWorks(DatabaseType type)
+    protected void Upload_WithTransaction_RollbackWorks(DatabaseType type)
     {
         var db = GetTestDatabase(type);
         var tbl = db.CreateTable("TestTransactionRollback",
@@ -641,8 +624,7 @@ internal sealed class BulkCopyTests : DatabaseTests
         Assert.That(tbl.GetRowCount(), Is.EqualTo(0));
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
-    public void Upload_TransactionError_RollsBackAutomatically(DatabaseType type)
+    protected void Upload_TransactionError_RollsBackAutomatically(DatabaseType type)
     {
         var db = GetTestDatabase(type);
         var tbl = db.CreateTable("TestAutoRollback",
@@ -677,8 +659,7 @@ internal sealed class BulkCopyTests : DatabaseTests
 
     #region Special Data Types
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
-    public void Upload_UnicodeStrings_PreservedCorrectly(DatabaseType type)
+    protected void Upload_UnicodeStrings_PreservedCorrectly(DatabaseType type)
     {
         var db = GetTestDatabase(type);
         var tbl = db.CreateTable("TestUnicode",
@@ -709,8 +690,7 @@ internal sealed class BulkCopyTests : DatabaseTests
         });
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
-    public void Upload_DateTimeValues_PreservedCorrectly(DatabaseType type)
+    protected void Upload_DateTimeValues_PreservedCorrectly(DatabaseType type)
     {
         if (type == DatabaseType.Sqlite)
             Assert.Ignore("SQLite stores DateTime as TEXT strings; ADO.NET returns string type. Fundamental SQLite limitation.");
@@ -746,8 +726,7 @@ internal sealed class BulkCopyTests : DatabaseTests
         });
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
-    public void Upload_DateTimeStrings_ParsedCorrectly(DatabaseType type)
+    protected void Upload_DateTimeStrings_ParsedCorrectly(DatabaseType type)
     {
         if (type == DatabaseType.Sqlite)
             Assert.Ignore("SQLite stores DateTime as TEXT strings; ADO.NET returns string type. Fundamental SQLite limitation.");
@@ -778,8 +757,7 @@ internal sealed class BulkCopyTests : DatabaseTests
         });
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
-    public void Upload_BinaryData_PreservedCorrectly(DatabaseType type)
+    protected void Upload_BinaryData_PreservedCorrectly(DatabaseType type)
     {
         var db = GetTestDatabase(type);
         var tbl = db.CreateTable("TestBinary",
@@ -803,8 +781,7 @@ internal sealed class BulkCopyTests : DatabaseTests
         Assert.That(retrieved, Is.EqualTo(testData));
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
-    public void Upload_BooleanValues_ConvertedCorrectly(DatabaseType type)
+    protected void Upload_BooleanValues_ConvertedCorrectly(DatabaseType type)
     {
         var db = GetTestDatabase(type);
         var tbl = db.CreateTable("TestBoolean",
@@ -830,8 +807,7 @@ internal sealed class BulkCopyTests : DatabaseTests
         Assert.That(result.Rows, Has.Count.EqualTo(2));
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
-    public void Upload_DecimalPrecision_PreservedCorrectly(DatabaseType type)
+    protected void Upload_DecimalPrecision_PreservedCorrectly(DatabaseType type)
     {
         var db = GetTestDatabase(type);
         var tbl = db.CreateTable("TestDecimalPrecision",
@@ -865,8 +841,7 @@ internal sealed class BulkCopyTests : DatabaseTests
 
     #region Performance and Large Datasets
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
-    public void Upload_LargeDataset_CompletesSuccessfully(DatabaseType type)
+    protected void Upload_LargeDataset_CompletesSuccessfully(DatabaseType type)
     {
         var db = GetTestDatabase(type);
         var tbl = db.CreateTable("TestLargeDataset",
@@ -897,8 +872,7 @@ internal sealed class BulkCopyTests : DatabaseTests
         });
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
-    public void Upload_WideTable_AllColumnsInserted(DatabaseType type)
+    protected void Upload_WideTable_AllColumnsInserted(DatabaseType type)
     {
         var db = GetTestDatabase(type);
 
@@ -934,8 +908,7 @@ internal sealed class BulkCopyTests : DatabaseTests
 
     #region Timeout and Cancellation
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
-    public void Upload_WithTimeout_RespectsSetting(DatabaseType type)
+    protected void Upload_WithTimeout_RespectsSetting(DatabaseType type)
     {
         var db = GetTestDatabase(type);
         var tbl = db.CreateTable("TestTimeout",
@@ -960,8 +933,7 @@ internal sealed class BulkCopyTests : DatabaseTests
 
     #region Auto-Increment and Identity Columns
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
-    public void Upload_WithAutoIncrementColumn_GeneratesValues(DatabaseType type)
+    protected void Upload_WithAutoIncrementColumn_GeneratesValues(DatabaseType type)
     {
         var db = GetTestDatabase(type);
         var tbl = db.CreateTable("TestAutoIncrement",
@@ -1000,8 +972,7 @@ internal sealed class BulkCopyTests : DatabaseTests
 
     #region Decimal Precision and Scale Validation
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
-    public void Upload_DecimalExceedsPrecision_ThrowsException(DatabaseType type)
+    protected void Upload_DecimalExceedsPrecision_ThrowsException(DatabaseType type)
     {
         var db = GetTestDatabase(type);
         var tbl = db.CreateTable("TestDecimalPrecisionExceeded",
@@ -1027,8 +998,7 @@ internal sealed class BulkCopyTests : DatabaseTests
             sqliteMayNotThrow: true);
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
-    public void Upload_DecimalExceedsScale_ThrowsException(DatabaseType type)
+    protected void Upload_DecimalExceedsScale_ThrowsException(DatabaseType type)
     {
         var db = GetTestDatabase(type);
         var tbl = db.CreateTable("TestDecimalScaleExceeded",
@@ -1055,8 +1025,7 @@ internal sealed class BulkCopyTests : DatabaseTests
             sqliteMayNotThrow: true);
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
-    public void Upload_DecimalMaxPrecisionAndScale_Success(DatabaseType type)
+    protected void Upload_DecimalMaxPrecisionAndScale_Success(DatabaseType type)
     {
         var db = GetTestDatabase(type);
         var tbl = db.CreateTable("TestDecimalMaxValid",
@@ -1097,8 +1066,7 @@ internal sealed class BulkCopyTests : DatabaseTests
         });
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
-    public void Upload_DecimalLargePrecisionViolation_ThrowsException(DatabaseType type)
+    protected void Upload_DecimalLargePrecisionViolation_ThrowsException(DatabaseType type)
     {
         var db = GetTestDatabase(type);
         var tbl = db.CreateTable("TestDecimalLargePrecision",
@@ -1124,8 +1092,7 @@ internal sealed class BulkCopyTests : DatabaseTests
             sqliteMayNotThrow: true);
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
-    public void Upload_DecimalZeroScale_Success(DatabaseType type)
+    protected void Upload_DecimalZeroScale_Success(DatabaseType type)
     {
         var db = GetTestDatabase(type);
         var tbl = db.CreateTable("TestDecimalZeroScale",
@@ -1153,8 +1120,7 @@ internal sealed class BulkCopyTests : DatabaseTests
         });
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
-    public void Upload_DecimalZeroScale_WithDecimalPlaces_ThrowsException(DatabaseType type)
+    protected void Upload_DecimalZeroScale_WithDecimalPlaces_ThrowsException(DatabaseType type)
     {
         var db = GetTestDatabase(type);
         var tbl = db.CreateTable("TestDecimalZeroScaleViolation",
@@ -1177,8 +1143,7 @@ internal sealed class BulkCopyTests : DatabaseTests
             sqliteMayNotThrow: true);
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
-    public void Upload_DecimalNullValues_IgnoredInValidation(DatabaseType type)
+    protected void Upload_DecimalNullValues_IgnoredInValidation(DatabaseType type)
     {
         var db = GetTestDatabase(type);
         var tbl = db.CreateTable("TestDecimalNullValidation",
@@ -1215,8 +1180,7 @@ internal sealed class BulkCopyTests : DatabaseTests
 
     #region Disposal and Resource Management
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
-    public void Upload_AfterDispose_ThrowsException(DatabaseType type)
+    protected void Upload_AfterDispose_ThrowsException(DatabaseType type)
     {
         var db = GetTestDatabase(type);
         var tbl = db.CreateTable("TestDispose",

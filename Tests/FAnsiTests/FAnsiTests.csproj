@@ -4,8 +4,8 @@
     <Product>FAnsiSqlTests</Product>
     <Copyright>Copyright ©  2019</Copyright>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-    <!-- Exclude from CI - kept for backward compatibility with RDMP/SmiServices -->
-    <IsTestProject>false</IsTestProject>
+    <!-- Re-enabled as test project for parallelized BulkCopy tests -->
+    <IsTestProject>true</IsTestProject>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="..\..\SharedAssemblyInfo.cs" Link="SharedAssemblyInfo.cs" />
