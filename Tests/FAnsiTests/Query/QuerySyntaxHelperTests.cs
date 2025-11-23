@@ -4,12 +4,29 @@ using FAnsi;
 using FAnsi.Discovery;
 using FAnsi.Discovery.QuerySyntax;
 using FAnsi.Implementation;
+using FAnsi.Implementations.MicrosoftSQL;
+using FAnsi.Implementations.MySql;
+using FAnsi.Implementations.Oracle;
+using FAnsi.Implementations.PostgreSql;
+using FAnsi.Implementations.Sqlite;
 using NUnit.Framework;
 
 namespace FAnsiTests.Query;
 
 internal sealed class QuerySyntaxHelperTests
 {
+    [OneTimeSetUp]
+    public void Setup()
+    {
+        // Explicit loading for tests (ModuleInitializer timing is unreliable in test runners)
+#pragma warning disable CS0618 // Type or member is obsolete
+        ImplementationManager.Load<MicrosoftSQLImplementation>();
+        ImplementationManager.Load<MySqlImplementation>();
+        ImplementationManager.Load<OracleImplementation>();
+        ImplementationManager.Load<PostgreSqlImplementation>();
+        ImplementationManager.Load<SqliteImplementation>();
+#pragma warning restore CS0618 // Type or member is obsolete
+    }
 
 
     //Oracle always uppers everything because... Oracle
