@@ -105,7 +105,8 @@ public sealed class SqliteBulkCopy(DiscoveredTable targetTable, IManagedConnecti
             cmd.CommandTimeout = BulkInsertBatchTimeoutInSeconds;
 
         // Pre-build static parts of the INSERT statement
-        var columnNames = string.Join(",", matchedColumns.Values.Select(c => $"[{c.GetRuntimeName()}]"));
+        var syntax = TargetTable.GetQuerySyntaxHelper();
+        var columnNames = string.Join(",", matchedColumns.Values.Select(c => syntax.EnsureWrapped(c.GetRuntimeName())));
         var baseCommand = $"INSERT INTO {TargetTable.GetFullyQualifiedName()}({columnNames}) VALUES ";
 
         // Pre-calculate values to avoid repeated calculations in the main loop
@@ -207,7 +208,8 @@ public sealed class SqliteBulkCopy(DiscoveredTable targetTable, IManagedConnecti
             cmd.CommandTimeout = BulkInsertBatchTimeoutInSeconds;
 
         // Pre-build static parts of the single-row INSERT statement for better performance
-        var columnNames = string.Join(",", matchedColumns.Values.Select(c => $"[{c.GetRuntimeName()}]"));
+        var syntax = TargetTable.GetQuerySyntaxHelper();
+        var columnNames = string.Join(",", matchedColumns.Values.Select(c => syntax.EnsureWrapped(c.GetRuntimeName())));
         var paramNames = string.Join(",", matchedColumns.Keys.Select((_, i) => $"@p{i}"));
         cmd.CommandText = $"INSERT INTO {TargetTable.GetFullyQualifiedName()}({columnNames}) VALUES ({paramNames})";
 

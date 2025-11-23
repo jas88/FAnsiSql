@@ -50,8 +50,9 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
     /// </remarks>
     public override IEnumerable<DiscoveredColumn> DiscoverColumns(DiscoveredTable discoveredTable, IManagedConnection connection, string database)
     {
-        // PRAGMA commands don't use quoted identifiers - use fully qualified name
-        var tableName = discoveredTable.GetFullyQualifiedName();
+        // PRAGMA commands accept quoted identifiers
+        var syntax = discoveredTable.GetQuerySyntaxHelper();
+        var tableName = syntax.EnsureWrapped(discoveredTable.GetRuntimeName());
 
         using var cmd = discoveredTable.Database.Server.Helper.GetCommand($"PRAGMA table_info({tableName})", connection.Connection);
         cmd.Transaction = connection.Transaction;
@@ -289,8 +290,9 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
     /// </remarks>
     public override IEnumerable<DiscoveredRelationship> DiscoverRelationships(DiscoveredTable discoveredTable, DbConnection connection, IManagedTransaction? transaction = null)
     {
-        // PRAGMA commands don't use quoted identifiers - use fully qualified name
-        var tableName = discoveredTable.GetFullyQualifiedName();
+        // PRAGMA commands accept quoted identifiers
+        var syntax = discoveredTable.GetQuerySyntaxHelper();
+        var tableName = syntax.EnsureWrapped(discoveredTable.GetRuntimeName());
         var relationships = new Dictionary<string, DiscoveredRelationship>();
 
         using var cmd = discoveredTable.Database.Server.Helper.GetCommand($"PRAGMA foreign_key_list({tableName})", connection);
@@ -360,8 +362,9 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
     /// </summary>
     public override bool HasPrimaryKey(DiscoveredTable table, IManagedConnection connection)
     {
-        // PRAGMA commands don't use quoted identifiers - use fully qualified name
-        var tableName = table.GetFullyQualifiedName();
+        // PRAGMA commands accept quoted identifiers
+        var syntax = table.GetQuerySyntaxHelper();
+        var tableName = syntax.EnsureWrapped(table.GetRuntimeName());
         using var cmd = table.Database.Server.Helper.GetCommand($"PRAGMA table_info({tableName})", connection.Connection);
         cmd.Transaction = connection.Transaction;
 
