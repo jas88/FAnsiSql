@@ -267,7 +267,7 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
     /// <param name="args">Database operation arguments</param>
     /// <param name="table">The table to add primary key to</param>
     /// <param name="discoverColumns">The columns to include in the primary key</param>
-    /// <exception cref="NotSupportedException">
+    /// <exception cref="FAnsi.Exceptions.AlterFailedException">
     /// SQLite does not support adding primary keys to existing tables. Table recreation would be required.
     /// </exception>
     /// <remarks>
@@ -277,7 +277,8 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
     public override void CreatePrimaryKey(DatabaseOperationArgs args, DiscoveredTable table, DiscoveredColumn[] discoverColumns)
     {
         // SQLite doesn't support adding primary keys to existing tables
-        throw new NotSupportedException("SQLite does not support adding primary keys to existing tables. Table recreation would be required.");
+        var notSupportedException = new NotSupportedException("SQLite does not support adding primary keys to existing tables. Table recreation would be required.");
+        throw new FAnsi.Exceptions.AlterFailedException($"Failed to create primary key on table {table.GetFullyQualifiedName()}. SQLite does not support adding primary keys to existing tables.", notSupportedException);
     }
 
     /// <summary>
@@ -288,39 +289,86 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
     /// <param name="transaction">Optional transaction</param>
     /// <returns>An enumerable of discovered relationships</returns>
     /// <remarks>
-    /// Uses PRAGMA foreign_key_list() to retrieve foreign key information. SQLite defaults to
-    /// NO ACTION for cascade rules.
+    /// In SQLite, foreign keys are stored on the child table (the table with the FK constraint).
+    /// To find all relationships involving a table, we need to:
+    /// 1. Check if this table has FKs pointing to other tables (we are the child)
+    /// 2. Search all other tables to see if they have FKs pointing to us (we are the parent)
+    ///
+    /// This differs from SQL Server where we can query system views to find all relationships.
     /// </remarks>
     public override IEnumerable<DiscoveredRelationship> DiscoverRelationships(DiscoveredTable discoveredTable, DbConnection connection, IManagedTransaction? transaction = null)
     {
-        // PRAGMA commands accept quoted identifiers
         var syntax = discoveredTable.GetQuerySyntaxHelper();
-        var tableName = syntax.EnsureWrapped(discoveredTable.GetRuntimeName());
         var relationships = new Dictionary<string, DiscoveredRelationship>();
+        var tableRuntimeName = discoveredTable.GetRuntimeName();
 
-        using var cmd = discoveredTable.Database.Server.Helper.GetCommand($"PRAGMA foreign_key_list({tableName})", connection);
-        cmd.Transaction = transaction?.Transaction;
-
-        using var r = cmd.ExecuteReader();
-        while (r.Read())
+        // First, get all tables in the database
+        var allTables = new List<string>();
+        using (var cmd = discoveredTable.Database.Server.Helper.GetCommand(
+            "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'", connection))
         {
-            var foreignKeyName = $"FK_{tableName}_{r["table"]}";
-            var primaryKeyTable = (string)r["table"];
-            var foreignKeyColumn = (string)r["from"];
-            var primaryKeyColumn = (string)r["to"];
-
-            if (!relationships.ContainsKey(foreignKeyName))
+            cmd.Transaction = transaction?.Transaction;
+            using var r = cmd.ExecuteReader();
+            while (r.Read())
             {
-                var pkTable = discoveredTable.Database.ExpectTable(primaryKeyTable);
-                relationships[foreignKeyName] = new DiscoveredRelationship(
-                    foreignKeyName,
-                    pkTable,
-                    discoveredTable,
-                    CascadeRule.NoAction  // SQLite defaults to NO ACTION
-                );
+                allTables.Add((string)r["name"]);
             }
+        }
 
-            relationships[foreignKeyName].AddKeys(primaryKeyColumn, foreignKeyColumn, transaction);
+        // Check each table to see if it has foreign keys referencing our table
+        foreach (var otherTableName in allTables)
+        {
+            var wrappedTableName = syntax.EnsureWrapped(otherTableName);
+            using var cmd = discoveredTable.Database.Server.Helper.GetCommand(
+                $"PRAGMA foreign_key_list({wrappedTableName})", connection);
+            cmd.Transaction = transaction?.Transaction;
+
+            using var r = cmd.ExecuteReader();
+            while (r.Read())
+            {
+                var primaryKeyTableName = (string)r["table"];
+
+                // Only include relationships where the discovered table is involved
+                // (either as parent or child)
+                var isParent = string.Equals(primaryKeyTableName, tableRuntimeName, StringComparison.OrdinalIgnoreCase);
+                var isChild = string.Equals(otherTableName, tableRuntimeName, StringComparison.OrdinalIgnoreCase);
+
+                if (!isParent && !isChild)
+                    continue;
+
+                var foreignKeyColumn = (string)r["from"];
+                var primaryKeyColumn = (string)r["to"];
+                var onDelete = (string)r["on_delete"];
+
+                // Parse cascade rule from SQLite's on_delete value
+                var cascadeRule = onDelete.ToUpperInvariant() switch
+                {
+                    "CASCADE" => CascadeRule.Delete,
+                    "SET NULL" => CascadeRule.SetNull,
+                    "SET DEFAULT" => CascadeRule.SetDefault,
+                    "RESTRICT" => CascadeRule.NoAction,
+                    "NO ACTION" => CascadeRule.NoAction,
+                    _ => CascadeRule.NoAction
+                };
+
+                // Generate a unique key for this FK relationship
+                var foreignKeyName = $"FK_{syntax.EnsureWrapped(otherTableName)}_{primaryKeyTableName}";
+
+                if (!relationships.ContainsKey(foreignKeyName))
+                {
+                    var pkTable = discoveredTable.Database.ExpectTable(primaryKeyTableName);
+                    var fkTable = discoveredTable.Database.ExpectTable(otherTableName);
+
+                    relationships[foreignKeyName] = new DiscoveredRelationship(
+                        foreignKeyName,
+                        pkTable,
+                        fkTable,
+                        cascadeRule
+                    );
+                }
+
+                relationships[foreignKeyName].AddKeys(primaryKeyColumn, foreignKeyColumn, transaction);
+            }
         }
 
         return relationships.Values;
