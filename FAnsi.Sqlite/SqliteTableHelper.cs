@@ -315,8 +315,7 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
             }
         }
 
-        // Check each table to see if it has foreign keys referencing our table
-        // Filter out tables with invalid names that cannot be wrapped (spaces, parentheses, etc.)
+        // Check each table (excluding those with invalid names that cannot be wrapped) to see if it has foreign keys referencing our table
         foreach (var otherTableName in allTables.Where(t => !t.Contains(' ') && !t.Contains('(') && !t.Contains(')')))
         {
             var wrappedTableName = syntax.EnsureWrapped(otherTableName);
