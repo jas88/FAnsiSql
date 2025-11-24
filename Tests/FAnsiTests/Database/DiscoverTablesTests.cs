@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using FAnsi;
 using FAnsi.Discovery;
@@ -36,15 +36,14 @@ internal sealed class DiscoverTablesTests : DatabaseTests
 
     }
     /// <summary>
-    /// RDMPDEV-1548 This test explores an issue where <see cref="DiscoveredDatabase.DiscoverTables"/> would fail when
-    /// there were tables in the database with invalid names.
+    /// Tests that <see cref="DiscoveredDatabase.DiscoverTables"/> correctly discovers tables with special characters
+    /// in their names (parentheses, brackets, etc.) when using quoted identifiers.
     ///
-    /// Correct behaviour varies by database:
-    /// - SQLite: Supports almost any characters in quoted identifiers, so "BB (ff)" is valid
-    /// - SQL Server/MySQL/etc: May reject names with parentheses as invalid
+    /// After removing IllegalNameChars validation, ALL databases now support special characters in quoted identifiers.
+    /// Tables like "BB (ff)" and "FF (troll)" should be discoverable across all database types.
     /// </summary>
     [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
-    public void Test_DiscoverTables_WithInvalidNames_Skipped(DatabaseType dbType)
+    public void Test_DiscoverTables_WithSpecialCharacters(DatabaseType dbType)
     {
         var db = GetTestDatabase(dbType);
 
@@ -67,11 +66,13 @@ internal sealed class DiscoverTablesTests : DatabaseTests
     }
 
     /// <summary>
-    /// As above test <see cref="Test_DiscoverTables_WithInvalidNames_Skipped"/> but creates a view with a bad name instead of a table
+    /// Tests that <see cref="DiscoveredDatabase.DiscoverTables"/> correctly discovers views with special characters
+    /// in their names when using quoted identifiers. Similar to <see cref="Test_DiscoverTables_WithSpecialCharacters"/>
+    /// but for views instead of tables.
     /// </summary>
     /// <param name="dbType"></param>
     [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
-    public void Test_DiscoverViews_WithInvalidNames_Skipped(DatabaseType dbType)
+    public void Test_DiscoverViews_WithSpecialCharacters(DatabaseType dbType)
     {
         var db = GetTestDatabase(dbType);
 
