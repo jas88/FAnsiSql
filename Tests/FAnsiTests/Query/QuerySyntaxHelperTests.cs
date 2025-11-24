@@ -176,15 +176,19 @@ internal sealed class QuerySyntaxHelperTests
 
         // After removing IllegalNameChars validation, ALL databases now allow special characters in identifiers
         // "count(*)" is technically a valid unquoted identifier (though in practice you'd quote it)
-        Assert.That(syntaxHelper.GetRuntimeName("count(*)"), Is.EqualTo("count(*)"));
-        Assert.That(syntaxHelper.GetRuntimeName("dbo.GetMyCoolThing(\"Magic Fun Times\")"), Is.EqualTo("GetMyCoolThing(\"Magic Fun Times\")"));
+        // Oracle uppercases unquoted identifiers, so we need case-insensitive comparison
+        var expectedCount = t == DatabaseType.Oracle ? "COUNT(*)" : "count(*)";
+        var expectedMethod = t == DatabaseType.Oracle ? "GETMYCOOLTHING(\"MAGIC FUN TIMES\")" : "GetMyCoolThing(\"Magic Fun Times\")";
+
+        Assert.That(syntaxHelper.GetRuntimeName("count(*)"), Is.EqualTo(expectedCount));
+        Assert.That(syntaxHelper.GetRuntimeName("dbo.GetMyCoolThing(\"Magic Fun Times\")"), Is.EqualTo(expectedMethod));
 
         Assert.Multiple(() =>
         {
             Assert.That(syntaxHelper.TryGetRuntimeName("count(*)", out var name1), Is.True);
-            Assert.That(name1, Is.EqualTo("count(*)"));
+            Assert.That(name1, Is.EqualTo(expectedCount));
             Assert.That(syntaxHelper.TryGetRuntimeName("dbo.GetMyCoolThing(\"Magic Fun Times\")", out var name2), Is.True);
-            Assert.That(name2, Is.EqualTo("GetMyCoolThing(\"Magic Fun Times\")"));
+            Assert.That(name2, Is.EqualTo(expectedMethod));
         });
     }
 
