@@ -285,17 +285,10 @@ internal sealed class QuerySyntaxHelperTests
         Assert.Throws<RuntimeNameException>(() => syntaxHelper.ValidateDatabaseName(null));
         Assert.Throws<RuntimeNameException>(() => syntaxHelper.ValidateDatabaseName("  "));
 
-        // SQLite uses file paths, so dots and parentheses are valid
-        if (dbType == DatabaseType.Sqlite)
-        {
-            Assert.DoesNotThrow(() => syntaxHelper.ValidateDatabaseName("db.table"));
-            Assert.DoesNotThrow(() => syntaxHelper.ValidateDatabaseName("db(lol)"));
-        }
-        else
-        {
-            Assert.Throws<RuntimeNameException>(() => syntaxHelper.ValidateDatabaseName("db.table"));
-            Assert.Throws<RuntimeNameException>(() => syntaxHelper.ValidateDatabaseName("db(lol)"));
-        }
+        // Special characters are now allowed in all databases since FAnsi wraps/quotes identifiers
+        // Dots, parentheses, brackets, etc. are valid in quoted identifiers for all databases
+        Assert.DoesNotThrow(() => syntaxHelper.ValidateDatabaseName("db.table"));
+        Assert.DoesNotThrow(() => syntaxHelper.ValidateDatabaseName("db(lol)"));
 
         Assert.Throws<RuntimeNameException>(() => syntaxHelper.ValidateDatabaseName(new string('A', syntaxHelper.MaximumDatabaseLength + 1)));
 

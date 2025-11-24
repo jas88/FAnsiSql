@@ -122,19 +122,10 @@ public abstract partial class QuerySyntaxHelper(
             return lastWord;
 
         //trim off any brackets e.g. return "My Table" for "[My Table]"
-        string result;
         if (lastWord.StartsWith(OpenQualifier, StringComparison.Ordinal) && lastWord.EndsWith(CloseQualifier, StringComparison.Ordinal))
-            result = UnescapeWrappedNameBody(lastWord[1..^1]);
-        else
-            result = lastWord;
+            return UnescapeWrappedNameBody(lastWord[1..^1]);
 
-        //if it's "count(1)" or something (after unwrapping) then that's a problem!
-        // Check if the final unwrapped identifier contains illegal characters
-        if (IllegalNameChars.Length > 0 && result.AsSpan().IndexOfAny(IllegalNameChars) != -1)
-            throw new RuntimeNameException(
-                $"Could not determine runtime name for Sql:'{s}'.  It had brackets and no alias.  Try adding ' as mycol' to the end.");
-
-        return result;
+        return lastWord;
     }
 
     /// <summary>
@@ -417,10 +408,9 @@ public abstract partial class QuerySyntaxHelper(
             return string.Format(CultureInfo.InvariantCulture, FAnsiStrings.QuerySyntaxHelper_ValidateName__0__name___1___is_too_long_for_the_DBMS___2__supports_maximum_length_of__3__,
                 objectType, candidate[..maximumLengthAllowed], DatabaseType, maximumLengthAllowed);
 
-        if (candidate.IndexOfAny(IllegalNameChars) != -1)
-            return string.Format(CultureInfo.InvariantCulture,
-                FAnsiStrings.QuerySyntaxHelper_ValidateName__0__name___1___contained_unsupported__by_FAnsi__characters___Unsupported_characters_are__2_,
-                objectType, candidate, new string(IllegalNameChars));
+        // FAnsi always wraps/quotes identifiers when generating SQL, so special characters
+        // like (), [], $, etc. are allowed. All supported databases permit these in quoted identifiers.
+        // Validation only checks for blank names and length limits.
 
         return null;
     }
