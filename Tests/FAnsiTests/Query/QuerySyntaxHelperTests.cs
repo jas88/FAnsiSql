@@ -173,16 +173,36 @@ internal sealed class QuerySyntaxHelperTests
     public void SyntaxHelperTest_GetRuntimeName_Impossible(DatabaseType t)
     {
         var syntaxHelper = ImplementationManager.GetImplementation(t).GetQuerySyntaxHelper();
-        var ex = Assert.Throws<RuntimeNameException>(() => syntaxHelper.GetRuntimeName("count(*)"));
-        Assert.That(ex?.Message, Does.Contain("Could not determine runtime name for Sql:'count(*)'.  It had brackets and no alias."));
 
-        Assert.Throws<RuntimeNameException>(() => syntaxHelper.GetRuntimeName("dbo.GetMyCoolThing(\"Magic Fun Times\")"));
-
-        Assert.Multiple(() =>
+        if (t == DatabaseType.Sqlite)
         {
-            Assert.That(syntaxHelper.TryGetRuntimeName("count(*)", out _), Is.False);
-            Assert.That(syntaxHelper.TryGetRuntimeName("dbo.GetMyCoolThing(\"Magic Fun Times\")", out _), Is.False);
-        });
+            // SQLite has no illegal name characters, so "count(*)" is technically a valid unquoted identifier
+            // (though in practice you'd quote it as "count(*)" to use it)
+            Assert.That(syntaxHelper.GetRuntimeName("count(*)"), Is.EqualTo("count(*)"));
+            Assert.That(syntaxHelper.GetRuntimeName("dbo.GetMyCoolThing(\"Magic Fun Times\")"), Is.EqualTo("GetMyCoolThing(\"Magic Fun Times\")"));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(syntaxHelper.TryGetRuntimeName("count(*)", out var name1), Is.True);
+                Assert.That(name1, Is.EqualTo("count(*)"));
+                Assert.That(syntaxHelper.TryGetRuntimeName("dbo.GetMyCoolThing(\"Magic Fun Times\")", out var name2), Is.True);
+                Assert.That(name2, Is.EqualTo("GetMyCoolThing(\"Magic Fun Times\")"));
+            });
+        }
+        else
+        {
+            // Other databases have parentheses in IllegalNameChars, so these should throw
+            var ex = Assert.Throws<RuntimeNameException>(() => syntaxHelper.GetRuntimeName("count(*)"));
+            Assert.That(ex?.Message, Does.Contain("Could not determine runtime name for Sql:'count(*)'.  It had brackets and no alias."));
+
+            Assert.Throws<RuntimeNameException>(() => syntaxHelper.GetRuntimeName("dbo.GetMyCoolThing(\"Magic Fun Times\")"));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(syntaxHelper.TryGetRuntimeName("count(*)", out _), Is.False);
+                Assert.That(syntaxHelper.TryGetRuntimeName("dbo.GetMyCoolThing(\"Magic Fun Times\")", out _), Is.False);
+            });
+        }
     }
 
     [Test]

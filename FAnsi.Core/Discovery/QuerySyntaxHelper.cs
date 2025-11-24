@@ -116,7 +116,8 @@ public abstract partial class QuerySyntaxHelper(
         //it doesn't have an alias, e.g. it's `MyDatabase`.`mytable` or something
 
         //if it's "count(1)" or something then that's a problem!
-        if (s.AsSpan().IndexOfAny(BracketSearcher) != -1)
+        // Check if it contains illegal characters (parentheses for most databases, but database-specific via IllegalNameChars)
+        if (IllegalNameChars.Length > 0 && s.AsSpan().IndexOfAny(IllegalNameChars) != -1)
             throw new RuntimeNameException(
                 $"Could not determine runtime name for Sql:'{s}'.  It had brackets and no alias.  Try adding ' as mycol' to the end.");
 
