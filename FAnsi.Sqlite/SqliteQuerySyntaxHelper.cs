@@ -43,14 +43,28 @@ public sealed class SqliteQuerySyntaxHelper : QuerySyntaxHelper
     public override int MaximumColumnLength => 1024;
 
     /// <summary>
-    /// Gets the opening qualifier character for identifiers (left square bracket).
+    /// Gets the opening qualifier character for identifiers (double quote).
     /// </summary>
-    public override string OpenQualifier => "[";
+    /// <remarks>
+    /// SQLite supports both square brackets [] (SQL Server style) and double quotes "" (SQL standard).
+    /// We use double quotes because square brackets have issues when the identifier contains ][
+    /// sequences, which causes parsing errors.
+    /// </remarks>
+    public override string OpenQualifier => "\"";
 
     /// <summary>
-    /// Gets the closing qualifier character for identifiers (right square bracket).
+    /// Gets the closing qualifier character for identifiers (double quote).
     /// </summary>
-    public override string CloseQualifier => "]";
+    public override string CloseQualifier => "\"";
+
+    /// <summary>
+    /// Gets the characters that are illegal in database/table/column names.
+    /// </summary>
+    /// <remarks>
+    /// SQLite database names are file paths, so dots and parentheses are valid.
+    /// Returns empty array since SQLite has very permissive naming rules.
+    /// </remarks>
+    public override char[] IllegalNameChars => [];
 
     private SqliteQuerySyntaxHelper() : base(SqliteTypeTranslater.Instance, SqliteAggregateHelper.Instance, SqliteUpdateHelper.Instance, DatabaseType.Sqlite)
     {
@@ -62,21 +76,61 @@ public sealed class SqliteQuerySyntaxHelper : QuerySyntaxHelper
     /// <returns>True (SQLite supports parameterized queries)</returns>
     public override bool SupportsEmbeddedParameters() => true;
 
+    /// <summary>
+    /// Gets the runtime name for SQLite identifiers.
+    /// </summary>
+    /// <param name="s">The identifier (which may be quoted or unquoted)</param>
+    /// <returns>The unquoted identifier name</returns>
+    /// <remarks>
+    /// SQLite allows almost any characters in identifiers when quoted.
+    /// The base implementation now respects IllegalNameChars (which is empty for SQLite),
+    /// so unquoted names with parentheses like "BB (ff)" are accepted.
+    /// This override only needs to handle the double-quote unwrapping for qualified names.
+    /// </remarks>
+    public override string? GetRuntimeName(string? s)
+    {
+        if (string.IsNullOrWhiteSpace(s))
+            return s;
+
+        // Check for aliased expressions first
+        if (SplitLineIntoSelectSQLAndAlias(s!.Trim(), out _, out var alias))
+            return alias;
+
+        // Handle fully-qualified names - extract the last component after the final dot
+        var lastDot = s.LastIndexOf('.');
+        if (lastDot >= 0)
+        {
+            var lastPart = s[(lastDot + 1)..].Trim();
+            // If the last part is quoted with double quotes, unwrap it
+            if (lastPart.Length >= 2 && lastPart[0] == '"' && lastPart[^1] == '"')
+                return UnescapeWrappedNameBody(lastPart[1..^1]);
+            // Otherwise return the unquoted last part
+            return lastPart;
+        }
+
+        // If the entire string is a simple quoted identifier, unwrap it
+        if (s.Length >= 2 && s[0] == '"' && s[^1] == '"')
+            return UnescapeWrappedNameBody(s[1..^1]);
+
+        // For unquoted simple names, return as-is (base will not throw since IllegalNameChars is empty)
+        return s;
+    }
+
     /// <inheritdoc />
-    public override string EnsureWrappedImpl(string databaseOrTableName) => $"[{GetRuntimeNameWithEscapedBrackets(databaseOrTableName)}]";
+    public override string EnsureWrappedImpl(string databaseOrTableName) => $"\"{GetRuntimeNameWithEscapedQuotes(databaseOrTableName)}\"";
 
     /// <summary>
-    /// Returns the runtime name of the string with all brackets escaped (but resulting string is not wrapped in brackets itself).
+    /// Returns the runtime name of the string with all double quotes escaped (but resulting string is not wrapped in quotes itself).
     /// </summary>
     /// <param name="s">The string to escape</param>
-    /// <returns>The escaped string with ] replaced by ]]</returns>
+    /// <returns>The escaped string with " replaced by ""</returns>
     /// <remarks>
-    /// SQLite escapes right brackets by doubling them within quoted identifiers.
+    /// SQLite escapes double quotes by doubling them within quoted identifiers.
     /// </remarks>
-    private string GetRuntimeNameWithEscapedBrackets(string s) => GetRuntimeName(s)!.Replace("]", "]]");
+    private string GetRuntimeNameWithEscapedQuotes(string s) => GetRuntimeName(s)!.Replace("\"", "\"\"");
 
     /// <inheritdoc />
-    protected override string UnescapeWrappedNameBody(string name) => name.Replace("]]", "]");
+    protected override string UnescapeWrappedNameBody(string name) => name.Replace("\"\"", "\"");
 
     /// <summary>
     /// Ensures a table name is fully qualified with database and schema.

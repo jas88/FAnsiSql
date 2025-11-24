@@ -58,6 +58,9 @@ internal sealed class ServerLevelTests : DatabaseTests
     [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void ServerHelper_GetConnectionStringBuilder(DatabaseType type)
     {
+        if (type == DatabaseType.Sqlite)
+            Assert.Inconclusive("SQLite is file-based and doesn't have separate server/database concepts or username/password authentication");
+
         var helper = ImplementationManager.GetImplementation(type).GetServerHelper();
         var builder = helper.GetConnectionStringBuilder("loco", "bob", "franko", "wacky");
 
@@ -78,6 +81,9 @@ internal sealed class ServerLevelTests : DatabaseTests
     [TestCaseSource(typeof(All), nameof(All.DatabaseTypesWithBoolFlags))]
     public void ServerHelper_GetConnectionStringBuilder_NoDatabase(DatabaseType type, bool useWhitespace)
     {
+        if (type == DatabaseType.Sqlite)
+            Assert.Inconclusive("SQLite is file-based and doesn't have separate server/database concepts or username/password authentication");
+
         var helper = ImplementationManager.GetImplementation(type).GetServerHelper();
         var builder = helper.GetConnectionStringBuilder("loco", useWhitespace ? "  " : null, "franko", "wacky");
 
@@ -156,7 +162,7 @@ internal sealed class ServerLevelTests : DatabaseTests
     [TestCaseSource(typeof(All), nameof(All.DatabaseTypesWithBoolFlags))]
     public void ServerHelper_ChangeDatabase_AdHoc(DatabaseType type, bool useApiFirst)
     {
-        if (type == DatabaseType.Oracle)
+        if (type is DatabaseType.Oracle or DatabaseType.Sqlite)
             Assert.Inconclusive("FAnsiSql understanding of Database cannot be encoded in DbConnectionStringBuilder sadly so we can end up with DiscoveredServer with no GetCurrentDatabase");
 
         //create initial server reference

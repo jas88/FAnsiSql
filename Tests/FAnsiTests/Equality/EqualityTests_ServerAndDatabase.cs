@@ -1,5 +1,10 @@
 using FAnsi;
 using FAnsi.Discovery;
+using FAnsi.Implementations.MicrosoftSQL;
+using FAnsi.Implementations.MySql;
+using FAnsi.Implementations.Oracle;
+using FAnsi.Implementations.PostgreSql;
+using FAnsi.Implementations.Sqlite;
 using NUnit.Framework;
 
 namespace FAnsiTests.Equality;
@@ -9,6 +14,11 @@ internal sealed class EqualityTests_ServerAndDatabase
     [OneTimeSetUp]
     public void SetUp()
     {
+        MicrosoftSQLImplementation.EnsureLoaded();
+        MySqlImplementation.EnsureLoaded();
+        OracleImplementation.EnsureLoaded();
+        PostgreSqlImplementation.EnsureLoaded();
+        SqliteImplementation.EnsureLoaded();
     }
 
     [TestCase("Server=fish fish fish", DatabaseType.MicrosoftSQLServer, "Server=fish fish fish", DatabaseType.MicrosoftSQLServer)]

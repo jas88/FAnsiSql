@@ -39,7 +39,9 @@ internal sealed class DiscoverTablesTests : DatabaseTests
     /// RDMPDEV-1548 This test explores an issue where <see cref="DiscoveredDatabase.DiscoverTables"/> would fail when
     /// there were tables in the database with invalid names.
     ///
-    /// Correct behaviour is for DiscoverTables to not return any tables that have invalid names
+    /// Correct behaviour varies by database:
+    /// - SQLite: Supports almost any characters in quoted identifiers, so "BB (ff)" is valid
+    /// - SQL Server/MySQL/etc: May reject names with parentheses as invalid
     /// </summary>
     [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void Test_DiscoverTables_WithInvalidNames_Skipped(DatabaseType dbType)
@@ -49,24 +51,41 @@ internal sealed class DiscoverTablesTests : DatabaseTests
         //FAnsi doesn't let you create tables with brackets in the names so we have to do it manually
         CreateBadTable(db);
 
-        //FAnsi shouldn't let us create a table with an invalid name
-        Assert.Throws<RuntimeNameException>(() =>
+        if (dbType == DatabaseType.Sqlite)
+        {
+            // SQLite supports names with parentheses when quoted - this should succeed
             db.CreateTable("FF (troll)",
                 [
                     new DatabaseColumnRequest("F", new DatabaseTypeRequest(typeof(int)))
-                ]));
+                ]);
 
-        //but we can create a table "FF"
-        db.CreateTable("FF",
-            [
-                new DatabaseColumnRequest("F",new DatabaseTypeRequest(typeof(int)))
-            ]);
+            // Both tables should be returned for SQLite
+            var tbls = db.DiscoverTables(false);
+            Assert.That(tbls, Has.Length.EqualTo(2));
+            Assert.That(tbls.Count(static t => t.GetRuntimeName().Equals("FF (troll)", StringComparison.OrdinalIgnoreCase)), Is.EqualTo(1));
+            Assert.That(tbls.Count(static t => t.GetRuntimeName().Equals("BB (ff)", StringComparison.OrdinalIgnoreCase)), Is.EqualTo(1));
+        }
+        else
+        {
+            // Other databases should reject names with parentheses
+            Assert.Throws<RuntimeNameException>(() =>
+                db.CreateTable("FF (troll)",
+                    [
+                        new DatabaseColumnRequest("F", new DatabaseTypeRequest(typeof(int)))
+                    ]));
 
-        //even though there are 2 tables in the database [BB (ff)] and [FF] only [FF] should be returned
-        var tbls = db.DiscoverTables(false);
+            //but we can create a table "FF"
+            db.CreateTable("FF",
+                [
+                    new DatabaseColumnRequest("F",new DatabaseTypeRequest(typeof(int)))
+                ]);
 
-        Assert.That(tbls, Has.Length.EqualTo(1));
-        Assert.That(tbls.Count(static t => t.GetRuntimeName().Equals("FF", StringComparison.OrdinalIgnoreCase)), Is.EqualTo(1));
+            //even though there are 2 tables in the database [BB (ff)] and [FF] only [FF] should be returned
+            var tbls = db.DiscoverTables(false);
+
+            Assert.That(tbls, Has.Length.EqualTo(1));
+            Assert.That(tbls.Count(static t => t.GetRuntimeName().Equals("FF", StringComparison.OrdinalIgnoreCase)), Is.EqualTo(1));
+        }
 
         DropBadTable(db, false);
     }
@@ -83,31 +102,58 @@ internal sealed class DiscoverTablesTests : DatabaseTests
         //FAnsi doesn't let you create tables with brackets in the names so we have to do it manually
         CreateBadView(db);
 
-        //FAnsi shouldn't let us create a table with an invalid name
-        Assert.Throws<RuntimeNameException>(() =>
-            db.CreateTable("FF (troll)",
-                [
-                    new DatabaseColumnRequest("F", new DatabaseTypeRequest(typeof(int)))
-                ]));
-
-        //but we can create a table "FF"
-        db.CreateTable("FF",
-            [
-                new DatabaseColumnRequest("F",new DatabaseTypeRequest(typeof(int)))
-            ]);
-
-        //even though there are 2 tables in the database [BB (ff)] and [FF] only [FF] should be returned
-        var tbls = db.DiscoverTables(true);
-
-        //should be 2 tables (and 1 bad view that doesn't get returned)
-        Assert.That(tbls, Has.Length.EqualTo(2));
-
-        Assert.Multiple(() =>
+        if (dbType == DatabaseType.Sqlite)
         {
-            //view should not be returned because it is bad
-            Assert.That(tbls.Count(static t => t.TableType == TableType.View), Is.EqualTo(0));
-            Assert.That(tbls.Count(static t => t.GetRuntimeName().Equals("FF", StringComparison.OrdinalIgnoreCase)), Is.EqualTo(1));
-        });
+            // SQLite supports names with parentheses when quoted - views too
+            // CreateBadView creates a view "BB (ff)", we should be able to discover it
+            //but we can create a table "FF"
+            db.CreateTable("FF",
+                [
+                    new DatabaseColumnRequest("F",new DatabaseTypeRequest(typeof(int)))
+                ]);
+
+            var tbls = db.DiscoverTables(true);
+
+            //should be 3 objects: table "ABC", view "BB (ff)", table "FF"
+            Assert.That(tbls, Has.Length.EqualTo(3));
+
+            Assert.Multiple(() =>
+            {
+                // SQLite view with special characters should be discovered
+                Assert.That(tbls.Count(static t => t.TableType == TableType.View), Is.EqualTo(1));
+                Assert.That(tbls.Count(static t => t.GetRuntimeName().Equals("BB (ff)", StringComparison.OrdinalIgnoreCase)), Is.EqualTo(1));
+                Assert.That(tbls.Count(static t => t.GetRuntimeName().Equals("FF", StringComparison.OrdinalIgnoreCase)), Is.EqualTo(1));
+                Assert.That(tbls.Count(static t => t.GetRuntimeName().Equals("ABC", StringComparison.OrdinalIgnoreCase)), Is.EqualTo(1));
+            });
+        }
+        else
+        {
+            //FAnsi shouldn't let us create a table with an invalid name
+            Assert.Throws<RuntimeNameException>(() =>
+                db.CreateTable("FF (troll)",
+                    [
+                        new DatabaseColumnRequest("F", new DatabaseTypeRequest(typeof(int)))
+                    ]));
+
+            //but we can create a table "FF"
+            db.CreateTable("FF",
+                [
+                    new DatabaseColumnRequest("F",new DatabaseTypeRequest(typeof(int)))
+                ]);
+
+            //even though there are 2 tables in the database [BB (ff)] and [FF] only [FF] should be returned
+            var tbls = db.DiscoverTables(true);
+
+            //should be 2 tables (and 1 bad view that doesn't get returned)
+            Assert.That(tbls, Has.Length.EqualTo(2));
+
+            Assert.Multiple(() =>
+            {
+                //view should not be returned because it is bad
+                Assert.That(tbls.Count(static t => t.TableType == TableType.View), Is.EqualTo(0));
+                Assert.That(tbls.Count(static t => t.GetRuntimeName().Equals("FF", StringComparison.OrdinalIgnoreCase)), Is.EqualTo(1));
+            });
+        }
 
         DropBadView(db, false);
     }
@@ -137,6 +183,7 @@ internal sealed class DiscoverTablesTests : DatabaseTests
             DatabaseType.MySql => "`BB (ff)`",
             DatabaseType.Oracle => $"{db.GetRuntimeName()}.\"BB (ff)\"",
             DatabaseType.PostgreSql => $"\"{db.GetRuntimeName()}\".public.\"BB (ff)\"",
+            DatabaseType.Sqlite => "\"BB (ff)\"",
             _ => throw new ArgumentOutOfRangeException(nameof(db), db.Server.DatabaseType, $"Unknown database type {db.Server.DatabaseType}")
         };
 

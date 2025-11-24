@@ -14,6 +14,9 @@ internal sealed class CreatePrimaryKeyTest : DatabaseTests
     [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void TestBasicCase_KeysCreated(DatabaseType databaseType)
     {
+        if (databaseType == DatabaseType.Sqlite)
+            Assert.Ignore("SQLite does not support adding primary keys to existing tables");
+
         // Force columns B and C to be strings otherwise Oracle gets upset by TypeGuesser mis-guessing the nulls as boolean
         var b = new DataColumn("B", typeof(string));
         b.SetDoNotReType(true);
@@ -57,6 +60,9 @@ internal sealed class CreatePrimaryKeyTest : DatabaseTests
     [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void TestBasicCase_FailHalfWay_SchemaUnchanged(DatabaseType databaseType)
     {
+        if (databaseType == DatabaseType.Sqlite)
+            Assert.Ignore("SQLite does not support adding primary keys to existing tables");
+
         DiscoveredTable tbl;
         // Force column C to be a string otherwise Oracle gets upset by TypeGuesser mis-guessing the nulls as boolean
         var c = new DataColumn("C", typeof(string));

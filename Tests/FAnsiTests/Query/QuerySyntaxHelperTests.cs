@@ -4,12 +4,29 @@ using FAnsi;
 using FAnsi.Discovery;
 using FAnsi.Discovery.QuerySyntax;
 using FAnsi.Implementation;
+using FAnsi.Implementations.MicrosoftSQL;
+using FAnsi.Implementations.MySql;
+using FAnsi.Implementations.Oracle;
+using FAnsi.Implementations.PostgreSql;
+using FAnsi.Implementations.Sqlite;
 using NUnit.Framework;
 
 namespace FAnsiTests.Query;
 
 internal sealed class QuerySyntaxHelperTests
 {
+    [OneTimeSetUp]
+    public void Setup()
+    {
+        // Explicit loading for tests (ModuleInitializer timing is unreliable in test runners)
+#pragma warning disable CS0618 // Type or member is obsolete
+        ImplementationManager.Load<MicrosoftSQLImplementation>();
+        ImplementationManager.Load<MySqlImplementation>();
+        ImplementationManager.Load<OracleImplementation>();
+        ImplementationManager.Load<PostgreSqlImplementation>();
+        ImplementationManager.Load<SqliteImplementation>();
+#pragma warning restore CS0618 // Type or member is obsolete
+    }
 
 
     //Oracle always uppers everything because... Oracle
@@ -156,16 +173,36 @@ internal sealed class QuerySyntaxHelperTests
     public void SyntaxHelperTest_GetRuntimeName_Impossible(DatabaseType t)
     {
         var syntaxHelper = ImplementationManager.GetImplementation(t).GetQuerySyntaxHelper();
-        var ex = Assert.Throws<RuntimeNameException>(() => syntaxHelper.GetRuntimeName("count(*)"));
-        Assert.That(ex?.Message, Does.Contain("Could not determine runtime name for Sql:'count(*)'.  It had brackets and no alias."));
 
-        Assert.Throws<RuntimeNameException>(() => syntaxHelper.GetRuntimeName("dbo.GetMyCoolThing(\"Magic Fun Times\")"));
-
-        Assert.Multiple(() =>
+        if (t == DatabaseType.Sqlite)
         {
-            Assert.That(syntaxHelper.TryGetRuntimeName("count(*)", out _), Is.False);
-            Assert.That(syntaxHelper.TryGetRuntimeName("dbo.GetMyCoolThing(\"Magic Fun Times\")", out _), Is.False);
-        });
+            // SQLite has no illegal name characters, so "count(*)" is technically a valid unquoted identifier
+            // (though in practice you'd quote it as "count(*)" to use it)
+            Assert.That(syntaxHelper.GetRuntimeName("count(*)"), Is.EqualTo("count(*)"));
+            Assert.That(syntaxHelper.GetRuntimeName("dbo.GetMyCoolThing(\"Magic Fun Times\")"), Is.EqualTo("GetMyCoolThing(\"Magic Fun Times\")"));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(syntaxHelper.TryGetRuntimeName("count(*)", out var name1), Is.True);
+                Assert.That(name1, Is.EqualTo("count(*)"));
+                Assert.That(syntaxHelper.TryGetRuntimeName("dbo.GetMyCoolThing(\"Magic Fun Times\")", out var name2), Is.True);
+                Assert.That(name2, Is.EqualTo("GetMyCoolThing(\"Magic Fun Times\")"));
+            });
+        }
+        else
+        {
+            // Other databases have parentheses in IllegalNameChars, so these should throw
+            var ex = Assert.Throws<RuntimeNameException>(() => syntaxHelper.GetRuntimeName("count(*)"));
+            Assert.That(ex?.Message, Does.Contain("Could not determine runtime name for Sql:'count(*)'.  It had brackets and no alias."));
+
+            Assert.Throws<RuntimeNameException>(() => syntaxHelper.GetRuntimeName("dbo.GetMyCoolThing(\"Magic Fun Times\")"));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(syntaxHelper.TryGetRuntimeName("count(*)", out _), Is.False);
+                Assert.That(syntaxHelper.TryGetRuntimeName("dbo.GetMyCoolThing(\"Magic Fun Times\")", out _), Is.False);
+            });
+        }
     }
 
     [Test]
@@ -299,6 +336,10 @@ internal sealed class QuerySyntaxHelperTests
             case DatabaseType.PostgreSql:
                 Assert.That(name, Is.EqualTo("\"mydb\".public.\"Troll\".\",,,\""));
                 break;
+            case DatabaseType.Sqlite:
+                // SQLite doesn't support database/schema qualification, returns only table.column
+                Assert.That(name, Is.EqualTo("\"Troll\".\",,,\""));
+                break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(dbType), dbType, null);
         }
@@ -326,6 +367,10 @@ internal sealed class QuerySyntaxHelperTests
                     break;
                 case DatabaseType.PostgreSql:
                     Assert.That(name, Is.EqualTo("\"mydb\".public.\"Troll\".\"MyCol\""));
+                    break;
+                case DatabaseType.Sqlite:
+                    // SQLite doesn't support database/schema qualification, returns only table.column
+                    Assert.That(name, Is.EqualTo("\"Troll\".\"MyCol\""));
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(dbType), dbType, null);

@@ -89,9 +89,18 @@ internal sealed class CreateTableTests : DatabaseTests
         var dob = colsDictionary["dob"];
         Assert.Multiple(() =>
         {
-            Assert.That(dob.DataType?.GetLengthIfString(), Is.EqualTo(-1));
+            // SQLite stores DateTime as TEXT with max length
+            if (type == DatabaseType.Sqlite)
+            {
+                Assert.That(dob.DataType?.GetLengthIfString(), Is.EqualTo(int.MaxValue));
+                Assert.That(syntaxHelper.TypeTranslater.GetCSharpTypeForSQLDBType(dob.DataType?.SQLType), Is.EqualTo(typeof(string)));
+            }
+            else
+            {
+                Assert.That(dob.DataType?.GetLengthIfString(), Is.EqualTo(-1));
+                Assert.That(syntaxHelper.TypeTranslater.GetCSharpTypeForSQLDBType(dob.DataType?.SQLType), Is.EqualTo(typeof(DateTime)));
+            }
             Assert.That(dob.AllowNulls, Is.EqualTo(false));
-            Assert.That(syntaxHelper.TypeTranslater.GetCSharpTypeForSQLDBType(dob.DataType?.SQLType), Is.EqualTo(typeof(DateTime)));
             Assert.That(dob.IsPrimaryKey, Is.False);
         });
 
@@ -150,6 +159,9 @@ internal sealed class CreateTableTests : DatabaseTests
                 Assert.That(dbType, Is.EqualTo("varchar2(5)"));
                 break;
             case DatabaseType.PostgreSql:
+                Assert.That(dbType, Is.EqualTo("character varying(5)"));
+                break;
+            case DatabaseType.Sqlite:
                 Assert.That(dbType, Is.EqualTo("character varying(5)"));
                 break;
             default:
@@ -245,8 +257,17 @@ internal sealed class CreateTableTests : DatabaseTests
                 return;
             }*/
 
-            Assert.That(tbl.DiscoverColumn("MyBoolCol").GetGuesser().Guess.CSharpType, Is.EqualTo(typeof(bool)));
-            Assert.That(tbl.GetDataTable().Rows[0][0], Is.EqualTo(true));
+            // SQLite stores boolean as INTEGER, Guesser sees it as int
+            if (type == DatabaseType.Sqlite)
+            {
+                Assert.That(tbl.DiscoverColumn("MyBoolCol").GetGuesser().Guess.CSharpType, Is.EqualTo(typeof(int)));
+                Assert.That(tbl.GetDataTable().Rows[0][0], Is.EqualTo(1));
+            }
+            else
+            {
+                Assert.That(tbl.DiscoverColumn("MyBoolCol").GetGuesser().Guess.CSharpType, Is.EqualTo(typeof(bool)));
+                Assert.That(tbl.GetDataTable().Rows[0][0], Is.EqualTo(true));
+            }
         });
     }
 
@@ -574,8 +595,19 @@ internal sealed class CreateTableTests : DatabaseTests
             Assert.That(tbl.Exists());
 
             Assert.That(tbl.DiscoverColumn("cint").DataType?.GetCSharpDataType(), Is.EqualTo(typeof(int)));
-            Assert.That(tbl.DiscoverColumn("clong").DataType?.GetCSharpDataType(), Is.EqualTo(typeof(long)));
-            Assert.That(tbl.DiscoverColumn("cshort").DataType?.GetCSharpDataType(), Is.EqualTo(typeof(short)));
+
+            // SQLite uses INTEGER for all integer types - maps to int
+            if (dbType == DatabaseType.Sqlite)
+            {
+                Assert.That(tbl.DiscoverColumn("clong").DataType?.GetCSharpDataType(), Is.EqualTo(typeof(int)));
+                Assert.That(tbl.DiscoverColumn("cshort").DataType?.GetCSharpDataType(), Is.EqualTo(typeof(int)));
+            }
+            else
+            {
+                Assert.That(tbl.DiscoverColumn("clong").DataType?.GetCSharpDataType(), Is.EqualTo(typeof(long)));
+                Assert.That(tbl.DiscoverColumn("cshort").DataType?.GetCSharpDataType(), Is.EqualTo(typeof(short)));
+            }
+
             Assert.That(tbl.DiscoverColumn("script_name").DataType?.GetCSharpDataType(), Is.EqualTo(typeof(string)));
         });
         tbl.Drop();
@@ -642,10 +674,27 @@ internal sealed class CreateTableTests : DatabaseTests
         var tbl = db.CreateTable(args);
         var col = tbl.DiscoverColumn("DateCol");
 
-        Assert.That(col.DataType?.GetCSharpDataType(), Is.EqualTo(useCustomDate ? typeof(DateTime) : typeof(string)));
+        // SQLite stores DateTime as TEXT (string type)
+        if (dbType == DatabaseType.Sqlite)
+        {
+            Assert.That(col.DataType?.GetCSharpDataType(), Is.EqualTo(typeof(string)));
+        }
+        else
+        {
+            Assert.That(col.DataType?.GetCSharpDataType(), Is.EqualTo(useCustomDate ? typeof(DateTime) : typeof(string)));
+        }
 
         var dtDown = tbl.GetDataTable();
-        Assert.That(dtDown.Rows[0][0], Is.EqualTo(useCustomDate ? new DateTime(2020, 01, 30) : "013020"));
+
+        // SQLite stores dates as strings, doesn't convert them
+        if (dbType == DatabaseType.Sqlite)
+        {
+            Assert.That(dtDown.Rows[0][0], Is.EqualTo("013020"));
+        }
+        else
+        {
+            Assert.That(dtDown.Rows[0][0], Is.EqualTo(useCustomDate ? new DateTime(2020, 01, 30) : "013020"));
+        }
     }
     [Test]
     public void GuessSettings_CopyProperties()

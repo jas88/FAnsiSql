@@ -82,8 +82,27 @@ public abstract class DatabaseTests
             if (databaseType is DatabaseType.PostgreSql or DatabaseType.Oracle)
             {
                 var server = GetTestServer(databaseType);
-                if (server.DiscoverDatabases().All(db => db.GetWrappedName()?.Contains(_testScratchDatabase) != true))
-                    server.CreateDatabase(_testScratchDatabase);
+                var db = server.ExpectDatabase(_testScratchDatabase);
+
+                // Check if database already exists
+                if (!db.Exists())
+                {
+                    try
+                    {
+                        server.CreateDatabase(_testScratchDatabase);
+                    }
+                    catch (Exception ex)
+                    {
+                        // Ignore "already exists" errors from parallel test execution
+                        // Oracle: ORA-01920 (user already exists)
+                        // PostgreSQL: 23505 (duplicate key in pg_database)
+                        var isAlreadyExists = ex.Message.Contains("ORA-01920") ||
+                                             ex.Message.Contains("23505") ||
+                                             ex.Message.Contains("already exists");
+                        if (!isAlreadyExists)
+                            throw;
+                    }
+                }
             }
         }
     }

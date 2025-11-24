@@ -103,7 +103,6 @@ public abstract partial class TypeTranslater : ITypeTranslater
     {
         if (decimalSize == null || decimalSize.IsEmpty)
         {
-            Console.WriteLine("DEBUG GetFloatingPointDataType: DecimalSize is null or empty, using default decimal(20,10)");
             return "decimal(20,10)";
         }
 
@@ -112,9 +111,7 @@ public abstract partial class TypeTranslater : ITypeTranslater
         // SQL decimal(precision, scale) where precision = total digits, scale = digits after
         var sqlPrecision = decimalSize.NumbersBeforeDecimalPlace + decimalSize.NumbersAfterDecimalPlace;
         var sqlScale = decimalSize.NumbersAfterDecimalPlace;
-        var result = $"decimal({sqlPrecision},{sqlScale})";
-        Console.WriteLine($"DEBUG GetFloatingPointDataType: DecimalSize({decimalSize.NumbersBeforeDecimalPlace},{decimalSize.NumbersAfterDecimalPlace}) → {result}");
-        return result;
+        return $"decimal({sqlPrecision},{sqlScale})";
     }
 
     protected virtual string GetDateDateTimeDataType() => "timestamp";

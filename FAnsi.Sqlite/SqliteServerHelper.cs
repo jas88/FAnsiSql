@@ -69,7 +69,17 @@ public sealed class SqliteServerHelper : DiscoveredServerHelper
     public override DbParameter GetParameter(string parameterName) => new SqliteParameter(parameterName, null);
 
     /// <inheritdoc />
-    public override DbConnection GetConnection(DbConnectionStringBuilder builder) => new SqliteConnection(builder.ConnectionString);
+    public override DbConnection GetConnection(DbConnectionStringBuilder builder)
+    {
+        // Enable foreign key constraints by adding to connection string
+        // Microsoft.Data.Sqlite supports "Foreign Keys=True" parameter
+        var sqliteBuilder = builder as SqliteConnectionStringBuilder ?? new SqliteConnectionStringBuilder(builder.ConnectionString);
+
+        // Set ForeignKeys property to enable foreign key constraints
+        sqliteBuilder.ForeignKeys = true;
+
+        return new SqliteConnection(sqliteBuilder.ConnectionString);
+    }
 
     /// <inheritdoc />
     protected override DbConnectionStringBuilder GetConnectionStringBuilderImpl(string? connectionString) =>

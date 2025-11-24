@@ -105,7 +105,8 @@ public sealed class SqliteBulkCopy(DiscoveredTable targetTable, IManagedConnecti
             cmd.CommandTimeout = BulkInsertBatchTimeoutInSeconds;
 
         // Pre-build static parts of the INSERT statement
-        var columnNames = string.Join(",", matchedColumns.Values.Select(c => $"[{c.GetRuntimeName()}]"));
+        var syntax = TargetTable.GetQuerySyntaxHelper();
+        var columnNames = string.Join(",", matchedColumns.Values.Select(c => syntax.EnsureWrapped(c.GetRuntimeName())));
         var baseCommand = $"INSERT INTO {TargetTable.GetFullyQualifiedName()}({columnNames}) VALUES ";
 
         // Pre-calculate values to avoid repeated calculations in the main loop
@@ -113,9 +114,16 @@ public sealed class SqliteBulkCopy(DiscoveredTable targetTable, IManagedConnecti
         var columnCount = matchedColumns.Count;
         var columnEntries = matchedColumns.ToArray(); // Convert to array for faster enumeration
 
+        // SQLite has a limit on the number of parameters (default 999, configurable up to 32766)
+        // We'll use a conservative limit of 900 to stay well under the default limit
+        // Calculate effective batch size based on column count to avoid "too many SQL variables" error
+        const int maxSqliteParameters = 900;
+        var effectiveBatchSize = columnCount > 0 ? Math.Min(BatchSize, maxSqliteParameters / columnCount) : BatchSize;
+        effectiveBatchSize = Math.Max(1, effectiveBatchSize); // Ensure at least 1 row per batch
+
         // Pre-allocate StringBuilder with estimated capacity for better performance
         // Estimate: (parameter_placeholder + comma) * columnCount * batchSize + overhead
-        var estimatedClauseCapacity = Math.Max(1024, 3 * columnCount * BatchSize + 100); // @pX format is about 3 chars
+        var estimatedClauseCapacity = Math.Max(1024, 3 * columnCount * effectiveBatchSize + 100); // @pX format is about 3 chars
         var valueClauses = new StringBuilder(estimatedClauseCapacity);
 
         var batchRows = 0;
@@ -163,8 +171,8 @@ public sealed class SqliteBulkCopy(DiscoveredTable targetTable, IManagedConnecti
 
             batchRows++;
 
-            // Execute batch when we reach batch size or it's the last row
-            if (batchRows >= BatchSize || rowIndex == lastRowIndex)
+            // Execute batch when we reach effective batch size or it's the last row
+            if (batchRows >= effectiveBatchSize || rowIndex == lastRowIndex)
             {
                 cmd.CommandText = baseCommand + valueClauses;
                 affected += cmd.ExecuteNonQuery();
@@ -207,7 +215,8 @@ public sealed class SqliteBulkCopy(DiscoveredTable targetTable, IManagedConnecti
             cmd.CommandTimeout = BulkInsertBatchTimeoutInSeconds;
 
         // Pre-build static parts of the single-row INSERT statement for better performance
-        var columnNames = string.Join(",", matchedColumns.Values.Select(c => $"[{c.GetRuntimeName()}]"));
+        var syntax = TargetTable.GetQuerySyntaxHelper();
+        var columnNames = string.Join(",", matchedColumns.Values.Select(c => syntax.EnsureWrapped(c.GetRuntimeName())));
         var paramNames = string.Join(",", matchedColumns.Keys.Select((_, i) => $"@p{i}"));
         cmd.CommandText = $"INSERT INTO {TargetTable.GetFullyQualifiedName()}({columnNames}) VALUES ({paramNames})";
 

@@ -88,12 +88,9 @@ jobs:
           --logger "console;verbosity=detailed" \
           --nologo \
           --no-build \
-          -p:TestTfmsInParallel=true \
           --collect:"XPlat Code Coverage" \
           --results-directory coverage \
-          --settings coverage.runsettings \
-          --blame-hang-timeout 5m \
-          --blame-hang-dump-type full
+          --settings coverage.runsettings
 
     - name: Debug coverage files
       run: |

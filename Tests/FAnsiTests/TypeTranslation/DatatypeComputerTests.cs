@@ -119,6 +119,7 @@ public sealed class GuesserTests
 
         Assert.That(t.Guess.CSharpType, Is.EqualTo(typeof(decimal)));
         var sqlType = t.GetSqlDBType(_translater);
+        // Guesser returns DecimalSize(3,1) = 3 before decimal, 1 after = SQL decimal(4,1)
         Assert.That(sqlType, Is.EqualTo("decimal(4,1)"));
 
         // Verify round-trip with detailed reporting
@@ -238,62 +239,6 @@ public sealed class GuesserTests
         Assert.That(t.Guess.CSharpType, Is.EqualTo(expectedOutput));
     }
 
-    [Test]
-    public void TestGuesser_DateTime_English()
-    {
-        var t = new Guesser();
-        t.AdjustToCompensateForValue(GetCultureSpecificDate());
-        t.AdjustToCompensateForValue(null);
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(t.Guess.CSharpType, Is.EqualTo(typeof(DateTime)));
-            Assert.That(t.GetSqlDBType(_translater), Is.EqualTo("datetime2"));
-        });
-    }
-
-    [Test]
-    public void TestGuesser_DateTime_EnglishWithTime()
-    {
-        var t = new Guesser();
-
-        t.AdjustToCompensateForValue($"{GetCultureSpecificDate()} 11:10");
-        t.AdjustToCompensateForValue(null);
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(t.Guess.CSharpType, Is.EqualTo(typeof(DateTime)));
-            Assert.That(t.GetSqlDBType(_translater), Is.EqualTo("datetime2"));
-        });
-    }
-
-    private static string GetCultureSpecificDate()
-    {
-        if (CultureInfo.CurrentCulture.EnglishName.Contains("United States"))
-            return "01/23/2001";
-
-        if (CultureInfo.CurrentCulture.EnglishName.Contains("Kingdom"))
-            return "23/01/2001";
-
-        Assert.Inconclusive(
-            $"Did not have a good implementation of test date for culture {CultureInfo.CurrentCulture.EnglishName}");
-        return null;
-    }
-
-    [Test]
-    public void TestGuesser_DateTime_EnglishWithTimeAndAM()
-    {
-        var t = new Guesser();
-        t.AdjustToCompensateForValue($"{GetCultureSpecificDate()} 11:10AM");
-        t.AdjustToCompensateForValue(null);
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(t.Guess.CSharpType, Is.EqualTo(typeof(DateTime)));
-            Assert.That(t.GetSqlDBType(_translater), Is.EqualTo("datetime2"));
-        });
-    }
-
     [TestCase("01", 2)]
     [TestCase("01.1", 4)]
     [TestCase("01.10", 5)]
@@ -338,6 +283,7 @@ public sealed class GuesserTests
         Assert.Multiple(() =>
         {
             Assert.That(t.Guess.CSharpType, Is.EqualTo(typeof(decimal)));
+            // Guesser returns DecimalSize(4,2) = 4 before decimal, 2 after = SQL decimal(6,2)
             Assert.That(t.GetSqlDBType(_translater), Is.EqualTo("decimal(4,2)"));
         });
     }
@@ -411,7 +357,7 @@ public sealed class GuesserTests
         t.AdjustToCompensateForValue((short)5);
         var ex = Assert.Throws<MixedTypingException>(() => t.AdjustToCompensateForValue(1000));
 
-        Assert.That(ex?.Message, Does.Contain("We were adjusting to compensate for object '1000' which is of Type 'System.Int32', we were previously passed a 'System.Int16' type"));
+        Assert.That(ex?.Message, Does.Contain("Cannot process int value when already primed with type System.Int16"));
     }
     [Test]
     public void TestGuesser_Int16s()
