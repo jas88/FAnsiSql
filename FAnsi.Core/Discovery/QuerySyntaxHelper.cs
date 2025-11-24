@@ -115,12 +115,6 @@ public abstract partial class QuerySyntaxHelper(
 
         //it doesn't have an alias, e.g. it's `MyDatabase`.`mytable` or something
 
-        //if it's "count(1)" or something then that's a problem!
-        // Check if it contains illegal characters (parentheses for most databases, but database-specific via IllegalNameChars)
-        if (IllegalNameChars.Length > 0 && s.AsSpan().IndexOfAny(IllegalNameChars) != -1)
-            throw new RuntimeNameException(
-                $"Could not determine runtime name for Sql:'{s}'.  It had brackets and no alias.  Try adding ' as mycol' to the end.");
-
         //Last symbol with no whitespace
         var lastWord = s[(s.LastIndexOf('.') + 1)..].Trim();
 
@@ -128,10 +122,19 @@ public abstract partial class QuerySyntaxHelper(
             return lastWord;
 
         //trim off any brackets e.g. return "My Table" for "[My Table]"
+        string result;
         if (lastWord.StartsWith(OpenQualifier, StringComparison.Ordinal) && lastWord.EndsWith(CloseQualifier, StringComparison.Ordinal))
-            return UnescapeWrappedNameBody(lastWord[1..^1]);
+            result = UnescapeWrappedNameBody(lastWord[1..^1]);
+        else
+            result = lastWord;
 
-        return lastWord;
+        //if it's "count(1)" or something (after unwrapping) then that's a problem!
+        // Check if the final unwrapped identifier contains illegal characters
+        if (IllegalNameChars.Length > 0 && result.AsSpan().IndexOfAny(IllegalNameChars) != -1)
+            throw new RuntimeNameException(
+                $"Could not determine runtime name for Sql:'{s}'.  It had brackets and no alias.  Try adding ' as mycol' to the end.");
+
+        return result;
     }
 
     /// <summary>
