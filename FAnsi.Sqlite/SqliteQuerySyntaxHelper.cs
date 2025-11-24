@@ -76,6 +76,30 @@ public sealed class SqliteQuerySyntaxHelper : QuerySyntaxHelper
     /// <returns>True (SQLite supports parameterized queries)</returns>
     public override bool SupportsEmbeddedParameters() => true;
 
+    /// <summary>
+    /// Gets the runtime name for SQLite identifiers.
+    /// </summary>
+    /// <param name="s">The identifier (which may be quoted or unquoted)</param>
+    /// <returns>The unquoted identifier name</returns>
+    /// <remarks>
+    /// SQLite allows almost any characters in identifiers when quoted.
+    /// Unlike SQL Server, parentheses and spaces in unquoted names are valid - they just need to be quoted for SQL.
+    /// This override prevents RuntimeNameException for valid SQLite names like "BB (ff)".
+    /// </remarks>
+    public override string? GetRuntimeName(string? s)
+    {
+        if (string.IsNullOrWhiteSpace(s))
+            return s;
+
+        // If already quoted with double quotes, unwrap it
+        if (s.Length >= 2 && s[0] == '"' && s[^1] == '"')
+            return UnescapeWrappedNameBody(s[1..^1]);
+
+        // For SQLite, unquoted names with special characters are still valid
+        // Return as-is (they'll be quoted when used in SQL via EnsureWrapped)
+        return s;
+    }
+
     /// <inheritdoc />
     public override string EnsureWrappedImpl(string databaseOrTableName) => $"\"{GetRuntimeNameWithEscapedQuotes(databaseOrTableName)}\"";
 

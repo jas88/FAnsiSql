@@ -300,9 +300,9 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
     {
         var syntax = discoveredTable.GetQuerySyntaxHelper();
         var relationships = new Dictionary<string, DiscoveredRelationship>();
-        var tableRuntimeName = discoveredTable.GetRuntimeName();
+        var tableName = discoveredTable.GetRuntimeName();
 
-        // First, get all tables in the database
+        // Get all plain table names from sqlite_master
         var allTables = new List<string>();
         using (var cmd = discoveredTable.Database.Server.Helper.GetCommand(
             "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'", connection))
@@ -318,10 +318,7 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
         // Check each table to see if it has foreign keys referencing our table
         foreach (var otherTableName in allTables)
         {
-            // Skip tables with invalid names that cannot be wrapped (spaces, parentheses, etc.)
-            if (otherTableName.Contains(' ') || otherTableName.Contains('(') || otherTableName.Contains(')'))
-                continue;
-
+            // Wrap table name for PRAGMA command
             var wrappedTableName = syntax.EnsureWrapped(otherTableName);
             using var cmd = discoveredTable.Database.Server.Helper.GetCommand(
                 $"PRAGMA foreign_key_list({wrappedTableName})", connection);
@@ -333,9 +330,9 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
                 var primaryKeyTableName = (string)r["table"];
 
                 // Only include relationships where the discovered table is involved
-                // (either as parent or child)
-                var isParent = string.Equals(primaryKeyTableName, tableRuntimeName, StringComparison.OrdinalIgnoreCase);
-                var isChild = string.Equals(otherTableName, tableRuntimeName, StringComparison.OrdinalIgnoreCase);
+                // (either as parent or child) - compare plain names
+                var isParent = string.Equals(primaryKeyTableName, tableName, StringComparison.OrdinalIgnoreCase);
+                var isChild = string.Equals(otherTableName, tableName, StringComparison.OrdinalIgnoreCase);
 
                 if (!isParent && !isChild)
                     continue;

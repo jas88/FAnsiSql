@@ -166,6 +166,7 @@ public sealed class SqliteDatabaseHelper : DiscoveredDatabaseHelper
 
         var tables = new List<DiscoveredTable>();
 
+        // Get plain table names - we'll wrap them when needed for SQL queries
         var sql = includeViews
             ? "SELECT name, type FROM sqlite_master WHERE type IN ('table', 'view') AND name NOT LIKE 'sqlite_%'"
             : "SELECT name, type FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'";
@@ -179,15 +180,6 @@ public sealed class SqliteDatabaseHelper : DiscoveredDatabaseHelper
             var tableName = (string)r["name"];
             var tableType = (string)r["type"];
             var isView = tableType.Equals("view", StringComparison.OrdinalIgnoreCase);
-
-            //skip invalid table names
-            if (!querySyntaxHelper.IsValidTableName(tableName, out _))
-                continue;
-
-            // SQLite allows spaces and parentheses in quoted identifiers, but GetRuntimeName() will fail
-            // if it encounters these characters in an unquoted name. Filter these out during discovery.
-            if (tableName.Contains(' ') || tableName.Contains('(') || tableName.Contains(')'))
-                continue;
 
             tables.Add(new DiscoveredTable(parent, tableName, querySyntaxHelper, null, isView ? TableType.View : TableType.Table));
         }
