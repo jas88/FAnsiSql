@@ -94,6 +94,21 @@ internal abstract class AggregationTests : DatabaseTests
 
             //could be dealing with int / long mismatch etc
             if (aType != bType)
+            {
+                // Handle DateOnly/DateTime interoperability (Npgsql 10.0 maps PostgreSQL date to DateOnly)
+                if (a is DateOnly dateOnly && b is DateTime dateTime)
+                {
+                    if (DateOnly.FromDateTime(dateTime) != dateOnly)
+                        return false;
+                    continue;
+                }
+                if (a is DateTime dt && b is DateOnly dOnly)
+                {
+                    if (DateOnly.FromDateTime(dt) != dOnly)
+                        return false;
+                    continue;
+                }
+
                 try
                 {
                     b = Convert.ChangeType(b, aType, CultureInfo.InvariantCulture);
@@ -103,6 +118,7 @@ internal abstract class AggregationTests : DatabaseTests
                     //they are not a match because they are not the same type and cannot be converted
                     return false;
                 }
+            }
 
             if (!a.Equals(b))
                 return false;
