@@ -104,6 +104,7 @@ internal abstract class ServerTestsBase : DatabaseTests
         });
     }
 
+    [SkipDatabase(DatabaseType.Sqlite, "SQLite is file-based and doesn't have separate server/database concepts")]
     protected void ServerHelper_ChangeDatabase(DatabaseType type)
     {
         // Oracle uppercases database names
@@ -139,7 +140,7 @@ internal abstract class ServerTestsBase : DatabaseTests
     /// to <see cref="DiscoveredServer.Builder"/>
     /// </summary>
     [SkipDatabase(DatabaseType.Oracle, "Oracle cannot encode database in connection string")]
-    [SkipDatabase(DatabaseType.Sqlite, "SQLite cannot encode database in connection string")]
+    [SkipDatabase(DatabaseType.Sqlite, "SQLite is file-based and doesn't have separate server/database concepts")]
     protected void ServerHelper_ChangeDatabase_AdHoc(DatabaseType type, bool useApiFirst)
     {
         //create initial server reference

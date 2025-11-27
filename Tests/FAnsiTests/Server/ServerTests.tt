@@ -15,18 +15,25 @@
     var methodPattern = @"^\s*(?:\[[\w\(\),\s=\.\""]+\]\s*)*protected\s+void\s+(\w+)\s*\(DatabaseType\s+type(?:,\s*bool\s+(\w+))?\)";
     var matches = Regex.Matches(baseContent, methodPattern, RegexOptions.Multiline);
 
-    var methods = new List<(string name, string? boolParam, bool skipSqlite)>();
+    var methods = new List<(string name, string? boolParam, List<string> excludedDatabases)>();
     foreach (Match match in matches)
     {
         var methodName = match.Groups[1].Value;
         var boolParam = match.Groups[2].Success ? match.Groups[2].Value : null;
 
-        // Check if method has [SkipDatabase(DatabaseType.Sqlite)] attribute
+        // Check for [SkipDatabase(DatabaseType.X)] attributes
         var methodStart = match.Index;
-        var beforeMethod = baseContent.Substring(Math.Max(0, methodStart - 300), Math.Min(300, methodStart));
-        var skipSqlite = beforeMethod.Contains("[SkipDatabase(DatabaseType.Sqlite");
+        var beforeMethod = baseContent.Substring(Math.Max(0, methodStart - 500), Math.Min(500, methodStart));
 
-        methods.Add((methodName, boolParam, skipSqlite));
+        var excluded = new List<string>();
+        var skipPattern = @"\[SkipDatabase\(DatabaseType\.(\w+)";
+        var skipMatches = Regex.Matches(beforeMethod, skipPattern);
+        foreach (Match skipMatch in skipMatches)
+        {
+            excluded.Add(skipMatch.Groups[1].Value);
+        }
+
+        methods.Add((methodName, boolParam, excluded));
     }
 
     var databases = new[] { "MicrosoftSQLServer", "MySql", "Oracle", "PostgreSql", "Sqlite" };
@@ -50,8 +57,8 @@ internal sealed class ServerTests_<#= db #> : ServerTestsBase
     private const DatabaseType DbType = DatabaseType.<#= db #>;
 
 <# foreach (var method in methods) {
-    // Skip this method for SQLite if it has [SkipDatabase(DatabaseType.Sqlite)]
-    if (method.skipSqlite && db == "Sqlite") continue;
+    // Skip this method if this database is in the excluded list
+    if (method.excludedDatabases.Contains(db)) continue;
 
     if (method.boolParam == null) { #>
     [Test]

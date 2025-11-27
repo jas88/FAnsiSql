@@ -92,10 +92,6 @@ internal sealed class ServerTests_Oracle : ServerTestsBase
     [Test]
     public void ServerHelper_ChangeDatabase() => ServerHelper_ChangeDatabase(DbType);
 
-    [TestCase(true)]
-    [TestCase(false)]
-    public void ServerHelper_ChangeDatabase_AdHoc(bool useApiFirst) => ServerHelper_ChangeDatabase_AdHoc(DbType, useApiFirst);
-
 }
 
 internal sealed class ServerTests_PostgreSql : ServerTestsBase
@@ -139,12 +135,5 @@ internal sealed class ServerTests_Sqlite : ServerTestsBase
 
     [Test]
     public void ServerHelper_GetCurrentDatabase_WhenNoneSpecified() => ServerHelper_GetCurrentDatabase_WhenNoneSpecified(DbType);
-
-    [Test]
-    public void ServerHelper_ChangeDatabase() => ServerHelper_ChangeDatabase(DbType);
-
-    [TestCase(true)]
-    [TestCase(false)]
-    public void ServerHelper_ChangeDatabase_AdHoc(bool useApiFirst) => ServerHelper_ChangeDatabase_AdHoc(DbType, useApiFirst);
 
 }

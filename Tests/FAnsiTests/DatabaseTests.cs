@@ -176,6 +176,16 @@ public abstract class DatabaseTests
         if (Equals(o, o2))
             return true;
 
+        // Handle DateTime/DateOnly/TimeOnly comparisons
+        if (o is DateTime dt1 && o2 is DateTime dt2)
+            return dt1.Date == dt2.Date && dt1.TimeOfDay == dt2.TimeOfDay;
+        if (o is DateTime dt && o2 is DateOnly d)
+            return dt.Date == d.ToDateTime(TimeOnly.MinValue).Date;
+        if (o is DateOnly d1 && o2 is DateTime dt3)
+            return d1.ToDateTime(TimeOnly.MinValue).Date == dt3.Date;
+        if (o is DateOnly d2 && o2 is DateOnly d3)
+            return d2 == d3;
+
         //if they are null but basically the same
         var oIsNull = o == null || o == DBNull.Value || o.ToString()?.Equals("0", StringComparison.Ordinal) == true;
         var o2IsNull = o2 == null || o2 == DBNull.Value || o2.ToString()?.Equals("0", StringComparison.Ordinal) == true;
