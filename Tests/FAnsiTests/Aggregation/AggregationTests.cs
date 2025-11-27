@@ -109,6 +109,19 @@ internal abstract class AggregationTests : DatabaseTests
                     continue;
                 }
 
+                // Handle SQLite string dates (SQLite stores dates as TEXT)
+                // Expected: DateTime, Actual: String like "2001-01-01 00:00:00"
+                if (a is string str && b is DateTime expectedDt)
+                {
+                    if (DateTime.TryParse(str, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedDt))
+                    {
+                        if (parsedDt != expectedDt)
+                            return false;
+                        continue;
+                    }
+                    return false; // String couldn't be parsed as DateTime
+                }
+
                 try
                 {
                     b = Convert.ChangeType(b, aType, CultureInfo.InvariantCulture);
