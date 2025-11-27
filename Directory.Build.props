@@ -32,25 +32,36 @@
 
   <!-- Automatic versioning from git tags via MinVer -->
   <ItemGroup>
-    <PackageReference Include="MinVer" Version="6.0.0">
+    <PackageReference Include="MinVer">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <!-- Common analyzer rules that are useful for FAnsiSql -->
-    <PackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="10.0.100" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers" PrivateAssets="all" />
   </ItemGroup>
 
   <PropertyGroup>
     <!-- MinVer configuration -->
     <MinVerTagPrefix>v</MinVerTagPrefix>
     <MinVerMinimumMajorMinor>3.3</MinVerMinimumMajorMinor>
+    <MinVerVerbosity>minimal</MinVerVerbosity>
     <!-- Remove hardcoded version from individual .csproj files - MinVer handles it -->
+  </PropertyGroup>
+
+  <!-- Common assembly metadata (replaces SharedAssemblyInfo.cs) -->
+  <PropertyGroup>
+    <Company>Health Informatics Centre, University of Dundee</Company>
+    <Product>FAnsiSql</Product>
+    <Copyright>Copyright (c) 2018 - 2025</Copyright>
+    <NeutralLanguage>en-GB</NeutralLanguage>
+    <!-- Enable automatic assembly info generation with MinVer versions -->
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
   </PropertyGroup>
 
   <!-- Add coverlet.collector to all test projects for code coverage -->
   <!-- Applies to all projects in Tests folder -->
   <ItemGroup Condition="$(MSBuildProjectDirectory.Contains('Tests'))">
-    <PackageReference Include="coverlet.collector" Version="6.0.4">
+    <PackageReference Include="coverlet.collector">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>

@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageId>FAnsiSql.PostgreSql</PackageId>
+    <title>FAnsiSql.PostgreSql</title>
+    <authors>Health Informatics Centre - University of Dundee</authors>
+    <owners>Health Informatics Centre - University of Dundee</owners>
+    <PackageProjectUrl>https://github.com/jas88/FAnsiSql</PackageProjectUrl>
+    <PackageLicenseExpression>GPL-3.0-or-later</PackageLicenseExpression>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <description>PostgreSQL implementation for FAnsiSql</description>
+    <PackageTags>Ansi,SQL,PostgreSQL</PackageTags>
+    <AssemblyTitle>FAnsiSql.PostgreSql</AssemblyTitle>
+    <Company>Health Informatics Centre, University of Dundee</Company>
+    <Product>FAnsiSql.PostgreSql</Product>
+    <Description>PostgreSQL implementation for FAnsiSql</Description>
+    <Copyright>Copyright ©  2019-2025</Copyright>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <IsAotCompatible>true</IsAotCompatible>
+    <NoWarn>CS1591</NoWarn>
+    <NeutralLanguage>en-GB</NeutralLanguage>
+    <DebugType>embedded</DebugType>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <WarningLevel>1</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\FAnsi.Core\FAnsi.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Npgsql" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+</Project>
