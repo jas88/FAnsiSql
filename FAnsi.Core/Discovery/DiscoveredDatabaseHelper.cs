@@ -96,7 +96,6 @@ public abstract class DiscoveredDatabaseHelper : IDiscoveredDatabaseHelper
                     // Guesser defaults to bool when no data, causing PostgreSQL type mismatches
                     if ((column.Table?.Rows.Count ?? 0) == 0)
                     {
-                        Console.WriteLine($"DEBUG EmptyTable: Column {column.ColumnName} has {column.Table?.Rows.Count ?? -1} rows, overriding Guesser type {guess.CSharpType} with DataColumn type {column.DataType}");
                         guess.CSharpType = column.DataType;
                     }
 

@@ -425,9 +425,7 @@ public abstract partial class TypeTranslater : ITypeTranslater
         // So: numbersBeforeDecimalPlace = precision - scale, numbersAfterDecimalPlace = scale
         var numbersBeforeDecimalPlace = precision - scale;
         var numbersAfterDecimalPlace = scale;
-        var result = new DecimalSize(numbersBeforeDecimalPlace, numbersAfterDecimalPlace);
-        Console.WriteLine($"DEBUG ParseDecimalSize: decimal({precision},{scale}) → DecimalSize({numbersBeforeDecimalPlace},{numbersAfterDecimalPlace})");
-        return result;
+        return new DecimalSize(numbersBeforeDecimalPlace, numbersAfterDecimalPlace);
     }
 
     public string TranslateSQLDBType(string sqlType, ITypeTranslater destinationTypeTranslater)
