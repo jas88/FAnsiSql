@@ -4,6 +4,7 @@ using System.Globalization;
 using FAnsi;
 using FAnsi.Discovery;
 using FAnsi.Implementation;
+using FAnsiTests.TestGeneration;
 using NUnit.Framework;
 
 namespace FAnsiTests.Server;
@@ -54,11 +55,9 @@ internal abstract class ServerTestsBase : DatabaseTests
         });
     }
 
+    [SkipDatabase(DatabaseType.Sqlite, "SQLite is file-based and doesn't have server/database concepts")]
     protected void ServerHelper_GetConnectionStringBuilder(DatabaseType type)
     {
-        if (type == DatabaseType.Sqlite)
-            Assert.Inconclusive("SQLite is file-based and doesn't have separate server/database concepts or username/password authentication");
-
         var helper = ImplementationManager.GetImplementation(type).GetServerHelper();
         var builder = helper.GetConnectionStringBuilder("loco", "bob", "franko", "wacky");
 
@@ -75,11 +74,9 @@ internal abstract class ServerTestsBase : DatabaseTests
         });
     }
 
+    [SkipDatabase(DatabaseType.Sqlite, "SQLite is file-based and doesn't have server/database concepts")]
     protected void ServerHelper_GetConnectionStringBuilder_NoDatabase(DatabaseType type, bool useWhitespace)
     {
-        if (type == DatabaseType.Sqlite)
-            Assert.Inconclusive("SQLite is file-based and doesn't have separate server/database concepts or username/password authentication");
-
         var helper = ImplementationManager.GetImplementation(type).GetServerHelper();
         var builder = helper.GetConnectionStringBuilder("loco", useWhitespace ? "  " : null, "franko", "wacky");
 
@@ -141,11 +138,10 @@ internal abstract class ServerTestsBase : DatabaseTests
     /// Checks the API for <see cref="DiscoveredServer"/> respects both changes using the API and direct user changes made
     /// to <see cref="DiscoveredServer.Builder"/>
     /// </summary>
+    [SkipDatabase(DatabaseType.Oracle, "Oracle cannot encode database in connection string")]
+    [SkipDatabase(DatabaseType.Sqlite, "SQLite cannot encode database in connection string")]
     protected void ServerHelper_ChangeDatabase_AdHoc(DatabaseType type, bool useApiFirst)
     {
-        if (type is DatabaseType.Oracle or DatabaseType.Sqlite)
-            Assert.Inconclusive("FAnsiSql understanding of Database cannot be encoded in DbConnectionStringBuilder sadly so we can end up with DiscoveredServer with no GetCurrentDatabase");
-
         //create initial server reference
         var helper = ImplementationManager.GetImplementation(type).GetServerHelper();
         var server = new DiscoveredServer(helper.GetConnectionStringBuilder("loco", "bob", "franko", "wacky"));
