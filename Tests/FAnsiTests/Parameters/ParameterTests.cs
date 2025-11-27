@@ -22,12 +22,6 @@ internal sealed class ParameterTests : DatabaseTests
             Assert.Throws<NotSupportedException>(() => syntax.GetParameterDeclaration("@bob", new DatabaseTypeRequest(typeof(string), 10)));
     }
 
-#if MSSQL_TESTS
-    [TestCase(DatabaseType.MicrosoftSQLServer)]
-#endif
-#if MYSQL_TESTS
-    [TestCase(DatabaseType.MySql)]
-#endif
     //[TestCase(DatabaseType.Oracle)]
     public void CreateParameter(DatabaseType type)
     {
@@ -38,12 +32,6 @@ internal sealed class ParameterTests : DatabaseTests
         Assert.That(declaration, Does.Contain("@bob"));
     }
 
-#if MSSQL_TESTS
-    [TestCase(DatabaseType.MicrosoftSQLServer)]
-#endif
-#if MYSQL_TESTS
-    [TestCase(DatabaseType.MySql)]
-#endif
     //[TestCase(DatabaseType.Oracle)]
     public void CreateParameter_AndUse(DatabaseType type)
     {
