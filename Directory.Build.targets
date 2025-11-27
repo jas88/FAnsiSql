@@ -1,0 +1,55 @@
+<Project>
+  <!--
+    Dynamically determine all supported non-EOL .NET versions.
+
+    Uses SDK-provided properties:
+    - _MinimumNonEolSupportedNetCoreTargetFramework: Oldest supported .NET (e.g., "net8.0")
+    - NETCoreAppMaximumVersion: Latest .NET in current SDK (e.g., "10.0")
+
+    This automatically adapts as .NET versions go EOL:
+    - Nov 2024: .NET 8, 9 supported (min=8, max=9)
+    - Nov 2025: .NET 8, 9, 10 supported (min=8, max=10)
+    - Nov 2026: .NET 10, 11 supported (min=10, max=11) - .NET 8 & 9 both go EOL
+    - Nov 2027: .NET 10, 11, 12 supported (min=10, max=12)
+    - Nov 2028: .NET 11, 12, 13 supported (min=11, max=13) - .NET 10 goes EOL
+  -->
+  <PropertyGroup>
+    <_MinSupportedMajor>$(_MinimumNonEolSupportedNetCoreTargetFramework.Replace('net', '').Replace('.0', ''))</_MinSupportedMajor>
+    <_MaxSupportedMajor>$(NETCoreAppMaximumVersion.Replace('.0', ''))</_MaxSupportedMajor>
+  </PropertyGroup>
+
+  <!-- .NET 9 SDK (min=8, max=9) -->
+  <PropertyGroup Condition="'$(_MaxSupportedMajor)' == '9' and '$(_MinSupportedMajor)' == '8'">
+    <SupportedNonEolTargetFrameworks>net8.0;net9.0</SupportedNonEolTargetFrameworks>
+  </PropertyGroup>
+
+  <!-- .NET 10 SDK variations -->
+  <PropertyGroup Condition="'$(_MaxSupportedMajor)' == '10' and '$(_MinSupportedMajor)' == '8'">
+    <SupportedNonEolTargetFrameworks>net8.0;net9.0;net10.0</SupportedNonEolTargetFrameworks>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(_MaxSupportedMajor)' == '10' and '$(_MinSupportedMajor)' == '9'">
+    <SupportedNonEolTargetFrameworks>net9.0;net10.0</SupportedNonEolTargetFrameworks>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(_MaxSupportedMajor)' == '10' and '$(_MinSupportedMajor)' == '10'">
+    <SupportedNonEolTargetFrameworks>net10.0</SupportedNonEolTargetFrameworks>
+  </PropertyGroup>
+
+  <!-- .NET 11 SDK variations (expected Nov 2026) -->
+  <PropertyGroup Condition="'$(_MaxSupportedMajor)' == '11' and '$(_MinSupportedMajor)' == '10'">
+    <SupportedNonEolTargetFrameworks>net10.0;net11.0</SupportedNonEolTargetFrameworks>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(_MaxSupportedMajor)' == '11' and '$(_MinSupportedMajor)' == '11'">
+    <SupportedNonEolTargetFrameworks>net11.0</SupportedNonEolTargetFrameworks>
+  </PropertyGroup>
+
+  <!-- .NET 12 SDK variations (expected Nov 2027) -->
+  <PropertyGroup Condition="'$(_MaxSupportedMajor)' == '12' and '$(_MinSupportedMajor)' == '10'">
+    <SupportedNonEolTargetFrameworks>net10.0;net11.0;net12.0</SupportedNonEolTargetFrameworks>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(_MaxSupportedMajor)' == '12' and '$(_MinSupportedMajor)' == '11'">
+    <SupportedNonEolTargetFrameworks>net11.0;net12.0</SupportedNonEolTargetFrameworks>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(_MaxSupportedMajor)' == '12' and '$(_MinSupportedMajor)' == '12'">
+    <SupportedNonEolTargetFrameworks>net12.0</SupportedNonEolTargetFrameworks>
+  </PropertyGroup>
+</Project>
