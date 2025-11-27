@@ -63,4 +63,4 @@ var col = table.DiscoverColumn("MyCol");
 Assert.AreEqual("varchar2(5)", col.DataType.SQLType);
 ```
 
-Oracle does not have a discrete time datatype.  both [date and timestamp](https://docs.oracle.com/cd/B28359_01/server.111/b28318/datatype.htm#CNCPT413) store full date/times.  It is possible to use `interval` for this purpose but that type is very flexible (which isn't a problem for creating the column but it is a problem for discovering a column and making a descision about whether it is TimeSpan or DateTime).
+Oracle does not have a discrete time datatype.  both [date and timestamp](https://docs.oracle.com/cd/B28359_01/server.111/b28318/datatype.htm#CNCPT413) store full date/times.  It is possible to use `interval` for this purpose but that type is very flexible (which isn't a problem for creating the column but it is a problem for discovering a column and making a decision about whether it is TimeSpan or DateTime).
