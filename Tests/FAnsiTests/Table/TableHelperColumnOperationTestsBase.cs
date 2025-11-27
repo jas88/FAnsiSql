@@ -366,9 +366,6 @@ internal abstract class TableHelperColumnOperationTestsBase : DatabaseTests
 
     protected void AddAndDropColumn_Sequence_Success(DatabaseType type)
     {
-        if (type == DatabaseType.Sqlite)
-            Assert.Ignore("SQLite does not support DROP COLUMN operations");
-
         var db = GetTestDatabase(type);
         var table = db.CreateTable("AddDropSeqTable",
         [
@@ -398,9 +395,6 @@ internal abstract class TableHelperColumnOperationTestsBase : DatabaseTests
 
     protected void AddColumn_InsertData_DropColumn_DataPreserved(DatabaseType type)
     {
-        if (type == DatabaseType.Sqlite)
-            Assert.Ignore("SQLite does not support DROP COLUMN operations");
-
         var db = GetTestDatabase(type);
         var table = db.CreateTable("AddInsertDropTable",
         [
