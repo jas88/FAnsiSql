@@ -42,11 +42,15 @@ public sealed partial class PackageListIsCorrectTests
             .Select(static m => m.Groups[1].Value)
             .ToHashSet(StringComparer.InvariantCultureIgnoreCase);
 
-        // Extract the named packages from csproj files
-        var usedPackages = GetCsprojFiles(root).Select(File.ReadAllText).SelectMany(static s => RPackageRef.Matches(s))
-            .Select(static m => m.Groups[1].Value)
+        // Extract the named packages from Directory.Packages.props (central package management)
+        // Filter out build/test packages that are not runtime dependencies
+        var usedPackages = GetPackagesFromCentralManagement(root)
             .Where(static p => !p.Contains("CodeAnalysis", StringComparison.OrdinalIgnoreCase) &&
-                              !p.Equals("System.Composition", StringComparison.OrdinalIgnoreCase))
+                              !p.Equals("System.Composition", StringComparison.OrdinalIgnoreCase) &&
+                              !p.Equals("MinVer", StringComparison.OrdinalIgnoreCase) &&
+                              !p.Contains("Test", StringComparison.OrdinalIgnoreCase) &&
+                              !p.Contains("NUnit", StringComparison.OrdinalIgnoreCase) &&
+                              !p.Contains("coverlet", StringComparison.OrdinalIgnoreCase))
             .ToHashSet(StringComparer.InvariantCultureIgnoreCase);
 
         // Then subtract those listed in PACKAGES.md (should be empty)
@@ -57,7 +61,7 @@ public sealed partial class PackageListIsCorrectTests
         Assert.Multiple(() =>
         {
             Assert.That(unusedPackages, Is.Empty,
-                    $"The following packages are listed in PACKAGES.md but are not used in any csproj file: {string.Join(", ", unusedPackages)}");
+                    $"The following packages are listed in PACKAGES.md but are not used in Directory.Packages.props: {string.Join(", ", unusedPackages)}");
             Assert.That(undocumented.ToString(), Is.Empty);
         });
     }
@@ -111,8 +115,31 @@ public sealed partial class PackageListIsCorrectTests
         return path;
     }
 
+    /// <summary>
+    /// Extract packages from Directory.Packages.props (central package management)
+    /// </summary>
+    /// <param name="root"></param>
+    /// <returns></returns>
+    private static IEnumerable<string> GetPackagesFromCentralManagement(DirectoryInfo root)
+    {
+        var packagesPropsPath = Path.Combine(root.FullName, "Directory.Packages.props");
+        if (!File.Exists(packagesPropsPath))
+        {
+            // Fallback to old method if Directory.Packages.props doesn't exist
+            return GetCsprojFiles(root).Select(File.ReadAllText).SelectMany(static s => RPackageRe().Matches(s))
+                .Select(static m => m.Groups[1].Value);
+        }
+
+        var packagesPropsContent = File.ReadAllText(packagesPropsPath);
+        // Match PackageVersion Include="PackageName" Version="X.Y.Z"
+        return RPackageVersionRe().Matches(packagesPropsContent)
+            .Select(static m => m.Groups[1].Value);
+    }
+
     [GeneratedRegex("<PackageReference\\s+Include=\"(.*)\"\\s+Version=\"([^\"]*)\"", RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]
     private static partial Regex RPackageRe();
+    [GeneratedRegex("<PackageVersion\\s+Include=\"(.*)\"\\s+Version=\"([^\"]*)\"", RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]
+    private static partial Regex RPackageVersionRe();
     [GeneratedRegex("^\\|\\s*\\[?([^ |\\]]+)(\\]\\([^)]+\\))?\\s*\\|", RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]
     private static partial Regex RMarkdownRe();
 }
