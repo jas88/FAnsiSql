@@ -64,10 +64,10 @@ public abstract partial class TypeTranslater : ITypeTranslater
         if (t == typeof(byte))
             return GetByteDataType();
 
-        if (t == typeof(short) || t == typeof(short) || t == typeof(ushort) || t == typeof(short?) || t == typeof(ushort?))
+        if (t == typeof(short) || t == typeof(ushort) || t == typeof(short?) || t == typeof(ushort?))
             return GetSmallIntDataType();
 
-        if (t == typeof(int) || t == typeof(int) || t == typeof(uint) || t == typeof(int?) || t == typeof(uint?))
+        if (t == typeof(int) || t == typeof(uint) || t == typeof(int?) || t == typeof(uint?))
             return GetIntDataType();
 
         if (t == typeof(long) || t == typeof(ulong) || t == typeof(long?) || t == typeof(ulong?))
@@ -83,7 +83,13 @@ public abstract partial class TypeTranslater : ITypeTranslater
         if (t == typeof(DateTime) || t == typeof(DateTime?))
             return GetDateDateTimeDataType();
 
+        if (t == typeof(DateOnly) || t == typeof(DateOnly?))
+            return GetDateDateTimeDataType();
+
         if (t == typeof(TimeSpan) || t == typeof(TimeSpan?))
+            return GetTimeDataType();
+
+        if (t == typeof(TimeOnly) || t == typeof(TimeOnly?))
             return GetTimeDataType();
 
         if (t == typeof(byte[]))
@@ -419,9 +425,7 @@ public abstract partial class TypeTranslater : ITypeTranslater
         // So: numbersBeforeDecimalPlace = precision - scale, numbersAfterDecimalPlace = scale
         var numbersBeforeDecimalPlace = precision - scale;
         var numbersAfterDecimalPlace = scale;
-        var result = new DecimalSize(numbersBeforeDecimalPlace, numbersAfterDecimalPlace);
-        Console.WriteLine($"DEBUG ParseDecimalSize: decimal({precision},{scale}) → DecimalSize({numbersBeforeDecimalPlace},{numbersAfterDecimalPlace})");
-        return result;
+        return new DecimalSize(numbersBeforeDecimalPlace, numbersAfterDecimalPlace);
     }
 
     public string TranslateSQLDBType(string sqlType, ITypeTranslater destinationTypeTranslater)

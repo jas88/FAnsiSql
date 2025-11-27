@@ -94,6 +94,34 @@ internal abstract class AggregationTests : DatabaseTests
 
             //could be dealing with int / long mismatch etc
             if (aType != bType)
+            {
+                // Handle DateOnly/DateTime interoperability (Npgsql 10.0 maps PostgreSQL date to DateOnly)
+                if (a is DateOnly dateOnly && b is DateTime dateTime)
+                {
+                    if (DateOnly.FromDateTime(dateTime) != dateOnly)
+                        return false;
+                    continue;
+                }
+                if (a is DateTime dt && b is DateOnly dOnly)
+                {
+                    if (DateOnly.FromDateTime(dt) != dOnly)
+                        return false;
+                    continue;
+                }
+
+                // Handle SQLite string dates (SQLite stores dates as TEXT)
+                // Expected: DateTime, Actual: String like "2001-01-01 00:00:00"
+                if (a is string str && b is DateTime expectedDt)
+                {
+                    if (DateTime.TryParse(str, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedDt))
+                    {
+                        if (parsedDt != expectedDt)
+                            return false;
+                        continue;
+                    }
+                    return false; // String couldn't be parsed as DateTime
+                }
+
                 try
                 {
                     b = Convert.ChangeType(b, aType, CultureInfo.InvariantCulture);
@@ -103,6 +131,7 @@ internal abstract class AggregationTests : DatabaseTests
                     //they are not a match because they are not the same type and cannot be converted
                     return false;
                 }
+            }
 
             if (!a.Equals(b))
                 return false;

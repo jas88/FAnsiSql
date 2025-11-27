@@ -4,22 +4,25 @@ using System.Globalization;
 using FAnsi;
 using FAnsi.Discovery;
 using FAnsi.Implementation;
+using FAnsiTests.TestGeneration;
 using NUnit.Framework;
 
 namespace FAnsiTests.Server;
 
-internal sealed class ServerLevelTests : DatabaseTests
+/// <summary>
+/// Base class for server-level tests across all database types.
+/// To add a new test: Add a protected method taking DatabaseType parameter.
+/// Then add [Test] methods to each ServerTests_{Database}.cs file that call it.
+/// </summary>
+internal abstract class ServerTestsBase : DatabaseTests
 {
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
-    public void Server_Exists(DatabaseType type)
+    protected void Server_Exists(DatabaseType type)
     {
         var server = GetTestServer(type);
         Assert.That(server.Exists(), "Server " + server + " did not exist");
     }
 
-
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
-    public void Server_Constructors(DatabaseType dbType)
+    protected void Server_Constructors(DatabaseType dbType)
     {
         var helper = ImplementationManager.GetImplementation(dbType).GetServerHelper();
         var server =
@@ -29,8 +32,7 @@ internal sealed class ServerLevelTests : DatabaseTests
         Assert.That(server.Name, Is.EqualTo("localhost"));
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
-    public void Server_RespondsWithinTime(DatabaseType type)
+    protected void Server_RespondsWithinTime(DatabaseType type)
     {
         var server = GetTestServer(type);
 
@@ -40,9 +42,7 @@ internal sealed class ServerLevelTests : DatabaseTests
     /// <summary>
     /// Tests systems ability to deal with missing information in the connection string
     /// </summary>
-    /// <param name="type"></param>
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
-    public void ServerHelper_GetCurrentDatabase_WhenNoneSpecified(DatabaseType type)
+    protected void ServerHelper_GetCurrentDatabase_WhenNoneSpecified(DatabaseType type)
     {
         var helper = ImplementationManager.GetImplementation(type).GetServerHelper();
         var builder = helper.GetConnectionStringBuilder("");
@@ -55,12 +55,9 @@ internal sealed class ServerLevelTests : DatabaseTests
         });
     }
 
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
-    public void ServerHelper_GetConnectionStringBuilder(DatabaseType type)
+    [SkipDatabase(DatabaseType.Sqlite, "SQLite is file-based and doesn't have server/database concepts")]
+    protected void ServerHelper_GetConnectionStringBuilder(DatabaseType type)
     {
-        if (type == DatabaseType.Sqlite)
-            Assert.Inconclusive("SQLite is file-based and doesn't have separate server/database concepts or username/password authentication");
-
         var helper = ImplementationManager.GetImplementation(type).GetServerHelper();
         var builder = helper.GetConnectionStringBuilder("loco", "bob", "franko", "wacky");
 
@@ -77,13 +74,9 @@ internal sealed class ServerLevelTests : DatabaseTests
         });
     }
 
-
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypesWithBoolFlags))]
-    public void ServerHelper_GetConnectionStringBuilder_NoDatabase(DatabaseType type, bool useWhitespace)
+    [SkipDatabase(DatabaseType.Sqlite, "SQLite is file-based and doesn't have server/database concepts")]
+    protected void ServerHelper_GetConnectionStringBuilder_NoDatabase(DatabaseType type, bool useWhitespace)
     {
-        if (type == DatabaseType.Sqlite)
-            Assert.Inconclusive("SQLite is file-based and doesn't have separate server/database concepts or username/password authentication");
-
         var helper = ImplementationManager.GetImplementation(type).GetServerHelper();
         var builder = helper.GetConnectionStringBuilder("loco", useWhitespace ? "  " : null, "franko", "wacky");
 
@@ -109,24 +102,14 @@ internal sealed class ServerLevelTests : DatabaseTests
 
             Assert.That(server.GetCurrentDatabase(), Is.Null);
         });
-
-
     }
 
-#if MYSQL_TESTS
-    [TestCase(DatabaseType.MySql, false)]
-#endif
-#if MSSQL_TESTS
-    [TestCase(DatabaseType.MicrosoftSQLServer, false)]
-#endif
-#if ORACLE_TESTS
-    [TestCase(DatabaseType.Oracle, true)]
-#endif
-#if POSTGRESQL_TESTS
-    [TestCase(DatabaseType.PostgreSql, false)]
-#endif
-    public void ServerHelper_ChangeDatabase(DatabaseType type, bool expectCaps)
+    [SkipDatabase(DatabaseType.Sqlite, "SQLite is file-based and doesn't have separate server/database concepts")]
+    protected void ServerHelper_ChangeDatabase(DatabaseType type)
     {
+        // Oracle uppercases database names
+        bool expectCaps = type == DatabaseType.Oracle;
+
         var server = new DiscoveredServer("loco", "bob", type, "franko", "wacky");
 
         Assert.Multiple(() =>
@@ -152,19 +135,14 @@ internal sealed class ServerLevelTests : DatabaseTests
         });
     }
 
-
     /// <summary>
     /// Checks the API for <see cref="DiscoveredServer"/> respects both changes using the API and direct user changes made
     /// to <see cref="DiscoveredServer.Builder"/>
     /// </summary>
-    /// <param name="type"></param>
-    /// <param name="useApiFirst"></param>
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypesWithBoolFlags))]
-    public void ServerHelper_ChangeDatabase_AdHoc(DatabaseType type, bool useApiFirst)
+    [SkipDatabase(DatabaseType.Oracle, "Oracle cannot encode database in connection string")]
+    [SkipDatabase(DatabaseType.Sqlite, "SQLite is file-based and doesn't have separate server/database concepts")]
+    protected void ServerHelper_ChangeDatabase_AdHoc(DatabaseType type, bool useApiFirst)
     {
-        if (type is DatabaseType.Oracle or DatabaseType.Sqlite)
-            Assert.Inconclusive("FAnsiSql understanding of Database cannot be encoded in DbConnectionStringBuilder sadly so we can end up with DiscoveredServer with no GetCurrentDatabase");
-
         //create initial server reference
         var helper = ImplementationManager.GetImplementation(type).GetServerHelper();
         var server = new DiscoveredServer(helper.GetConnectionStringBuilder("loco", "bob", "franko", "wacky"));
@@ -201,77 +179,7 @@ internal sealed class ServerLevelTests : DatabaseTests
         });
     }
 
-#if MSSQL_TESTS
-    [TestCase(DatabaseType.MicrosoftSQLServer, DatabaseType.MySql)]
-#endif
-#if MYSQL_TESTS
-    [TestCase(DatabaseType.MySql, DatabaseType.MicrosoftSQLServer)]
-#endif
-#if MSSQL_TESTS
-    [TestCase(DatabaseType.MicrosoftSQLServer, DatabaseType.PostgreSql)]
-#endif
-#if POSTGRESQL_TESTS
-    [TestCase(DatabaseType.PostgreSql, DatabaseType.MicrosoftSQLServer)]
-#endif
-
-    public void MoveData_BetweenServerTypes(DatabaseType from, DatabaseType to)
-    {
-        //Create some test data
-        using var dtToMove = new DataTable();
-        dtToMove.Columns.Add("MyCol");
-        dtToMove.Columns.Add("DateOfBirth");
-        dtToMove.Columns.Add("Sanity");
-
-        dtToMove.Rows.Add("Frank", new DateTime(2001, 01, 01), "0.50");
-        dtToMove.Rows.Add("Tony", null, "9.99");
-        dtToMove.Rows.Add("Jez", new DateTime(2001, 05, 01), "100.0");
-
-        dtToMove.PrimaryKey = [dtToMove.Columns["MyCol"] ?? throw new InvalidOperationException()];
-
-        //Upload it to the first database
-        var fromDb = GetTestDatabase(from);
-        var tblFrom = fromDb.CreateTable("MyTable", dtToMove);
-        Assert.That(tblFrom.Exists());
-
-        //Get pointer to the second database table (which doesn't exist yet)
-        var toDb = GetTestDatabase(to);
-        var toTable = toDb.ExpectTable("MyNewTable");
-        Assert.That(toTable.Exists(), Is.False);
-
-        //Get the clone table sql adjusted to work on the other DBMS
-        var sql = tblFrom.ScriptTableCreation(false, false, false, toTable);
-
-        //open connection and run the code to create the new table
-        using (var con = toDb.Server.GetConnection())
-        {
-            con.Open();
-            var cmd = toDb.Server.GetCommand(sql, con);
-            cmd.ExecuteNonQuery();
-        }
-
-        //new table should exist
-        Assert.That(tblFrom.Exists());
-
-        using (var insert = toTable.BeginBulkInsert(CultureInfo.InvariantCulture))
-        {
-            //fetch the data from the source table
-            var fromData = tblFrom.GetDataTable();
-
-            //put it into the destination table
-            insert.Upload(fromData);
-        }
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(tblFrom.GetRowCount(), Is.EqualTo(3));
-            Assert.That(toTable.GetRowCount(), Is.EqualTo(3));
-        });
-
-        AssertAreEqual(toTable.GetDataTable(), tblFrom.GetDataTable());
-    }
-
-    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
-    public void TestServer_GetVersion(DatabaseType dbType)
+    protected void TestServer_GetVersion(DatabaseType dbType)
     {
         var db = GetTestDatabase(dbType, false);
         var ver = db.Server.GetVersion();

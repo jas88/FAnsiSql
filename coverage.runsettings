@@ -14,5 +14,9 @@
   </DataCollectionRunSettings>
   <NUnit>
     <DefaultTimeout>60000</DefaultTimeout>
+    <!-- Run entire test fixtures (classes) in parallel instead of individual test methods -->
+    <ParallelizeAssembly>true</ParallelizeAssembly>
+    <Workers>6</Workers>
+    <LevelOfParallelism>Fixture</LevelOfParallelism>
   </NUnit>
 </RunSettings>

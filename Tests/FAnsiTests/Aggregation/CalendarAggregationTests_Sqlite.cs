@@ -17,7 +17,6 @@ internal sealed class CalendarAggregationTests_Sqlite : CalendarAggregationTests
     public void Test_Calendar_Month() => Test_Calendar_Month(DbType);
 
     [Test]
-    [Ignore("SQLite stores DateTime as TEXT; calendar functions work differently")]
     public void Test_Calendar_Day() => Test_Calendar_Day(DbType);
 
     [Test]

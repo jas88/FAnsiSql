@@ -88,20 +88,23 @@ public sealed class SqliteServerHelper : DiscoveredServerHelper
     /// <summary>
     /// Creates a connection string builder with the specified parameters.
     /// </summary>
-    /// <param name="server">The server/file path (used if database is null)</param>
-    /// <param name="database">The database file path (preferred over server)</param>
+    /// <param name="server">The server/file path (primary parameter for file path)</param>
+    /// <param name="database">The database file path (fallback if server is not provided)</param>
     /// <param name="username">Username (ignored for SQLite as it has no authentication)</param>
     /// <param name="password">Password (ignored for SQLite as it has no authentication)</param>
     /// <returns>A configured connection string builder</returns>
     /// <remarks>
-    /// SQLite doesn't use username/password authentication. These parameters are accepted for API compatibility but ignored.
+    /// <para>SQLite doesn't use username/password authentication. These parameters are accepted for API compatibility but ignored.</para>
+    /// <para>For SQLite, server and database are the same concept (file path). We prefer the server parameter to maintain
+    /// consistency with the Name property, which uses ServerKeyName ("Data Source").</para>
     /// </remarks>
     protected override DbConnectionStringBuilder GetConnectionStringBuilderImpl(string server, string? database, string username, string password)
     {
         var builder = new SqliteConnectionStringBuilder();
 
         // For SQLite, server and database are the same (file path)
-        var dataSource = database ?? server;
+        // Use server as primary, fall back to database for backwards compatibility
+        var dataSource = !string.IsNullOrWhiteSpace(server) ? server : database;
         builder.DataSource = dataSource;
 
         // SQLite doesn't use username/password authentication, but we accept them

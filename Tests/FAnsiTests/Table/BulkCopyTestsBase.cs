@@ -538,16 +538,13 @@ internal abstract class BulkCopyTestsBase : DatabaseTests
     protected void Upload_WithTransaction_CommitsProperly(DatabaseType type)
     {
         var db = GetTestDatabase(type);
-        TestContext.Out.WriteLine($"[{type}] Created database");
         var tbl = db.CreateTable("TestTransactionCommit",
         [
             new DatabaseColumnRequest("Id", new DatabaseTypeRequest(typeof(int))),
             new DatabaseColumnRequest("Value", new DatabaseTypeRequest(typeof(string), 50))
         ]);
-        TestContext.Out.WriteLine($"[{type}] Created table");
 
         using var transaction = tbl.Database.Server.BeginNewTransactedConnection();
-        TestContext.Out.WriteLine($"[{type}] Started transaction");
 
         // Check isolation level for SQL Server
         if (type == DatabaseType.MicrosoftSQLServer)
@@ -564,34 +561,26 @@ internal abstract class BulkCopyTestsBase : DatabaseTests
             dt.Columns.Add("Id", typeof(int));
             dt.Columns.Add("Value", typeof(string));
             dt.Rows.Add(1, "InTransaction");
-            TestContext.Out.WriteLine($"[{type}] Created DataTable");
 
             using var bulk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture, transaction.ManagedTransaction);
-            TestContext.Out.WriteLine($"[{type}] Created BulkInsert");
             bulk.Upload(dt);
-            TestContext.Out.WriteLine($"[{type}] Upload completed");
 
             // Inside transaction
             Assert.That(tbl.GetRowCount(transaction.ManagedTransaction), Is.EqualTo(1));
-            TestContext.Out.WriteLine($"[{type}] Row count inside transaction verified");
         }
 
         // Skip checking row count from outside transaction for SQL Server
         // TableLock blocks reads from other connections during active transaction
         if (type != DatabaseType.MicrosoftSQLServer)
         {
-            TestContext.Out.WriteLine($"[{type}] About to check row count OUTSIDE transaction");
             // Outside transaction - should be 0 before commit
             Assert.That(tbl.GetRowCount(), Is.EqualTo(0));
-            TestContext.Out.WriteLine($"[{type}] Row count outside transaction verified");
         }
 
         transaction.ManagedTransaction?.CommitAndCloseConnection();
-        TestContext.Out.WriteLine($"[{type}] Transaction committed");
 
         // After commit
         Assert.That(tbl.GetRowCount(), Is.EqualTo(1));
-        TestContext.Out.WriteLine($"[{type}] Final row count verified");
     }
 
     protected void Upload_WithTransaction_RollbackWorks(DatabaseType type)

@@ -157,9 +157,6 @@ internal abstract class CalendarAggregationTestsBase : AggregationTests
     }
     protected void Test_Calendar_Day(DatabaseType type)
     {
-        if (type == DatabaseType.Sqlite)
-            Assert.Ignore("SQLite stores DateTime as TEXT; calendar functions work differently");
-
         var tbl = GetTestTable(type);
         var svr = tbl.Database.Server;
         var col = tbl.DiscoverColumn("EventDate");
@@ -193,7 +190,7 @@ internal abstract class CalendarAggregationTestsBase : AggregationTests
         using var dt = new DataTable();
         da.Fill(dt);
 
-        Assert.That(dt.Rows, Has.Count.EqualTo(3288)); // 109 months between 2001 and 2010 (inclusive)
+        Assert.That(dt.Rows, Has.Count.EqualTo(3288)); // 3288 days between 2001-01-01 and 2010-01-01 (inclusive)
 
         AssertHasRow(dt, new DateTime(2001, 1, 1), 4);
         AssertHasRow(dt, new DateTime(2001, 1, 2), 1);
