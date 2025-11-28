@@ -29,7 +29,7 @@ jobs:
     - uses: actions/checkout@v6
 
     - name: Replace test configuration for CI
-      run: mv Tests/FAnsiTests/TestDatabases{-github,}.xml
+      run: mv tests/FAnsiTests/TestDatabases{-github,}.xml
 
     - name: MS repo
       run: |
@@ -56,6 +56,7 @@ jobs:
     - name: Setup .NET Core
       uses: actions/setup-dotnet@v5
       with:
+        global-json-file: global.json
         cache: true
         cache-dependency-path: Directory.Packages.props
 
@@ -126,7 +127,7 @@ jobs:
         patterns: |
           +**/*
           -**/*.g.cs
-          -**/Tests/**
+          -**/tests/**
         input: sarif-results/csharp.sarif
         output: sarif-results/csharp.sarif
 
@@ -140,7 +141,7 @@ jobs:
       if: false
       run: |
         echo "=== Building SQL Server AOT Test ==="
-        dotnet publish Tests/AotCompatibility/SqlServer.AotTest/SqlServer.AotTest.csproj \
+        dotnet publish tests/AotCompatibility/SqlServer.AotTest/SqlServer.AotTest.csproj \
           -c Release \
           -r linux-x64 \
           -o ./aot-output/sqlserver \
@@ -154,7 +155,7 @@ jobs:
       if: false
       run: |
         echo "=== Building MySQL AOT Test ==="
-        dotnet publish Tests/AotCompatibility/MySql.AotTest/MySql.AotTest.csproj \
+        dotnet publish tests/AotCompatibility/MySql.AotTest/MySql.AotTest.csproj \
           -c Release \
           -r linux-x64 \
           -o ./aot-output/mysql \
@@ -168,7 +169,7 @@ jobs:
       if: false
       run: |
         echo "=== Building PostgreSQL AOT Test ==="
-        dotnet publish Tests/AotCompatibility/PostgreSql.AotTest/PostgreSql.AotTest.csproj \
+        dotnet publish tests/AotCompatibility/PostgreSql.AotTest/PostgreSql.AotTest.csproj \
           -c Release \
           -r linux-x64 \
           -o ./aot-output/postgresql \
@@ -182,7 +183,7 @@ jobs:
       if: false
       run: |
         echo "=== Building Oracle AOT Test ==="
-        dotnet publish Tests/AotCompatibility/Oracle.AotTest/Oracle.AotTest.csproj \
+        dotnet publish tests/AotCompatibility/Oracle.AotTest/Oracle.AotTest.csproj \
           -c Release \
           -r linux-x64 \
           -o ./aot-output/oracle \
@@ -196,7 +197,7 @@ jobs:
       if: false
       run: |
         echo "=== Building SQLite AOT Test ==="
-        dotnet publish Tests/AotCompatibility/Sqlite.AotTest/Sqlite.AotTest.csproj \
+        dotnet publish tests/AotCompatibility/Sqlite.AotTest/Sqlite.AotTest.csproj \
           -c Release \
           -r linux-x64 \
           -o ./aot-output/sqlite \
@@ -210,7 +211,7 @@ jobs:
       if: false
       run: |
         echo "=== Building Comprehensive FAnsiSql AOT Test ==="
-        dotnet publish Tests/AotCompatibility/FAnsi.AotTest/FAnsi.AotTest.csproj \
+        dotnet publish tests/AotCompatibility/FAnsi.AotTest/FAnsi.AotTest.csproj \
           -c Release \
           -r linux-x64 \
           -o ./aot-output/comprehensive \
@@ -236,7 +237,7 @@ jobs:
       if: false
       run: |
         echo "=== Checking for AOT Analysis Warnings ==="
-        dotnet build Tests/AotCompatibility/FAnsi.AotTest/FAnsi.AotTest.csproj \
+        dotnet build tests/AotCompatibility/FAnsi.AotTest/FAnsi.AotTest.csproj \
           -c Release \
           -p:PublishAot=true \
           -v detailed 2>&1 | tee build.log
@@ -248,8 +249,7 @@ jobs:
         fi
 
     - name: Pack
-      run: |
-        dotnet pack FAnsi.sln -c Release -p:DebugType=full -p:SymbolPackageFormat=snupkg --include-symbols --nologo -p:Version=$(fgrep AssemblyInformationalVersion SharedAssemblyInfo.cs|cut -d'"' -f2) -o .
+      run: dotnet pack FAnsi.sln -c Release -p:DebugType=full -p:SymbolPackageFormat=snupkg --include-symbols --nologo -o .
     - name: Nuget push
       if: contains(github.ref,'refs/tags/')
       run: dotnet nuget push FAnsi*.nupkg -s https://api.nuget.org/v3/index.json -k ${{ secrets.NUGET_API_KEY }} --skip-duplicate

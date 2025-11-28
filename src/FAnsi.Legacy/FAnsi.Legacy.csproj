@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageId>FAnsiSql.Legacy</PackageId>
+    <title>FAnsiSql.Legacy</title>
+    <authors>Health Informatics Centre - University of Dundee</authors>
+    <owners>Health Informatics Centre - University of Dundee</owners>
+    <PackageProjectUrl>https://github.com/jas88/FAnsiSql</PackageProjectUrl>
+    <PackageLicenseExpression>GPL-3.0-or-later</PackageLicenseExpression>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <description>FAnsiSql is a database management/ETL library that allows you to perform common SQL operations without having to know which Database Management System (DBMS) you are targetting (e.g. Sql Server, My Sql, Oracle). This legacy meta-package includes all supported DBMS implementations for easy migration from HIC.FAnsiSql. New projects should use the modular packages (FAnsi.Core + specific DBMS packages).</description>
+    <PackageTags>Ansi,SQL,Legacy</PackageTags>
+    <AssemblyTitle>FAnsiSql.Legacy</AssemblyTitle>
+    <Company>Health Informatics Centre, University of Dundee</Company>
+    <Product>FAnsiSql.Legacy</Product>
+    <Description>FAnsiSql legacy package with all DBMS implementations included</Description>
+    <Copyright>Copyright ©  2019-2025</Copyright>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <IsAotCompatible>true</IsAotCompatible>
+    <NoWarn>CS1591;CA2255</NoWarn>
+    <NeutralLanguage>en-GB</NeutralLanguage>
+    <DebugType>embedded</DebugType>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <WarningLevel>1</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\FAnsi.Core\FAnsi.Core.csproj" />
+    <ProjectReference Include="..\FAnsi.MicrosoftSql\FAnsi.MicrosoftSql.csproj" />
+    <ProjectReference Include="..\FAnsi.MySql\FAnsi.MySql.csproj" />
+    <ProjectReference Include="..\FAnsi.Oracle\FAnsi.Oracle.csproj" />
+    <ProjectReference Include="..\FAnsi.PostgreSql\FAnsi.PostgreSql.csproj" />
+    <ProjectReference Include="..\FAnsi.Sqlite\FAnsi.Sqlite.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+</Project>

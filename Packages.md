@@ -9,7 +9,6 @@
 
 | Package | Source Code | License | Purpose | Additional Risk Assessment |
 | ------- | ------------| ------- | ------- | -------------------------- |
-| Microsoft.SourceLink.GitHub | [GitHub](https://github.com/dotnet/sourcelink) | [MIT](https://opensource.org/licenses/MIT) | Enable source linkage from nupkg | Official MS project |
 | Microsoft.Data.SqlClient | [GitHub](https://github.com/dotnet/SqlClient) | [MIT](https://opensource.org/licenses/MIT) | Enables interaction with Microsoft Sql Server databases |  |
 | Microsoft.Data.Sqlite | [GitHub](https://github.com/dotnet/efcore) | [MIT](https://opensource.org/licenses/MIT) | Enables interaction with SQLite databases | Official MS project |
 | MySqlConnector | [GitHub](https://github.com/mysql-net/MySqlConnector) | [MIT](https://github.com/mysql-net/MySqlConnector/blob/master/LICENSE) | Enables interaction with MySql databases |  |

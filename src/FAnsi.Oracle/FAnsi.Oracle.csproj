@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageId>FAnsiSql.Oracle</PackageId>
+    <title>FAnsiSql.Oracle</title>
+    <authors>Health Informatics Centre - University of Dundee</authors>
+    <owners>Health Informatics Centre - University of Dundee</owners>
+    <PackageProjectUrl>https://github.com/jas88/FAnsiSql</PackageProjectUrl>
+    <PackageLicenseExpression>GPL-3.0-or-later</PackageLicenseExpression>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <description>Oracle implementation for FAnsiSql</description>
+    <PackageTags>Ansi,SQL,Oracle</PackageTags>
+    <AssemblyTitle>FAnsiSql.Oracle</AssemblyTitle>
+    <Company>Health Informatics Centre, University of Dundee</Company>
+    <Product>FAnsiSql.Oracle</Product>
+    <Description>Oracle implementation for FAnsiSql</Description>
+    <Copyright>Copyright ©  2019-2025</Copyright>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <IsAotCompatible>true</IsAotCompatible>
+    <NoWarn>CS1591</NoWarn>
+    <NeutralLanguage>en-GB</NeutralLanguage>
+    <DebugType>embedded</DebugType>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <WarningLevel>1</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\FAnsi.Core\FAnsi.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Oracle.ManagedDataAccess.Core" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+</Project>

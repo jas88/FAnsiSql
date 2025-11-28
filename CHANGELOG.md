@@ -7,22 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.6.0] - 2025-11-27
+
 ### Changed
 - **Npgsql 10.0 compatibility**
   - Updated Npgsql from 9.0.4 to 10.0.0
   - Added DateOnly/TimeOnly support for PostgreSQL date/time type mappings
   - Refactored PostgreSqlTypeTranslater to use FrozenDictionary for O(1) type lookups
 
+- **Project modernization and .NET 10 support**
+  - Updated target frameworks: Libraries now multi-target net8.0, net9.0, net10.0
+  - Tests and tools now target net10.0
+  - Reorganized project structure: libraries moved to `src/`, tests to `tests/`
+  - Implemented central package management via Directory.Packages.props
+  - Added global.json to specify .NET SDK 10.0.100
+  - Updated CI workflows to use global.json for SDK versioning
+  - Improved NuGet caching using Directory.Packages.props as cache key
+
 ### Added
 - **DateOnly/TimeOnly support across all database implementations**
   - Added DateOnly/TimeOnly type support in base TypeTranslater class
   - All database backends now recognize and handle .NET 6+ date/time types
+
+- **Modern .NET project structure**
+  - Created src/Directory.Build.props for library multi-targeting (net8.0;net9.0;net10.0)
+  - Created tests/Directory.Build.props for test projects (net10.0)
+  - Target frameworks now managed centrally via Directory.Build.props files
+  - Automated target framework updates via generate-build-props.sh script
 
 ### Fixed
 - **Type mapping bugs in base TypeTranslater**
   - Fixed duplicate type checks: `typeof(short)` and `typeof(int)` appeared twice in conditionals
   - Fixed Test_Calendar_Day failure caused by Npgsql 10.0 returning DateOnly instead of DateTime
   - Updated test assertions to handle DateOnly/DateTime interoperability
+  - Fixed string-to-DateTime comparison for SQLite cross-database tests
+  - Fixed SQLite server name handling in connection string builder
+
+### Removed
+- **Deprecated dependencies and files**
+  - Removed Microsoft.SourceLink.GitHub package (now integrated in .NET SDK)
+  - Removed SharedAssemblyInfo.cs (replaced by centralized Directory.Build.props properties)
+  - Removed hardcoded TargetFramework(s) from .csproj files (now inherited from Directory.Build.props)
 
 ## [3.5.0] - 2025-11-04
 
