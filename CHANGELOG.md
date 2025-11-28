@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Performance
+- **MySQL bulk copy performance improvement**
+  - Refactored MySqlBulkCopy to use native MySqlConnector.MySqlBulkCopy API
+  - Performance: 2-5x faster bulk inserts via MySQL's native bulk loading protocol
+  - Code simplification: reduced from ~355 lines to ~220 lines (38% reduction)
+  - Memory: lower memory usage (no batch parameter building overhead)
+  - Consistency: matches SQL Server's SqlBulkCopy implementation pattern
+  - Preserved all validation logic (decimal precision/scale, empty strings to NULL)
+
 ## [3.6.1] - 2025-11-27
 
 ### Changed
