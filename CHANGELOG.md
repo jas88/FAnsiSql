@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [3.6.0] - 2025-11-27
+## [3.6.1] - 2025-11-27
 
 ### Changed
 - **Npgsql 10.0 compatibility**
@@ -48,6 +48,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Removed Microsoft.SourceLink.GitHub package (now integrated in .NET SDK)
   - Removed SharedAssemblyInfo.cs (replaced by centralized Directory.Build.props properties)
   - Removed hardcoded TargetFramework(s) from .csproj files (now inherited from Directory.Build.props)
+
+## [3.6.0] - 2025-11-17
+
+### Changed
+- **Migrated to TypeGuesser v2.0.1** with improved performance and accuracy
+
+### Added
+- **Added 72 new test methods** (4,441 lines) significantly improving code coverage
+- **Comprehensive test suites** for TableHelper, BulkCopy, ColumnHelper, Aggregation, and Update operations
+- **Added SQLite DataAdapter support** for better data operations
+- Added `coverage.runsettings` for XPlat code coverage
+- Enhanced CI/CD workflows for better coverage reporting
+- Added detailed coverage analysis documentation
+
+### Fixed
+- Fixed table name bug in AggregateHelper tests
+- Fixed incorrect test assertions in aggregation tests
+- Improved SQLite compatibility with proper skip conditions for unsupported features
+- Fixed PRAGMA command handling in SQLite TableHelper
+- Added culture-invariant operations throughout test suite
+- Eliminated all CA1304/CA1305 culture-sensitive warnings
 
 ## [3.5.0] - 2025-11-04
 
@@ -436,7 +457,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Fixed bug in repeated calls to GetRuntimeName and EnsureWrapped when a column/table name had escaped qualifiers (e.g. `[Hey]]There]`)
- 
+
 ## [1.0.4] - 2020-08-10
 
 ### Fixed
@@ -451,7 +472,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Added `GetWrappedName` method for columns/tables for when a full expression is not allowed but wrapping is still needed. 
+- Added `GetWrappedName` method for columns/tables for when a full expression is not allowed but wrapping is still needed.
 
 ## [1.0.2] - 2020-07-07
 
@@ -581,7 +602,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Fixed bug in MySql where `DiscoveredTable.DiscoverRelationships(...)` could throw an ArgumentException ("same key has already been added [...]") in some circumstances
- 
+
 ## [0.10.1] - 2019-09-05
 
 ### Fixed
@@ -595,7 +616,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Type Guessing rules adjusted (and moved to [new repository TypeGuesser](https://github.com/HicServices/TypeGuesser))
   - Bit strings now include "Y", "N" "1" and "0".
-  - Zeros after decimal point no longer prohibit guessing int (e.g. 1.00 is the now `int` instead of `decimal(3,2)`) 
+  - Zeros after decimal point no longer prohibit guessing int (e.g. 1.00 is the now `int` instead of `decimal(3,2)`)
 - DecimalSize class now uses `int` instead of nullable int (`int?`) for number of digits before/after decimal point.
 - Table/column name suggester now allows unicode characters (now called `GetSensibleEntityNameFromString`)
 - Attempting to resize a column to the same size it is currently is now ignored (previously `InvalidResizeException` was thrown)
@@ -631,7 +652,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Improved error messages in Sql Server for failed bulk insert
 - Reduced MaximumDatabaseLength in Sql Server to 100 (previously 124) to allow for longer default log file suffixes
- 
+
 
 ## [0.9.5] - 2019-08-08
 
@@ -640,27 +661,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added (DBMS specific) awareness of maximum table/database/column lengths into `IQuerySyntaxHelper`
 - Create / Discover methods now validate the provided names before sending Sql to the DBMS (prevents attempts to create table names that are too long for the DBMS or entities containing periods or brackets)
 
-### Fixed 
+### Fixed
 - Oracle no longer truncates strings in GetRuntimeName to 30
 
 ## [0.9.4] - 2019-07-29
 
-### Fixed 
+### Fixed
 - Fixed bug creating Oracle tables from free text data containing extended ASCII / Unicode characters.
 
 ## [0.9.3] - 2019-07-19
 
-### Added 
+### Added
 
 - Oracle support for Basic and Calendar table aggregates
 
-### Fixed 
+### Fixed
 
 - DiscoveredTable.Rename now throws NotSupportedException for Views and TableValuedFunctions
 
 ## [0.9.2] - 2019-07-04
 
-### Added 
+### Added
 
 - Oracle DiscoverTables now supports return view option
 - MySql DiscoverTables now supports return view option
@@ -669,62 +690,66 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - FAnsi.csproj no longer depends on System.Data.SqlClient (dependency moved to FAnsi.Implementations.MicrosoftSQL)
 
-### Fixed 
+### Fixed
 
 - Fixed Oracle rename implementation
 - Fixed DiscoverTables not correctly setting TableType for Views
 - Fixed Drop table to work correctly with Views
 - Exists now works correctly for Views (previously it would return true if there was no view but a table with the same name)
 
-[Unreleased]: https://github.com/jas88/FAnsiSql/compare/v3.3.4...main
+[Unreleased]: https://github.com/jas88/FAnsiSql/compare/v3.6.1...main
+[3.6.1]: https://github.com/jas88/FAnsiSql/compare/v3.6.0...HEAD
+[3.6.0]: https://github.com/jas88/FAnsiSql/compare/v3.5.0...v3.6.0
+[3.5.0]: https://github.com/jas88/FAnsiSql/compare/v3.4.0...v3.5.0
+[3.4.0]: https://github.com/jas88/FAnsiSql/compare/v3.3.4...v3.4.0
 [3.3.4]: https://github.com/jas88/FAnsiSql/compare/v3.3.3...v3.3.4
 [3.3.3]: https://github.com/jas88/FAnsiSql/compare/v3.3.2...v3.3.3
 [3.3.2]: https://github.com/jas88/FAnsiSql/compare/v3.3.1...v3.3.2
 [3.3.1]: https://github.com/jas88/FAnsiSql/compare/v3.3.0...v3.3.1
 [3.3.0]: https://github.com/jas88/FAnsiSql/compare/v3.2.7...v3.3.0
 [3.2.7]: https://github.com/jas88/FAnsiSql/compare/v3.2.6...v3.2.7
-[3.2.6]: https://github.com/HicServices/FAnsiSql/compare/v2.3.5...v3.2.6
-[3.2.5]: https://github.com/HicServices/FAnsiSql/compare/v2.3.4...v3.2.5
-[3.2.4]: https://github.com/HicServices/FAnsiSql/compare/v3.2.3...v3.2.4
-[3.2.3]: https://github.com/HicServices/FAnsiSql/compare/v3.2.2...v3.2.3
-[3.2.2]: https://github.com/HicServices/FAnsiSql/compare/v3.2.1...v3.2.2
-[3.2.1]: https://github.com/HicServices/FAnsiSql/compare/v3.2.0...v3.2.1
-[3.2.0]: https://github.com/HicServices/FAnsiSql/compare/v3.1.1...v3.2.0
-[3.1.1]: https://github.com/HicServices/FAnsiSql/compare/v3.1.0...v3.1.1
-[3.1.0]: https://github.com/HicServices/FAnsiSql/compare/3.0.1...v3.1.0
-[3.0.1]: https://github.com/HicServices/FAnsiSql/compare/3.0.0...3.0.1
-[3.0.0]: https://github.com/HicServices/FAnsiSql/compare/2.0.5...3.0.0
-[2.0.5]: https://github.com/HicServices/FAnsiSql/compare/2.0.4...2.0.5
-[2.0.4]: https://github.com/HicServices/FAnsiSql/compare/2.0.3...2.0.4
-[2.0.3]: https://github.com/HicServices/FAnsiSql/compare/2.0.2...2.0.3
-[2.0.2]: https://github.com/HicServices/FAnsiSql/compare/2.0.1...2.0.2
-[2.0.1]: https://github.com/HicServices/FAnsiSql/compare/1.0.7...2.0.1
-[1.0.7]: https://github.com/HicServices/FAnsiSql/compare/1.0.6...1.0.7
-[1.0.6]: https://github.com/HicServices/FAnsiSql/compare/1.0.5...1.0.6
-[1.0.5]: https://github.com/HicServices/FAnsiSql/compare/1.0.4...1.0.5
-[1.0.4]: https://github.com/HicServices/FAnsiSql/compare/1.0.3...1.0.4
-[1.0.3]: https://github.com/HicServices/FAnsiSql/compare/1.0.2...1.0.3
-[1.0.2]: https://github.com/HicServices/FAnsiSql/compare/1.0.1...1.0.2
-[1.0.1]: https://github.com/HicServices/FAnsiSql/compare/0.11.0...1.0.1
-[0.11.0]: https://github.com/HicServices/FAnsiSql/compare/0.10.13...0.11.0
-[0.10.13]: https://github.com/HicServices/FAnsiSql/compare/0.10.12...0.10.13
-[0.10.12]: https://github.com/HicServices/FAnsiSql/compare/0.10.11...0.10.12
-[0.10.11]: https://github.com/HicServices/FAnsiSql/compare/0.10.10...0.10.11
-[0.10.10]: https://github.com/HicServices/FAnsiSql/compare/0.10.9...0.10.10
-[0.10.9]: https://github.com/HicServices/FAnsiSql/compare/0.10.8...0.10.9
-[0.10.8]: https://github.com/HicServices/FAnsiSql/compare/0.10.7...0.10.8
-[0.10.7]: https://github.com/HicServices/FAnsiSql/compare/0.10.6...0.10.7
-[0.10.6]: https://github.com/HicServices/FAnsiSql/compare/0.10.5...0.10.6
-[0.10.5]: https://github.com/HicServices/FAnsiSql/compare/0.10.4...0.10.5
-[0.10.4]: https://github.com/HicServices/FAnsiSql/compare/0.10.3...0.10.4
-[0.10.3]: https://github.com/HicServices/FAnsiSql/compare/0.10.2...0.10.3
-[0.10.2]: https://github.com/HicServices/FAnsiSql/compare/0.10.1...0.10.2
-[0.10.1]: https://github.com/HicServices/FAnsiSql/compare/0.10.0...0.10.1
-[0.10.0]: https://github.com/HicServices/FAnsiSql/compare/0.9.8...0.10.0
-[0.9.8]: https://github.com/HicServices/FAnsiSql/compare/0.9.7...0.9.8
-[0.9.7]: https://github.com/HicServices/FAnsiSql/compare/0.9.6...0.9.7
-[0.9.6]: https://github.com/HicServices/FAnsiSql/compare/0.9.5...0.9.6
-[0.9.5]: https://github.com/HicServices/FAnsiSql/compare/0.9.4...0.9.5
-[0.9.4]: https://github.com/HicServices/FAnsiSql/compare/0.9.3...0.9.4
-[0.9.3]: https://github.com/HicServices/FAnsiSql/compare/0.9.2...0.9.3
-[0.9.2]: https://github.com/HicServices/FAnsiSql/compare/v0.9.1.10...0.9.2
+[3.2.6]: https://github.com/jas88/FAnsiSql/compare/v2.3.5...v3.2.6
+[3.2.5]: https://github.com/jas88/FAnsiSql/compare/v2.3.4...v3.2.5
+[3.2.4]: https://github.com/jas88/FAnsiSql/compare/v3.2.3...v3.2.4
+[3.2.3]: https://github.com/jas88/FAnsiSql/compare/v3.2.2...v3.2.3
+[3.2.2]: https://github.com/jas88/FAnsiSql/compare/v3.2.1...v3.2.2
+[3.2.1]: https://github.com/jas88/FAnsiSql/compare/v3.2.0...v3.2.1
+[3.2.0]: https://github.com/jas88/FAnsiSql/compare/v3.1.1...v3.2.0
+[3.1.1]: https://github.com/jas88/FAnsiSql/compare/v3.1.0...v3.1.1
+[3.1.0]: https://github.com/jas88/FAnsiSql/compare/3.0.1...v3.1.0
+[3.0.1]: https://github.com/jas88/FAnsiSql/compare/3.0.0...3.0.1
+[3.0.0]: https://github.com/jas88/FAnsiSql/compare/2.0.5...3.0.0
+[2.0.5]: https://github.com/jas88/FAnsiSql/compare/2.0.4...2.0.5
+[2.0.4]: https://github.com/jas88/FAnsiSql/compare/2.0.3...2.0.4
+[2.0.3]: https://github.com/jas88/FAnsiSql/compare/2.0.2...2.0.3
+[2.0.2]: https://github.com/jas88/FAnsiSql/compare/2.0.1...2.0.2
+[2.0.1]: https://github.com/jas88/FAnsiSql/compare/1.0.7...2.0.1
+[1.0.7]: https://github.com/jas88/FAnsiSql/compare/1.0.6...1.0.7
+[1.0.6]: https://github.com/jas88/FAnsiSql/compare/1.0.5...1.0.6
+[1.0.5]: https://github.com/jas88/FAnsiSql/compare/1.0.4...1.0.5
+[1.0.4]: https://github.com/jas88/FAnsiSql/compare/1.0.3...1.0.4
+[1.0.3]: https://github.com/jas88/FAnsiSql/compare/1.0.2...1.0.3
+[1.0.2]: https://github.com/jas88/FAnsiSql/compare/1.0.1...1.0.2
+[1.0.1]: https://github.com/jas88/FAnsiSql/compare/0.11.0...1.0.1
+[0.11.0]: https://github.com/jas88/FAnsiSql/compare/0.10.13...0.11.0
+[0.10.13]: https://github.com/jas88/FAnsiSql/compare/0.10.12...0.10.13
+[0.10.12]: https://github.com/jas88/FAnsiSql/compare/0.10.11...0.10.12
+[0.10.11]: https://github.com/jas88/FAnsiSql/compare/0.10.10...0.10.11
+[0.10.10]: https://github.com/jas88/FAnsiSql/compare/0.10.9...0.10.10
+[0.10.9]: https://github.com/jas88/FAnsiSql/compare/0.10.8...0.10.9
+[0.10.8]: https://github.com/jas88/FAnsiSql/compare/0.10.7...0.10.8
+[0.10.7]: https://github.com/jas88/FAnsiSql/compare/0.10.6...0.10.7
+[0.10.6]: https://github.com/jas88/FAnsiSql/compare/0.10.5...0.10.6
+[0.10.5]: https://github.com/jas88/FAnsiSql/compare/0.10.4...0.10.5
+[0.10.4]: https://github.com/jas88/FAnsiSql/compare/0.10.3...0.10.4
+[0.10.3]: https://github.com/jas88/FAnsiSql/compare/0.10.2...0.10.3
+[0.10.2]: https://github.com/jas88/FAnsiSql/compare/0.10.1...0.10.2
+[0.10.1]: https://github.com/jas88/FAnsiSql/compare/0.10.0...0.10.1
+[0.10.0]: https://github.com/jas88/FAnsiSql/compare/0.9.8...0.10.0
+[0.9.8]: https://github.com/jas88/FAnsiSql/compare/0.9.7...0.9.8
+[0.9.7]: https://github.com/jas88/FAnsiSql/compare/0.9.6...0.9.7
+[0.9.6]: https://github.com/jas88/FAnsiSql/compare/0.9.5...0.9.6
+[0.9.5]: https://github.com/jas88/FAnsiSql/compare/0.9.4...0.9.5
+[0.9.4]: https://github.com/jas88/FAnsiSql/compare/0.9.3...0.9.4
+[0.9.3]: https://github.com/jas88/FAnsiSql/compare/0.9.2...0.9.3
+[0.9.2]: https://github.com/jas88/FAnsiSql/compare/v0.9.1.10...0.9.2
