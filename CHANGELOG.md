@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [3.6.0] - 2025-11-27
+## [3.6.1] - 2025-11-27
 
 ### Changed
 - **Npgsql 10.0 compatibility**
@@ -48,6 +48,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Removed Microsoft.SourceLink.GitHub package (now integrated in .NET SDK)
   - Removed SharedAssemblyInfo.cs (replaced by centralized Directory.Build.props properties)
   - Removed hardcoded TargetFramework(s) from .csproj files (now inherited from Directory.Build.props)
+
+## [3.6.0] - 2025-11-17
+
+### Changed
+- **Migrated to TypeGuesser v2.0.1** with improved performance and accuracy
+
+### Added
+- **Added 72 new test methods** (4,441 lines) significantly improving code coverage
+- **Comprehensive test suites** for TableHelper, BulkCopy, ColumnHelper, Aggregation, and Update operations
+- **Added SQLite DataAdapter support** for better data operations
+- Added `coverage.runsettings` for XPlat code coverage
+- Enhanced CI/CD workflows for better coverage reporting
+- Added detailed coverage analysis documentation
+
+### Fixed
+- Fixed table name bug in AggregateHelper tests
+- Fixed incorrect test assertions in aggregation tests
+- Improved SQLite compatibility with proper skip conditions for unsupported features
+- Fixed PRAGMA command handling in SQLite TableHelper
+- Added culture-invariant operations throughout test suite
+- Eliminated all CA1304/CA1305 culture-sensitive warnings
 
 ## [3.5.0] - 2025-11-04
 
@@ -676,7 +697,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed Drop table to work correctly with Views
 - Exists now works correctly for Views (previously it would return true if there was no view but a table with the same name)
 
-[Unreleased]: https://github.com/jas88/FAnsiSql/compare/v3.3.4...main
+[Unreleased]: https://github.com/jas88/FAnsiSql/compare/v3.6.1...main
+[3.6.1]: https://github.com/jas88/FAnsiSql/compare/v3.6.0...HEAD
 [3.3.4]: https://github.com/jas88/FAnsiSql/compare/v3.3.3...v3.3.4
 [3.3.3]: https://github.com/jas88/FAnsiSql/compare/v3.3.2...v3.3.3
 [3.3.2]: https://github.com/jas88/FAnsiSql/compare/v3.3.1...v3.3.2
