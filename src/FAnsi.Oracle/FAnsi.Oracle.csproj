@@ -31,6 +31,6 @@
     <PackageReference Include="Oracle.ManagedDataAccess.Core" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\README.md" Pack="true" PackagePath="\" />
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 </Project>

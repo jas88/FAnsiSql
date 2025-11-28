@@ -35,7 +35,7 @@
 
   <!-- Source generation removed - analyzer DLL references cleaned up -->
   <ItemGroup>
-    <None Include="..\README.md" Pack="true" PackagePath="\" />
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
   <ItemGroup>
     <Compile Update="FAnsiStrings.Designer.cs">
