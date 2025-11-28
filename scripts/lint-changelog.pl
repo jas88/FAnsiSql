@@ -265,6 +265,78 @@ unless (exists $existing_links{'Unreleased'}) {
     }
 }
 
+# Sort version links to match changelog order (newest to oldest)
+if ($links_start >= 0 && @versions) {
+    # Collect all version links with their line numbers
+    my @link_entries;
+    my @non_version_links;
+
+    for my $i ($links_start .. $#lines) {
+        my $line = $lines[$i];
+
+        if ($line =~ /^\[([^\]]+)\]:\s*(.+)$/) {
+            my ($version, $url) = ($1, $2);
+
+            if ($version eq 'Unreleased') {
+                # Keep Unreleased at the beginning
+                push @non_version_links, {line => $line, order => -1};
+            } elsif (grep { $_ eq $version } @versions) {
+                # Find position in @versions array
+                my $order = 0;
+                for my $j (0 .. $#versions) {
+                    if ($versions[$j] eq $version) {
+                        $order = $j;
+                        last;
+                    }
+                }
+                push @link_entries, {line => $line, version => $version, order => $order};
+            } else {
+                # Non-version links (keep at end)
+                push @non_version_links, {line => $line, order => 999};
+            }
+        }
+    }
+
+    # Sort by order
+    @link_entries = sort { $a->{order} <=> $b->{order} } @link_entries;
+    @non_version_links = sort { $a->{order} <=> $b->{order} } @non_version_links;
+
+    # Check if current order matches sorted order
+    my @current_order;
+    my @sorted_order = (
+        (map { $_->{line} } @non_version_links),
+        (map { $_->{line} } @link_entries)
+    );
+
+    for my $i ($links_start .. $#lines) {
+        push @current_order, $lines[$i] if $lines[$i] =~ /^\[/;
+    }
+
+    my $links_out_of_order = 0;
+    for my $i (0 .. $#current_order) {
+        if ($current_order[$i] ne $sorted_order[$i]) {
+            $links_out_of_order = 1;
+            last;
+        }
+    }
+
+    if ($links_out_of_order) {
+        push @issues, "Version diff links are not in chronological order";
+
+        if ($fix) {
+            # Remove all link lines
+            my @new_lines = @lines[0 .. ($links_start - 1)];
+
+            # Add sorted links
+            push @new_lines, @sorted_order;
+
+            @lines = @new_lines;
+            $modified = 1;
+            say "Fixed: Sorted version diff links in chronological order";
+        }
+    }
+}
+
 # Report issues
 if (@issues) {
     say "\n=== CHANGELOG Issues Found ===";

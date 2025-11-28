@@ -699,6 +699,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 [Unreleased]: https://github.com/jas88/FAnsiSql/compare/v3.6.1...main
 [3.6.1]: https://github.com/jas88/FAnsiSql/compare/v3.6.0...HEAD
+[3.6.0]: https://github.com/jas88/FAnsiSql/compare/v3.5.0...v3.6.0
+[3.5.0]: https://github.com/jas88/FAnsiSql/compare/v3.4.0...v3.5.0
+[3.4.0]: https://github.com/jas88/FAnsiSql/compare/v3.3.4...v3.4.0
 [3.3.4]: https://github.com/jas88/FAnsiSql/compare/v3.3.3...v3.3.4
 [3.3.3]: https://github.com/jas88/FAnsiSql/compare/v3.3.2...v3.3.3
 [3.3.2]: https://github.com/jas88/FAnsiSql/compare/v3.3.1...v3.3.2
@@ -750,6 +753,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.9.4]: https://github.com/jas88/FAnsiSql/compare/0.9.3...0.9.4
 [0.9.3]: https://github.com/jas88/FAnsiSql/compare/0.9.2...0.9.3
 [0.9.2]: https://github.com/jas88/FAnsiSql/compare/v0.9.1.10...0.9.2
-[3.6.0]: https://github.com/jas88/FAnsiSql/compare/v3.5.0...v3.6.0
-[3.5.0]: https://github.com/jas88/FAnsiSql/compare/v3.4.0...v3.5.0
-[3.4.0]: https://github.com/jas88/FAnsiSql/compare/v3.3.4...v3.4.0
