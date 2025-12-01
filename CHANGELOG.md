@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added AllowLoadLocalInfile=true as default connection string setting (required for native bulk copy)
   - Added STRICT_TRANS_TABLES mode for MySQL sessions to throw exceptions on data violations
     (integer overflow, string truncation, NOT NULL violations) instead of silently truncating
+  - Added automatic fallback to batched parameterized INSERT statements when `local_infile` is
+    disabled (either client-side or server-side), ensuring compatibility with restricted MySQL servers
 
 ### Changed
 - **MySQL default charset changed from utf8 to utf8mb4** (breaking change)

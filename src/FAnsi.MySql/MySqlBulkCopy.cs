@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Globalization;
 using System.Linq;
+using System.Text;
 using FAnsi.Connections;
 using FAnsi.Discovery;
 using MySqlConnector;
@@ -12,11 +13,18 @@ namespace FAnsi.Implementations.MySql;
 /// <summary>
 /// High-performance bulk insert implementation for MySQL using MySqlConnector's native MySqlBulkCopy API.
 /// This provides performance similar to SQL Server's SqlBulkCopy by leveraging MySQL's optimized bulk loading protocol.
+/// Falls back to batched parameterized INSERT statements when LOAD DATA LOCAL INFILE is disabled.
 /// </summary>
 public sealed class MySqlBulkCopy(DiscoveredTable targetTable, IManagedConnection connection, CultureInfo culture)
     : BulkCopy(targetTable, connection, culture), IDisposable
 {
     public static int BulkInsertBatchTimeoutInSeconds { get; set; } = 0;
+
+    /// <summary>
+    /// Number of rows to insert per batch when using fallback mode (batched INSERT statements).
+    /// Default is 1000 rows per batch, which balances performance with MySQL's max_allowed_packet limit.
+    /// </summary>
+    public static int FallbackBatchSize { get; set; } = 1000;
 
     private readonly MySqlConnector.MySqlBulkCopy _bulkCopy = new((MySqlConnection)connection.Connection, (MySqlTransaction?)connection.Transaction)
     {
@@ -24,6 +32,7 @@ public sealed class MySqlBulkCopy(DiscoveredTable targetTable, IManagedConnectio
     };
 
     private bool _disposed;
+    private bool _localInfileDisabled;
 
     public override int UploadImpl(DataTable dt)
     {
@@ -35,14 +44,22 @@ public sealed class MySqlBulkCopy(DiscoveredTable targetTable, IManagedConnectio
         if (dt.Rows.Count == 0)
             return 0;
 
+        // Enable strict mode to throw exceptions for data violations (like SQL Server does)
+        // This makes MySQL reject invalid data (overflow, truncation, NULL in NOT NULL) instead of silently truncating
+        EnsureStrictMode();
+
+        // Pre-process data
+        EmptyStringsToNulls(dt);
+        ValidateDecimalPrecisionAndScale(dt);
+
+        // If local_infile is known to be disabled, skip directly to fallback
+        if (_localInfileDisabled)
+            return FallbackBatchedInsert(dt);
+
         // Set timeout if configured
         _bulkCopy.BulkCopyTimeout = BulkInsertBatchTimeoutInSeconds != 0
             ? BulkInsertBatchTimeoutInSeconds
             : Timeout;
-
-        // Enable strict mode to throw exceptions for data violations (like SQL Server does)
-        // This makes MySQL reject invalid data (overflow, truncation, NULL in NOT NULL) instead of silently truncating
-        EnsureStrictMode();
 
         // Clear and set up column mappings
         _bulkCopy.ColumnMappings.Clear();
@@ -74,14 +91,23 @@ public sealed class MySqlBulkCopy(DiscoveredTable targetTable, IManagedConnectio
 
     private int BulkInsertWithBetterErrorMessages(MySqlConnector.MySqlBulkCopy insert, DataTable dt)
     {
-        EmptyStringsToNulls(dt);
-        ValidateDecimalPrecisionAndScale(dt);
-
         try
         {
             // Use native MySqlBulkCopy for optimal performance
             var result = insert.WriteToServer(dt);
             return result.RowsInserted;
+        }
+        catch (NotSupportedException ex) when (IsLocalInfileError(ex))
+        {
+            // Client-side local_infile disabled - fall back to batched inserts
+            _localInfileDisabled = true;
+            return FallbackBatchedInsert(dt);
+        }
+        catch (MySqlException ex) when (IsLocalInfileError(ex))
+        {
+            // Server-side local_infile disabled - fall back to batched inserts
+            _localInfileDisabled = true;
+            return FallbackBatchedInsert(dt);
         }
         catch (MySqlException ex)
         {
@@ -89,6 +115,89 @@ public sealed class MySqlBulkCopy(DiscoveredTable targetTable, IManagedConnectio
             var enhancedMessage = EnhanceErrorMessage(ex, dt);
             throw new InvalidOperationException(enhancedMessage, ex);
         }
+    }
+
+    /// <summary>
+    /// Checks if an exception is related to local_infile being disabled (client or server side).
+    /// </summary>
+    private static bool IsLocalInfileError(Exception ex)
+    {
+        var message = ex.Message;
+        // Client-side: "To use MySqlBulkLoader.Local=true, set AllowLoadLocalInfile=true in the connection string"
+        // Server-side: "Loading local data is disabled; this must be enabled on both the client and server sides"
+        // MySQL error code 1148: ER_NOT_ALLOWED_COMMAND / ER_CLIENT_LOCAL_FILES_DISABLED
+        return message.Contains("AllowLoadLocalInfile", StringComparison.OrdinalIgnoreCase) ||
+               message.Contains("Loading local data is disabled", StringComparison.OrdinalIgnoreCase) ||
+               message.Contains("local_infile", StringComparison.OrdinalIgnoreCase) ||
+               (ex is MySqlException { Number: 1148 or 3948 }); // 1148 = ER_NOT_ALLOWED_COMMAND, 3948 = new error code
+    }
+
+    /// <summary>
+    /// Fallback implementation using batched parameterized INSERT statements when LOAD DATA LOCAL INFILE is disabled.
+    /// </summary>
+    private int FallbackBatchedInsert(DataTable dt)
+    {
+        var matchedColumns = GetMapping(dt.Columns.Cast<DataColumn>());
+        var syntax = TargetTable.GetQuerySyntaxHelper();
+        var columnNames = string.Join(",", matchedColumns.Values.Select(c => syntax.EnsureWrapped(c.GetRuntimeName())));
+        var baseCommand = $"INSERT INTO {TargetTable.GetFullyQualifiedName()}({columnNames}) VALUES ";
+
+        var conn = (MySqlConnection)Connection.Connection;
+        var totalRows = dt.Rows.Count;
+        var columnCount = matchedColumns.Count;
+        var columnEntries = matchedColumns.ToArray();
+        var affected = 0;
+
+        // Calculate effective batch size (MySQL has parameter limits)
+        var effectiveBatchSize = Math.Max(1, Math.Min(FallbackBatchSize, 65535 / Math.Max(1, columnCount)));
+
+        using var cmd = new MySqlCommand { Connection = conn, Transaction = (MySqlTransaction?)Connection.Transaction };
+        if (Timeout > 0)
+            cmd.CommandTimeout = Timeout;
+
+        var valueClauses = new StringBuilder();
+        var batchRows = 0;
+        var parameterIndex = 0;
+
+        for (var rowIndex = 0; rowIndex < totalRows; rowIndex++)
+        {
+            var dr = dt.Rows[rowIndex];
+
+            if (batchRows > 0)
+                valueClauses.Append(',');
+
+            valueClauses.Append('(');
+
+            for (var colIndex = 0; colIndex < columnCount; colIndex++)
+            {
+                var kvp = columnEntries[colIndex];
+
+                if (colIndex > 0)
+                    valueClauses.Append(',');
+
+                var paramName = $"@p{parameterIndex}";
+                valueClauses.Append(paramName);
+                cmd.Parameters.AddWithValue(paramName, dr[kvp.Key.Ordinal] ?? DBNull.Value);
+                parameterIndex++;
+            }
+            valueClauses.Append(')');
+            batchRows++;
+
+            // Execute batch when we reach effective batch size or it's the last row
+            if (batchRows >= effectiveBatchSize || rowIndex == totalRows - 1)
+            {
+                cmd.CommandText = baseCommand + valueClauses;
+                affected += cmd.ExecuteNonQuery();
+
+                // Reset for next batch
+                cmd.Parameters.Clear();
+                valueClauses.Clear();
+                batchRows = 0;
+                parameterIndex = 0;
+            }
+        }
+
+        return affected;
     }
 
     /// <summary>
