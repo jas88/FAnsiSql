@@ -15,6 +15,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Memory: lower memory usage (no batch parameter building overhead)
   - Consistency: matches SQL Server's SqlBulkCopy implementation pattern
   - Preserved all validation logic (decimal precision/scale, empty strings to NULL)
+  - Added AllowLoadLocalInfile=true as default connection string setting (required for native bulk copy)
+
+### Changed
+- **MySQL default charset changed from utf8 to utf8mb4** (breaking change)
+  - MySQL's `utf8` is actually `utf8mb3` which only supports 3-byte characters
+  - `utf8mb4` provides full 4-byte UTF-8 support (emojis, all CJK characters)
+  - This may affect existing databases created with `utf8` charset if character set compatibility issues arise
 
 ## [3.6.1] - 2025-11-27
 

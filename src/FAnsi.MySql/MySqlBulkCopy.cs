@@ -36,10 +36,9 @@ public sealed class MySqlBulkCopy(DiscoveredTable targetTable, IManagedConnectio
             return 0;
 
         // Set timeout if configured
-        if (BulkInsertBatchTimeoutInSeconds != 0)
-            _bulkCopy.BulkCopyTimeout = BulkInsertBatchTimeoutInSeconds;
-        else
-            _bulkCopy.BulkCopyTimeout = Timeout;
+        _bulkCopy.BulkCopyTimeout = BulkInsertBatchTimeoutInSeconds != 0
+            ? BulkInsertBatchTimeoutInSeconds
+            : Timeout;
 
         // Clear and set up column mappings
         _bulkCopy.ColumnMappings.Clear();
@@ -84,9 +83,9 @@ public sealed class MySqlBulkCopy(DiscoveredTable targetTable, IManagedConnectio
         if (message.Contains("Data too long for column", StringComparison.OrdinalIgnoreCase))
         {
             // Try to identify which column and row caused the issue
+            var rowIndex = 0;
             foreach (DataRow dataRow in dt.Rows)
             {
-                var rowIndex = dt.Rows.IndexOf(dataRow);
                 foreach (var (dataColumn, discoveredColumn) in mapping)
                 {
                     var value = dataRow[dataColumn];
@@ -99,6 +98,7 @@ public sealed class MySqlBulkCopy(DiscoveredTable targetTable, IManagedConnectio
                         }
                     }
                 }
+                rowIndex++;
             }
         }
 
@@ -106,9 +106,9 @@ public sealed class MySqlBulkCopy(DiscoveredTable targetTable, IManagedConnectio
             message.Contains("Incorrect", StringComparison.OrdinalIgnoreCase))
         {
             // Try to identify which column has out of range value
+            var rowIndex = 0;
             foreach (DataRow dataRow in dt.Rows)
             {
-                var rowIndex = dt.Rows.IndexOf(dataRow);
                 foreach (var (dataColumn, discoveredColumn) in mapping)
                 {
                     var value = dataRow[dataColumn];
@@ -117,6 +117,7 @@ public sealed class MySqlBulkCopy(DiscoveredTable targetTable, IManagedConnectio
                         return $"Bulk insert failed on data row {rowIndex + 1}: source column '{dataColumn.ColumnName}' has value '{value}' which may be out of range for destination column '{discoveredColumn.GetRuntimeName()}' of type '{discoveredColumn.DataType?.SQLType}'. Original MySQL error: {message}";
                     }
                 }
+                rowIndex++;
             }
         }
 
@@ -129,11 +130,14 @@ public sealed class MySqlBulkCopy(DiscoveredTable targetTable, IManagedConnectio
     private static void EmptyStringsToNulls(DataTable dt)
     {
         foreach (var col in dt.Columns.Cast<DataColumn>().Where(static c => c.DataType == typeof(string)))
-            foreach (var row in dt.Rows.Cast<DataRow>()
-                         .Select(row => new { row, o = row[col] })
-                         .Where(static t => t.o != DBNull.Value && t.o != null && string.IsNullOrWhiteSpace(t.o.ToString()))
-                         .Select(static t => t.row))
-                row[col] = DBNull.Value;
+        {
+            foreach (DataRow row in dt.Rows)
+            {
+                var value = row[col];
+                if (value != DBNull.Value && value != null && string.IsNullOrWhiteSpace(value.ToString()))
+                    row[col] = DBNull.Value;
+            }
+        }
     }
 
     /// <summary>

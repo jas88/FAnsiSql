@@ -19,7 +19,8 @@ public sealed class MySqlServerHelper : DiscoveredServerHelper
     static MySqlServerHelper()
     {
         AddConnectionStringKeyword(DatabaseType.MySql, "AllowUserVariables", "True", ConnectionStringKeywordPriority.ApiRule);
-        AddConnectionStringKeyword(DatabaseType.MySql, "CharSet", "utf8", ConnectionStringKeywordPriority.ApiRule);
+        AddConnectionStringKeyword(DatabaseType.MySql, "AllowLoadLocalInfile", "True", ConnectionStringKeywordPriority.ApiRule);
+        AddConnectionStringKeyword(DatabaseType.MySql, "CharSet", "utf8mb4", ConnectionStringKeywordPriority.ApiRule);
     }
 
     private MySqlServerHelper() : base(DatabaseType.MySql)
