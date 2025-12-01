@@ -54,7 +54,6 @@ public sealed class MySqlBulkCopy(DiscoveredTable targetTable, IManagedConnectio
     private int BulkInsertWithBetterErrorMessages(MySqlConnector.MySqlBulkCopy insert, DataTable dt)
     {
         EmptyStringsToNulls(dt);
-        ConvertStringTypesToHardTypes(dt);
         ValidateDecimalPrecisionAndScale(dt);
 
         try

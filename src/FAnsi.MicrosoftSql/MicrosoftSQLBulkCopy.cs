@@ -104,7 +104,6 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
         var rowsWritten = 0;
         EmptyStringsToNulls(dt);
         InspectDataTableForFloats(dt);
-        ConvertStringTypesToHardTypes(dt);
         ValidateDecimalPrecisionAndScale(dt);
 
         try

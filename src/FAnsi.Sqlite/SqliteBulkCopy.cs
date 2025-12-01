@@ -50,7 +50,6 @@ public sealed class SqliteBulkCopy(DiscoveredTable targetTable, IManagedConnecti
     public override int UploadImpl(DataTable dt)
     {
         EmptyStringsToNulls(dt);
-        ConvertStringTypesToHardTypes(dt);
 
         try
         {
