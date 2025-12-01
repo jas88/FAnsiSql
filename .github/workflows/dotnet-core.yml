@@ -51,8 +51,8 @@ jobs:
         # Start databases
         sudo systemctl start postgresql
         sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'pgpass4291';"
+        echo -e "[mysqld]\nlocal_infile=1" | sudo tee /etc/mysql/mysql.conf.d/local_infile.cnf
         sudo systemctl start mysql.service
-        sudo mysql -e "SET GLOBAL local_infile = 1;"
 
     - name: Setup .NET Core
       uses: actions/setup-dotnet@v5
