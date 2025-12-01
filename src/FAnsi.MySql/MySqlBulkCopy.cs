@@ -40,6 +40,10 @@ public sealed class MySqlBulkCopy(DiscoveredTable targetTable, IManagedConnectio
             ? BulkInsertBatchTimeoutInSeconds
             : Timeout;
 
+        // Enable strict mode to throw exceptions for data violations (like SQL Server does)
+        // This makes MySQL reject invalid data (overflow, truncation, NULL in NOT NULL) instead of silently truncating
+        EnsureStrictMode();
+
         // Clear and set up column mappings
         _bulkCopy.ColumnMappings.Clear();
         foreach (var (key, value) in GetMapping(dt.Columns.Cast<DataColumn>()))
@@ -49,6 +53,23 @@ public sealed class MySqlBulkCopy(DiscoveredTable targetTable, IManagedConnectio
                 expression: null));
 
         return BulkInsertWithBetterErrorMessages(_bulkCopy, dt);
+    }
+
+    private bool _strictModeSet;
+
+    /// <summary>
+    /// Ensures MySQL strict mode is enabled for the current session.
+    /// This makes MySQL throw exceptions for data violations instead of silently truncating.
+    /// </summary>
+    private void EnsureStrictMode()
+    {
+        if (_strictModeSet)
+            return;
+
+        var conn = (MySqlConnection)Connection.Connection;
+        using var cmd = new MySqlCommand("SET SESSION sql_mode = 'STRICT_TRANS_TABLES,NO_ENGINE_SUBSTITUTION'", conn, (MySqlTransaction?)Connection.Transaction);
+        cmd.ExecuteNonQuery();
+        _strictModeSet = true;
     }
 
     private int BulkInsertWithBetterErrorMessages(MySqlConnector.MySqlBulkCopy insert, DataTable dt)

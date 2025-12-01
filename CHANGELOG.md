@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Consistency: matches SQL Server's SqlBulkCopy implementation pattern
   - Preserved all validation logic (decimal precision/scale, empty strings to NULL)
   - Added AllowLoadLocalInfile=true as default connection string setting (required for native bulk copy)
+  - Added STRICT_TRANS_TABLES mode for MySQL sessions to throw exceptions on data violations
+    (integer overflow, string truncation, NOT NULL violations) instead of silently truncating
 
 ### Changed
 - **MySQL default charset changed from utf8 to utf8mb4** (breaking change)
