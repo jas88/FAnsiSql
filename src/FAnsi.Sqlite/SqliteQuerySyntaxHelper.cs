@@ -83,38 +83,11 @@ public sealed class SqliteQuerySyntaxHelper : QuerySyntaxHelper
     /// <returns>The unquoted identifier name</returns>
     /// <remarks>
     /// SQLite allows almost any characters in identifiers when quoted.
-    /// The base implementation now respects IllegalNameChars (which is empty for SQLite),
-    /// so unquoted names with parentheses like "BB (ff)" are accepted.
-    /// This override only needs to handle the double-quote unwrapping for qualified names.
+    /// The base implementation respects IllegalNameChars (which is empty for SQLite),
+    /// handles dots inside wrapped identifiers correctly, and calls UnescapeWrappedNameBody
+    /// (which SQLite overrides to handle doubled quotes).
     /// </remarks>
-    public override string? GetRuntimeName(string? s)
-    {
-        if (string.IsNullOrWhiteSpace(s))
-            return s;
-
-        // Check for aliased expressions first
-        if (SplitLineIntoSelectSQLAndAlias(s!.Trim(), out _, out var alias))
-            return alias;
-
-        // Handle fully-qualified names - extract the last component after the final dot
-        var lastDot = s.LastIndexOf('.');
-        if (lastDot >= 0)
-        {
-            var lastPart = s[(lastDot + 1)..].Trim();
-            // If the last part is quoted with double quotes, unwrap it
-            if (lastPart.Length >= 2 && lastPart[0] == '"' && lastPart[^1] == '"')
-                return UnescapeWrappedNameBody(lastPart[1..^1]);
-            // Otherwise return the unquoted last part
-            return lastPart;
-        }
-
-        // If the entire string is a simple quoted identifier, unwrap it
-        if (s.Length >= 2 && s[0] == '"' && s[^1] == '"')
-            return UnescapeWrappedNameBody(s[1..^1]);
-
-        // For unquoted simple names, return as-is (base will not throw since IllegalNameChars is empty)
-        return s;
-    }
+    public override string? GetRuntimeName(string? s) => base.GetRuntimeName(s);
 
     /// <inheritdoc />
     public override string EnsureWrappedImpl(string databaseOrTableName) => $"\"{GetRuntimeNameWithEscapedQuotes(databaseOrTableName)}\"";

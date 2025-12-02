@@ -115,8 +115,10 @@ public abstract partial class QuerySyntaxHelper(
 
         //it doesn't have an alias, e.g. it's `MyDatabase`.`mytable` or something
 
-        //Last symbol with no whitespace
-        var lastWord = s[(s.LastIndexOf('.') + 1)..].Trim();
+        // Find the last dot that's outside of wrapped identifiers
+        // This correctly handles cases like `db`.`table`.`Column.Name` where the dot in Column.Name should be ignored
+        var lastDotIndex = FindLastUnquotedDotIndex(s.AsSpan(), OpenQualifier[0], CloseQualifier[0]);
+        var lastWord = (lastDotIndex >= 0 ? s[(lastDotIndex + 1)..] : s).Trim();
 
         if (string.IsNullOrWhiteSpace(lastWord) || lastWord.Length < 2)
             return lastWord;
@@ -126,6 +128,60 @@ public abstract partial class QuerySyntaxHelper(
             return UnescapeWrappedNameBody(lastWord[1..^1]);
 
         return lastWord;
+    }
+
+    /// <summary>
+    /// Finds the index of the last dot character that is outside of wrapped identifiers.
+    /// For example, in `db`.`table`.`Column.Name`, returns the index of the dot after `table`,
+    /// not the dot inside `Column.Name`.
+    /// </summary>
+    /// <param name="s">The span to search</param>
+    /// <param name="openQualifier">The opening qualifier character (e.g., '[', '`', '"')</param>
+    /// <param name="closeQualifier">The closing qualifier character (e.g., ']', '`', '"')</param>
+    /// <returns>The index of the last unquoted dot, or -1 if none found</returns>
+    private static int FindLastUnquotedDotIndex(ReadOnlySpan<char> s, char openQualifier, char closeQualifier)
+    {
+        // For symmetric qualifiers (same open and close, like ` or "), use toggle logic
+        // For asymmetric qualifiers (like [ and ]), use nesting logic
+        var isSymmetric = openQualifier == closeQualifier;
+        var insideQuoted = false;
+        var nestingLevel = 0;
+
+        // Parse from right to left
+        for (var i = s.Length - 1; i >= 0; i--)
+        {
+            var c = s[i];
+
+            if (isSymmetric)
+            {
+                // Toggle mode: each qualifier toggles in/out of quoted section
+                if (c == openQualifier)
+                    insideQuoted = !insideQuoted;
+                else if (c == '.' && !insideQuoted)
+                    return i;
+            }
+            else
+            {
+                // Nesting mode: track depth for asymmetric qualifiers like [ ]
+                // When scanning right-to-left, CloseQualifier means we're entering a wrapped section
+                if (c == closeQualifier)
+                {
+                    nestingLevel++;
+                }
+                else if (c == openQualifier)
+                {
+                    // OpenQualifier means we're exiting a wrapped section
+                    if (nestingLevel > 0)
+                        nestingLevel--;
+                }
+                else if (c == '.' && nestingLevel == 0)
+                {
+                    return i;
+                }
+            }
+        }
+
+        return -1; // No unquoted dot found
     }
 
     /// <summary>
