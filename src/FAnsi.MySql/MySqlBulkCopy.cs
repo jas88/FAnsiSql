@@ -362,8 +362,8 @@ public sealed class MySqlBulkCopy(DiscoveredTable targetTable, IManagedConnectio
                 {
                     throw new InvalidOperationException(
                         string.Format(CultureInfo.InvariantCulture,
-                            "Value in column '{0}' (row {1}) has length {2} which exceeds maximum length {3} for column '{4}'.",
-                            dataColumn.ColumnName, rowIndex + 1, stringValue.Length, maxLength.Value,
+                            "Bulk insert failed on data row {0}: source column <<{1}>> has value <<{2}>> (length {3}) which exceeds maximum length {4} for destination column <<{5}>>.",
+                            rowIndex + 1, dataColumn.ColumnName, stringValue, stringValue.Length, maxLength.Value,
                             discoveredColumn.GetRuntimeName()));
                 }
             }

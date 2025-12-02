@@ -273,6 +273,9 @@ internal sealed class BulkInsertTest : DatabaseTests
                 //Make it bigger
                 col.DataType?.Resize(100, transaction.ManagedTransaction);
 
+                // Refresh the cached column metadata after schema change
+                bulk.InvalidateTableSchema();
+
                 bulk.Upload(dt);
 
                 //inside transaction the count is 3
