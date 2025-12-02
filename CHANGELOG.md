@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Performance
+- **MySQL bulk copy performance improvement**
+  - Refactored MySqlBulkCopy to use native MySqlConnector.MySqlBulkCopy API
+  - Performance: 2-5x faster bulk inserts via MySQL's native bulk loading protocol
+  - Code simplification: reduced from ~355 lines to ~220 lines (38% reduction)
+  - Memory: lower memory usage (no batch parameter building overhead)
+  - Consistency: matches SQL Server's SqlBulkCopy implementation pattern
+  - Preserved all validation logic (decimal precision/scale, empty strings to NULL)
+  - Added AllowLoadLocalInfile=true as default connection string setting (required for native bulk copy)
+  - Added STRICT_TRANS_TABLES mode for MySQL sessions to throw exceptions on data violations
+    (integer overflow, string truncation, NOT NULL violations) instead of silently truncating
+  - Added automatic fallback to batched parameterized INSERT statements when `local_infile` is
+    disabled (either client-side or server-side), ensuring compatibility with restricted MySQL servers
+
+### Changed
+- **MySQL default charset changed from utf8 to utf8mb4** (breaking change)
+  - MySQL's `utf8` is actually `utf8mb3` which only supports 3-byte characters
+  - `utf8mb4` provides full 4-byte UTF-8 support (emojis, all CJK characters)
+  - This may affect existing databases created with `utf8` charset if character set compatibility issues arise
+
 ## [3.6.1] - 2025-11-27
 
 ### Changed

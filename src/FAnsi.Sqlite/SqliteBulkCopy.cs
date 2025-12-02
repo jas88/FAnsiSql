@@ -50,7 +50,6 @@ public sealed class SqliteBulkCopy(DiscoveredTable targetTable, IManagedConnecti
     public override int UploadImpl(DataTable dt)
     {
         EmptyStringsToNulls(dt);
-        ConvertStringTypesToHardTypes(dt);
 
         try
         {
@@ -434,7 +433,8 @@ public sealed class SqliteBulkCopy(DiscoveredTable targetTable, IManagedConnecti
         if (dt.Rows.Count == 0)
             return 0;
 
-        return UploadImpl(dt);
+        // Call base class Upload to get ConvertStringTypesToHardTypes behavior
+        return base.Upload(dt);
     }
 
     // BulkCopy base class handles disposal
