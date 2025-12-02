@@ -116,6 +116,42 @@ internal sealed class QuerySyntaxHelperTests
         });
     }
 
+    /// <summary>
+    /// Tests that GetRuntimeName correctly handles dots INSIDE wrapped identifiers.
+    /// For example, `db`.`table`.`Column.Name` should return "Column.Name", not "Name".
+    /// See GitHub issue #75.
+    /// </summary>
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    public void SyntaxHelperTest_GetRuntimeName_DotsInsideWrappedIdentifiers(DatabaseType dbType)
+    {
+        var syntaxHelper = ImplementationManager.GetImplementation(dbType).GetQuerySyntaxHelper();
+        var open = syntaxHelper.OpenQualifier;
+        var close = syntaxHelper.CloseQualifier;
+
+        // Column name with a dot inside: `Column.Name` or [Column.Name] or "Column.Name"
+        var columnWithDot = $"{open}Column.Name{close}";
+        var fullyQualified = $"{open}db{close}.{open}table{close}.{columnWithDot}";
+
+        // Should return "Column.Name", not "Name"
+        var expected = dbType == DatabaseType.Oracle ? "COLUMN.NAME" : "Column.Name";
+        Assert.That(syntaxHelper.GetRuntimeName(fullyQualified), Is.EqualTo(expected),
+            $"GetRuntimeName should return the full column name including the dot inside the wrapped identifier");
+
+        // Also test just the column itself
+        Assert.That(syntaxHelper.GetRuntimeName(columnWithDot), Is.EqualTo(expected),
+            "GetRuntimeName should handle a single wrapped identifier with a dot");
+
+        // Test table.column with dot in column name
+        var tableAndColumn = $"{open}table{close}.{columnWithDot}";
+        Assert.That(syntaxHelper.GetRuntimeName(tableAndColumn), Is.EqualTo(expected),
+            "GetRuntimeName should handle table.column where column has a dot");
+
+        // Test a more complex name with multiple dots inside
+        var complexName = $"{open}Version.1.0.Release{close}";
+        var expectedComplex = dbType == DatabaseType.Oracle ? "VERSION.1.0.RELEASE" : "Version.1.0.Release";
+        Assert.That(syntaxHelper.GetRuntimeName(complexName), Is.EqualTo(expectedComplex),
+            "GetRuntimeName should handle multiple dots inside a wrapped identifier");
+    }
 
     [TestCase("count(*) as Frank", "count(*)", "Frank")]
     [TestCase("count(cast(1 as int)) as Frank", "count(cast(1 as int))", "Frank")]
