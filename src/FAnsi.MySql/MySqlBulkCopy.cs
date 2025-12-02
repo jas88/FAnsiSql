@@ -254,169 +254,13 @@ public sealed class MySqlBulkCopy(DiscoveredTable targetTable, IManagedConnectio
     }
 
     /// <summary>
-    /// Pre-processes and validates all data in a single pass through the DataTable.
-    /// Performs: empty string to NULL conversion, string length validation, decimal validation,
-    /// integer range validation, and NOT NULL constraint validation.
+    /// Returns the valid integer range for MySQL-specific integer types.
+    /// Handles MySQL's MEDIUMINT, TINYINT (signed), and UNSIGNED variants.
     /// </summary>
-    private static void PreProcessAndValidate(DataTable dt, Dictionary<DataColumn, DiscoveredColumn> mapping)
-    {
-        // Pre-compute validation rules for each column (once per table, not per row)
-        var rules = new ColumnValidationRule[mapping.Count];
-        var ruleIndex = 0;
-
-        foreach (var (dataColumn, discoveredColumn) in mapping)
-        {
-            var isString = dataColumn.DataType == typeof(string);
-            var isDecimal = dataColumn.DataType == typeof(decimal) || dataColumn.DataType == typeof(decimal?);
-            var isInteger = IsIntegerType(dataColumn.DataType);
-
-            int maxStringLength = 0;
-            int decimalPrecision = 0, decimalScale = 0;
-            decimal maxDecimalValue = 0;
-            long intMin = long.MinValue, intMax = long.MaxValue;
-            var hasIntRange = false;
-
-            if (isString)
-            {
-                var len = discoveredColumn.DataType?.GetLengthIfString();
-                if (len.HasValue && len.Value > 0)
-                    maxStringLength = len.Value;
-            }
-
-            if (isDecimal)
-            {
-                var sz = discoveredColumn.DataType?.GetDecimalSize();
-                if (sz != null)
-                {
-                    decimalPrecision = sz.Precision;
-                    decimalScale = sz.Scale;
-                    var maxInt = (int)Math.Pow(10, sz.Precision - sz.Scale) - 1;
-                    maxDecimalValue = maxInt + (decimal)((Math.Pow(10, sz.Scale) - 1) / Math.Pow(10, sz.Scale));
-                }
-            }
-
-            if (isInteger)
-            {
-                var sqlType = discoveredColumn.DataType?.SQLType?.ToUpperInvariant();
-                if (!string.IsNullOrEmpty(sqlType))
-                {
-                    (intMin, intMax) = GetIntegerRange(sqlType);
-                    hasIntRange = intMin != long.MinValue || intMax != long.MaxValue;
-                }
-            }
-
-            rules[ruleIndex++] = new ColumnValidationRule(
-                dataColumn, discoveredColumn, dataColumn.Ordinal,
-                isString, maxStringLength,
-                isDecimal, decimalPrecision, decimalScale, maxDecimalValue,
-                hasIntRange, intMin, intMax,
-                !discoveredColumn.AllowNulls);
-        }
-
-        // Single pass through all rows using pre-computed rules
-        var rowCount = dt.Rows.Count;
-        for (var rowIndex = 0; rowIndex < rowCount; rowIndex++)
-        {
-            var row = dt.Rows[rowIndex];
-
-            for (var i = 0; i < rules.Length; i++)
-            {
-                var rule = rules[i];
-                var value = row[rule.Ordinal];
-                var isNull = value == DBNull.Value || value == null;
-
-                // String: convert empty to NULL, validate length
-                if (rule.IsString && value is string s)
-                {
-                    if (string.IsNullOrWhiteSpace(s))
-                    {
-                        row[rule.Ordinal] = DBNull.Value;
-                        isNull = true;
-                    }
-                    else if (rule.MaxStringLength > 0 && s.Length > rule.MaxStringLength)
-                    {
-                        throw new InvalidOperationException(string.Format(CultureInfo.InvariantCulture,
-                            "Bulk insert failed on data row {0}: source column <<{1}>> has value <<{2}>> (length {3}) which exceeds maximum length {4} for destination column <<{5}>>.",
-                            rowIndex + 1, rule.SourceName, s, s.Length, rule.MaxStringLength, rule.DestName));
-                    }
-                }
-
-                // Decimal validation
-                if (rule.IsDecimal && !isNull && rule.MaxDecimalValue > 0)
-                {
-                    var d = Math.Abs(Convert.ToDecimal(value, CultureInfo.InvariantCulture));
-                    if (d > rule.MaxDecimalValue)
-                        throw new InvalidOperationException(string.Format(CultureInfo.InvariantCulture,
-                            "Value {0} in column '{1}' (row {2}) exceeds the maximum allowed for decimal({3},{4}). Maximum value is {5}.",
-                            value, rule.SourceName, rowIndex + 1, rule.DecimalPrecision, rule.DecimalScale, rule.MaxDecimalValue));
-
-                    var vs = d.ToString(CultureInfo.InvariantCulture);
-                    if (vs.Contains('.', StringComparison.Ordinal))
-                    {
-                        var places = vs.Split('.')[1].TrimEnd('0').Length;
-                        if (places > rule.DecimalScale)
-                            throw new InvalidOperationException(string.Format(CultureInfo.InvariantCulture,
-                                "Value {0} in column '{1}' (row {2}) has {3} decimal places, but column is defined as decimal({4},{5}) which allows only {5} decimal places.",
-                                value, rule.SourceName, rowIndex + 1, places, rule.DecimalPrecision, rule.DecimalScale));
-                    }
-                }
-
-                // Integer range validation
-                if (rule.HasIntegerRange && !isNull)
-                {
-                    var v = Convert.ToInt64(value, CultureInfo.InvariantCulture);
-                    if (v < rule.IntegerMin || v > rule.IntegerMax)
-                        throw new InvalidOperationException(string.Format(CultureInfo.InvariantCulture,
-                            "Value {0} in column '{1}' (row {2}) is out of range for column '{3}' of type '{4}'.",
-                            value, rule.SourceName, rowIndex + 1, rule.DestName, rule.SqlType));
-                }
-
-                // NOT NULL validation (after empty string conversion)
-                if (rule.RequiresNotNull && isNull)
-                    throw new InvalidOperationException(string.Format(CultureInfo.InvariantCulture,
-                        "NULL value in column '{0}' (row {1}) violates NOT NULL constraint on column '{2}'.",
-                        rule.SourceName, rowIndex + 1, rule.DestName));
-            }
-        }
-    }
-
-    /// <summary>
-    /// Pre-computed validation rules for a column. Avoids repeated lookups during row iteration.
-    /// </summary>
-    private readonly struct ColumnValidationRule(
-        DataColumn dataColumn, DiscoveredColumn discoveredColumn, int ordinal,
-        bool isString, int maxStringLength,
-        bool isDecimal, int decimalPrecision, int decimalScale, decimal maxDecimalValue,
-        bool hasIntegerRange, long integerMin, long integerMax,
-        bool requiresNotNull)
-    {
-        public readonly int Ordinal = ordinal;
-        public readonly string SourceName = dataColumn.ColumnName;
-        public readonly string DestName = discoveredColumn.GetRuntimeName();
-        public readonly string? SqlType = discoveredColumn.DataType?.SQLType;
-        public readonly bool IsString = isString;
-        public readonly int MaxStringLength = maxStringLength;
-        public readonly bool IsDecimal = isDecimal;
-        public readonly int DecimalPrecision = decimalPrecision;
-        public readonly int DecimalScale = decimalScale;
-        public readonly decimal MaxDecimalValue = maxDecimalValue;
-        public readonly bool HasIntegerRange = hasIntegerRange;
-        public readonly long IntegerMin = integerMin;
-        public readonly long IntegerMax = integerMax;
-        public readonly bool RequiresNotNull = requiresNotNull;
-    }
-
-    private static bool IsIntegerType(Type type) =>
-        type == typeof(byte) || type == typeof(sbyte) ||
-        type == typeof(short) || type == typeof(ushort) ||
-        type == typeof(int) || type == typeof(uint) ||
-        type == typeof(long) || type == typeof(ulong) ||
-        (Nullable.GetUnderlyingType(type) is { } underlying && IsIntegerType(underlying));
-
-    private static (long min, long max) GetIntegerRange(string sqlType) =>
+    protected override (long min, long max) GetIntegerRange(string sqlType) =>
         sqlType switch
         {
-            "TINYINT" => (-128, 127),
+            "TINYINT" => (-128, 127), // MySQL TINYINT is signed by default
             "TINYINT UNSIGNED" => (0, 255),
             "SMALLINT" => (short.MinValue, short.MaxValue),
             "SMALLINT UNSIGNED" => (0, ushort.MaxValue),
@@ -425,7 +269,7 @@ public sealed class MySqlBulkCopy(DiscoveredTable targetTable, IManagedConnectio
             "INT" or "INTEGER" => (int.MinValue, int.MaxValue),
             "INT UNSIGNED" or "INTEGER UNSIGNED" => (0, uint.MaxValue),
             "BIGINT" => (long.MinValue, long.MaxValue),
-            _ => (long.MinValue, long.MaxValue)
+            _ => base.GetIntegerRange(sqlType)
         };
 
     private void ThrowIfDisposed()
