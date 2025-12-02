@@ -303,7 +303,7 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
             .Select(static c => c.ColumnName).ToArray();
         if (floatColumnNames.Length != 0)
             throw new NotSupportedException(
-                $"Found float column(s) in data table, SQLServer does not support floats in bulk insert, instead you should use doubles otherwise you will end up with the value 0.85 turning into :0.850000023841858 in your database.  Float column(s) were:{string.Join(",", floatColumnNames)}");
+                $"Found float column(s) in data table, SQL Server does not support floats in bulk insert, instead you should use doubles otherwise you will end up with the value 0.85 turning into 0.850000023841858 in your database.  Float column(s) were:{string.Join(",", floatColumnNames)}");
 
         // Check for float values in object-typed columns (sample first 100 rows)
         var objectColumns = dt.Columns.Cast<DataColumn>()
@@ -316,7 +316,7 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
                 .FirstOrDefault(static t => t is float);
             if (bad != null)
                 throw new NotSupportedException(
-                    $"Found float value {bad} in data table, SQLServer does not support floats in bulk insert, instead you should use doubles otherwise you will end up with the value 0.85 turning into :0.850000023841858 in your database");
+                    $"Found float value {bad} in data table, SQL Server does not support floats in bulk insert, instead you should use doubles otherwise you will end up with the value 0.85 turning into 0.850000023841858 in your database");
         }
     }
 

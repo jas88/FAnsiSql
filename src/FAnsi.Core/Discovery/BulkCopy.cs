@@ -363,10 +363,11 @@ public abstract class BulkCopy : IBulkCopy
                     }
                 }
 
-                // Integer range validation
+                // Integer range validation - use decimal to handle ulong without overflow
                 if (rule.HasIntegerRange && !isNull)
                 {
-                    var v = Convert.ToInt64(value, CultureInfo.InvariantCulture);
+                    // Use decimal for comparison to safely handle ulong values that exceed long.MaxValue
+                    var v = Convert.ToDecimal(value, CultureInfo.InvariantCulture);
                     if (v < rule.IntegerMin || v > rule.IntegerMax)
                         throw new InvalidOperationException(string.Format(CultureInfo.InvariantCulture,
                             "Value {0} in column '{1}' (row {2}) is out of range for column '{3}' of type '{4}'.",
