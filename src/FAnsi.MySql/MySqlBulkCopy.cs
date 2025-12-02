@@ -48,9 +48,12 @@ public sealed class MySqlBulkCopy(DiscoveredTable targetTable, IManagedConnectio
         // This makes MySQL reject invalid data (overflow, truncation, NULL in NOT NULL) instead of silently truncating
         EnsureStrictMode();
 
-        // Pre-process data
+        // Pre-process and validate data
         EmptyStringsToNulls(dt);
         ValidateDecimalPrecisionAndScale(dt);
+        ValidateStringLengths(dt);
+        ValidateIntegerRanges(dt);
+        ValidateNotNullConstraints(dt);
 
         // If local_infile is known to be disabled, skip directly to fallback
         if (_localInfileDisabled)
@@ -330,6 +333,130 @@ public sealed class MySqlBulkCopy(DiscoveredTable targetTable, IManagedConnectio
             }
         }
     }
+
+    /// <summary>
+    /// Validates that string values don't exceed their target column's maximum length.
+    /// MySQL's LOAD DATA INFILE silently truncates strings, so we validate client-side.
+    /// </summary>
+    private void ValidateStringLengths(DataTable dt)
+    {
+        var mapping = GetMapping(dt.Columns.Cast<DataColumn>());
+
+        foreach (var (dataColumn, discoveredColumn) in mapping)
+        {
+            if (dataColumn.DataType != typeof(string))
+                continue;
+
+            var maxLength = discoveredColumn.DataType?.GetLengthIfString();
+            if (!maxLength.HasValue || maxLength.Value <= 0)
+                continue;
+
+            for (var rowIndex = 0; rowIndex < dt.Rows.Count; rowIndex++)
+            {
+                var value = dt.Rows[rowIndex][dataColumn];
+                if (value == DBNull.Value || value == null)
+                    continue;
+
+                var stringValue = value.ToString();
+                if (stringValue != null && stringValue.Length > maxLength.Value)
+                {
+                    throw new InvalidOperationException(
+                        string.Format(CultureInfo.InvariantCulture,
+                            "Value in column '{0}' (row {1}) has length {2} which exceeds maximum length {3} for column '{4}'.",
+                            dataColumn.ColumnName, rowIndex + 1, stringValue.Length, maxLength.Value,
+                            discoveredColumn.GetRuntimeName()));
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Validates that integer values fit within the range of their target column type.
+    /// MySQL's LOAD DATA INFILE silently clips values, so we validate client-side.
+    /// </summary>
+    private void ValidateIntegerRanges(DataTable dt)
+    {
+        var mapping = GetMapping(dt.Columns.Cast<DataColumn>());
+
+        foreach (var (dataColumn, discoveredColumn) in mapping)
+        {
+            if (!IsIntegerType(dataColumn.DataType))
+                continue;
+
+            var sqlType = discoveredColumn.DataType?.SQLType?.ToUpperInvariant();
+            if (string.IsNullOrEmpty(sqlType))
+                continue;
+
+            var (minValue, maxValue) = GetIntegerRange(sqlType);
+            if (minValue == long.MinValue && maxValue == long.MaxValue)
+                continue;
+
+            for (var rowIndex = 0; rowIndex < dt.Rows.Count; rowIndex++)
+            {
+                var value = dt.Rows[rowIndex][dataColumn];
+                if (value == DBNull.Value || value == null)
+                    continue;
+
+                var longValue = Convert.ToInt64(value, CultureInfo.InvariantCulture);
+                if (longValue < minValue || longValue > maxValue)
+                {
+                    throw new InvalidOperationException(
+                        string.Format(CultureInfo.InvariantCulture,
+                            "Value {0} in column '{1}' (row {2}) is out of range for column '{3}' of type '{4}'.",
+                            value, dataColumn.ColumnName, rowIndex + 1,
+                            discoveredColumn.GetRuntimeName(), discoveredColumn.DataType?.SQLType));
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Validates that NOT NULL columns don't receive NULL values.
+    /// </summary>
+    private void ValidateNotNullConstraints(DataTable dt)
+    {
+        var mapping = GetMapping(dt.Columns.Cast<DataColumn>());
+
+        foreach (var (dataColumn, discoveredColumn) in mapping)
+        {
+            if (discoveredColumn.AllowNulls)
+                continue;
+
+            for (var rowIndex = 0; rowIndex < dt.Rows.Count; rowIndex++)
+            {
+                var value = dt.Rows[rowIndex][dataColumn];
+                if (value == DBNull.Value || value == null)
+                {
+                    throw new InvalidOperationException(
+                        string.Format(CultureInfo.InvariantCulture,
+                            "NULL value in column '{0}' (row {1}) violates NOT NULL constraint on column '{2}'.",
+                            dataColumn.ColumnName, rowIndex + 1, discoveredColumn.GetRuntimeName()));
+                }
+            }
+        }
+    }
+
+    private static bool IsIntegerType(Type type) =>
+        type == typeof(byte) || type == typeof(sbyte) ||
+        type == typeof(short) || type == typeof(ushort) ||
+        type == typeof(int) || type == typeof(uint) ||
+        type == typeof(long) || type == typeof(ulong) ||
+        (Nullable.GetUnderlyingType(type) is { } underlying && IsIntegerType(underlying));
+
+    private static (long min, long max) GetIntegerRange(string sqlType) =>
+        sqlType switch
+        {
+            "TINYINT" => (-128, 127),
+            "TINYINT UNSIGNED" => (0, 255),
+            "SMALLINT" => (short.MinValue, short.MaxValue),
+            "SMALLINT UNSIGNED" => (0, ushort.MaxValue),
+            "MEDIUMINT" => (-8388608, 8388607),
+            "MEDIUMINT UNSIGNED" => (0, 16777215),
+            "INT" or "INTEGER" => (int.MinValue, int.MaxValue),
+            "INT UNSIGNED" or "INTEGER UNSIGNED" => (0, uint.MaxValue),
+            "BIGINT" => (long.MinValue, long.MaxValue),
+            _ => (long.MinValue, long.MaxValue)
+        };
 
     private void ThrowIfDisposed()
     {
