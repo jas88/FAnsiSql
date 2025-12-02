@@ -285,9 +285,11 @@ public abstract class BulkCopy : IBulkCopy
                 var sz = discoveredColumn.DataType?.GetDecimalSize();
                 if (sz != null)
                 {
-                    decimalPrecision = sz.Precision;
+                    // DecimalSize.Precision = digits BEFORE decimal, Scale = digits AFTER decimal
+                    // SQL precision notation: decimal(total_digits, scale) where total_digits = Precision + Scale
+                    decimalPrecision = sz.Precision + sz.Scale; // SQL-style total precision
                     decimalScale = sz.Scale;
-                    var maxInt = (int)Math.Pow(10, sz.Precision - sz.Scale) - 1;
+                    var maxInt = (int)Math.Pow(10, sz.Precision) - 1;
                     maxDecimalValue = maxInt + (decimal)((Math.Pow(10, sz.Scale) - 1) / Math.Pow(10, sz.Scale));
                 }
             }

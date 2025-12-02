@@ -747,33 +747,11 @@ internal sealed class BulkInsertTest : DatabaseTests
 
         var ex = Assert.Catch(() => bulk.Upload(dt), "Expected upload to fail because value on row 2 is too long");
 
-        switch (type)
-        {
-            case DatabaseType.MicrosoftSQLServer:
-                Assert.That(ex?.Message, Does.Contain("BulkInsert failed on data row 4 the complaint was about source column <<name>> which had value <<AAAAAAAAAAA>> destination data type was <<varchar(10)>>"));
-                break;
-            case DatabaseType.MySql:
-                Assert.That(ex?.Message, Does.Contain("Bulk insert failed on data row 4"));
-                Assert.That(ex?.Message, Does.Contain("source column <<name>>"));
-                break;
-            case DatabaseType.Oracle:
-                Assert.That(ex?.Message, Does.Contain("NAME"));
-                Assert.That(ex?.Message, Does.Contain("maximum: 10"));
-                Assert.That(ex?.Message, Does.Contain("actual: 11"));
-
-                break;
-            case DatabaseType.PostgreSql:
-                Assert.That(ex?.Message, Does.Contain("value too long for type character varying(10)"));
-                break;
-            case DatabaseType.Sqlite:
-                // SQLite doesn't enforce string length constraints at the database level
-                // It stores them as TEXT with no length validation, so FAnsi should catch this
-                Assert.That(ex?.Message, Does.Contain("Bulk insert failed on data row 4"));
-                Assert.That(ex?.Message, Does.Contain("source column <<name>>"));
-                break;
-            default:
-                throw new ArgumentOutOfRangeException(nameof(type), type, null);
-        }
+        // All databases now use consistent pre-validation error messages
+        Assert.That(ex?.Message, Does.Contain("Bulk insert failed on data row 4"));
+        Assert.That(ex?.Message, Does.Contain("source column <<name>>"));
+        Assert.That(ex?.Message, Does.Contain("(length 11)"));
+        Assert.That(ex?.Message, Does.Contain("maximum length 10"));
     }
 
     [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
@@ -850,29 +828,19 @@ internal sealed class BulkInsertTest : DatabaseTests
 
         var ex = Assert.Catch(() => bulk.Upload(dt), "Expected upload to fail because value on row 2 is too long");
 
+        // All databases now use consistent pre-validation error messages
+        // DecimalSize(2,1) = 2 digits before decimal + 1 after = SQL decimal(3,1), max 99.9
+        Assert.That(ex?.Message, Does.Contain("Value 111111111.11 in column 'score' (row 3) exceeds the maximum allowed for decimal(3,1)"));
+        Assert.That(ex?.Message, Does.Contain("Maximum value is 99.9"));
+
+        // Switch kept for documentation purposes but all databases now behave consistently
         switch (type)
         {
             case DatabaseType.MicrosoftSQLServer:
-                Assert.That(ex?.Message, Does.Contain("Value 111111111.11 in column 'score' (row 3) exceeds the maximum allowed for decimal(4,1)"));
-                Assert.That(ex?.Message, Does.Contain("Maximum value is 999.9"));
-                break;
             case DatabaseType.MySql:
-                Assert.That(ex?.Message, Does.Contain("Value 111111111.11 in column 'score' (row 3) exceeds the maximum allowed for decimal(3,1)"));
-                Assert.That(ex?.Message, Does.Contain("Maximum value is 99.9"));
-                break;
             case DatabaseType.Oracle:
-                Assert.That(ex?.Message, Does.Contain("Value 111111111.11 in column 'score' (row 3) exceeds the maximum allowed for decimal(3,1)"));
-                Assert.That(ex?.Message, Does.Contain("Maximum value is 99.9"));
-                break;
             case DatabaseType.PostgreSql:
-                Assert.That(ex?.Message, Does.Contain("Value 111111111.11 in column 'score' (row 3) exceeds the maximum allowed for decimal(3,1)"));
-                Assert.That(ex?.Message, Does.Contain("Maximum value is 99.9"));
-                break;
             case DatabaseType.Sqlite:
-                // SQLite doesn't enforce decimal precision constraints at the database level
-                // It stores them as floating point, so the validation happens in FAnsi
-                Assert.That(ex?.Message, Does.Contain("Value 111111111.11 in column 'score' (row 3) exceeds the maximum allowed for decimal(3,1)"));
-                Assert.That(ex?.Message, Does.Contain("Maximum value is 99.9"));
                 break;
 
             default:
