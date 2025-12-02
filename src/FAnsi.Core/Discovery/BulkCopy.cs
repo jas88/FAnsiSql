@@ -292,8 +292,9 @@ public abstract class BulkCopy : IBulkCopy
                     decimalPrecision = sz.Precision; // Already SQL-style total precision
                     decimalScale = sz.Scale;
                     var digitsBeforeDecimal = sz.Precision - sz.Scale;
-                    var maxInt = (int)Math.Pow(10, digitsBeforeDecimal) - 1;
-                    maxDecimalValue = maxInt + (decimal)((Math.Pow(10, sz.Scale) - 1) / Math.Pow(10, sz.Scale));
+                    // Use decimal to avoid int overflow for precision > 9 (e.g., decimal(10,0) needs 10^10 - 1)
+                    var maxIntPart = (decimal)Math.Pow(10, digitsBeforeDecimal) - 1;
+                    maxDecimalValue = maxIntPart + (decimal)((Math.Pow(10, sz.Scale) - 1) / Math.Pow(10, sz.Scale));
                 }
             }
 

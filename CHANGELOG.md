@@ -30,6 +30,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added automatic fallback to batched parameterized INSERT statements when `local_infile` is
     disabled (either client-side or server-side), ensuring compatibility with restricted MySQL servers
 
+### Fixed
+- **Decimal precision overflow for precision > 9**
+  - Fixed integer overflow when calculating max value for decimal columns with precision > 9
+  - For example, decimal(10,0) incorrectly reported max value as ~2.1 billion (int overflow) instead of 9,999,999,999
+  - Changed intermediate calculation from `int` to `decimal` to support full SQL decimal range
+
 ### Changed
 - **MySQL default charset changed from utf8 to utf8mb4** (breaking change)
   - MySQL's `utf8` is actually `utf8mb3` which only supports 3-byte characters
