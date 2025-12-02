@@ -48,12 +48,9 @@ public sealed class MySqlBulkCopy(DiscoveredTable targetTable, IManagedConnectio
         // This makes MySQL reject invalid data (overflow, truncation, NULL in NOT NULL) instead of silently truncating
         EnsureStrictMode();
 
-        // Pre-process and validate data
-        EmptyStringsToNulls(dt);
-        ValidateDecimalPrecisionAndScale(dt);
-        ValidateStringLengths(dt);
-        ValidateIntegerRanges(dt);
-        ValidateNotNullConstraints(dt);
+        // Get mapping once and pre-process/validate all data in a single pass
+        var mapping = GetMapping(dt.Columns.Cast<DataColumn>());
+        PreProcessAndValidate(dt, mapping);
 
         // If local_infile is known to be disabled, skip directly to fallback
         if (_localInfileDisabled)
@@ -66,7 +63,7 @@ public sealed class MySqlBulkCopy(DiscoveredTable targetTable, IManagedConnectio
 
         // Clear and set up column mappings
         _bulkCopy.ColumnMappings.Clear();
-        foreach (var (key, value) in GetMapping(dt.Columns.Cast<DataColumn>()))
+        foreach (var (key, value) in mapping)
             _bulkCopy.ColumnMappings.Add(new MySqlConnector.MySqlBulkCopyColumnMapping(
                 key.Ordinal,
                 value.GetRuntimeName(),
@@ -257,183 +254,156 @@ public sealed class MySqlBulkCopy(DiscoveredTable targetTable, IManagedConnectio
     }
 
     /// <summary>
-    /// Converts empty strings to DBNull for proper NULL handling in the database.
+    /// Pre-processes and validates all data in a single pass through the DataTable.
+    /// Performs: empty string to NULL conversion, string length validation, decimal validation,
+    /// integer range validation, and NOT NULL constraint validation.
     /// </summary>
-    private static void EmptyStringsToNulls(DataTable dt)
+    private static void PreProcessAndValidate(DataTable dt, Dictionary<DataColumn, DiscoveredColumn> mapping)
     {
-        foreach (var col in dt.Columns.Cast<DataColumn>().Where(static c => c.DataType == typeof(string)))
-        {
-            foreach (DataRow row in dt.Rows)
-            {
-                var value = row[col];
-                if (value != DBNull.Value && value != null && string.IsNullOrWhiteSpace(value.ToString()))
-                    row[col] = DBNull.Value;
-            }
-        }
-    }
-
-    /// <summary>
-    /// Validates that decimal values in the DataTable fit within the precision and scale constraints
-    /// of their target database columns. Throws exception if any value exceeds the allowed precision or scale.
-    /// </summary>
-    /// <param name="dt">DataTable to validate</param>
-    private void ValidateDecimalPrecisionAndScale(DataTable dt)
-    {
-        var mapping = GetMapping(dt.Columns.Cast<DataColumn>());
+        // Pre-compute validation rules for each column (once per table, not per row)
+        var rules = new ColumnValidationRule[mapping.Count];
+        var ruleIndex = 0;
 
         foreach (var (dataColumn, discoveredColumn) in mapping)
         {
-            // Only check decimal columns
-            if (dataColumn.DataType != typeof(decimal) && dataColumn.DataType != typeof(decimal?))
-                continue;
+            var isString = dataColumn.DataType == typeof(string);
+            var isDecimal = dataColumn.DataType == typeof(decimal) || dataColumn.DataType == typeof(decimal?);
+            var isInteger = IsIntegerType(dataColumn.DataType);
 
-            var decimalSize = discoveredColumn.DataType?.GetDecimalSize();
-            if (decimalSize == null)
-                continue;
+            int maxStringLength = 0;
+            int decimalPrecision = 0, decimalScale = 0;
+            decimal maxDecimalValue = 0;
+            long intMin = long.MinValue, intMax = long.MaxValue;
+            var hasIntRange = false;
 
-            var precision = decimalSize.Precision;
-            var scale = decimalSize.Scale;
-
-            // Calculate max value: for decimal(5,2), max is 999.99
-            // Max integer part = 10^(precision - scale) - 1
-            // With scale decimal places
-            var maxIntegerPart = (int)Math.Pow(10, precision - scale) - 1;
-            var maxValue = maxIntegerPart + (decimal)((Math.Pow(10, scale) - 1) / Math.Pow(10, scale));
-
-            for (var rowIndex = 0; rowIndex < dt.Rows.Count; rowIndex++)
+            if (isString)
             {
-                var value = dt.Rows[rowIndex][dataColumn];
-                if (value == DBNull.Value || value == null)
-                    continue;
+                var len = discoveredColumn.DataType?.GetLengthIfString();
+                if (len.HasValue && len.Value > 0)
+                    maxStringLength = len.Value;
+            }
 
-                var decimalValue = Math.Abs((decimal)value);
-
-                // Check if value exceeds precision/scale
-                if (decimalValue > maxValue)
+            if (isDecimal)
+            {
+                var sz = discoveredColumn.DataType?.GetDecimalSize();
+                if (sz != null)
                 {
-                    throw new InvalidOperationException(
-                        string.Format(CultureInfo.InvariantCulture,
-                            "Value {0} in column '{1}' (row {2}) exceeds the maximum allowed for decimal({3},{4}). Maximum value is {5}.",
-                            value, dataColumn.ColumnName, rowIndex + 1, precision, scale, maxValue));
+                    decimalPrecision = sz.Precision;
+                    decimalScale = sz.Scale;
+                    var maxInt = (int)Math.Pow(10, sz.Precision - sz.Scale) - 1;
+                    maxDecimalValue = maxInt + (decimal)((Math.Pow(10, sz.Scale) - 1) / Math.Pow(10, sz.Scale));
                 }
+            }
 
-                // Check scale (number of decimal places)
-                var valueString = decimalValue.ToString(CultureInfo.InvariantCulture);
-                if (valueString.Contains('.', StringComparison.Ordinal))
+            if (isInteger)
+            {
+                var sqlType = discoveredColumn.DataType?.SQLType?.ToUpperInvariant();
+                if (!string.IsNullOrEmpty(sqlType))
                 {
-                    var decimalPlaces = valueString.Split('.')[1].TrimEnd('0').Length;
-                    if (decimalPlaces > scale)
+                    (intMin, intMax) = GetIntegerRange(sqlType);
+                    hasIntRange = intMin != long.MinValue || intMax != long.MaxValue;
+                }
+            }
+
+            rules[ruleIndex++] = new ColumnValidationRule(
+                dataColumn, discoveredColumn, dataColumn.Ordinal,
+                isString, maxStringLength,
+                isDecimal, decimalPrecision, decimalScale, maxDecimalValue,
+                hasIntRange, intMin, intMax,
+                !discoveredColumn.AllowNulls);
+        }
+
+        // Single pass through all rows using pre-computed rules
+        var rowCount = dt.Rows.Count;
+        for (var rowIndex = 0; rowIndex < rowCount; rowIndex++)
+        {
+            var row = dt.Rows[rowIndex];
+
+            for (var i = 0; i < rules.Length; i++)
+            {
+                var rule = rules[i];
+                var value = row[rule.Ordinal];
+                var isNull = value == DBNull.Value || value == null;
+
+                // String: convert empty to NULL, validate length
+                if (rule.IsString && value is string s)
+                {
+                    if (string.IsNullOrWhiteSpace(s))
                     {
-                        throw new InvalidOperationException(
-                            string.Format(CultureInfo.InvariantCulture,
-                                "Value {0} in column '{1}' (row {2}) has {3} decimal places, but column is defined as decimal({4},{5}) which allows only {5} decimal places.",
-                                value, dataColumn.ColumnName, rowIndex + 1, decimalPlaces, precision, scale));
+                        row[rule.Ordinal] = DBNull.Value;
+                        isNull = true;
+                    }
+                    else if (rule.MaxStringLength > 0 && s.Length > rule.MaxStringLength)
+                    {
+                        throw new InvalidOperationException(string.Format(CultureInfo.InvariantCulture,
+                            "Bulk insert failed on data row {0}: source column <<{1}>> has value <<{2}>> (length {3}) which exceeds maximum length {4} for destination column <<{5}>>.",
+                            rowIndex + 1, rule.SourceName, s, s.Length, rule.MaxStringLength, rule.DestName));
                     }
                 }
-            }
-        }
-    }
 
-    /// <summary>
-    /// Validates that string values don't exceed their target column's maximum length.
-    /// MySQL's LOAD DATA INFILE silently truncates strings, so we validate client-side.
-    /// </summary>
-    private void ValidateStringLengths(DataTable dt)
-    {
-        var mapping = GetMapping(dt.Columns.Cast<DataColumn>());
-
-        foreach (var (dataColumn, discoveredColumn) in mapping)
-        {
-            if (dataColumn.DataType != typeof(string))
-                continue;
-
-            var maxLength = discoveredColumn.DataType?.GetLengthIfString();
-            if (!maxLength.HasValue || maxLength.Value <= 0)
-                continue;
-
-            for (var rowIndex = 0; rowIndex < dt.Rows.Count; rowIndex++)
-            {
-                var value = dt.Rows[rowIndex][dataColumn];
-                if (value == DBNull.Value || value == null)
-                    continue;
-
-                var stringValue = value.ToString();
-                if (stringValue != null && stringValue.Length > maxLength.Value)
+                // Decimal validation
+                if (rule.IsDecimal && !isNull && rule.MaxDecimalValue > 0)
                 {
-                    throw new InvalidOperationException(
-                        string.Format(CultureInfo.InvariantCulture,
-                            "Bulk insert failed on data row {0}: source column <<{1}>> has value <<{2}>> (length {3}) which exceeds maximum length {4} for destination column <<{5}>>.",
-                            rowIndex + 1, dataColumn.ColumnName, stringValue, stringValue.Length, maxLength.Value,
-                            discoveredColumn.GetRuntimeName()));
+                    var d = Math.Abs(Convert.ToDecimal(value, CultureInfo.InvariantCulture));
+                    if (d > rule.MaxDecimalValue)
+                        throw new InvalidOperationException(string.Format(CultureInfo.InvariantCulture,
+                            "Value {0} in column '{1}' (row {2}) exceeds the maximum allowed for decimal({3},{4}). Maximum value is {5}.",
+                            value, rule.SourceName, rowIndex + 1, rule.DecimalPrecision, rule.DecimalScale, rule.MaxDecimalValue));
+
+                    var vs = d.ToString(CultureInfo.InvariantCulture);
+                    if (vs.Contains('.', StringComparison.Ordinal))
+                    {
+                        var places = vs.Split('.')[1].TrimEnd('0').Length;
+                        if (places > rule.DecimalScale)
+                            throw new InvalidOperationException(string.Format(CultureInfo.InvariantCulture,
+                                "Value {0} in column '{1}' (row {2}) has {3} decimal places, but column is defined as decimal({4},{5}) which allows only {5} decimal places.",
+                                value, rule.SourceName, rowIndex + 1, places, rule.DecimalPrecision, rule.DecimalScale));
+                    }
                 }
-            }
-        }
-    }
 
-    /// <summary>
-    /// Validates that integer values fit within the range of their target column type.
-    /// MySQL's LOAD DATA INFILE silently clips values, so we validate client-side.
-    /// </summary>
-    private void ValidateIntegerRanges(DataTable dt)
-    {
-        var mapping = GetMapping(dt.Columns.Cast<DataColumn>());
-
-        foreach (var (dataColumn, discoveredColumn) in mapping)
-        {
-            if (!IsIntegerType(dataColumn.DataType))
-                continue;
-
-            var sqlType = discoveredColumn.DataType?.SQLType?.ToUpperInvariant();
-            if (string.IsNullOrEmpty(sqlType))
-                continue;
-
-            var (minValue, maxValue) = GetIntegerRange(sqlType);
-            if (minValue == long.MinValue && maxValue == long.MaxValue)
-                continue;
-
-            for (var rowIndex = 0; rowIndex < dt.Rows.Count; rowIndex++)
-            {
-                var value = dt.Rows[rowIndex][dataColumn];
-                if (value == DBNull.Value || value == null)
-                    continue;
-
-                var longValue = Convert.ToInt64(value, CultureInfo.InvariantCulture);
-                if (longValue < minValue || longValue > maxValue)
+                // Integer range validation
+                if (rule.HasIntegerRange && !isNull)
                 {
-                    throw new InvalidOperationException(
-                        string.Format(CultureInfo.InvariantCulture,
+                    var v = Convert.ToInt64(value, CultureInfo.InvariantCulture);
+                    if (v < rule.IntegerMin || v > rule.IntegerMax)
+                        throw new InvalidOperationException(string.Format(CultureInfo.InvariantCulture,
                             "Value {0} in column '{1}' (row {2}) is out of range for column '{3}' of type '{4}'.",
-                            value, dataColumn.ColumnName, rowIndex + 1,
-                            discoveredColumn.GetRuntimeName(), discoveredColumn.DataType?.SQLType));
+                            value, rule.SourceName, rowIndex + 1, rule.DestName, rule.SqlType));
                 }
+
+                // NOT NULL validation (after empty string conversion)
+                if (rule.RequiresNotNull && isNull)
+                    throw new InvalidOperationException(string.Format(CultureInfo.InvariantCulture,
+                        "NULL value in column '{0}' (row {1}) violates NOT NULL constraint on column '{2}'.",
+                        rule.SourceName, rowIndex + 1, rule.DestName));
             }
         }
     }
 
     /// <summary>
-    /// Validates that NOT NULL columns don't receive NULL values.
+    /// Pre-computed validation rules for a column. Avoids repeated lookups during row iteration.
     /// </summary>
-    private void ValidateNotNullConstraints(DataTable dt)
+    private readonly struct ColumnValidationRule(
+        DataColumn dataColumn, DiscoveredColumn discoveredColumn, int ordinal,
+        bool isString, int maxStringLength,
+        bool isDecimal, int decimalPrecision, int decimalScale, decimal maxDecimalValue,
+        bool hasIntegerRange, long integerMin, long integerMax,
+        bool requiresNotNull)
     {
-        var mapping = GetMapping(dt.Columns.Cast<DataColumn>());
-
-        foreach (var (dataColumn, discoveredColumn) in mapping)
-        {
-            if (discoveredColumn.AllowNulls)
-                continue;
-
-            for (var rowIndex = 0; rowIndex < dt.Rows.Count; rowIndex++)
-            {
-                var value = dt.Rows[rowIndex][dataColumn];
-                if (value == DBNull.Value || value == null)
-                {
-                    throw new InvalidOperationException(
-                        string.Format(CultureInfo.InvariantCulture,
-                            "NULL value in column '{0}' (row {1}) violates NOT NULL constraint on column '{2}'.",
-                            dataColumn.ColumnName, rowIndex + 1, discoveredColumn.GetRuntimeName()));
-                }
-            }
-        }
+        public readonly int Ordinal = ordinal;
+        public readonly string SourceName = dataColumn.ColumnName;
+        public readonly string DestName = discoveredColumn.GetRuntimeName();
+        public readonly string? SqlType = discoveredColumn.DataType?.SQLType;
+        public readonly bool IsString = isString;
+        public readonly int MaxStringLength = maxStringLength;
+        public readonly bool IsDecimal = isDecimal;
+        public readonly int DecimalPrecision = decimalPrecision;
+        public readonly int DecimalScale = decimalScale;
+        public readonly decimal MaxDecimalValue = maxDecimalValue;
+        public readonly bool HasIntegerRange = hasIntegerRange;
+        public readonly long IntegerMin = integerMin;
+        public readonly long IntegerMax = integerMax;
+        public readonly bool RequiresNotNull = requiresNotNull;
     }
 
     private static bool IsIntegerType(Type type) =>
