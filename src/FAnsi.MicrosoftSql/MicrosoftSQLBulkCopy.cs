@@ -102,9 +102,11 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
     private int BulkInsertWithBetterErrorMessages(SqlBulkCopy insert, DataTable dt, DiscoveredServer serverForLineByLineInvestigation)
     {
         var rowsWritten = 0;
-        EmptyStringsToNulls(dt);
-        InspectDataTableForFloats(dt);
-        ValidateDecimalPrecisionAndScale(dt);
+
+        // Single-pass validation: empty string to NULL, string length, decimal precision/scale, NOT NULL
+        // Float column rejection is handled via OnBeforeRowValidation override
+        var mapping = GetMapping(dt.Columns.Cast<DataColumn>());
+        PreProcessAndValidate(dt, mapping);
 
         try
         {
@@ -272,16 +274,6 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
         return true;
     }
 
-    private static void EmptyStringsToNulls(DataTable dt)
-    {
-        foreach (var col in dt.Columns.Cast<DataColumn>().Where(static c => c.DataType == typeof(string)))
-            foreach (var row in dt.Rows.Cast<DataRow>()
-                         .Select(row => new { row, o = row[col] })
-                         .Where(static t => t.o != DBNull.Value && t.o != null && string.IsNullOrWhiteSpace(t.o.ToString()))
-                         .Select(static t => t.row))
-                row[col] = DBNull.Value;
-    }
-
     [Pure]
     private static string ExceptionToListOfInnerMessages(Exception e, bool includeStackTrace = false)
     {
@@ -299,91 +291,32 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
         return message.ToString();
     }
 
-    private static void InspectDataTableForFloats(DataTable dt)
+    /// <summary>
+    /// SQL Server-specific pre-validation: rejects float columns/values because SqlBulkCopy
+    /// introduces precision loss (0.85 becomes 0.850000023841858).
+    /// </summary>
+    protected override void OnBeforeRowValidation(DataTable dt, Dictionary<DataColumn, DiscoveredColumn> mapping)
     {
-        //are there any float or float? columns
-        var floatColumnNames = dt.Columns.Cast<DataColumn>().Where(static c => c.DataType == typeof(float) || c.DataType == typeof(float?)).Select(static c => c.ColumnName).ToArray();
+        // Check for float or float? typed columns
+        var floatColumnNames = dt.Columns.Cast<DataColumn>()
+            .Where(static c => c.DataType == typeof(float) || c.DataType == typeof(float?))
+            .Select(static c => c.ColumnName).ToArray();
         if (floatColumnNames.Length != 0)
             throw new NotSupportedException(
                 $"Found float column(s) in data table, SQLServer does not support floats in bulk insert, instead you should use doubles otherwise you will end up with the value 0.85 turning into :0.850000023841858 in your database.  Float column(s) were:{string.Join(",", floatColumnNames)}");
 
-        //are there any object columns
-        var objectColumns = dt.Columns.Cast<DataColumn>().Where(static c => c.DataType == typeof(object)).Select(static col => col.Ordinal).ToArray();
+        // Check for float values in object-typed columns (sample first 100 rows)
+        var objectColumns = dt.Columns.Cast<DataColumn>()
+            .Where(static c => c.DataType == typeof(object))
+            .Select(static col => col.Ordinal).ToArray();
 
-        //do any of the object columns have floats or float? in them?
         for (var i = 0; i < Math.Min(100, dt.Rows.Count); i++)
         {
             var bad = objectColumns.Select(c => dt.Rows[i][c])
                 .FirstOrDefault(static t => t is float);
             if (bad != null)
                 throw new NotSupportedException(
-                $"Found float value {bad} in data table, SQLServer does not support floats in bulk insert, instead you should use doubles otherwise you will end up with the value 0.85 turning into :0.850000023841858 in your database");
-        }
-    }
-
-    /// <summary>
-    /// Validates that decimal values in the DataTable fit within the precision and scale constraints
-    /// of their target database columns. Throws exception if any value exceeds the allowed precision or scale.
-    /// </summary>
-    /// <param name="dt">DataTable to validate</param>
-    private void ValidateDecimalPrecisionAndScale(DataTable dt)
-    {
-        var mapping = GetMapping(dt.Columns.Cast<DataColumn>());
-
-        foreach (var (dataColumn, discoveredColumn) in mapping)
-        {
-            // Only check decimal columns
-            if (dataColumn.DataType != typeof(decimal) && dataColumn.DataType != typeof(decimal?))
-                continue;
-
-            var decimalSize = discoveredColumn.DataType?.GetDecimalSize();
-            if (decimalSize == null)
-                continue;
-
-            // DecimalSize.Precision = numbers before decimal point
-            // DecimalSize.Scale = numbers after decimal point
-            // For SQL decimal(5,2), DecimalSize is (3, 2) meaning 999.99 max
-            var numbersBeforeDecimal = decimalSize.Precision;
-            var numbersAfterDecimal = decimalSize.Scale;
-
-            // Calculate max value: for DecimalSize(3,2), max is 999.99
-            var maxIntegerPart = (int)Math.Pow(10, numbersBeforeDecimal) - 1;
-            var maxValue = maxIntegerPart + (decimal)((Math.Pow(10, numbersAfterDecimal) - 1) / Math.Pow(10, numbersAfterDecimal));
-
-            for (var rowIndex = 0; rowIndex < dt.Rows.Count; rowIndex++)
-            {
-                var value = dt.Rows[rowIndex][dataColumn];
-                if (value == DBNull.Value || value == null)
-                    continue;
-
-                var decimalValue = Math.Abs((decimal)value);
-
-                // Check if value exceeds precision/scale
-                if (decimalValue > maxValue)
-                {
-                    // SQL precision = numbersBeforeDecimal + numbersAfterDecimal
-                    var sqlPrecision = numbersBeforeDecimal + numbersAfterDecimal;
-                    throw new InvalidOperationException(
-                        string.Format(CultureInfo.InvariantCulture,
-                            "Value {0} in column '{1}' (row {2}) exceeds the maximum allowed for decimal({3},{4}). Maximum value is {5}.",
-                            value, dataColumn.ColumnName, rowIndex + 1, sqlPrecision, numbersAfterDecimal, maxValue));
-                }
-
-                // Check scale (number of decimal places)
-                var valueString = decimalValue.ToString(CultureInfo.InvariantCulture);
-                if (valueString.Contains('.', StringComparison.Ordinal))
-                {
-                    var decimalPlaces = valueString.Split('.')[1].TrimEnd('0').Length;
-                    if (decimalPlaces > numbersAfterDecimal)
-                    {
-                        var sqlPrecision = numbersBeforeDecimal + numbersAfterDecimal;
-                        throw new InvalidOperationException(
-                            string.Format(CultureInfo.InvariantCulture,
-                                "Value {0} in column '{1}' (row {2}) has {3} decimal places, but column is defined as decimal({4},{5}) which allows only {5} decimal places.",
-                                value, dataColumn.ColumnName, rowIndex + 1, decimalPlaces, sqlPrecision, numbersAfterDecimal));
-                    }
-                }
-            }
+                    $"Found float value {bad} in data table, SQLServer does not support floats in bulk insert, instead you should use doubles otherwise you will end up with the value 0.85 turning into :0.850000023841858 in your database");
         }
     }
 

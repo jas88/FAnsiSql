@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Performance
+- **BulkCopy single-pass validation optimization**
+  - Unified row iteration across all database implementations (MySQL, SQL Server, PostgreSQL, Oracle, SQLite)
+  - Single-pass validation: empty string to NULL, string length, decimal precision/scale, integer range, NOT NULL
+  - Pre-computed `ColumnValidationRule` struct for O(1) column metadata lookups during row iteration
+  - Code reduction: ~155 lines removed through base class consolidation
+  - Virtual `GetIntegerRange` method for database-specific integer type ranges (MySQL MEDIUMINT, TINYINT UNSIGNED, etc.)
+  - Virtual `OnBeforeRowValidation` hook for database-specific pre-checks (SQL Server float rejection)
+  - Optional `validateDecimalPrecision` parameter for SQLite's dynamic typing
+
 - **MySQL bulk copy performance improvement**
   - Refactored MySqlBulkCopy to use native MySqlConnector.MySqlBulkCopy API
   - Performance: 2-5x faster bulk inserts via MySQL's native bulk loading protocol

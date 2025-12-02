@@ -49,7 +49,9 @@ public sealed class SqliteBulkCopy(DiscoveredTable targetTable, IManagedConnecti
 
     public override int UploadImpl(DataTable dt)
     {
-        EmptyStringsToNulls(dt);
+        // Single-pass validation: empty string to NULL, string length (no decimal validation for SQLite's dynamic typing)
+        var mapping = GetMapping(dt.Columns.Cast<DataColumn>());
+        PreProcessAndValidate(dt, mapping, validateNotNull: true, validateDecimalPrecision: false);
 
         try
         {
@@ -364,19 +366,6 @@ public sealed class SqliteBulkCopy(DiscoveredTable targetTable, IManagedConnecti
         message.AppendLine();
         message.Append(ExceptionToListOfInnerMessages(e.InnerException, includeStackTrace));
         return message.ToString();
-    }
-
-    /// <summary>
-    /// Converts empty strings to DBNull to match SQL Server behavior
-    /// </summary>
-    private static void EmptyStringsToNulls(DataTable dt)
-    {
-        foreach (var col in dt.Columns.Cast<DataColumn>().Where(static c => c.DataType == typeof(string)))
-            foreach (var row in dt.Rows.Cast<DataRow>()
-                         .Select(row => new { row, o = row[col] })
-                         .Where(static t => t.o != DBNull.Value && t.o != null && string.IsNullOrWhiteSpace(t.o.ToString()))
-                         .Select(static t => t.row))
-                row[col] = DBNull.Value;
     }
 
     private static object ConvertValueForSQLite(object value, string? targetSqlType = null)
