@@ -1,11 +1,10 @@
 # Auto detect text files and perform LF normalization
 
-* text=auto
-* eol=crlf
+* text=auto eol=lf
 
-*.cs text eol=crlf diff=csharp
-*.txt text eol=crlf
-*.resx text eol=crlf
+*.cs text eol=lf diff=csharp
+*.txt text eol=lf
+*.resx text eol=lf
 
 # Shell scripts should always use LF endings (Unix standard)
 *.sh text eol=lf

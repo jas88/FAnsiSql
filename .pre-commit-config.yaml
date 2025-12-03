@@ -52,3 +52,11 @@ repos:
         language: script
         stages: [commit-msg]
         description: Prevent commits with Claude co-authorship
+
+      - id: lint-changelog
+        name: Lint CHANGELOG
+        entry: perl scripts/lint-changelog.pl CHANGELOG.md
+        language: system
+        files: CHANGELOG\.md$
+        pass_filenames: false
+        description: Validate CHANGELOG format
