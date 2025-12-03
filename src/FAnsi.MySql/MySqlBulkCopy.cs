@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Globalization;
 using System.Linq;
+using System.Numerics;
 using System.Text;
 using FAnsi.Connections;
 using FAnsi.Discovery;
@@ -255,9 +256,9 @@ public sealed class MySqlBulkCopy(DiscoveredTable targetTable, IManagedConnectio
 
     /// <summary>
     /// Returns the valid integer range for MySQL-specific integer types.
-    /// Handles MySQL's MEDIUMINT, TINYINT (signed), and UNSIGNED variants.
+    /// Handles MySQL's MEDIUMINT, TINYINT (signed), and UNSIGNED variants including BIGINT UNSIGNED.
     /// </summary>
-    protected override (long min, long max) GetIntegerRange(string sqlType) =>
+    protected override (BigInteger min, BigInteger max) GetIntegerRange(string sqlType) =>
         sqlType switch
         {
             "TINYINT" => (-128, 127), // MySQL TINYINT is signed by default
@@ -269,6 +270,7 @@ public sealed class MySqlBulkCopy(DiscoveredTable targetTable, IManagedConnectio
             "INT" or "INTEGER" => (int.MinValue, int.MaxValue),
             "INT UNSIGNED" or "INTEGER UNSIGNED" => (0, uint.MaxValue),
             "BIGINT" => (long.MinValue, long.MaxValue),
+            "BIGINT UNSIGNED" => (0, ulong.MaxValue),
             _ => base.GetIntegerRange(sqlType)
         };
 
