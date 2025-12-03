@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Globalization;
 using System.Linq;
+using System.Numerics;
 using System.Threading;
 using FAnsi.Connections;
 using FAnsi.Discovery.Helpers;
@@ -19,7 +20,7 @@ public readonly struct ColumnValidationRule(
     DataColumn dataColumn, DiscoveredColumn discoveredColumn, int ordinal,
     bool isString, int maxStringLength,
     bool isDecimal, int decimalPrecision, int decimalScale, decimal maxDecimalValue,
-    bool hasIntegerRange, long integerMin, long integerMax,
+    bool hasIntegerRange, BigInteger integerMin, BigInteger integerMax,
     bool requiresNotNull)
 {
     public readonly int Ordinal = ordinal;
@@ -33,8 +34,8 @@ public readonly struct ColumnValidationRule(
     public readonly int DecimalScale = decimalScale;
     public readonly decimal MaxDecimalValue = maxDecimalValue;
     public readonly bool HasIntegerRange = hasIntegerRange;
-    public readonly long IntegerMin = integerMin;
-    public readonly long IntegerMax = integerMax;
+    public readonly BigInteger IntegerMin = integerMin;
+    public readonly BigInteger IntegerMax = integerMax;
     public readonly bool RequiresNotNull = requiresNotNull;
 }
 
@@ -270,7 +271,7 @@ public abstract class BulkCopy : IBulkCopy
             int maxStringLength = 0;
             int decimalPrecision = 0, decimalScale = 0;
             decimal maxDecimalValue = 0;
-            long intMin = long.MinValue, intMax = long.MaxValue;
+            BigInteger intMin = long.MinValue, intMax = long.MaxValue;
             var hasIntRange = false;
 
             if (isString)
@@ -292,8 +293,14 @@ public abstract class BulkCopy : IBulkCopy
                     decimalPrecision = sz.Precision; // Already SQL-style total precision
                     decimalScale = sz.Scale;
                     var digitsBeforeDecimal = sz.Precision - sz.Scale;
-                    var maxInt = (int)Math.Pow(10, digitsBeforeDecimal) - 1;
-                    maxDecimalValue = maxInt + (decimal)((Math.Pow(10, sz.Scale) - 1) / Math.Pow(10, sz.Scale));
+                    // C# decimal max is ~7.9e28, so we can only validate when digitsBeforeDecimal <= 28.
+                    // For precision 29-38, skip validation (leave maxDecimalValue at 0).
+                    // Any value that fits in C# decimal will fit in SQL decimal(29+).
+                    if (digitsBeforeDecimal <= 28)
+                    {
+                        var maxIntPart = (decimal)Math.Pow(10, digitsBeforeDecimal) - 1;
+                        maxDecimalValue = maxIntPart + (decimal)((Math.Pow(10, sz.Scale) - 1) / Math.Pow(10, sz.Scale));
+                    }
                 }
             }
 
@@ -366,11 +373,21 @@ public abstract class BulkCopy : IBulkCopy
                     }
                 }
 
-                // Integer range validation - use decimal to handle ulong without overflow
+                // Integer range validation using BigInteger for full ulong support
                 if (rule.HasIntegerRange && !isNull)
                 {
-                    // Use decimal for comparison to safely handle ulong values that exceed long.MaxValue
-                    var v = Convert.ToDecimal(value, CultureInfo.InvariantCulture);
+                    var v = value switch
+                    {
+                        ulong ulVal => new BigInteger(ulVal),
+                        long lVal => new BigInteger(lVal),
+                        uint uiVal => new BigInteger(uiVal),
+                        int iVal => new BigInteger(iVal),
+                        ushort usVal => new BigInteger(usVal),
+                        short sVal => new BigInteger(sVal),
+                        byte bVal => new BigInteger(bVal),
+                        sbyte sbVal => new BigInteger(sbVal),
+                        _ => BigInteger.Parse(Convert.ToString(value, CultureInfo.InvariantCulture) ?? "0", CultureInfo.InvariantCulture)
+                    };
                     if (v < rule.IntegerMin || v > rule.IntegerMax)
                         throw new InvalidOperationException(string.Format(CultureInfo.InvariantCulture,
                             "Value {0} in column '{1}' (row {2}) is out of range for column '{3}' of type '{4}'.",
@@ -399,11 +416,11 @@ public abstract class BulkCopy : IBulkCopy
 
     /// <summary>
     /// Returns the valid integer range for a SQL type. Override in subclasses to handle
-    /// database-specific integer types (e.g., MySQL's MEDIUMINT, TINYINT UNSIGNED).
+    /// database-specific integer types (e.g., MySQL's MEDIUMINT, TINYINT UNSIGNED, BIGINT UNSIGNED).
     /// </summary>
     /// <param name="sqlType">The SQL type name (uppercase)</param>
     /// <returns>Tuple of (min, max) values for the type</returns>
-    protected virtual (long min, long max) GetIntegerRange(string sqlType) =>
+    protected virtual (BigInteger min, BigInteger max) GetIntegerRange(string sqlType) =>
         sqlType switch
         {
             // Standard SQL types common across databases

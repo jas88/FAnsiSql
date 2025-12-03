@@ -30,6 +30,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added automatic fallback to batched parameterized INSERT statements when `local_infile` is
     disabled (either client-side or server-side), ensuring compatibility with restricted MySQL servers
 
+### Fixed
+- **Decimal precision validation for full SQL range**
+  - Fixed integer overflow when validating decimal columns with precision > 9
+  - For precision 10-28: uses `decimal` arithmetic to correctly compute max values
+  - For precision 29-38: skips client-side validation (C# decimal max is ~7.9×10²⁸; database enforces constraints)
+  - Example: decimal(10,0) now correctly allows values up to 9,999,999,999
+
+- **Integer range validation using BigInteger**
+  - Changed integer bounds from `long` to `BigInteger` for full unsigned type support
+  - Added `BIGINT UNSIGNED` support for MySQL (0 to 18,446,744,073,709,551,615)
+  - Integer comparison now uses `BigInteger` instead of `decimal` for semantic correctness
+
 ### Changed
 - **MySQL default charset changed from utf8 to utf8mb4** (breaking change)
   - MySQL's `utf8` is actually `utf8mb3` which only supports 3-byte characters
