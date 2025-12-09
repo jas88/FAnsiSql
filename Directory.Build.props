@@ -1,68 +1,24 @@
 <Project>
+  <!-- Import shared build standards -->
+  <Import Project="build-standards/Directory.Build.props.shared" />
+
+  <!-- FAnsiSql-specific configuration -->
   <PropertyGroup>
-    <LangVersion>preview</LangVersion>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
-
-  <!-- Enable comprehensive .NET analyzers across all projects -->
-  <PropertyGroup>
-    <!-- Enable built-in .NET analyzers (recommended for .NET 8+) -->
-    <EnableNETAnalyzers>true</EnableNETAnalyzers>
-
-    <!-- Analysis Level: 0=minimum, 1=recommended, 5=maximum -->
-    <AnalysisLevel>5.0</AnalysisLevel>
-
-    <!-- Run analyzers during build for immediate feedback -->
-    <RunAnalyzersDuringBuild>true</RunAnalyzersDuringBuild>
-
-    <!-- Enforce code style rules during build -->
-    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
-
-    <!-- Analysis mode: Default, Recommended, All, Minimal -->
-    <AnalysisMode>Recommended</AnalysisMode>
-
-    <!-- Don't treat warnings as errors (can be overridden per-project) -->
+    <!-- Override: FAnsiSql has existing warnings to address before enabling -->
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
 
-    <!-- AOT and Trimming analyzers -->
-    <IsAotCompatible>true</IsAotCompatible>
-    <IsTrimCompatible>true</IsTrimCompatible>
-  </PropertyGroup>
-
-  <!-- Automatic versioning from git tags via MinVer -->
-  <ItemGroup>
-    <PackageReference Include="MinVer">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <!-- Common analyzer rules that are useful for FAnsiSql -->
-    <PackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers" PrivateAssets="all" />
-  </ItemGroup>
-
-  <PropertyGroup>
     <!-- MinVer configuration -->
-    <MinVerTagPrefix>v</MinVerTagPrefix>
     <MinVerMinimumMajorMinor>3.3</MinVerMinimumMajorMinor>
-    <MinVerVerbosity>minimal</MinVerVerbosity>
-    <!-- Remove hardcoded version from individual .csproj files - MinVer handles it -->
-  </PropertyGroup>
 
-  <!-- Common assembly metadata (replaces SharedAssemblyInfo.cs) -->
-  <PropertyGroup>
-    <Company>Health Informatics Centre, University of Dundee</Company>
+    <!-- Package metadata -->
     <Product>FAnsiSql</Product>
+    <Company>Health Informatics Centre, University of Dundee</Company>
     <Copyright>Copyright (c) 2018 - 2025</Copyright>
     <NeutralLanguage>en-GB</NeutralLanguage>
-    <!-- Enable automatic assembly info generation with MinVer versions -->
-    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
   </PropertyGroup>
 
-  <!-- Add coverlet.collector to all test projects for code coverage -->
-  <!-- Applies to all projects in Tests folder -->
-  <ItemGroup Condition="$(MSBuildProjectDirectory.Contains('Tests'))">
-    <PackageReference Include="coverlet.collector">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
+  <!-- Additional analyzer for FAnsiSql -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers" PrivateAssets="all" />
   </ItemGroup>
 </Project>
