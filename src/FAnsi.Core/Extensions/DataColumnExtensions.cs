@@ -19,13 +19,8 @@ public static class DataColumnExtensions
     /// </summary>
     /// <param name="dc"></param>
     /// <param name="value">True to prevent retyping, false to allow it</param>
-    public static void SetDoNotReType(this DataColumn dc, bool value)
-    {
-        if (!dc.ExtendedProperties.ContainsKey(DoNotReTypeExtendedProperty))
-            dc.ExtendedProperties.Add(DoNotReTypeExtendedProperty, value);
-        else
-            dc.ExtendedProperties[DoNotReTypeExtendedProperty] = value;
-    }
+    public static void SetDoNotReType(this DataColumn dc, bool value) =>
+        dc.ExtendedProperties[DoNotReTypeExtendedProperty] = value;
 
     /// <summary>
     /// Returns true if the <see cref="DataColumn.ExtendedProperties"/> of the <see cref="DataColumn"/> lists
