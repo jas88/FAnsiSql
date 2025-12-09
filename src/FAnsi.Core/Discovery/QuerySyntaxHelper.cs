@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
@@ -64,7 +65,7 @@ public abstract partial class QuerySyntaxHelper(
 
     public ITypeTranslater TypeTranslater { get; private set; } = translater;
 
-    private readonly Dictionary<CultureInfo, TypeDeciderFactory> _factories = [];
+    private readonly ConcurrentDictionary<CultureInfo, TypeDeciderFactory> _factories = new();
 
     public IAggregateHelper AggregateHelper { get; private set; } = aggregateHelper;
     public IUpdateHelper UpdateHelper { get; set; } = updateHelper;
@@ -379,8 +380,7 @@ public abstract partial class QuerySyntaxHelper(
         {
             culture ??= CultureInfo.InvariantCulture;
 
-            if (!_factories.ContainsKey(culture))
-                _factories.Add(culture, new TypeDeciderFactory(culture));
+            var factory = _factories.GetOrAdd(culture, static c => new TypeDeciderFactory(c));
 
             var tt = TypeTranslater;
             p.DbType = tt.GetDbTypeForSQLDBType(discoveredColumn.DataType!.SQLType);
@@ -388,9 +388,9 @@ public abstract partial class QuerySyntaxHelper(
 
             if (IsBasicallyNull(value))
                 p.Value = DBNull.Value;
-            else if (value is string strVal && _factories[culture].IsSupported(cSharpType)) //if the input is a string and it's for a hard type e.g. TimeSpan
+            else if (value is string strVal && factory.IsSupported(cSharpType)) //if the input is a string and it's for a hard type e.g. TimeSpan
             {
-                var decider = _factories[culture].Create(cSharpType);
+                var decider = factory.Create(cSharpType);
                 var o = decider.Parse(strVal);
 
                 if (o is DateTime d) o = FormatDateTimeForDbParameter(d);
