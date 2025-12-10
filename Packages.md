@@ -16,3 +16,4 @@
 | TypeGuesser | [GitHub](https://github.com/HicServices/TypeGuesser) | [MIT](https://opensource.org/licenses/MIT)| Allows picking system Types for untyped strings e.g. `"12.3"`| |
 | Npgsql | [GitHub](https://github.com/npgsql/npgsql) | [PostgreSQL](https://github.com/npgsql/npgsql/blob/dev/LICENSE)| Enables interaction with Postgres databases  | |
 | System.Linq.Async | [GitHub](https://github.com/dotnet/reactive) | [MIT](https://opensource.org/licenses/MIT) | Adds async support to LINQ | |
+| DotNet.ReproducibleBuilds | [GitHub](https://github.com/dotnet/reproducible-builds) | [MIT](https://opensource.org/licenses/MIT) | Ensures deterministic builds | |

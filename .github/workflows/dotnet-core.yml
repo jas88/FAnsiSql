@@ -27,6 +27,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v6
+      with:
+        submodules: recursive
 
     - name: Replace test configuration for CI
       run: mv tests/FAnsiTests/TestDatabases{-github,}.xml
