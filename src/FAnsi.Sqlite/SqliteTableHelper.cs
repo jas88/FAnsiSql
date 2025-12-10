@@ -361,20 +361,21 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
                     foreignKeyName = $"FK_{otherTableName}_{primaryKeyTableName}";
                 }
 
-                if (!relationships.ContainsKey(foreignKeyName))
+                if (!relationships.TryGetValue(foreignKeyName, out var relationship))
                 {
                     var pkTable = discoveredTable.Database.ExpectTable(primaryKeyTableName);
                     var fkTable = discoveredTable.Database.ExpectTable(otherTableName);
 
-                    relationships[foreignKeyName] = new DiscoveredRelationship(
+                    relationship = new DiscoveredRelationship(
                         foreignKeyName,
                         pkTable,
                         fkTable,
                         cascadeRule
                     );
+                    relationships[foreignKeyName] = relationship;
                 }
 
-                relationships[foreignKeyName].AddKeys(primaryKeyColumn, foreignKeyColumn, transaction);
+                relationship.AddKeys(primaryKeyColumn, foreignKeyColumn, transaction);
             }
         }
 

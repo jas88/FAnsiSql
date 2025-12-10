@@ -2,6 +2,7 @@ using System;
 using System.Data;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.Text;
 using System.Text.RegularExpressions;
 using TypeGuesser;
 
@@ -40,6 +41,10 @@ public abstract partial class TypeTranslater : ITypeTranslater
     /// use <see cref="Guesser"/> to determine the required length/type at runtime.
     /// </summary>
     private readonly int _stringWidthWhenNotSupplied;
+
+    // Cached CompositeFormat for CA1863
+    private static readonly CompositeFormat UnsureSqlTypeFormat = CompositeFormat.Parse(FAnsiStrings.TypeTranslater_GetSQLDBTypeForCSharpType_Unsure_what_SQL_type_to_use_for_CSharp_Type___0_____TypeTranslater_was___1__);
+    private static readonly CompositeFormat NoCSharpTypeMappingFormat = CompositeFormat.Parse(FAnsiStrings.TypeTranslater_GetCSharpTypeForSQLDBType_No_CSharp_type_mapping_exists_for_SQL_type___0____TypeTranslater_was___1___);
 
     /// <summary>
     ///
@@ -98,7 +103,7 @@ public abstract partial class TypeTranslater : ITypeTranslater
         if (t == typeof(Guid))
             return GetGuidDataType();
 
-        throw new TypeNotMappedException(string.Format(CultureInfo.InvariantCulture, FAnsiStrings.TypeTranslater_GetSQLDBTypeForCSharpType_Unsure_what_SQL_type_to_use_for_CSharp_Type___0_____TypeTranslater_was___1__, t.Name, GetType().Name));
+        throw new TypeNotMappedException(string.Format(CultureInfo.InvariantCulture, UnsureSqlTypeFormat, t.Name, GetType().Name));
     }
 
     protected virtual string GetByteArrayDataType() => "blob";
@@ -173,8 +178,7 @@ public abstract partial class TypeTranslater : ITypeTranslater
         TryGetCSharpTypeForSQLDBType(sqlType) ??
         throw new TypeNotMappedException(string.Format(
             CultureInfo.InvariantCulture,
-            FAnsiStrings
-                .TypeTranslater_GetCSharpTypeForSQLDBType_No_CSharp_type_mapping_exists_for_SQL_type___0____TypeTranslater_was___1___,
+            NoCSharpTypeMappingFormat,
             sqlType, GetType().Name));
 
     /// <inheritdoc/>
@@ -263,8 +267,7 @@ public abstract partial class TypeTranslater : ITypeTranslater
 
         throw new TypeNotMappedException(string.Format(
             CultureInfo.InvariantCulture,
-            FAnsiStrings
-                .TypeTranslater_GetCSharpTypeForSQLDBType_No_CSharp_type_mapping_exists_for_SQL_type___0____TypeTranslater_was___1___,
+            NoCSharpTypeMappingFormat,
             sqlType, GetType().Name));
     }
 

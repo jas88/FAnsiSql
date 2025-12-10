@@ -20,6 +20,11 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
     private static readonly Regex ColumnLevelComplaint = ColumnLevelComplaintRe();
     private Dictionary<int, ColumnMappingMetadata>? _columnMetadataCache;
 
+    private static readonly CompositeFormat FormatFailedToBulkInsert = CompositeFormat.Parse(SR.MicrosoftSQLBulkCopy_BulkInsertWithBetterErrorMessages_Failed_to_bulk_insert__0_);
+    private static readonly CompositeFormat FormatBulkInsertFailedOnDataRow = CompositeFormat.Parse(SR.MicrosoftSQLBulkCopy_AttemptLineByLineInsert_BulkInsert_failed_on_data_row__0___1_);
+    private static readonly CompositeFormat FormatBulkInsertFailedOnDataRowWithDetails = CompositeFormat.Parse(SR.MicrosoftSQLBulkCopy_AttemptLineByLineInsert_BulkInsert_failed_on_data_row__0__the_complaint_was_about_source_column____1____which_had_value____2____destination_data_type_was____3____4__5_);
+    private static readonly CompositeFormat FormatSecondPassException = CompositeFormat.Parse(SR.MicrosoftSQLBulkCopy_AttemptLineByLineInsert_Second_Pass_Exception__Failed_to_load_data_row__0__the_following_values_were_rejected_by_the_database___1__2__3_);
+
     /// <summary>
     /// Metadata for a column mapping, cached to avoid reflection when enhancing error messages.
     /// </summary>
@@ -145,7 +150,7 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
             if (BcpColIdToString(insert, e as SqlException, out var result1, out _))
                 throw new InvalidOperationException(
                     string.Format(CultureInfo.InvariantCulture,
-                        SR.MicrosoftSQLBulkCopy_BulkInsertWithBetterErrorMessages_Failed_to_bulk_insert__0_,
+                        FormatFailedToBulkInsert,
                         result1), e); //but we can still give him a better message than "bcp colid 1 was bad"!
 
             throw;
@@ -197,8 +202,7 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
                             if (badMapping is null || !dt.Columns.Contains(badMapping.SourceColumn))
                                 return new InvalidOperationException(
                                     string.Format(CultureInfo.InvariantCulture,
-                                        SR
-                                            .MicrosoftSQLBulkCopy_AttemptLineByLineInsert_BulkInsert_failed_on_data_row__0___1_,
+                                        FormatBulkInsertFailedOnDataRow,
                                         line, result), e);
 
                             var sourceValue = dr[badMapping.SourceColumn];
@@ -207,13 +211,13 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
 
                             if (destColumn != null)
                                 return new FileLoadException(
-                                    string.Format(CultureInfo.InvariantCulture, SR.MicrosoftSQLBulkCopy_AttemptLineByLineInsert_BulkInsert_failed_on_data_row__0__the_complaint_was_about_source_column____1____which_had_value____2____destination_data_type_was____3____4__5_, line, badMapping.SourceColumn, sourceValue, destColumn.DataType, Environment.NewLine, result), exception);
+                                    string.Format(CultureInfo.InvariantCulture, FormatBulkInsertFailedOnDataRowWithDetails, line, badMapping.SourceColumn, sourceValue, destColumn.DataType, Environment.NewLine, result), exception);
 
-                            return new InvalidOperationException(string.Format(CultureInfo.InvariantCulture, SR.MicrosoftSQLBulkCopy_AttemptLineByLineInsert_BulkInsert_failed_on_data_row__0___1_, line, result), e);
+                            return new InvalidOperationException(string.Format(CultureInfo.InvariantCulture, FormatBulkInsertFailedOnDataRow, line, result), e);
                         }
 
                         return new FileLoadException(
-                            string.Format(CultureInfo.InvariantCulture, SR.MicrosoftSQLBulkCopy_AttemptLineByLineInsert_Second_Pass_Exception__Failed_to_load_data_row__0__the_following_values_were_rejected_by_the_database___1__2__3_, line, Environment.NewLine, string.Join(Environment.NewLine, dr.ItemArray), firstPass),
+                            string.Format(CultureInfo.InvariantCulture, FormatSecondPassException, line, Environment.NewLine, string.Join(Environment.NewLine, dr.ItemArray), firstPass),
                             exception);
                     }
 

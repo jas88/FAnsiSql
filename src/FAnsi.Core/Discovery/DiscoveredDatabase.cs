@@ -4,6 +4,7 @@ using System.Data;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Text;
 using FAnsi.Connections;
 using FAnsi.Discovery.QuerySyntax;
 using FAnsi.Discovery.TableCreation;
@@ -17,6 +18,9 @@ namespace FAnsi.Discovery;
 /// </summary>
 public sealed class DiscoveredDatabase : IHasRuntimeName, IMightNotExist
 {
+    // Cached CompositeFormat for CA1863
+    private static readonly CompositeFormat DatabaseDoesNotExistFormat = CompositeFormat.Parse(FAnsiStrings.DiscoveredDatabase_DatabaseDoesNotExistSoCannotBeDropped);
+
     private readonly string _database;
     private readonly IQuerySyntaxHelper _querySyntaxHelper;
 
@@ -137,7 +141,7 @@ public sealed class DiscoveredDatabase : IHasRuntimeName, IMightNotExist
     public void Drop()
     {
         if (!Exists())
-            throw new InvalidOperationException(string.Format(CultureInfo.InvariantCulture, FAnsiStrings.DiscoveredDatabase_DatabaseDoesNotExistSoCannotBeDropped, this));
+            throw new InvalidOperationException(string.Format(CultureInfo.InvariantCulture, DatabaseDoesNotExistFormat, this));
 
         // Pass in a copy of ourself, the Drop can mutate the connection string which can cause nasty side-effects (because many classes, e.g. attachers, hold references to these objects)
         Helper.DropDatabase(new DiscoveredDatabase(Server, _database, _querySyntaxHelper));

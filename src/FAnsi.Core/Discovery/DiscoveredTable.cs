@@ -4,6 +4,7 @@ using System.Data;
 using System.Data.Common;
 using System.Globalization;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using FAnsi.Connections;
 using FAnsi.Discovery.Constraints;
@@ -20,6 +21,10 @@ namespace FAnsi.Discovery;
 /// </summary>
 public class DiscoveredTable : IHasFullyQualifiedNameToo, IMightNotExist, IHasQuerySyntaxHelper, IEquatable<DiscoveredTable>
 {
+    // Cached CompositeFormats for CA1863
+    private static readonly CompositeFormat DiscoverColumnFailedFormat = CompositeFormat.Parse(FAnsiStrings.DiscoveredTable_DiscoverColumn_DiscoverColumn_failed__could_not_find_column_called___0___in_table___1__);
+    private static readonly CompositeFormat InsertFailedFormat = CompositeFormat.Parse(FAnsiStrings.DiscoveredTable_Insert_Insert_failed__could_not_find_column_called___0___in_table___1__);
+
     protected string TableName;
 
     /// <summary>
@@ -153,7 +158,7 @@ public class DiscoveredTable : IHasFullyQualifiedNameToo, IMightNotExist, IHasQu
         catch (InvalidOperationException e)
         {
             throw new ColumnMappingException(string.Format(CultureInfo.InvariantCulture,
-                FAnsiStrings.DiscoveredTable_DiscoverColumn_DiscoverColumn_failed__could_not_find_column_called___0___in_table___1__, specificColumnName,
+                DiscoverColumnFailedFormat, specificColumnName,
                 TableName), e);
         }
     }
@@ -507,8 +512,7 @@ public class DiscoveredTable : IHasFullyQualifiedNameToo, IMightNotExist, IHasQu
 
             if (match == null)
                 throw new ColumnMappingException(string.Format(CultureInfo.InvariantCulture,
-                    FAnsiStrings
-                        .DiscoveredTable_Insert_Insert_failed__could_not_find_column_called___0___in_table___1__, k,
+                    InsertFailedFormat, k,
                     TableName));
 
             foundColumns.Add(match, toInsert[k]);

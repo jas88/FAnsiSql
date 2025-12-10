@@ -61,11 +61,8 @@ public sealed class PostgreSqlBulkCopy(DiscoveredTable discoveredTable, IManaged
         return dt.Rows.Count;
     }
 
-    private void ThrowIfDisposed()
-    {
-        if (_disposed)
-            throw new ObjectDisposedException(nameof(PostgreSqlBulkCopy));
-    }
+    private void ThrowIfDisposed() =>
+        ObjectDisposedException.ThrowIf(_disposed, this);
 
     /// <summary>
     /// Releases all resources used by the PostgreSqlBulkCopy.

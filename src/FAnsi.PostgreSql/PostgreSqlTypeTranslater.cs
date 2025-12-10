@@ -2,6 +2,7 @@ using System;
 using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Text;
 using System.Text.RegularExpressions;
 using FAnsi.Discovery.TypeTranslation;
 using NpgsqlTypes;
@@ -11,6 +12,9 @@ namespace FAnsi.Implementations.PostgreSql;
 public sealed partial class PostgreSqlTypeTranslater : TypeTranslater
 {
     public static readonly PostgreSqlTypeTranslater Instance = new();
+
+    private static readonly CompositeFormat TypeNotMappedExceptionFormat =
+        CompositeFormat.Parse(FAnsiStrings.TypeTranslater_GetSQLDBTypeForCSharpType_Unsure_what_SQL_type_to_use_for_CSharp_Type___0_____TypeTranslater_was___1__);
 
     private static readonly FrozenDictionary<Type, NpgsqlDbType> TypeMappings =
         new Dictionary<Type, NpgsqlDbType>
@@ -69,7 +73,7 @@ public sealed partial class PostgreSqlTypeTranslater : TypeTranslater
     public NpgsqlDbType GetNpgsqlDbTypeForCSharpType(Type t) =>
         TypeMappings.TryGetValue(t, out var npgsqlType)
             ? npgsqlType
-            : throw new TypeNotMappedException(string.Format(CultureInfo.InvariantCulture, FAnsiStrings.TypeTranslater_GetSQLDBTypeForCSharpType_Unsure_what_SQL_type_to_use_for_CSharp_Type___0_____TypeTranslater_was___1__, t.Name, GetType().Name));
+            : throw new TypeNotMappedException(string.Format(CultureInfo.InvariantCulture, TypeNotMappedExceptionFormat, t.Name, GetType().Name));
 
     protected override bool IsByteArray(string sqlType) =>
         sqlType?.StartsWith("bytea", StringComparison.OrdinalIgnoreCase) ?? false;

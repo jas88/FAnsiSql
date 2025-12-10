@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data.Common;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.Text;
 using FAnsi.Connections;
 using FAnsi.Discovery.TypeTranslation;
 using FAnsi.Exceptions;
@@ -15,6 +16,13 @@ namespace FAnsi.Discovery;
 /// </summary>
 public sealed class DiscoveredDataType
 {
+    // Cached CompositeFormat for CA1863
+    private static readonly CompositeFormat CannotResizeSmallerFormat = CompositeFormat.Parse(FAnsiStrings.DiscoveredDataType_Resize_CannotResizeSmaller);
+    private static readonly CompositeFormat DataTypeNotDecimalFormat = CompositeFormat.Parse(FAnsiStrings.DiscoveredDataType_Resize_DataType_cannot_be_resized_to_decimal_because_it_is_of_data_type__0_);
+    private static readonly CompositeFormat CannotShrinkBeforeDecimalFormat = CompositeFormat.Parse(FAnsiStrings.DiscoveredDataType_Resize_Cannot_shrink_column__number_of_digits_before_the_decimal_point_is_currently__0__and_you_asked_to_set_it_to__1___Current_SQLType_is__2__);
+    private static readonly CompositeFormat CannotShrinkAfterDecimalFormat = CompositeFormat.Parse(FAnsiStrings.DiscoveredDataType_Resize_Cannot_shrink_column__number_of_digits_after_the_decimal_point_is_currently__0__and_you_asked_to_set_it_to__1___Current_SQLType_is__2__);
+    private static readonly CompositeFormat FailedResizeSqlFormat = CompositeFormat.Parse(FAnsiStrings.DiscoveredDataType_AlterTypeTo_Failed_to_send_resize_SQL__0_);
+
     private readonly DiscoveredColumn? _column;
 
     /// <summary>
@@ -87,7 +95,7 @@ public sealed class DiscoveredDataType
             return;
 
         if (newSize < toReplace)
-            throw new InvalidResizeException(string.Format(CultureInfo.InvariantCulture, FAnsiStrings.DiscoveredDataType_Resize_CannotResizeSmaller, SQLType, newSize));
+            throw new InvalidResizeException(string.Format(CultureInfo.InvariantCulture, CannotResizeSmallerFormat, SQLType, newSize));
 
         var newType = SQLType.Replace(toReplace.ToString(CultureInfo.InvariantCulture), newSize.ToString(CultureInfo.InvariantCulture));
 
@@ -110,13 +118,13 @@ public sealed class DiscoveredDataType
         var toReplace = GetDecimalSize();
 
         if (toReplace == null || toReplace.IsEmpty)
-            throw new InvalidResizeException(string.Format(CultureInfo.InvariantCulture, FAnsiStrings.DiscoveredDataType_Resize_DataType_cannot_be_resized_to_decimal_because_it_is_of_data_type__0_, SQLType));
+            throw new InvalidResizeException(string.Format(CultureInfo.InvariantCulture, DataTypeNotDecimalFormat, SQLType));
 
         if (toReplace.NumbersBeforeDecimalPlace > numberOfDigitsBeforeDecimalPoint)
-            throw new InvalidResizeException(string.Format(CultureInfo.InvariantCulture, FAnsiStrings.DiscoveredDataType_Resize_Cannot_shrink_column__number_of_digits_before_the_decimal_point_is_currently__0__and_you_asked_to_set_it_to__1___Current_SQLType_is__2__, toReplace.NumbersBeforeDecimalPlace, numberOfDigitsBeforeDecimalPoint, SQLType));
+            throw new InvalidResizeException(string.Format(CultureInfo.InvariantCulture, CannotShrinkBeforeDecimalFormat, toReplace.NumbersBeforeDecimalPlace, numberOfDigitsBeforeDecimalPoint, SQLType));
 
         if (toReplace.NumbersAfterDecimalPlace > numberOfDigitsAfterDecimalPoint)
-            throw new InvalidResizeException(string.Format(CultureInfo.InvariantCulture, FAnsiStrings.DiscoveredDataType_Resize_Cannot_shrink_column__number_of_digits_after_the_decimal_point_is_currently__0__and_you_asked_to_set_it_to__1___Current_SQLType_is__2__, toReplace.NumbersAfterDecimalPlace, numberOfDigitsAfterDecimalPoint, SQLType));
+            throw new InvalidResizeException(string.Format(CultureInfo.InvariantCulture, CannotShrinkAfterDecimalFormat, toReplace.NumbersAfterDecimalPlace, numberOfDigitsAfterDecimalPoint, SQLType));
 
         var newDataType = _column?.Table.GetQuerySyntaxHelper()
                               .TypeTranslater.GetSQLDBTypeForCSharpType(new DatabaseTypeRequest(typeof(decimal), null,
@@ -152,7 +160,7 @@ public sealed class DiscoveredDataType
             }
             catch (DbException e)
             {
-                throw new AlterFailedException(string.Format(CultureInfo.InvariantCulture, FAnsiStrings.DiscoveredDataType_AlterTypeTo_Failed_to_send_resize_SQL__0_, sql), e);
+                throw new AlterFailedException(string.Format(CultureInfo.InvariantCulture, FailedResizeSqlFormat, sql), e);
             }
         }
 

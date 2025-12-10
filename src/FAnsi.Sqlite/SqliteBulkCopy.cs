@@ -345,7 +345,7 @@ public sealed class SqliteBulkCopy(DiscoveredTable targetTable, IManagedConnecti
             return $"<byte[{bytes.Length}]>";
 
         var str = value.ToString() ?? "<NULL>";
-        return str.Length > 100 ? str.Substring(0, 100) + "..." : str;
+        return str.Length > 100 ? string.Concat(str.AsSpan(0, 100), "...") : str;
     }
 
     /// <summary>

@@ -4,6 +4,7 @@ using System.Data;
 using System.Data.Common;
 using System.Globalization;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 using FAnsi.Connections;
 using FAnsi.Discovery;
@@ -16,6 +17,16 @@ namespace FAnsi.Implementations.MicrosoftSQL;
 
 public sealed partial class MicrosoftSQLTableHelper : DiscoveredTableHelper
 {
+    private static readonly CompositeFormat FormatCreatePrimaryKeyFailed = CompositeFormat.Parse(FAnsiStrings.DiscoveredTableHelper_CreatePrimaryKey_Failed_to_create_primary_key_on_table__0__using_columns___1__);
+    private static readonly CompositeFormat FormatMakeDistinctSql = CompositeFormat.Parse("""
+                           DELETE f
+                                       FROM (
+                                       SELECT	ROW_NUMBER() OVER (PARTITION BY {0} ORDER BY {0}) AS RowNum
+                                       FROM {1}
+
+                                       ) as f
+                                       where RowNum > 1
+                           """);
     public override IEnumerable<DiscoveredColumn> DiscoverColumns(DiscoveredTable discoveredTable, IManagedConnection connection, string database)
     {
         //don't bother looking for pks if it is a table valued function
@@ -289,7 +300,7 @@ public sealed partial class MicrosoftSQLTableHelper : DiscoveredTableHelper
         }
         catch (DbException e)
         {
-            throw new AlterFailedException(string.Format(CultureInfo.InvariantCulture, FAnsiStrings.DiscoveredTableHelper_CreatePrimaryKey_Failed_to_create_primary_key_on_table__0__using_columns___1__, table, string.Join(",", discoverColumns.Select(static c => c.GetRuntimeName()))), e);
+            throw new AlterFailedException(string.Format(CultureInfo.InvariantCulture, FormatCreatePrimaryKeyFailed, table, string.Join(",", discoverColumns.Select(static c => c.GetRuntimeName()))), e);
         }
 
         base.CreatePrimaryKey(args, table, discoverColumns);
@@ -394,20 +405,10 @@ public sealed partial class MicrosoftSQLTableHelper : DiscoveredTableHelper
     {
         var syntax = discoveredTable.GetQuerySyntaxHelper();
 
-        const string sql = """
-                           DELETE f
-                                       FROM (
-                                       SELECT	ROW_NUMBER() OVER (PARTITION BY {0} ORDER BY {0}) AS RowNum
-                                       FROM {1}
-
-                                       ) as f
-                                       where RowNum > 1
-                           """;
-
         var columnList = string.Join(",",
             discoveredTable.DiscoverColumns().Select(c => syntax.EnsureWrapped(c.GetRuntimeName())));
 
-        var sqlToExecute = string.Format(CultureInfo.InvariantCulture, sql, columnList, discoveredTable.GetFullyQualifiedName());
+        var sqlToExecute = string.Format(CultureInfo.InvariantCulture, FormatMakeDistinctSql, columnList, discoveredTable.GetFullyQualifiedName());
 
         var server = discoveredTable.Database.Server;
 

@@ -5,6 +5,7 @@ using System.Data;
 using System.Data.Common;
 using System.Globalization;
 using System.Linq;
+using System.Text;
 using FAnsi.Connections;
 using FAnsi.Discovery;
 using FAnsi.Discovery.Constraints;
@@ -17,6 +18,8 @@ namespace FAnsi.Implementations.PostgreSql;
 public sealed class PostgreSqlTableHelper : DiscoveredTableHelper
 {
     public static readonly PostgreSqlTableHelper Instance = new();
+
+    private static readonly CompositeFormat FormatDropIndexFailed = CompositeFormat.Parse(FAnsiStrings.DiscoveredTableHelper_DropIndex_Failed);
 
     private PostgreSqlTableHelper()
     {
@@ -266,7 +269,7 @@ public sealed class PostgreSqlTableHelper : DiscoveredTableHelper
         }
         catch (DbException e)
         {
-            throw new AlterFailedException(string.Format(CultureInfo.InvariantCulture, FAnsiStrings.DiscoveredTableHelper_DropIndex_Failed, table), e);
+            throw new AlterFailedException(string.Format(CultureInfo.InvariantCulture, FormatDropIndexFailed, table), e);
         }
     }
 

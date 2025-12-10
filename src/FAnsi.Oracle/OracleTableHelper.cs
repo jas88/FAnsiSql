@@ -4,6 +4,7 @@ using System.Data;
 using System.Data.Common;
 using System.Globalization;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using FAnsi.Connections;
 using FAnsi.Discovery;
@@ -18,6 +19,8 @@ public sealed class OracleTableHelper : DiscoveredTableHelper
 {
     public static readonly OracleTableHelper Instance = new();
     private OracleTableHelper() { }
+
+    private static readonly CompositeFormat FormatDropIndexFailed = CompositeFormat.Parse(FAnsiStrings.DiscoveredTableHelper_DropIndex_Failed);
 
     public override string GetTopXSqlForTable(IHasFullyQualifiedNameToo table, int topX) => $"SELECT * FROM {table.GetFullyQualifiedName()} OFFSET 0 ROWS FETCH NEXT {topX} ROWS ONLY";
 
@@ -259,7 +262,7 @@ public sealed class OracleTableHelper : DiscoveredTableHelper
         }
         catch (DbException e)
         {
-            throw new AlterFailedException(string.Format(CultureInfo.InvariantCulture, FAnsiStrings.DiscoveredTableHelper_DropIndex_Failed, table), e);
+            throw new AlterFailedException(string.Format(CultureInfo.InvariantCulture, FormatDropIndexFailed, table), e);
         }
     }
 
@@ -369,7 +372,7 @@ public sealed class OracleTableHelper : DiscoveredTableHelper
         cmd.ExecuteNonQuery();
     }
 
-    private static string GetBasicTypeFromOracleType(IDataRecord r)
+    private static string GetBasicTypeFromOracleType(DbDataReader r)
     {
         int? precision = null;
         int? scale = null;

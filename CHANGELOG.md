@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.6.3] - 2025-12-10
+
+### Fixed
+- **Thread-safety fix in QuerySyntaxHelper.GetParameter**
+  - Changed `_factories` from `Dictionary` to `ConcurrentDictionary`
+  - Used `GetOrAdd` instead of `ContainsKey`/`Add` pattern
+  - Fixes race condition causing "An item with the same key has already been added" when
+    multiple threads call `GetParameter` concurrently (e.g., during parallel database creation)
+
+### Performance
+- **CA1863 compliance: CompositeFormat caching for string formatting**
+  - Cached `CompositeFormat` objects across 17 files to avoid repeated format string parsing
+  - Affected Core classes: `QuerySyntaxHelper`, `DiscoveredDatabase`, `DiscoveredTableHelper`,
+    `DiscoveredServer`, `DiscoveredTable`, `DiscoveredDatabaseHelper`, `BulkCopy`, `DiscoveredDataType`,
+    `ConnectionStringKeywordAccumulator`, `TypeTranslater`, `ImplementationManager`
+  - Affected database implementations: `MicrosoftSQLBulkCopy`, `MicrosoftSQLTableHelper`, `OracleBulkCopy`,
+    `OracleTableHelper`, `PostgreSqlTableHelper`, `PostgreSqlTypeTranslater`
+- **Span-based string operations**
+  - `OracleAggregateHelper`: Replaced `Substring()` with `AsSpan()` for zero-allocation string slicing
+  - `SqliteBulkCopy`: Uses `string.Concat` with `AsSpan()` instead of `Substring()` (CA1845)
+- **Modern exception handling**
+  - `OracleBulkCopy`, `PostgreSqlBulkCopy`, `MySqlBulkCopy`: Use `ObjectDisposedException.ThrowIf()` (CA1513)
+  - `MySqlBulkCopy`: Uses `ArgumentNullException.ThrowIfNull()` (CA1510)
+- **Dictionary lookup optimization in SqliteTableHelper**
+  - Uses `TryGetValue` instead of `ContainsKey` + indexer (CA1854)
+
+### Changed
+- **Type refinements for better type safety**
+  - `ManagedConnectionPool.GetServerLevelPooledConnection()` returns `ManagedConnection` (was `IManagedConnection`)
+  - `ManagedConnectionPool.GetDatabaseLevelPooledConnection()` returns `ManagedConnection` (was `IManagedConnection`)
+  - `OracleTableHelper.GetBasicTypeFromOracleType()` parameter changed from `IDataRecord` to `DbDataReader`
+
 ## [3.6.2] - 2025-12-02
 
 ### Performance
@@ -740,7 +772,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed Drop table to work correctly with Views
 - Exists now works correctly for Views (previously it would return true if there was no view but a table with the same name)
 
-[Unreleased]: https://github.com/jas88/FAnsiSql/compare/v3.6.2...main
+[Unreleased]: https://github.com/jas88/FAnsiSql/compare/v3.6.3...main
+[3.6.3]: https://github.com/jas88/FAnsiSql/compare/v3.6.2...v3.6.3
 [3.6.2]: https://github.com/jas88/FAnsiSql/compare/v3.6.1...v3.6.2
 [3.6.1]: https://github.com/jas88/FAnsiSql/compare/v3.6.0...v3.6.1
 [3.6.0]: https://github.com/jas88/FAnsiSql/compare/v3.5.0...v3.6.0

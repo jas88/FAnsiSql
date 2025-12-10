@@ -22,6 +22,10 @@ namespace FAnsi.Discovery;
 /// </summary>
 public abstract class DiscoveredDatabaseHelper : IDiscoveredDatabaseHelper
 {
+    // Cached CompositeFormats for CA1863
+    private static readonly CompositeFormat ColumnRequestMustHaveTypeFormat = CompositeFormat.Parse(FAnsiStrings.DiscoveredDatabaseHelper_CreateTable_DatabaseColumnRequestMustHaveEitherTypeRequestedOrExplicitDbType);
+    private static readonly CompositeFormat ObjectColumnNotAllowedFormat = CompositeFormat.Parse(FAnsiStrings.DataTable_Column__0__was_of_DataType__1___this_is_not_allowed___Use_String_for_untyped_data);
+
     public abstract IEnumerable<DiscoveredTable> ListTables(DiscoveredDatabase parent, IQuerySyntaxHelper querySyntaxHelper, DbConnection connection,
         string database, bool includeViews, DbTransaction? transaction = null);
 
@@ -73,7 +77,7 @@ public abstract class DiscoveredDatabaseHelper : IDiscoveredDatabaseHelper
                             request = tt.GetDataTypeRequestForSQLDBType(overriding.ExplicitDbType);
                         }
                         else
-                            throw new ArgumentException(string.Format(CultureInfo.InvariantCulture, FAnsiStrings.DiscoveredDatabaseHelper_CreateTable_DatabaseColumnRequestMustHaveEitherTypeRequestedOrExplicitDbType, column));
+                            throw new ArgumentException(string.Format(CultureInfo.InvariantCulture, ColumnRequestMustHaveTypeFormat, column));
 
                     var guesser = GetGuesser(request);
                     CopySettings(guesser, args);
@@ -166,7 +170,7 @@ public abstract class DiscoveredDatabaseHelper : IDiscoveredDatabaseHelper
             throw new NotSupportedException(
                 string.Format(
                     CultureInfo.InvariantCulture,
-                    FAnsiStrings.DataTable_Column__0__was_of_DataType__1___this_is_not_allowed___Use_String_for_untyped_data,
+                    ObjectColumnNotAllowedFormat,
                     objCol.ColumnName,
                     objCol.DataType
                 ));
