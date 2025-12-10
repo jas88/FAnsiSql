@@ -39,8 +39,7 @@ public sealed class MySqlBulkCopy(DiscoveredTable targetTable, IManagedConnectio
     {
         ThrowIfDisposed();
 
-        if (dt == null)
-            throw new ArgumentNullException(nameof(dt));
+        ArgumentNullException.ThrowIfNull(dt);
 
         if (dt.Rows.Count == 0)
             return 0;
@@ -276,8 +275,7 @@ public sealed class MySqlBulkCopy(DiscoveredTable targetTable, IManagedConnectio
 
     private void ThrowIfDisposed()
     {
-        if (_disposed)
-            throw new ObjectDisposedException(nameof(MySqlBulkCopy));
+        ObjectDisposedException.ThrowIf(_disposed, this);
     }
 
     /// <summary>

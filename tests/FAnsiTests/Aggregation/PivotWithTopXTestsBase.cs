@@ -15,7 +15,7 @@ internal abstract class PivotWithTopXTestsBase : AggregationTests
 {
     /// <summary>
     /// Tests basic PIVOT with TOP 2 ordered by count descending.
-    /// Expected: Top 2 most common categories (T and E&, %a' mp;E) should appear as columns.
+    /// Expected: Top 2 most common categories (T and E&amp;, %a' mp;E) should appear as columns.
     /// </summary>
     protected void Test_PivotWithTop2_OrderByCountDesc(DatabaseType type)
     {

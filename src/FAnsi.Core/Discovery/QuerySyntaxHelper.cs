@@ -26,6 +26,13 @@ public abstract partial class QuerySyntaxHelper(
 {
     private static readonly System.Buffers.SearchValues<char> BracketSearcher = System.Buffers.SearchValues.Create("()");
 
+    // Cached CompositeFormats for CA1863
+    private static readonly CompositeFormat EnsureWrappedContainsSeparatorsFormat = CompositeFormat.Parse(FAnsiStrings.QuerySyntaxHelper_EnsureWrapped_String_passed_to_EnsureWrapped___0___contained_separators__not_allowed____Prohibited_Separator_is___1__);
+    private static readonly CompositeFormat SplitLineMultipleAliasesFormat = CompositeFormat.Parse(FAnsiStrings.QuerySyntaxHelper_SplitLineIntoSelectSQLAndAlias_);
+    private static readonly CompositeFormat GetParameterCouldNotFormat = CompositeFormat.Parse(FAnsiStrings.QuerySyntaxHelper_GetParameter_Could_not_GetParameter_for_column___0__);
+    private static readonly CompositeFormat ValidateNameBlankFormat = CompositeFormat.Parse(FAnsiStrings.QuerySyntaxHelper_ValidateName__0__name_cannot_be_blank);
+    private static readonly CompositeFormat ValidateNameTooLongFormat = CompositeFormat.Parse(FAnsiStrings.QuerySyntaxHelper_ValidateName__0__name___1___is_too_long_for_the_DBMS___2__supports_maximum_length_of__3__);
+
     public virtual string DatabaseTableSeparator => ".";
 
     /// <inheritdoc/>
@@ -216,7 +223,7 @@ public abstract partial class QuerySyntaxHelper(
             return databaseOrTableName;
 
         if (databaseOrTableName.Contains(DatabaseTableSeparator))
-            throw new ArgumentException(string.Format(CultureInfo.InvariantCulture, FAnsiStrings.QuerySyntaxHelper_EnsureWrapped_String_passed_to_EnsureWrapped___0___contained_separators__not_allowed____Prohibited_Separator_is___1__, databaseOrTableName, DatabaseTableSeparator));
+            throw new ArgumentException(string.Format(CultureInfo.InvariantCulture, EnsureWrappedContainsSeparatorsFormat, databaseOrTableName, DatabaseTableSeparator));
 
         return EnsureWrappedImpl(databaseOrTableName);
     }
@@ -256,7 +263,7 @@ public abstract partial class QuerySyntaxHelper(
         switch (matches.Count)
         {
             case > 1:
-                throw new SyntaxErrorException(string.Format(CultureInfo.InvariantCulture, FAnsiStrings.QuerySyntaxHelper_SplitLineIntoSelectSQLAndAlias_, matches.Count, lineToSplit));
+                throw new SyntaxErrorException(string.Format(CultureInfo.InvariantCulture, SplitLineMultipleAliasesFormat, matches.Count, lineToSplit));
             case 0:
                 selectSQL = lineToSplit;
                 alias = null;
@@ -406,7 +413,7 @@ public abstract partial class QuerySyntaxHelper(
         }
         catch (DbException ex)
         {
-            throw new InvalidOperationException(string.Format(CultureInfo.InvariantCulture, FAnsiStrings.QuerySyntaxHelper_GetParameter_Could_not_GetParameter_for_column___0__, discoveredColumn.GetFullyQualifiedName()), ex);
+            throw new InvalidOperationException(string.Format(CultureInfo.InvariantCulture, GetParameterCouldNotFormat, discoveredColumn.GetFullyQualifiedName()), ex);
         }
 
         return p;
@@ -458,10 +465,10 @@ public abstract partial class QuerySyntaxHelper(
     private string? ValidateName(string? candidate, string objectType, int maximumLengthAllowed)
     {
         if (string.IsNullOrWhiteSpace(candidate))
-            return string.Format(CultureInfo.InvariantCulture, FAnsiStrings.QuerySyntaxHelper_ValidateName__0__name_cannot_be_blank, objectType);
+            return string.Format(CultureInfo.InvariantCulture, ValidateNameBlankFormat, objectType);
 
         if (candidate.Length > maximumLengthAllowed)
-            return string.Format(CultureInfo.InvariantCulture, FAnsiStrings.QuerySyntaxHelper_ValidateName__0__name___1___is_too_long_for_the_DBMS___2__supports_maximum_length_of__3__,
+            return string.Format(CultureInfo.InvariantCulture, ValidateNameTooLongFormat,
                 objectType, candidate[..maximumLengthAllowed], DatabaseType, maximumLengthAllowed);
 
         // FAnsi always wraps/quotes identifiers when generating SQL, so special characters

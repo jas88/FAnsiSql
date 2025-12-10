@@ -4,6 +4,7 @@ using System.Data;
 using System.Data.Common;
 using System.Globalization;
 using System.Linq;
+using System.Text;
 using FAnsi.Connections;
 using FAnsi.Discovery.Constraints;
 using FAnsi.Discovery.Helpers;
@@ -18,6 +19,12 @@ namespace FAnsi.Discovery;
 /// </summary>
 public abstract class DiscoveredTableHelper : IDiscoveredTableHelper
 {
+    // Cached CompositeFormats for CA1863
+    private static readonly CompositeFormat RenameNotSupportedFormat = CompositeFormat.Parse(FAnsiStrings.DiscoveredTableHelper_RenameTable_Rename_is_not_supported_for_TableType__0_);
+    private static readonly CompositeFormat CreateIndexFailedFormat = CompositeFormat.Parse(FAnsiStrings.DiscoveredTableHelper_CreateIndex_Failed);
+    private static readonly CompositeFormat DropIndexFailedFormat = CompositeFormat.Parse(FAnsiStrings.DiscoveredTableHelper_DropIndex_Failed);
+    private static readonly CompositeFormat CreatePrimaryKeyFailedFormat = CompositeFormat.Parse(FAnsiStrings.DiscoveredTableHelper_CreatePrimaryKey_Failed_to_create_primary_key_on_table__0__using_columns___1__);
+
     /// <summary>
     /// <para>Default fallback implementation checks existence by listing all tables and filtering in memory.</para>
     /// <para>Database-specific helpers should override this method to use direct SQL queries for better performance (80-99% faster).</para>
@@ -184,7 +191,7 @@ public abstract class DiscoveredTableHelper : IDiscoveredTableHelper
     public virtual void RenameTable(DiscoveredTable discoveredTable, string newName, IManagedConnection connection)
     {
         if (discoveredTable.TableType != TableType.Table)
-            throw new NotSupportedException(string.Format(CultureInfo.InvariantCulture, FAnsiStrings.DiscoveredTableHelper_RenameTable_Rename_is_not_supported_for_TableType__0_, discoveredTable.TableType));
+            throw new NotSupportedException(string.Format(CultureInfo.InvariantCulture, RenameNotSupportedFormat, discoveredTable.TableType));
 
         discoveredTable.GetQuerySyntaxHelper().ValidateTableName(newName);
 
@@ -209,7 +216,7 @@ public abstract class DiscoveredTableHelper : IDiscoveredTableHelper
         }
         catch (DbException e)
         {
-            throw new AlterFailedException(string.Format(CultureInfo.InvariantCulture, FAnsiStrings.DiscoveredTableHelper_CreateIndex_Failed, table), e);
+            throw new AlterFailedException(string.Format(CultureInfo.InvariantCulture, CreateIndexFailedFormat, table), e);
         }
     }
 
@@ -227,7 +234,7 @@ public abstract class DiscoveredTableHelper : IDiscoveredTableHelper
         }
         catch (DbException e)
         {
-            throw new AlterFailedException(string.Format(CultureInfo.InvariantCulture, FAnsiStrings.DiscoveredTableHelper_DropIndex_Failed, table), e);
+            throw new AlterFailedException(string.Format(CultureInfo.InvariantCulture, DropIndexFailedFormat, table), e);
         }
     }
 
@@ -247,7 +254,7 @@ public abstract class DiscoveredTableHelper : IDiscoveredTableHelper
         }
         catch (DbException e)
         {
-            throw new AlterFailedException(string.Format(CultureInfo.InvariantCulture, FAnsiStrings.DiscoveredTableHelper_CreatePrimaryKey_Failed_to_create_primary_key_on_table__0__using_columns___1__, table, string.Join(",", discoverColumns.Select(static c => c.GetRuntimeName()))), e);
+            throw new AlterFailedException(string.Format(CultureInfo.InvariantCulture, CreatePrimaryKeyFailedFormat, table, string.Join(",", discoverColumns.Select(static c => c.GetRuntimeName()))), e);
         }
     }
 

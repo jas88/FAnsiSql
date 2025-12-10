@@ -32,7 +32,7 @@ public sealed class OracleAggregateHelper : AggregateHelper
         {
             // Look for AVG(
             if (i <= text.Length - 4 &&
-                text.Substring(i, 4).Equals("AVG(", StringComparison.OrdinalIgnoreCase))
+                text.AsSpan(i, 4).Equals("AVG(", StringComparison.OrdinalIgnoreCase))
             {
                 result.Append("ROUND(AVG(");
                 i += 4;
@@ -48,7 +48,7 @@ public sealed class OracleAggregateHelper : AggregateHelper
                 }
 
                 // Append the AVG content and close the ROUND
-                result.Append(text.Substring(start, i - start));
+                result.Append(text.AsSpan(start, i - start));
                 result.Append(", 10)");
             }
             else

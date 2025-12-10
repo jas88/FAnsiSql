@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Globalization;
 using System.Linq;
+using System.Text;
 using FAnsi.Connections;
 using FAnsi.Discovery;
 using Oracle.ManagedDataAccess.Client;
@@ -13,6 +14,8 @@ internal sealed class OracleBulkCopy(DiscoveredTable targetTable, IManagedConnec
 {
     private readonly DiscoveredServer _server = targetTable.Database.Server;
     private bool _disposed;
+
+    private static readonly CompositeFormat FormatInsertSql = CompositeFormat.Parse("INSERT INTO {0}({1}) VALUES ({2})");
 
     public override int UploadImpl(DataTable dt)
     {
@@ -37,7 +40,8 @@ internal sealed class OracleBulkCopy(DiscoveredTable targetTable, IManagedConnec
 
         var dateColumns = new HashSet<DataColumn>();
 
-        var sql = string.Format(CultureInfo.InvariantCulture, "INSERT INTO " + TargetTable.GetFullyQualifiedName() + "({0}) VALUES ({1})",
+        var sql = string.Format(CultureInfo.InvariantCulture, FormatInsertSql,
+            TargetTable.GetFullyQualifiedName(),
             string.Join(",", mapping.Values.Select(static c => c.GetWrappedName())),
             string.Join(",", mapping.Keys.Select(c => parameterNames[c]))
         );
@@ -103,8 +107,7 @@ internal sealed class OracleBulkCopy(DiscoveredTable targetTable, IManagedConnec
 
     private void ThrowIfDisposed()
     {
-        if (_disposed)
-            throw new ObjectDisposedException(nameof(OracleBulkCopy));
+        ObjectDisposedException.ThrowIf(_disposed, this);
     }
 
     /// <summary>

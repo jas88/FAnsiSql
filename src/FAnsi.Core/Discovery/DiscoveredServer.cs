@@ -5,6 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using System.Threading;
 using FAnsi.Connections;
 using FAnsi.Discovery.QuerySyntax;
@@ -18,6 +19,10 @@ namespace FAnsi.Discovery;
 /// </summary>
 public sealed class DiscoveredServer : IMightNotExist
 {
+    // Cached CompositeFormats for CA1863
+    private static readonly CompositeFormat CouldNotConnectTimeoutFormat = CompositeFormat.Parse(FAnsiStrings.DiscoveredServer_TestConnection_Could_not_connect_to_server___0___after_timeout_of__1__milliseconds_);
+    private static readonly CompositeFormat HelperTriedToCreateDatabaseFormat = CompositeFormat.Parse(FAnsiStrings.DiscoveredServer_CreateDatabase_Helper___0___tried_to_create_database___1___but_the_database_didn_t_exist_after_the_creation_attempt);
+
     /// <summary>
     /// Stores connection string State (which server the <see cref="DiscoveredServer"/> refers to.
     /// </summary>
@@ -252,8 +257,7 @@ public sealed class DiscoveredServer : IMightNotExist
             {
                 throw new TimeoutException(
                     string.Format(CultureInfo.InvariantCulture,
-                        FAnsiStrings
-                            .DiscoveredServer_TestConnection_Could_not_connect_to_server___0___after_timeout_of__1__milliseconds_,
+                        CouldNotConnectTimeoutFormat,
                         Name, timeoutInMillis), e);
             }
             catch (AggregateException e)
@@ -261,8 +265,7 @@ public sealed class DiscoveredServer : IMightNotExist
                 if (openTask.IsCanceled)
                     throw new TimeoutException(
                         string.Format(CultureInfo.InvariantCulture,
-                            FAnsiStrings
-                                .DiscoveredServer_TestConnection_Could_not_connect_to_server___0___after_timeout_of__1__milliseconds_,
+                            CouldNotConnectTimeoutFormat,
                             Name, timeoutInMillis), e);
 
                 throw;
@@ -400,7 +403,7 @@ public sealed class DiscoveredServer : IMightNotExist
         Helper.CreateDatabase(Builder, db);
 
         if (!db.Exists())
-            throw new InvalidOperationException(string.Format(CultureInfo.InvariantCulture, FAnsiStrings.DiscoveredServer_CreateDatabase_Helper___0___tried_to_create_database___1___but_the_database_didn_t_exist_after_the_creation_attempt, Helper.GetType().Name, newDatabaseName));
+            throw new InvalidOperationException(string.Format(CultureInfo.InvariantCulture, HelperTriedToCreateDatabaseFormat, Helper.GetType().Name, newDatabaseName));
 
         return db;
     }

@@ -6,6 +6,7 @@ using System.Data.Common;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using System.Threading;
 using FAnsi.Exceptions;
 
@@ -28,6 +29,10 @@ public sealed class ImplementationManager
     /// Fast O(1) array lookup for DatabaseType to implementation mapping. Initialized with nulls.
     /// </summary>
     private static readonly IImplementation?[] _databaseTypeLookup = new IImplementation[5]; // 5 DatabaseType enum values
+
+    // Cached CompositeFormat for CA1863
+    private static readonly CompositeFormat NoDatabaseTypeImplementationFormat = CompositeFormat.Parse(FAnsiStrings.ImplementationManager_GetImplementation_No_implementation_found_for_DatabaseType__0_);
+    private static readonly CompositeFormat NoAdoNetImplementationFormat = CompositeFormat.Parse(FAnsiStrings.ImplementationManager_GetImplementation_No_implementation_found_for_ADO_Net_object_of_Type__0_);
 
     /// <summary>
     /// Registers an implementation instance for fast O(1) lookups
@@ -78,7 +83,7 @@ public sealed class ImplementationManager
 
         throw new ImplementationNotFoundException(string.Format(
             CultureInfo.InvariantCulture,
-            FAnsiStrings.ImplementationManager_GetImplementation_No_implementation_found_for_DatabaseType__0_,
+            NoDatabaseTypeImplementationFormat,
             databaseType));
     }
 
@@ -90,8 +95,7 @@ public sealed class ImplementationManager
 
         throw new ImplementationNotFoundException(string.Format(
             CultureInfo.InvariantCulture,
-            FAnsiStrings
-                .ImplementationManager_GetImplementation_No_implementation_found_for_ADO_Net_object_of_Type__0_,
+            NoAdoNetImplementationFormat,
             connectionStringBuilder.GetType()));
     }
 
@@ -103,8 +107,7 @@ public sealed class ImplementationManager
 
         throw new ImplementationNotFoundException(string.Format(
             CultureInfo.InvariantCulture,
-            FAnsiStrings
-                .ImplementationManager_GetImplementation_No_implementation_found_for_ADO_Net_object_of_Type__0_,
+            NoAdoNetImplementationFormat,
             connection.GetType()));
     }
     /// <summary>

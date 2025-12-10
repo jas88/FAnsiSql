@@ -68,7 +68,7 @@ internal static class ManagedConnectionPool
     /// <summary>
     /// Gets a server-level pooled connection for SQL Server or MySQL, switching databases as needed.
     /// </summary>
-    private static IManagedConnection GetServerLevelPooledConnection(DiscoveredServer server)
+    private static ManagedConnection GetServerLevelPooledConnection(DiscoveredServer server)
     {
         var serverKey = server.Helper.GetServerLevelConnectionKey(server.Builder.ConnectionString);
         var targetDatabase = server.GetCurrentDatabase()?.GetRuntimeName();
@@ -168,7 +168,7 @@ internal static class ManagedConnectionPool
     /// <summary>
     /// Gets a database-level pooled connection (for PostgreSQL).
     /// </summary>
-    private static IManagedConnection GetDatabaseLevelPooledConnection(DiscoveredServer server)
+    private static ManagedConnection GetDatabaseLevelPooledConnection(DiscoveredServer server)
     {
         var connectionKey = server.Builder.ConnectionString;
         var threadDbConnections = ThreadLocalDatabaseConnections.Value;

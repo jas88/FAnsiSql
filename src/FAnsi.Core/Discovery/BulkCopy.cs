@@ -4,6 +4,7 @@ using System.Data;
 using System.Globalization;
 using System.Linq;
 using System.Numerics;
+using System.Text;
 using System.Threading;
 using FAnsi.Connections;
 using FAnsi.Discovery.Helpers;
@@ -42,6 +43,9 @@ public readonly struct ColumnValidationRule(
 /// <inheritdoc/>
 public abstract class BulkCopy : IBulkCopy
 {
+    // Cached CompositeFormat for CA1863
+    private static readonly CompositeFormat ColumnNotInDestinationFormat = CompositeFormat.Parse(FAnsiStrings.BulkCopy_ColumnNotInDestinationTable);
+
     public CultureInfo Culture { get; }
 
     /// <summary>
@@ -224,7 +228,7 @@ public abstract class BulkCopy : IBulkCopy
             if (match == null)
             {
                 if (!AllowUnmatchedInputColumns)
-                    throw new ColumnMappingException(string.Format(CultureInfo.InvariantCulture, FAnsiStrings.BulkCopy_ColumnNotInDestinationTable, colInSource.ColumnName, TargetTable));
+                    throw new ColumnMappingException(string.Format(CultureInfo.InvariantCulture, ColumnNotInDestinationFormat, colInSource.ColumnName, TargetTable));
 
                 //user is ignoring the fact there are unmatched items in DataTable!
             }
