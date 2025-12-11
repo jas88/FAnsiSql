@@ -1,0 +1,140 @@
+name: ReSharper Code Inspection
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      run_cleanup:
+        description: 'Run cleanupcode to auto-fix issues'
+        required: false
+        default: 'false'
+        type: boolean
+
+env:
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Install ReSharper CLI
+        run: dotnet tool install -g JetBrains.ReSharper.GlobalTools
+
+      - name: Restore dependencies
+        run: dotnet restore FAnsi.sln
+
+      - name: Run ReSharper InspectCode
+        run: |
+          jb inspectcode FAnsi.sln \
+            --output=resharper-report.sarif \
+            --severity=WARNING \
+            --no-build \
+            --exclude="**/obj/**;**/bin/**;**/*.g.cs;**/*.Designer.cs"
+
+      - name: Upload SARIF report
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: resharper-report.sarif
+          category: resharper
+
+      - name: Upload inspection report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: resharper-report
+          path: resharper-report.sarif
+          retention-days: 30
+
+      - name: Summarize findings
+        if: always()
+        run: |
+          echo "## ReSharper Inspection Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ -f resharper-report.sarif ]; then
+            TOTAL=$(jq '.runs[0].results | length' resharper-report.sarif)
+            echo "**Total issues found:** $TOTAL" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+
+            echo "### Issues by Rule (Top 15)" >> $GITHUB_STEP_SUMMARY
+            echo "| Count | Rule |" >> $GITHUB_STEP_SUMMARY
+            echo "|-------|------|" >> $GITHUB_STEP_SUMMARY
+            jq -r '.runs[0].results | group_by(.ruleId) | map({rule: .[0].ruleId, count: length}) | sort_by(-.count) | .[:15] | .[] | "| \(.count) | \(.rule) |"' resharper-report.sarif >> $GITHUB_STEP_SUMMARY
+          else
+            echo "No SARIF report generated" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  # Optional cleanup job - only runs when manually triggered with run_cleanup=true
+  cleanup:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.run_cleanup == 'true'
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Install ReSharper CLI
+        run: dotnet tool install -g JetBrains.ReSharper.GlobalTools
+
+      - name: Restore dependencies
+        run: dotnet restore FAnsi.sln
+
+      - name: Run ReSharper CleanupCode
+        run: |
+          jb cleanupcode FAnsi.sln \
+            --no-build \
+            --exclude="**/obj/**;**/bin/**;**/*.g.cs;**/*.Designer.cs"
+
+      - name: Check for changes
+        id: changes
+        run: |
+          if git diff --quiet; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "## Files modified by cleanupcode" >> $GITHUB_STEP_SUMMARY
+            git diff --name-only >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Create Pull Request
+        if: steps.changes.outputs.has_changes == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "style: Apply ReSharper code cleanup"
+          title: "style: Apply ReSharper code cleanup"
+          body: |
+            This PR applies automatic code cleanup using ReSharper CLI.
+
+            ## What cleanupcode fixes:
+            - Remove redundant using directives
+            - Fix naming conventions
+            - Apply code style formatting
+            - Remove redundant qualifiers
+            - Convert to expression-bodied members where applicable
+            - Other code style improvements
+
+            Please review the changes carefully before merging.
+          branch: resharper-cleanup
+          delete-branch: true
