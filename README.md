@@ -2,6 +2,7 @@
 
 [![Build and test](https://github.com/jas88/FAnsiSql/actions/workflows/dotnet-core.yml/badge.svg)](https://github.com/jas88/FAnsiSql/actions/workflows/dotnet-core.yml)
 [![codecov](https://codecov.io/gh/jas88/FAnsiSql/graph/badge.svg)](https://codecov.io/gh/jas88/FAnsiSql)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=jas88_FAnsiSql&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=jas88_FAnsiSql)
 [![NuGet](https://img.shields.io/nuget/v/FAnsiSql.Core.svg)](https://www.nuget.org/packages/FAnsiSql.Core/)
 
 - [Nuget](https://www.nuget.org/packages/FAnsiSql.Core/)
