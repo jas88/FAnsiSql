@@ -1,8 +1,5 @@
-using System;
-using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
-using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using FAnsi.Connections;
 using FAnsi.Discovery;
@@ -15,6 +12,7 @@ namespace FAnsi.Implementations.MicrosoftSQL;
 public sealed class MicrosoftSQLServerHelper : DiscoveredServerHelper
 {
     public static readonly MicrosoftSQLServerHelper Instance = new();
+
     private MicrosoftSQLServerHelper() : base(DatabaseType.MicrosoftSQLServer)
     {
     }
@@ -24,39 +22,6 @@ public sealed class MicrosoftSQLServerHelper : DiscoveredServerHelper
     protected override string DatabaseKeyName => "Initial Catalog";
 
     protected override string ConnectionTimeoutKeyName => "Connect Timeout";
-
-    #region Up Typing
-    public override DbCommand GetCommand(string s, DbConnection con, DbTransaction? transaction = null) => new SqlCommand(s, (SqlConnection)con, transaction as SqlTransaction);
-
-    public override DbDataAdapter GetDataAdapter(DbCommand cmd) => new SqlDataAdapter((SqlCommand)cmd);
-
-    public override DbCommandBuilder GetCommandBuilder(DbCommand cmd) => new SqlCommandBuilder((SqlDataAdapter)GetDataAdapter(cmd));
-
-    public override DbParameter GetParameter(string parameterName) => new SqlParameter(parameterName, null);
-
-    public override DbConnection GetConnection(DbConnectionStringBuilder builder) => new SqlConnection(builder.ConnectionString);
-
-    protected override DbConnectionStringBuilder GetConnectionStringBuilderImpl(string? connectionString) => new SqlConnectionStringBuilder(connectionString);
-
-    protected override DbConnectionStringBuilder GetConnectionStringBuilderImpl(string server, string? database, string username, string password)
-    {
-        var toReturn = new SqlConnectionStringBuilder { DataSource = server };
-        if (!string.IsNullOrWhiteSpace(username))
-        {
-            toReturn.UserID = username;
-            toReturn.Password = password;
-        }
-        else
-            toReturn.IntegratedSecurity = true;
-
-        if (!string.IsNullOrWhiteSpace(database))
-            toReturn.InitialCatalog = database;
-
-        return toReturn;
-    }
-    public static string GetDatabaseNameFrom(DbConnectionStringBuilder builder) => ((SqlConnectionStringBuilder)builder).InitialCatalog;
-
-    #endregion
 
 
     public override IEnumerable<string> ListDatabases(DbConnectionStringBuilder builder)
@@ -106,7 +71,8 @@ public sealed class MicrosoftSQLServerHelper : DiscoveredServerHelper
 
         using var con = new SqlConnection(b.ConnectionString);
         con.Open();
-        using var cmd = new SqlCommand($"CREATE DATABASE {syntax.EnsureWrapped(newDatabaseName.GetRuntimeName())}", con);
+        using var cmd = new SqlCommand($"CREATE DATABASE {syntax.EnsureWrapped(newDatabaseName.GetRuntimeName())}",
+            con);
         cmd.CommandTimeout = CreateDatabaseTimeoutInSeconds;
         cmd.ExecuteNonQuery();
     }
@@ -126,7 +92,9 @@ public sealed class MicrosoftSQLServerHelper : DiscoveredServerHelper
             using var dt = new DataTable();
             using (var cmd = new SqlCommand("EXEC master..xp_fixeddrives", con))
             using (var da = new SqlDataAdapter(cmd))
+            {
                 da.Fill(dt);
+            }
 
             foreach (DataRow row in dt.Rows)
                 toReturn.Add($"Free Space Drive{row[0]}", $"{row[1]}");
@@ -178,7 +146,6 @@ public sealed class MicrosoftSQLServerHelper : DiscoveredServerHelper
     public override bool HasDanglingTransaction(DbConnection connection)
     {
         if (connection is SqlConnection sqlConn && sqlConn.State == ConnectionState.Open)
-        {
             try
             {
                 // Check for dangling transactions (fixes #30)
@@ -201,19 +168,21 @@ public sealed class MicrosoftSQLServerHelper : DiscoveredServerHelper
                 // be removed from the pool (treat as "dirty").
                 return true;
             }
-        }
+
         return false;
     }
 
     /// <summary>
-    /// Checks if the database exists using the provided connection.
+    ///     Checks if the database exists using the provided connection.
     /// </summary>
     /// <param name="database">The database to check</param>
     /// <param name="connection">The managed connection to use</param>
     /// <returns>True if the database exists, false otherwise</returns>
     public bool DatabaseExists(DiscoveredDatabase database, IManagedConnection connection)
     {
-        using var cmd = new SqlCommand("SELECT CASE WHEN EXISTS(SELECT 1 FROM sys.databases WHERE name = @name) THEN 1 ELSE 0 END", (SqlConnection)connection.Connection);
+        using var cmd =
+            new SqlCommand("SELECT CASE WHEN EXISTS(SELECT 1 FROM sys.databases WHERE name = @name) THEN 1 ELSE 0 END",
+                (SqlConnection)connection.Connection);
         cmd.Transaction = (SqlTransaction?)connection.Transaction;
         cmd.Parameters.AddWithValue("@name", database.GetRuntimeName());
         return Convert.ToInt32(cmd.ExecuteScalar(), CultureInfo.InvariantCulture) == 1;
@@ -240,4 +209,47 @@ public sealed class MicrosoftSQLServerHelper : DiscoveredServerHelper
         };
         return builder.ConnectionString;
     }
+
+    #region Up Typing
+
+    public override DbCommand GetCommand(string s, DbConnection con, DbTransaction? transaction = null) =>
+        new SqlCommand(s, (SqlConnection)con, transaction as SqlTransaction);
+
+    public override DbDataAdapter GetDataAdapter(DbCommand cmd) => new SqlDataAdapter((SqlCommand)cmd);
+
+    public override DbCommandBuilder GetCommandBuilder(DbCommand cmd) =>
+        new SqlCommandBuilder((SqlDataAdapter)GetDataAdapter(cmd));
+
+    public override DbParameter GetParameter(string parameterName) => new SqlParameter(parameterName, null);
+
+    public override DbConnection GetConnection(DbConnectionStringBuilder builder) =>
+        new SqlConnection(builder.ConnectionString);
+
+    protected override DbConnectionStringBuilder GetConnectionStringBuilderImpl(string? connectionString) =>
+        new SqlConnectionStringBuilder(connectionString);
+
+    protected override DbConnectionStringBuilder GetConnectionStringBuilderImpl(string server, string? database,
+        string username, string password)
+    {
+        var toReturn = new SqlConnectionStringBuilder { DataSource = server };
+        if (!string.IsNullOrWhiteSpace(username))
+        {
+            toReturn.UserID = username;
+            toReturn.Password = password;
+        }
+        else
+        {
+            toReturn.IntegratedSecurity = true;
+        }
+
+        if (!string.IsNullOrWhiteSpace(database))
+            toReturn.InitialCatalog = database;
+
+        return toReturn;
+    }
+
+    public static string GetDatabaseNameFrom(DbConnectionStringBuilder builder) =>
+        ((SqlConnectionStringBuilder)builder).InitialCatalog;
+
+    #endregion
 }

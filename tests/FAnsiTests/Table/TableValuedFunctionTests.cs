@@ -1,4 +1,3 @@
-using System.Linq;
 using FAnsi;
 using NUnit.Framework;
 
@@ -67,7 +66,8 @@ END";
 
         Assert.Multiple(() =>
         {
-            Assert.That(tvf.GetFullyQualifiedName(), Does.EndWith(".MyAwesomeFunction(@startNumber,@stopNumber,@name)"));
+            Assert.That(tvf.GetFullyQualifiedName(),
+                Does.EndWith(".MyAwesomeFunction(@startNumber,@stopNumber,@name)"));
 
             Assert.That(tvf.Exists());
         });
@@ -75,7 +75,5 @@ END";
         tvf.Drop();
 
         Assert.That(tvf.Exists(), Is.False);
-
-
     }
 }

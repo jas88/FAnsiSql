@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using System.Text;
 using FAnsi.Discovery;
 using FAnsi.Discovery.QuerySyntax;
@@ -11,26 +9,44 @@ namespace FAnsi.Implementations.MySql;
 public sealed class MySqlQuerySyntaxHelper : QuerySyntaxHelper
 {
     public static readonly MySqlQuerySyntaxHelper Instance = new();
+
+    private static readonly Dictionary<string, string> Functions = new()
+    {
+        { "left", "LEFT ( string , length)" },
+        { "right", "RIGHT ( string , length )" },
+        { "upper", "UPPER ( string )" },
+        { "substring", "SUBSTR ( str ,start , length ) " },
+        { "dateadd", "DATE_ADD (date, INTERVAL value unit)" },
+        { "datediff", "DATEDIFF ( date1 , date2)  " },
+        { "getdate", "now()" },
+        { "now", "now()" },
+        { "cast", "CAST ( value AS type )" },
+        { "convert", "CONVERT ( value, type ) " },
+        { "case", "CASE WHEN x=y THEN 'something' WHEN x=z THEN 'something2' ELSE 'something3' END" }
+    };
+
+    private MySqlQuerySyntaxHelper() : base(MySqlTypeTranslater.Instance, MySqlAggregateHelper.Instance,
+        MySqlUpdateHelper.Instance, DatabaseType.MySql) //no specific type translation required
+    {
+    }
+
     public override int MaximumDatabaseLength => 64;
     public override int MaximumTableLength => 64;
     public override int MaximumColumnLength => 64;
-
 
 
     public override string OpenQualifier => "`";
 
     public override string CloseQualifier => "`";
 
-    private MySqlQuerySyntaxHelper() : base(MySqlTypeTranslater.Instance, MySqlAggregateHelper.Instance, MySqlUpdateHelper.Instance, DatabaseType.MySql)//no specific type translation required
-    {
-    }
-
     public override bool SupportsEmbeddedParameters() => true;
 
-    public override string EnsureWrappedImpl(string databaseOrTableName) => $"`{GetRuntimeNameWithDoubledBackticks(databaseOrTableName)}`";
+    public override string EnsureWrappedImpl(string databaseOrTableName) =>
+        $"`{GetRuntimeNameWithDoubledBackticks(databaseOrTableName)}`";
 
     /// <summary>
-    /// Returns the runtime name of the string with all backticks escaped (but resulting string is not wrapped in backticks itself)
+    ///     Returns the runtime name of the string with all backticks escaped (but resulting string is not wrapped in backticks
+    ///     itself)
     /// </summary>
     /// <param name="s"></param>
     /// <returns></returns>
@@ -91,21 +107,6 @@ public sealed class MySqlQuerySyntaxHelper : QuerySyntaxHelper
     public override string GetAutoIncrementKeywordIfAny() => "AUTO_INCREMENT";
 
     public override Dictionary<string, string> GetSQLFunctionsDictionary() => Functions;
-
-    private static readonly Dictionary<string, string> Functions = new()
-    {
-        {"left", "LEFT ( string , length)"},
-        {"right", "RIGHT ( string , length )"},
-        {"upper", "UPPER ( string )"},
-        {"substring", "SUBSTR ( str ,start , length ) "},
-        {"dateadd", "DATE_ADD (date, INTERVAL value unit)"},
-        {"datediff", "DATEDIFF ( date1 , date2)  "},
-        {"getdate", "now()"},
-        {"now", "now()"},
-        {"cast", "CAST ( value AS type )"},
-        {"convert", "CONVERT ( value, type ) "},
-        {"case", "CASE WHEN x=y THEN 'something' WHEN x=z THEN 'something2' ELSE 'something3' END"}
-    };
 
     public override string HowDoWeAchieveMd5(string selectSql) => $"md5({selectSql})";
 }

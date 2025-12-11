@@ -1,16 +1,15 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using FAnsi.Connections;
 using FAnsi.Discovery.QuerySyntax;
 
 namespace FAnsi.Discovery;
 
 /// <summary>
-/// Cross database type reference to a Table valued function in a Database (actually currently only supported by Microsoft Sql Server).  For views see
-/// DiscoveredTable
+///     Cross database type reference to a Table valued function in a Database (actually currently only supported by
+///     Microsoft Sql Server).  For views see
+///     DiscoveredTable
 /// </summary>
-public sealed class DiscoveredTableValuedFunction(DiscoveredDatabase database,
+public sealed class DiscoveredTableValuedFunction(
+    DiscoveredDatabase database,
     string functionName,
     IQuerySyntaxHelper querySyntaxHelper,
     string? schema = null) : DiscoveredTable(database, functionName, querySyntaxHelper,
@@ -18,7 +17,8 @@ public sealed class DiscoveredTableValuedFunction(DiscoveredDatabase database,
 {
     public override bool Exists(IManagedTransaction? transaction = null)
     {
-        return Database.DiscoverTableValuedFunctions(transaction).Any(f => f.GetRuntimeName().Equals(GetRuntimeName(), StringComparison.Ordinal));
+        return Database.DiscoverTableValuedFunctions(transaction)
+            .Any(f => f.GetRuntimeName().Equals(GetRuntimeName(), StringComparison.Ordinal));
     }
 
     public override string GetRuntimeName() => QuerySyntaxHelper.GetRuntimeName(TableName);

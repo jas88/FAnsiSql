@@ -1,4 +1,3 @@
-using System;
 using System.Data;
 using System.Globalization;
 using FAnsi;
@@ -9,9 +8,9 @@ using TypeGuesser;
 namespace FAnsiTests.Table;
 
 /// <summary>
-/// Abstract base class for testing ColumnHelper operations: GetTopXSqlForColumn and GetAlterColumnToSql.
-/// These tests target uncovered functionality in all ColumnHelper implementations.
-/// CRITICAL: SQLite ColumnHelper is 0% coverage (8 lines, completely untested).
+///     Abstract base class for testing ColumnHelper operations: GetTopXSqlForColumn and GetAlterColumnToSql.
+///     These tests target uncovered functionality in all ColumnHelper implementations.
+///     CRITICAL: SQLite ColumnHelper is 0% coverage (8 lines, completely untested).
 /// </summary>
 internal abstract class ColumnHelperTestsBase : DatabaseTests
 {
@@ -118,10 +117,7 @@ internal abstract class ColumnHelperTestsBase : DatabaseTests
         using var dt = new DataTable();
         dt.Columns.Add("Id", typeof(int));
         dt.Columns.Add("Score", typeof(int));
-        for (var i = 1; i <= 10; i++)
-        {
-            dt.Rows.Add(i, i * 10);
-        }
+        for (var i = 1; i <= 10; i++) dt.Rows.Add(i, i * 10);
 
         var table = db.CreateTable("TopXIntTable", dt);
 
@@ -159,9 +155,18 @@ internal abstract class ColumnHelperTestsBase : DatabaseTests
         using var dt = new DataTable();
         dt.Columns.Add("Id", typeof(int));
         dt.Columns.Add("EventDate", typeof(DateTime));
-        dt.Rows.Add(1, type == DatabaseType.PostgreSql ? DateTime.SpecifyKind(new DateTime(2024, 1, 1), DateTimeKind.Utc) : new DateTime(2024, 1, 1));
-        dt.Rows.Add(2, type == DatabaseType.PostgreSql ? DateTime.SpecifyKind(new DateTime(2024, 2, 1), DateTimeKind.Utc) : new DateTime(2024, 2, 1));
-        dt.Rows.Add(3, type == DatabaseType.PostgreSql ? DateTime.SpecifyKind(new DateTime(2024, 3, 1), DateTimeKind.Utc) : new DateTime(2024, 3, 1));
+        dt.Rows.Add(1,
+            type == DatabaseType.PostgreSql
+                ? DateTime.SpecifyKind(new DateTime(2024, 1, 1), DateTimeKind.Utc)
+                : new DateTime(2024, 1, 1));
+        dt.Rows.Add(2,
+            type == DatabaseType.PostgreSql
+                ? DateTime.SpecifyKind(new DateTime(2024, 2, 1), DateTimeKind.Utc)
+                : new DateTime(2024, 2, 1));
+        dt.Rows.Add(3,
+            type == DatabaseType.PostgreSql
+                ? DateTime.SpecifyKind(new DateTime(2024, 3, 1), DateTimeKind.Utc)
+                : new DateTime(2024, 3, 1));
         dt.Rows.Add(4, DBNull.Value);
 
         var table = db.CreateTable("TopXDateTable", dt);
@@ -248,10 +253,7 @@ internal abstract class ColumnHelperTestsBase : DatabaseTests
             using var reader = cmd.ExecuteReader();
 
             var count = 0;
-            while (reader.Read())
-            {
-                count++;
-            }
+            while (reader.Read()) count++;
 
             Assert.That(count, Is.EqualTo(0), "Should return 0 rows when all values are NULL and discardNulls is true");
         }
@@ -267,10 +269,7 @@ internal abstract class ColumnHelperTestsBase : DatabaseTests
         using var dt = new DataTable();
         dt.Columns.Add("Id", typeof(int));
         dt.Columns.Add("Value", typeof(string));
-        for (var i = 1; i <= 5; i++)
-        {
-            dt.Rows.Add(i, $"Value{i}");
-        }
+        for (var i = 1; i <= 5; i++) dt.Rows.Add(i, $"Value{i}");
 
         var table = db.CreateTable("TopXLargeTable", dt);
 
@@ -287,10 +286,7 @@ internal abstract class ColumnHelperTestsBase : DatabaseTests
             using var reader = cmd.ExecuteReader();
 
             var count = 0;
-            while (reader.Read())
-            {
-                count++;
-            }
+            while (reader.Read()) count++;
 
             Assert.That(count, Is.EqualTo(5), "Should return all 5 rows even when requesting 100");
         }
@@ -313,7 +309,7 @@ internal abstract class ColumnHelperTestsBase : DatabaseTests
 
         try
         {
-            table.Insert(new System.Collections.Generic.Dictionary<string, object>
+            table.Insert(new Dictionary<string, object>
             {
                 { "Id", 1 },
                 { colName, "Test" }
@@ -392,7 +388,7 @@ internal abstract class ColumnHelperTestsBase : DatabaseTests
             Assert.That(column.AllowNulls, Is.True);
 
             // Insert a non-null value so we can change to NOT NULL
-            table.Insert(new System.Collections.Generic.Dictionary<string, object>
+            table.Insert(new Dictionary<string, object>
             {
                 { "Id", 1 },
                 { "Score", 100 }
@@ -429,7 +425,7 @@ internal abstract class ColumnHelperTestsBase : DatabaseTests
 
         try
         {
-            table.Insert(new System.Collections.Generic.Dictionary<string, object>
+            table.Insert(new Dictionary<string, object>
             {
                 { "Id", 1 },
                 { "Score", 100 }
@@ -468,7 +464,7 @@ internal abstract class ColumnHelperTestsBase : DatabaseTests
 
         try
         {
-            table.Insert(new System.Collections.Generic.Dictionary<string, object>
+            table.Insert(new Dictionary<string, object>
             {
                 { "Id", 1 },
                 { "Value", 42 }
@@ -522,7 +518,7 @@ internal abstract class ColumnHelperTestsBase : DatabaseTests
 
         try
         {
-            table.Insert(new System.Collections.Generic.Dictionary<string, object>
+            table.Insert(new Dictionary<string, object>
             {
                 { "Id", 1 },
                 { "IsActive", true }
@@ -563,7 +559,7 @@ internal abstract class ColumnHelperTestsBase : DatabaseTests
 
         try
         {
-            table.Insert(new System.Collections.Generic.Dictionary<string, object>
+            table.Insert(new Dictionary<string, object>
             {
                 { "Id", 1 },
                 { "Code", "XYZ" }
@@ -604,10 +600,9 @@ internal abstract class ColumnHelperTestsBase : DatabaseTests
         {
             var column = table.DiscoverColumn("Name");
 
-            Assert.Throws<NotSupportedException>(() =>
-            {
-                column.Helper.GetAlterColumnToSql(column, "varchar(100)", true);
-            }, "SQLite should throw NotSupportedException for ALTER COLUMN");
+            Assert.Throws<NotSupportedException>(
+                () => { column.Helper.GetAlterColumnToSql(column, "varchar(100)", true); },
+                "SQLite should throw NotSupportedException for ALTER COLUMN");
         }
         finally
         {
@@ -626,10 +621,15 @@ internal abstract class ColumnHelperTestsBase : DatabaseTests
 
         try
         {
-            table.Insert(new System.Collections.Generic.Dictionary<string, object>
+            table.Insert(new Dictionary<string, object>
             {
                 { "Id", 1 },
-                { "CreatedDate", type == DatabaseType.PostgreSql ? DateTime.SpecifyKind(new DateTime(2024, 1, 1), DateTimeKind.Utc) : new DateTime(2024, 1, 1) }
+                {
+                    "CreatedDate",
+                    type == DatabaseType.PostgreSql
+                        ? DateTime.SpecifyKind(new DateTime(2024, 1, 1), DateTimeKind.Utc)
+                        : new DateTime(2024, 1, 1)
+                }
             });
 
             var column = table.DiscoverColumn("CreatedDate");
@@ -667,7 +667,7 @@ internal abstract class ColumnHelperTestsBase : DatabaseTests
         try
         {
             const int testValue = 12345;
-            table.Insert(new System.Collections.Generic.Dictionary<string, object>
+            table.Insert(new Dictionary<string, object>
             {
                 { "Id", 1 },
                 { "Amount", testValue }
@@ -690,10 +690,14 @@ internal abstract class ColumnHelperTestsBase : DatabaseTests
                 con.Open();
                 var deleteSql = $"DELETE FROM {table.GetFullyQualifiedName()}";
                 using (var deleteCmd = db.Server.GetCommand(deleteSql, con))
+                {
                     deleteCmd.ExecuteNonQuery();
+                }
 
                 using (var cmd = db.Server.GetCommand(alterSql, con))
+                {
                     cmd.ExecuteNonQuery();
+                }
 
                 // For Oracle, just verify the column was altered successfully
                 var alteredColumn = table.DiscoverColumn("Amount");
@@ -714,7 +718,8 @@ internal abstract class ColumnHelperTestsBase : DatabaseTests
             {
                 con.Open();
                 var syntaxHelper = table.GetQuerySyntaxHelper();
-                var selectSql = $"SELECT {syntaxHelper.EnsureWrapped("Amount")} FROM {table.GetFullyQualifiedName()} WHERE {syntaxHelper.EnsureWrapped("Id")} = 1";
+                var selectSql =
+                    $"SELECT {syntaxHelper.EnsureWrapped("Amount")} FROM {table.GetFullyQualifiedName()} WHERE {syntaxHelper.EnsureWrapped("Id")} = 1";
                 using var cmd = db.Server.GetCommand(selectSql, con);
                 var result = cmd.ExecuteScalar();
 
@@ -743,7 +748,7 @@ internal abstract class ColumnHelperTestsBase : DatabaseTests
 
         try
         {
-            table.Insert(new System.Collections.Generic.Dictionary<string, object>
+            table.Insert(new Dictionary<string, object>
             {
                 { "Id", 1 },
                 { "Value", "Test" }
@@ -793,7 +798,7 @@ internal abstract class ColumnHelperTestsBase : DatabaseTests
 
         try
         {
-            table.Insert(new System.Collections.Generic.Dictionary<string, object>
+            table.Insert(new Dictionary<string, object>
             {
                 { "Id", 1 },
                 { "Value", 123.45m }

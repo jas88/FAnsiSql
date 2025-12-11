@@ -1,4 +1,3 @@
-using System;
 using System.Data;
 using FAnsi;
 using FAnsi.Discovery;
@@ -8,7 +7,8 @@ namespace FAnsiTests;
 
 internal sealed class TestExamples : DatabaseTests
 {
-    [Ignore("Test only works when the hard coded connection strings pass,  this test is used to build clear examples in the documentation")]
+    [Ignore(
+        "Test only works when the hard coded connection strings pass,  this test is used to build clear examples in the documentation")]
     [Test]
     public void Simple_Example()
     {
@@ -46,7 +46,8 @@ internal sealed class TestExamples : DatabaseTests
     }
 
     [Test]
-    [Ignore("Test only works when the hard coded connection strings pass,  this test is used to build clear examples in the documentation")]
+    [Ignore(
+        "Test only works when the hard coded connection strings pass,  this test is used to build clear examples in the documentation")]
     public void Example_TableCreation()
     {
         using var dt = new DataTable();
@@ -74,7 +75,8 @@ internal sealed class TestExamples : DatabaseTests
         //Table has 2 rows in it
         TestContext.Out.WriteLine("Table {0} has {1} rows", table.GetFullyQualifiedName(), table.GetRowCount());
         TestContext.Out.WriteLine("Column Name is of type {0}", table.DiscoverColumn("Name").DataType?.SQLType);
-        TestContext.Out.WriteLine("Column DateOfBirth is of type {0}", table.DiscoverColumn("DateOfBirth").DataType?.SQLType);
+        TestContext.Out.WriteLine("Column DateOfBirth is of type {0}",
+            table.DiscoverColumn("DateOfBirth").DataType?.SQLType);
 
         using var con = server.GetConnection();
         con.Open();

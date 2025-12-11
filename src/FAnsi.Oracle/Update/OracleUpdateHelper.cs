@@ -1,7 +1,4 @@
-using System;
-using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
 using FAnsi.Discovery;
 using FAnsi.Discovery.QuerySyntax;
 using FAnsi.Discovery.QuerySyntax.Update;
@@ -11,10 +8,13 @@ namespace FAnsi.Implementations.Oracle.Update;
 public sealed class OracleUpdateHelper : UpdateHelper
 {
     public static readonly OracleUpdateHelper Instance = new();
-    private OracleUpdateHelper() { }
+
+    private OracleUpdateHelper()
+    {
+    }
+
     protected override string BuildUpdateImpl(DiscoveredTable table1, DiscoveredTable table2, List<CustomLine> lines)
     {
-
         // This implementation is based on:
         // https://stackoverflow.com/a/32748797/4824531
 
@@ -29,7 +29,8 @@ WHEN MATCHED THEN UPDATE SET
 t1.name = t2.name,
 t1.desc = t2.desc;*/
 
-        var whereConditions = lines.Where(static l => l.LocationToInsert == QueryComponent.WHERE).Select(static c => c.Text).ToList();
+        var whereConditions = lines.Where(static l => l.LocationToInsert == QueryComponent.WHERE)
+            .Select(static c => c.Text).ToList();
         var whereClause = whereConditions.Count != 0
             ? $"{Environment.NewLine}WHERE {string.Join(" AND ", whereConditions)}"
             : string.Empty;
@@ -46,10 +47,12 @@ t1.desc = t2.desc;*/
             WHEN MATCHED THEN UPDATE SET
                 {0}{4}
             """,
-            string.Join($", {Environment.NewLine}", lines.Where(static l => l.LocationToInsert == QueryComponent.SET).Select(static c => c.Text)),
+            string.Join($", {Environment.NewLine}",
+                lines.Where(static l => l.LocationToInsert == QueryComponent.SET).Select(static c => c.Text)),
             table1.GetFullyQualifiedName(),
             table2.GetFullyQualifiedName(),
-            string.Join(" AND ", lines.Where(static l => l.LocationToInsert == QueryComponent.JoinInfoJoin).Select(static c => c.Text)),
+            string.Join(" AND ",
+                lines.Where(static l => l.LocationToInsert == QueryComponent.JoinInfoJoin).Select(static c => c.Text)),
             whereClause);
     }
 }

@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using FAnsi;
 using FAnsi.Discovery;
 using FAnsi.Discovery.TableCreation;
@@ -14,7 +13,7 @@ internal sealed class DataTypeAdjusterTests : DatabaseTests
     {
         var tbl = GetTestDatabase(type).CreateTable("MyTable",
         [
-            new DatabaseColumnRequest("Name", new DatabaseTypeRequest(typeof (string), 10))
+            new DatabaseColumnRequest("Name", new DatabaseTypeRequest(typeof(string), 10))
         ], null, new DataTypeAdjusterTestsPadder());
 
         Assert.That(tbl.DiscoverColumn("Name").DataType?.GetLengthIfString(), Is.EqualTo(12));

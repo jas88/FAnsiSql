@@ -1,8 +1,5 @@
-using System;
-using System.Collections.Generic;
 using System.Data;
 using System.Globalization;
-using System.Linq;
 using FAnsi;
 using FAnsi.Discovery.QuerySyntax;
 using FAnsi.Discovery.QuerySyntax.Aggregation;
@@ -11,9 +8,9 @@ using NUnit.Framework;
 namespace FAnsiTests.Aggregation;
 
 /// <summary>
-/// Advanced tests for AggregateHelper focusing on routing logic, axis wrapping, and edge cases.
-/// These tests verify the BuildAggregate method's decision-making for basic, axis, pivot, and
-/// pivot+axis aggregates.
+///     Advanced tests for AggregateHelper focusing on routing logic, axis wrapping, and edge cases.
+///     These tests verify the BuildAggregate method's decision-making for basic, axis, pivot, and
+///     pivot+axis aggregates.
 /// </summary>
 internal abstract class AggregateHelperAdvancedTestsBase : AggregationTests
 {
@@ -44,6 +41,7 @@ internal abstract class AggregateHelperAdvancedTestsBase : AggregationTests
         var result = Convert.ToInt32(cmd.ExecuteScalar(), CultureInfo.InvariantCulture);
         Assert.That(result, Is.EqualTo(14));
     }
+
     protected void Test_BuildAxisAggregate_DayIncrement(DatabaseType type)
     {
         var tbl = GetTestTable(type);
@@ -81,6 +79,7 @@ internal abstract class AggregateHelperAdvancedTestsBase : AggregationTests
         // Should have 5 rows (2001-01-01 to 2001-01-05 inclusive)
         Assert.That(dt.Rows, Has.Count.EqualTo(5));
     }
+
     protected void Test_BuildAxisAggregate_MonthIncrement(DatabaseType type)
     {
         var tbl = GetTestTable(type);
@@ -118,6 +117,7 @@ internal abstract class AggregateHelperAdvancedTestsBase : AggregationTests
         // Should have 12 rows (Jan to Dec 2001)
         Assert.That(dt.Rows, Has.Count.EqualTo(12));
     }
+
     protected void Test_AxisAggregate_VerifyWrappedColumn(DatabaseType type)
     {
         var tbl = GetTestTable(type);
@@ -160,6 +160,7 @@ internal abstract class AggregateHelperAdvancedTestsBase : AggregationTests
 
         Assert.That(dt.Rows, Has.Count.EqualTo(3));
     }
+
     protected void Test_GroupByWithOrderByDesc(DatabaseType type)
     {
         var tbl = GetTestTable(type);
@@ -195,6 +196,7 @@ internal abstract class AggregateHelperAdvancedTestsBase : AggregationTests
         var firstSum = Convert.ToInt32(dt.Rows[0][0], CultureInfo.InvariantCulture);
         Assert.That(firstSum, Is.GreaterThanOrEqualTo(100)); // T or E&, %a' mp;E
     }
+
     protected void Test_MultipleAggregatesInSameQuery(DatabaseType type)
     {
         var tbl = GetTestTable(type);
@@ -205,7 +207,7 @@ internal abstract class AggregateHelperAdvancedTestsBase : AggregationTests
         var lines = new List<CustomLine>
         {
             new("SELECT", QueryComponent.SELECT),
-            new($"COUNT(*) as RecordCount,", QueryComponent.QueryTimeColumn)
+            new("COUNT(*) as RecordCount,", QueryComponent.QueryTimeColumn)
                 { Role = CustomLineRole.CountFunction },
             new($"SUM({numberCol.GetFullyQualifiedName()}) as Total,", QueryComponent.QueryTimeColumn),
             new($"AVG({numberCol.GetFullyQualifiedName()}) as Average,", QueryComponent.QueryTimeColumn),
@@ -247,6 +249,7 @@ internal abstract class AggregateHelperAdvancedTestsBase : AggregationTests
             Assert.That(min, Is.LessThanOrEqualTo(max));
         }
     }
+
     protected void Test_HavingWithMultipleConditions(DatabaseType type)
     {
         var tbl = GetTestTable(type);
@@ -257,7 +260,7 @@ internal abstract class AggregateHelperAdvancedTestsBase : AggregationTests
         var lines = new List<CustomLine>
         {
             new("SELECT", QueryComponent.SELECT),
-            new($"COUNT(*) as RecordCount,", QueryComponent.QueryTimeColumn)
+            new("COUNT(*) as RecordCount,", QueryComponent.QueryTimeColumn)
                 { Role = CustomLineRole.CountFunction },
             new($"SUM({numberCol.GetFullyQualifiedName()}) as Total,", QueryComponent.QueryTimeColumn),
             new(category.GetFullyQualifiedName(), QueryComponent.QueryTimeColumn),
@@ -291,6 +294,7 @@ internal abstract class AggregateHelperAdvancedTestsBase : AggregationTests
             Assert.That(sum, Is.GreaterThan(50));
         }
     }
+
     protected void Test_EmptyResult_WithAxis(DatabaseType type)
     {
         var tbl = GetTestTable(type);
@@ -336,6 +340,7 @@ internal abstract class AggregateHelperAdvancedTestsBase : AggregationTests
             Assert.That(countValue, Is.EqualTo(DBNull.Value).Or.EqualTo(0));
         }
     }
+
     protected void Test_AggregateWithComplexExpression(DatabaseType type)
     {
         var tbl = GetTestTable(type);
@@ -370,18 +375,18 @@ internal abstract class AggregateHelperAdvancedTestsBase : AggregationTests
         // Find category T and verify the sum is doubled
         DataRow? rowT = null;
         foreach (DataRow r in dt.Rows)
-        {
             if (r[1].ToString() == "T")
             {
                 rowT = r;
                 break;
             }
-        }
+
         Assert.That(rowT, Is.Not.Null);
         var doubledSum = Convert.ToInt32(rowT![0], CultureInfo.InvariantCulture);
         // T sum is 139, doubled is 278
         Assert.That(doubledSum, Is.EqualTo(278));
     }
+
     protected void Test_GroupByWithNullHandling(DatabaseType type)
     {
         var tbl = GetTestTable(type);
@@ -413,16 +418,16 @@ internal abstract class AggregateHelperAdvancedTestsBase : AggregationTests
         var nullRowCount = 0;
         DataRow? firstNullRow = null;
         foreach (DataRow r in dt.Rows)
-        {
             if (r[1] == DBNull.Value)
             {
                 nullRowCount++;
                 firstNullRow ??= r;
             }
-        }
+
         Assert.That(nullRowCount, Is.EqualTo(1));
         Assert.That(Convert.ToInt32(firstNullRow![0], CultureInfo.InvariantCulture), Is.EqualTo(1));
     }
+
     protected void Test_AggregateWithCaseExpression(DatabaseType type)
     {
         var tbl = GetTestTable(type);
@@ -449,6 +454,7 @@ internal abstract class AggregateHelperAdvancedTestsBase : AggregationTests
         // Count values > 30: 49, 31, 37, 41, 59, 47, 53 = 7 values
         Assert.That(result, Is.EqualTo(7));
     }
+
     protected void Test_GetDatePartOfColumn_AllIncrements_Consistency(DatabaseType type)
     {
         var tbl = GetTestTable(type);
@@ -474,6 +480,7 @@ internal abstract class AggregateHelperAdvancedTestsBase : AggregationTests
                 $"Result for {increment} should wrap the column name");
         }
     }
+
     protected void Test_AggregateWithJoin(DatabaseType type)
     {
         // This test verifies aggregation works with explicit joins
@@ -490,7 +497,7 @@ internal abstract class AggregateHelperAdvancedTestsBase : AggregationTests
         var lines = new List<CustomLine>
         {
             new("SELECT", QueryComponent.SELECT),
-            new($"COUNT(*) as Total,", QueryComponent.QueryTimeColumn) { Role = CustomLineRole.CountFunction },
+            new("COUNT(*) as Total,", QueryComponent.QueryTimeColumn) { Role = CustomLineRole.CountFunction },
             new(t1Category, QueryComponent.QueryTimeColumn),
             new($"FROM {tbl.GetFullyQualifiedName()} {syntax.EnsureWrapped(t1Alias)}", QueryComponent.FROM),
             new("JOIN", QueryComponent.JoinInfoJoin),

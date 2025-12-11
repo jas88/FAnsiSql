@@ -1,10 +1,9 @@
-using System;
-using FAnsi;
-using FAnsi.Implementation;
-using NUnit.Framework;
 using System.Data;
 using System.Globalization;
 using System.Text;
+using FAnsi;
+using FAnsi.Implementation;
+using NUnit.Framework;
 using TypeGuesser;
 
 namespace FAnsiTests.Parameters;
@@ -17,9 +16,11 @@ internal sealed class ParameterTests : DatabaseTests
         var syntax = ImplementationManager.GetImplementation(type).GetQuerySyntaxHelper();
 
         if (syntax.SupportsEmbeddedParameters())
-            Assert.That(syntax.GetParameterDeclaration("@bob", new DatabaseTypeRequest(typeof(string), 10)), Is.Not.Empty);
+            Assert.That(syntax.GetParameterDeclaration("@bob", new DatabaseTypeRequest(typeof(string), 10)),
+                Is.Not.Empty);
         else
-            Assert.Throws<NotSupportedException>(() => syntax.GetParameterDeclaration("@bob", new DatabaseTypeRequest(typeof(string), 10)));
+            Assert.Throws<NotSupportedException>(() =>
+                syntax.GetParameterDeclaration("@bob", new DatabaseTypeRequest(typeof(string), 10)));
     }
 
     //[TestCase(DatabaseType.Oracle)]
@@ -48,7 +49,8 @@ internal sealed class ParameterTests : DatabaseTests
         var sb = new StringBuilder();
 
         //declare the variable
-        sb.AppendLine(tbl.GetQuerySyntaxHelper().GetParameterDeclaration("@bob", new DatabaseTypeRequest(typeof(string), 10)));
+        sb.AppendLine(tbl.GetQuerySyntaxHelper()
+            .GetParameterDeclaration("@bob", new DatabaseTypeRequest(typeof(string), 10)));
 
         sb.AppendLine("SET @bob='armag';");
         //set the variable

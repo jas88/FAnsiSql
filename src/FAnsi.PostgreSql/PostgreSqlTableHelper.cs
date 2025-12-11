@@ -1,10 +1,6 @@
-using System;
-using System.Collections.Generic;
-using System.Configuration.Internal;
 using System.Data;
 using System.Data.Common;
 using System.Globalization;
-using System.Linq;
 using System.Text;
 using FAnsi.Connections;
 using FAnsi.Discovery;
@@ -19,19 +15,24 @@ public sealed class PostgreSqlTableHelper : DiscoveredTableHelper
 {
     public static readonly PostgreSqlTableHelper Instance = new();
 
-    private static readonly CompositeFormat FormatDropIndexFailed = CompositeFormat.Parse(FAnsiStrings.DiscoveredTableHelper_DropIndex_Failed);
+    private static readonly CompositeFormat FormatDropIndexFailed =
+        CompositeFormat.Parse(FAnsiStrings.DiscoveredTableHelper_DropIndex_Failed);
 
     private PostgreSqlTableHelper()
     {
     }
 
-    public override string GetTopXSqlForTable(IHasFullyQualifiedNameToo table, int topX) => $"SELECT * FROM {table.GetFullyQualifiedName()} FETCH FIRST {topX} ROWS ONLY";
+    public override string GetTopXSqlForTable(IHasFullyQualifiedNameToo table, int topX) =>
+        $"SELECT * FROM {table.GetFullyQualifiedName()} FETCH FIRST {topX} ROWS ONLY";
 
-    public override IEnumerable<DiscoveredColumn> DiscoverColumns(DiscoveredTable discoveredTable, IManagedConnection connection, string database)
+    public override IEnumerable<DiscoveredColumn> DiscoverColumns(DiscoveredTable discoveredTable,
+        IManagedConnection connection, string database)
     {
         var pks =
             //don't bother looking for pks if it is a table valued function
-            discoveredTable is DiscoveredTableValuedFunction ? null : ListPrimaryKeys(connection, discoveredTable).ToHashSet();
+            discoveredTable is DiscoveredTableValuedFunction
+                ? null
+                : ListPrimaryKeys(connection, discoveredTable).ToHashSet();
 
         const string sqlColumns = """
                                   SELECT *
@@ -49,7 +50,9 @@ public sealed class PostgreSqlTableHelper : DiscoveredTableHelper
 
         var p2 = cmd.CreateParameter();
         p2.ParameterName = "@schemaName";
-        p2.Value = string.IsNullOrWhiteSpace(discoveredTable.Schema) ? PostgreSqlSyntaxHelper.DefaultPostgresSchema : discoveredTable.Schema;
+        p2.Value = string.IsNullOrWhiteSpace(discoveredTable.Schema)
+            ? PostgreSqlSyntaxHelper.DefaultPostgresSchema
+            : discoveredTable.Schema;
         cmd.Parameters.Add(p2);
 
 
@@ -108,7 +111,7 @@ public sealed class PostgreSqlTableHelper : DiscoveredTableHelper
     }
 
     /// <summary>
-    /// Checks if the table exists using the provided connection.
+    ///     Checks if the table exists using the provided connection.
     /// </summary>
     /// <param name="table">The table to check</param>
     /// <param name="connection">The managed connection to use</param>
@@ -122,19 +125,19 @@ public sealed class PostgreSqlTableHelper : DiscoveredTableHelper
         var relKind = table.TableType switch
         {
             TableType.Table => "'r'", // r = ordinary table
-            TableType.View => "'v'",  // v = view
+            TableType.View => "'v'", // v = view
             _ => "'r', 'v'" // For unknown types, check both
         };
 
         var sql = $"""
-            SELECT EXISTS (
-                SELECT 1 FROM pg_catalog.pg_class c
-                INNER JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
-                WHERE c.relname = @tableName
-                AND n.nspname = @schemaName
-                AND c.relkind IN ({relKind})
-            )
-            """;
+                   SELECT EXISTS (
+                       SELECT 1 FROM pg_catalog.pg_class c
+                       INNER JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+                       WHERE c.relname = @tableName
+                       AND n.nspname = @schemaName
+                       AND c.relkind IN ({relKind})
+                   )
+                   """;
 
         using var cmd = table.GetCommand(sql, connection.Connection, connection.Transaction);
 
@@ -145,7 +148,9 @@ public sealed class PostgreSqlTableHelper : DiscoveredTableHelper
 
         var p2 = cmd.CreateParameter();
         p2.ParameterName = "@schemaName";
-        p2.Value = string.IsNullOrWhiteSpace(table.Schema) ? PostgreSqlSyntaxHelper.DefaultPostgresSchema : table.Schema;
+        p2.Value = string.IsNullOrWhiteSpace(table.Schema)
+            ? PostgreSqlSyntaxHelper.DefaultPostgresSchema
+            : table.Schema;
         cmd.Parameters.Add(p2);
 
         var result = cmd.ExecuteScalar();
@@ -160,7 +165,7 @@ public sealed class PostgreSqlTableHelper : DiscoveredTableHelper
     }
 
     /// <summary>
-    /// Checks if the table has a primary key using the provided connection.
+    ///     Checks if the table has a primary key using the provided connection.
     /// </summary>
     /// <param name="table">The table to check</param>
     /// <param name="connection">The managed connection to use</param>
@@ -168,15 +173,15 @@ public sealed class PostgreSqlTableHelper : DiscoveredTableHelper
     public override bool HasPrimaryKey(DiscoveredTable table, IManagedConnection connection)
     {
         const string sql = """
-            SELECT EXISTS (
-                SELECT 1 FROM pg_catalog.pg_constraint con
-                INNER JOIN pg_catalog.pg_class rel ON con.conrelid = rel.oid
-                INNER JOIN pg_catalog.pg_namespace nsp ON nsp.oid = rel.relnamespace
-                WHERE con.contype = 'p'
-                AND rel.relname = @tableName
-                AND nsp.nspname = @schemaName
-            )
-            """;
+                           SELECT EXISTS (
+                               SELECT 1 FROM pg_catalog.pg_constraint con
+                               INNER JOIN pg_catalog.pg_class rel ON con.conrelid = rel.oid
+                               INNER JOIN pg_catalog.pg_namespace nsp ON nsp.oid = rel.relnamespace
+                               WHERE con.contype = 'p'
+                               AND rel.relname = @tableName
+                               AND nsp.nspname = @schemaName
+                           )
+                           """;
 
         using var cmd = table.GetCommand(sql, connection.Connection, connection.Transaction);
 
@@ -187,14 +192,17 @@ public sealed class PostgreSqlTableHelper : DiscoveredTableHelper
 
         var p2 = cmd.CreateParameter();
         p2.ParameterName = "@schemaName";
-        p2.Value = string.IsNullOrWhiteSpace(table.Schema) ? PostgreSqlSyntaxHelper.DefaultPostgresSchema : table.Schema;
+        p2.Value = string.IsNullOrWhiteSpace(table.Schema)
+            ? PostgreSqlSyntaxHelper.DefaultPostgresSchema
+            : table.Schema;
         cmd.Parameters.Add(p2);
 
         var result = cmd.ExecuteScalar();
         return Convert.ToBoolean(result, CultureInfo.InvariantCulture);
     }
 
-    [Obsolete("Prefer using HasPrimaryKey(DiscoveredTable, IManagedConnection) to reuse connections and improve performance")]
+    [Obsolete(
+        "Prefer using HasPrimaryKey(DiscoveredTable, IManagedConnection) to reuse connections and improve performance")]
     public override bool HasPrimaryKey(DiscoveredTable table, IManagedTransaction? transaction = null)
     {
         using var connection = table.Database.Server.GetManagedConnection(transaction);
@@ -202,7 +210,8 @@ public sealed class PostgreSqlTableHelper : DiscoveredTableHelper
     }
 
     /// <summary>
-    /// Gets the auto-increment column for the table using a database-specific SQL query (90-99% faster than discovering all columns).
+    ///     Gets the auto-increment column for the table using a database-specific SQL query (90-99% faster than discovering
+    ///     all columns).
     /// </summary>
     /// <param name="table">The table to check</param>
     /// <param name="connection">The managed connection to use</param>
@@ -228,7 +237,9 @@ public sealed class PostgreSqlTableHelper : DiscoveredTableHelper
 
         var p2 = cmd.CreateParameter();
         p2.ParameterName = "@schemaName";
-        p2.Value = string.IsNullOrWhiteSpace(table.Schema) ? PostgreSqlSyntaxHelper.DefaultPostgresSchema : table.Schema;
+        p2.Value = string.IsNullOrWhiteSpace(table.Schema)
+            ? PostgreSqlSyntaxHelper.DefaultPostgresSchema
+            : table.Schema;
         cmd.Parameters.Add(p2);
 
         using var r = cmd.ExecuteReader();
@@ -250,7 +261,8 @@ public sealed class PostgreSqlTableHelper : DiscoveredTableHelper
 
         if (HasPrecisionAndScale(columnType ?? string.Empty))
             lengthQualifier = $"({r["numeric_precision"]},{r["numeric_scale"]})";
-        else if (r["character_maximum_length"] != DBNull.Value) lengthQualifier = $"({Convert.ToInt32(r["character_maximum_length"], CultureInfo.InvariantCulture)})";
+        else if (r["character_maximum_length"] != DBNull.Value)
+            lengthQualifier = $"({Convert.ToInt32(r["character_maximum_length"], CultureInfo.InvariantCulture)})";
 
         return columnType + lengthQualifier;
     }
@@ -260,7 +272,6 @@ public sealed class PostgreSqlTableHelper : DiscoveredTableHelper
         using var connection = args.GetManagedConnection(table);
         try
         {
-
             var sql =
                 $"DROP INDEX {indexName}";
 
@@ -269,7 +280,8 @@ public sealed class PostgreSqlTableHelper : DiscoveredTableHelper
         }
         catch (DbException e)
         {
-            throw new AlterFailedException(string.Format(CultureInfo.InvariantCulture, FormatDropIndexFailed, table), e);
+            throw new AlterFailedException(string.Format(CultureInfo.InvariantCulture, FormatDropIndexFailed, table),
+                e);
         }
     }
 
@@ -292,7 +304,8 @@ public sealed class PostgreSqlTableHelper : DiscoveredTableHelper
         DiscoveredTableValuedFunction discoveredTableValuedFunction, DbTransaction? transaction) =>
         throw new NotImplementedException();
 
-    public override IBulkCopy BeginBulkInsert(DiscoveredTable discoveredTable, IManagedConnection connection, CultureInfo culture) => new PostgreSqlBulkCopy(discoveredTable, connection, culture);
+    public override IBulkCopy BeginBulkInsert(DiscoveredTable discoveredTable, IManagedConnection connection,
+        CultureInfo culture) => new PostgreSqlBulkCopy(discoveredTable, connection, culture);
 
     public override int ExecuteInsertReturningIdentity(DiscoveredTable discoveredTable, DbCommand cmd,
         IManagedTransaction? transaction = null)
@@ -347,13 +360,17 @@ public sealed class PostgreSqlTableHelper : DiscoveredTableHelper
 
             var p2 = cmd.CreateParameter();
             p2.ParameterName = "@schema";
-            p2.Value = string.IsNullOrWhiteSpace(table.Schema) ? PostgreSqlSyntaxHelper.DefaultPostgresSchema : table.Schema;
+            p2.Value = string.IsNullOrWhiteSpace(table.Schema)
+                ? PostgreSqlSyntaxHelper.DefaultPostgresSchema
+                : table.Schema;
             cmd.Parameters.Add(p2);
 
             //fill data table to avoid multiple active readers
             using var dt = new DataTable();
             using (var da = new NpgsqlDataAdapter((NpgsqlCommand)cmd))
+            {
                 da.Fill(dt);
+            }
 
             foreach (DataRow r in dt.Rows)
             {

@@ -8,15 +8,22 @@ namespace FAnsi.Implementations.Oracle;
 public sealed class OracleColumnHelper : IDiscoveredColumnHelper
 {
     public static readonly OracleColumnHelper Instance = new();
-    private OracleColumnHelper() { }
-    public string GetTopXSqlForColumn(IHasRuntimeName database, IHasFullyQualifiedNameToo table, IHasRuntimeName column, int topX, bool discardNulls)
+
+    private OracleColumnHelper()
+    {
+    }
+
+    public string GetTopXSqlForColumn(IHasRuntimeName database, IHasFullyQualifiedNameToo table, IHasRuntimeName column,
+        int topX, bool discardNulls)
     {
         var syntax = OracleQuerySyntaxHelper.Instance;
 
-        var sql = new StringBuilder($"SELECT {syntax.EnsureWrapped(column.GetRuntimeName())} FROM {table.GetFullyQualifiedName()}");
+        var sql = new StringBuilder(
+            $"SELECT {syntax.EnsureWrapped(column.GetRuntimeName())} FROM {table.GetFullyQualifiedName()}");
 
         if (discardNulls)
-            sql.Append(CultureInfo.InvariantCulture, $" WHERE {syntax.EnsureWrapped(column.GetRuntimeName())} IS NOT NULL");
+            sql.Append(CultureInfo.InvariantCulture,
+                $" WHERE {syntax.EnsureWrapped(column.GetRuntimeName())} IS NOT NULL");
 
         sql.Append(CultureInfo.InvariantCulture, $" OFFSET 0 ROWS FETCH NEXT {topX} ROWS ONLY");
         return sql.ToString();

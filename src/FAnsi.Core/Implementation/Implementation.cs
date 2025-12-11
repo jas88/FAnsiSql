@@ -1,4 +1,3 @@
-using System;
 using System.Data.Common;
 using FAnsi.Discovery;
 using FAnsi.Discovery.QuerySyntax;
@@ -9,17 +8,17 @@ public abstract class Implementation<T>(DatabaseType type, Type connectionType) 
     where T : DbConnectionStringBuilder, new()
 {
     /// <summary>
-    /// The database type this implementation supports
+    ///     The database type this implementation supports
     /// </summary>
     public DatabaseType SupportedDatabaseType => type;
 
     /// <summary>
-    /// The connection string builder type this implementation supports
+    ///     The connection string builder type this implementation supports
     /// </summary>
     public Type ConnectionStringBuilderType => typeof(T);
 
     /// <summary>
-    /// The connection type this implementation supports
+    ///     The connection type this implementation supports
     /// </summary>
     public Type ConnectionType => connectionType;
 

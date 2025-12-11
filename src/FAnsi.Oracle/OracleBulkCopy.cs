@@ -1,8 +1,5 @@
-using System;
-using System.Collections.Generic;
 using System.Data;
 using System.Globalization;
-using System.Linq;
 using System.Text;
 using FAnsi.Connections;
 using FAnsi.Discovery;
@@ -10,12 +7,14 @@ using Oracle.ManagedDataAccess.Client;
 
 namespace FAnsi.Implementations.Oracle;
 
-internal sealed class OracleBulkCopy(DiscoveredTable targetTable, IManagedConnection connection, CultureInfo culture) : BulkCopy(targetTable, connection, culture)
+internal sealed class OracleBulkCopy(DiscoveredTable targetTable, IManagedConnection connection, CultureInfo culture)
+    : BulkCopy(targetTable, connection, culture)
 {
+    private static readonly CompositeFormat
+        FormatInsertSql = CompositeFormat.Parse("INSERT INTO {0}({1}) VALUES ({2})");
+
     private readonly DiscoveredServer _server = targetTable.Database.Server;
     private bool _disposed;
-
-    private static readonly CompositeFormat FormatInsertSql = CompositeFormat.Parse("INSERT INTO {0}({1}) VALUES ({2})");
 
     public override int UploadImpl(DataTable dt)
     {
@@ -29,7 +28,8 @@ internal sealed class OracleBulkCopy(DiscoveredTable targetTable, IManagedConnec
         var tt = syntaxHelper.TypeTranslater;
 
         //if the column name is a reserved keyword e.g. "Comment" we need to give it a new name
-        var parameterNames = syntaxHelper.GetParameterNamesFor(dt.Columns.Cast<DataColumn>().ToArray(), static c => c.ColumnName);
+        var parameterNames =
+            syntaxHelper.GetParameterNamesFor(dt.Columns.Cast<DataColumn>().ToArray(), static c => c.ColumnName);
 
         var affectedRows = 0;
 
@@ -62,14 +62,12 @@ internal sealed class OracleBulkCopy(DiscoveredTable targetTable, IManagedConnec
                     dateColumns.Add(dataColumn);
                     break;
                 case DbType.Boolean:
-                    p.DbType = DbType.Int32; // JS 2023-05-11 special case since we don't have a true boolean type in Oracle, but use 0/1 instead
+                    p.DbType = DbType
+                        .Int32; // JS 2023-05-11 special case since we don't have a true boolean type in Oracle, but use 0/1 instead
                     break;
                 case DbType.Object:
                     // DbType.Object is used for byte[] - Oracle needs OracleDbType.Blob for array binding
-                    if (dataColumn.DataType == typeof(byte[]))
-                    {
-                        ((OracleParameter)p).OracleDbType = OracleDbType.Blob;
-                    }
+                    if (dataColumn.DataType == typeof(byte[])) ((OracleParameter)p).OracleDbType = OracleDbType.Blob;
                     break;
             }
         }
@@ -86,7 +84,9 @@ internal sealed class OracleBulkCopy(DiscoveredTable targetTable, IManagedConnec
                 if (val == DBNull.Value)
                     val = null;
                 else if (dateColumns.Contains(col))
-                    val = val is string s ? (DateTime?)DateTimeDecider.Parse(s) : Convert.ToDateTime(dataRow[col], CultureInfo.InvariantCulture);
+                    val = val is string s
+                        ? (DateTime?)DateTimeDecider.Parse(s)
+                        : Convert.ToDateTime(dataRow[col], CultureInfo.InvariantCulture);
 
                 if (col.DataType == typeof(bool) && val is bool b)
                     values[col].Add(b ? 1 : 0);
@@ -111,7 +111,7 @@ internal sealed class OracleBulkCopy(DiscoveredTable targetTable, IManagedConnec
     }
 
     /// <summary>
-    /// Releases all resources used by the OracleBulkCopy.
+    ///     Releases all resources used by the OracleBulkCopy.
     /// </summary>
     public new void Dispose()
     {

@@ -9,8 +9,8 @@ using FAnsi.Implementations.Sqlite;
 namespace FAnsi.Legacy;
 
 /// <summary>
-/// Auto-registers all DBMS implementations when FAnsi.Legacy loads.
-/// AOT-compatible: uses direct type references and explicit registration.
+///     Auto-registers all DBMS implementations when FAnsi.Legacy loads.
+///     AOT-compatible: uses direct type references and explicit registration.
 /// </summary>
 internal static class AutoLoadAllImplementations
 {

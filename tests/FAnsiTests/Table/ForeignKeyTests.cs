@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using FAnsi;
 using FAnsi.Discovery;
 using FAnsi.Discovery.Constraints;
@@ -18,13 +15,13 @@ internal sealed class ForeignKeyTests : DatabaseTests
 
 
         var parentTable = db.CreateTable("Table1",
-            [
-                new DatabaseColumnRequest("Id", "int", false)
-                {
-                    IsAutoIncrement = true,
-                    IsPrimaryKey = true
-                }
-            ]);
+        [
+            new DatabaseColumnRequest("Id", "int", false)
+            {
+                IsAutoIncrement = true,
+                IsPrimaryKey = true
+            }
+        ]);
 
         var discovered_pkCol = parentTable.DiscoverColumn("Id");
         var requested_fkCol = new DatabaseColumnRequest("Parent_Id", "int");
@@ -35,8 +32,7 @@ internal sealed class ForeignKeyTests : DatabaseTests
             new DatabaseColumnRequest("SomeNumber", "int")
         ], new Dictionary<DatabaseColumnRequest, DiscoveredColumn>
         {
-            {requested_fkCol,discovered_pkCol}
-
+            { requested_fkCol, discovered_pkCol }
         }, cascade);
 
         var discovered_fkCol = childTable.DiscoverColumn("Parent_Id");
@@ -61,7 +57,8 @@ internal sealed class ForeignKeyTests : DatabaseTests
 
             Assert.That(discovered_fkCol, Is.EqualTo(relationships[0].Keys[discovered_pkCol]));
 
-            Assert.That(relationships[0].CascadeDelete, Is.EqualTo(cascade ? CascadeRule.Delete : CascadeRule.NoAction));
+            Assert.That(relationships[0].CascadeDelete,
+                Is.EqualTo(cascade ? CascadeRule.Delete : CascadeRule.NoAction));
         });
 
         var sort1 = new RelationshipTopologicalSort([childTable, parentTable]);
@@ -88,17 +85,16 @@ internal sealed class ForeignKeyTests : DatabaseTests
         var db = GetTestDatabase(dbType);
 
         var parentTable = db.CreateTable("Table2",
-            [
-                new DatabaseColumnRequest("Id1", "int", false)
-                {
-                    IsPrimaryKey = true
-                },
-                new DatabaseColumnRequest("Id2", "int", false)
-                {
-                    IsPrimaryKey = true
-                }
-
-            ]);
+        [
+            new DatabaseColumnRequest("Id1", "int", false)
+            {
+                IsPrimaryKey = true
+            },
+            new DatabaseColumnRequest("Id2", "int", false)
+            {
+                IsPrimaryKey = true
+            }
+        ]);
 
         var discovered_pkCol1 = parentTable.DiscoverColumn("Id1");
         var discovered_pkCol2 = parentTable.DiscoverColumn("Id2");
@@ -109,11 +105,10 @@ internal sealed class ForeignKeyTests : DatabaseTests
         [
             requested_fkCol1,
             requested_fkCol2
-
         ], new Dictionary<DatabaseColumnRequest, DiscoveredColumn>
         {
-            {requested_fkCol1,discovered_pkCol1},
-            {requested_fkCol2,discovered_pkCol2}
+            { requested_fkCol1, discovered_pkCol1 },
+            { requested_fkCol2, discovered_pkCol2 }
         }, true);
 
 
@@ -165,17 +160,23 @@ internal sealed class ForeignKeyTests : DatabaseTests
             // Create parent table first
             t1 = db.CreateTable("T1",
             [
-                new DatabaseColumnRequest("c1", new DatabaseTypeRequest(typeof(int))){IsPrimaryKey = true}
+                new DatabaseColumnRequest("c1", new DatabaseTypeRequest(typeof(int))) { IsPrimaryKey = true }
             ]);
 
             // Create child tables with FK defined at creation
             using (var con = db.Server.GetConnection())
             {
                 con.Open();
-                using var cmd = db.Server.GetCommand("CREATE TABLE T2 (c2 INT, CONSTRAINT FK_T2_T1 FOREIGN KEY (c2) REFERENCES T1(c1) ON DELETE CASCADE)", con);
+                using var cmd =
+                    db.Server.GetCommand(
+                        "CREATE TABLE T2 (c2 INT, CONSTRAINT FK_T2_T1 FOREIGN KEY (c2) REFERENCES T1(c1) ON DELETE CASCADE)",
+                        con);
                 cmd.ExecuteNonQuery();
 
-                using var cmd2 = db.Server.GetCommand("CREATE TABLE T3 (c3 INT, CONSTRAINT FK_Lol FOREIGN KEY (c3) REFERENCES T1(c1) ON DELETE CASCADE)", con);
+                using var cmd2 =
+                    db.Server.GetCommand(
+                        "CREATE TABLE T3 (c3 INT, CONSTRAINT FK_Lol FOREIGN KEY (c3) REFERENCES T1(c1) ON DELETE CASCADE)",
+                        con);
                 cmd2.ExecuteNonQuery();
             }
 
@@ -201,7 +202,7 @@ internal sealed class ForeignKeyTests : DatabaseTests
 
             t1 = db.CreateTable("T1",
             [
-                new DatabaseColumnRequest("c1", new DatabaseTypeRequest(typeof(int))){IsPrimaryKey = true}
+                new DatabaseColumnRequest("c1", new DatabaseTypeRequest(typeof(int))) { IsPrimaryKey = true }
             ]);
 
             var c1 = t1.DiscoverColumns().Single();
@@ -211,8 +212,10 @@ internal sealed class ForeignKeyTests : DatabaseTests
             if (useTransaction)
             {
                 using var con = t1.Database.Server.BeginNewTransactedConnection();
-                constraint1 = t1.AddForeignKey(c2, c1, true, null, new DatabaseOperationArgs { TransactionIfAny = con.ManagedTransaction });
-                constraint2 = t1.AddForeignKey(c3, c1, true, "FK_Lol", new DatabaseOperationArgs { TransactionIfAny = con.ManagedTransaction });
+                constraint1 = t1.AddForeignKey(c2, c1, true, null,
+                    new DatabaseOperationArgs { TransactionIfAny = con.ManagedTransaction });
+                constraint2 = t1.AddForeignKey(c3, c1, true, "FK_Lol",
+                    new DatabaseOperationArgs { TransactionIfAny = con.ManagedTransaction });
                 con.ManagedTransaction?.CommitAndCloseConnection();
             }
             else
@@ -260,12 +263,12 @@ internal sealed class ForeignKeyTests : DatabaseTests
             // Create parent tables first
             t1 = db.CreateTable("T1",
             [
-                new DatabaseColumnRequest("c1", new DatabaseTypeRequest(typeof(int))){IsPrimaryKey = true}
+                new DatabaseColumnRequest("c1", new DatabaseTypeRequest(typeof(int))) { IsPrimaryKey = true }
             ]);
 
             t2 = db.CreateTable("T2",
             [
-                new DatabaseColumnRequest("c2", new DatabaseTypeRequest(typeof(int))){IsPrimaryKey = true}
+                new DatabaseColumnRequest("c2", new DatabaseTypeRequest(typeof(int))) { IsPrimaryKey = true }
             ]);
 
             // Create child table with TWO foreign keys defined at creation
@@ -290,12 +293,12 @@ internal sealed class ForeignKeyTests : DatabaseTests
         {
             t1 = db.CreateTable("T1",
             [
-                new DatabaseColumnRequest("c1", new DatabaseTypeRequest(typeof(int))){IsPrimaryKey = true}
+                new DatabaseColumnRequest("c1", new DatabaseTypeRequest(typeof(int))) { IsPrimaryKey = true }
             ]);
 
             t2 = db.CreateTable("T2",
             [
-                new DatabaseColumnRequest("c2", new DatabaseTypeRequest(typeof(int))){IsPrimaryKey = true}
+                new DatabaseColumnRequest("c2", new DatabaseTypeRequest(typeof(int))) { IsPrimaryKey = true }
             ]);
 
             t3 = db.CreateTable("T3",
@@ -329,9 +332,12 @@ internal sealed class ForeignKeyTests : DatabaseTests
     {
         var db = GetTestDatabase(DatabaseType.MicrosoftSQLServer);
 
-        var cops = db.CreateTable("Cops", [new DatabaseColumnRequest("Name", new DatabaseTypeRequest(typeof(string), 100))]);
-        var robbers = db.CreateTable("Robbers", [new DatabaseColumnRequest("Name", new DatabaseTypeRequest(typeof(string), 100))]);
-        var lawyers = db.CreateTable("Lawyers", [new DatabaseColumnRequest("Name", new DatabaseTypeRequest(typeof(string), 100))]);
+        var cops = db.CreateTable("Cops",
+            [new DatabaseColumnRequest("Name", new DatabaseTypeRequest(typeof(string), 100))]);
+        var robbers = db.CreateTable("Robbers",
+            [new DatabaseColumnRequest("Name", new DatabaseTypeRequest(typeof(string), 100))]);
+        var lawyers = db.CreateTable("Lawyers",
+            [new DatabaseColumnRequest("Name", new DatabaseTypeRequest(typeof(string), 100))]);
 
         var sort = new RelationshipTopologicalSort([cops]);
         Assert.That(sort.Order.Single(), Is.EqualTo(cops));
@@ -343,6 +349,5 @@ internal sealed class ForeignKeyTests : DatabaseTests
             Assert.That(sort2.Order[1], Is.EqualTo(robbers));
             Assert.That(sort2.Order[2], Is.EqualTo(lawyers));
         });
-
     }
 }

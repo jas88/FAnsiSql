@@ -1,11 +1,7 @@
-using System;
-using System.Collections.Generic;
 using System.Data;
 using System.Globalization;
-using System.Linq;
 using System.Numerics;
 using System.Text;
-using System.Threading;
 using FAnsi.Connections;
 using FAnsi.Discovery.Helpers;
 using TypeGuesser;
@@ -14,14 +10,22 @@ using TypeGuesser.Deciders;
 namespace FAnsi.Discovery;
 
 /// <summary>
-/// Pre-computed validation rules for a column. Avoids repeated lookups during row iteration.
-/// Used by <see cref="BulkCopy.PreProcessAndValidate"/> for single-pass data validation.
+///     Pre-computed validation rules for a column. Avoids repeated lookups during row iteration.
+///     Used by <see cref="BulkCopy.PreProcessAndValidate" /> for single-pass data validation.
 /// </summary>
 public readonly struct ColumnValidationRule(
-    DataColumn dataColumn, DiscoveredColumn discoveredColumn, int ordinal,
-    bool isString, int maxStringLength,
-    bool isDecimal, int decimalPrecision, int decimalScale, decimal maxDecimalValue,
-    bool hasIntegerRange, BigInteger integerMin, BigInteger integerMax,
+    DataColumn dataColumn,
+    DiscoveredColumn discoveredColumn,
+    int ordinal,
+    bool isString,
+    int maxStringLength,
+    bool isDecimal,
+    int decimalPrecision,
+    int decimalScale,
+    decimal maxDecimalValue,
+    bool hasIntegerRange,
+    BigInteger integerMin,
+    BigInteger integerMax,
     bool requiresNotNull)
 {
     public readonly int Ordinal = ordinal;
@@ -40,48 +44,29 @@ public readonly struct ColumnValidationRule(
     public readonly bool RequiresNotNull = requiresNotNull;
 }
 
-/// <inheritdoc/>
+/// <inheritdoc />
 public abstract class BulkCopy : IBulkCopy
 {
     // Cached CompositeFormat for CA1863
-    private static readonly CompositeFormat ColumnNotInDestinationFormat = CompositeFormat.Parse(FAnsiStrings.BulkCopy_ColumnNotInDestinationTable);
-
-    public CultureInfo Culture { get; }
+    private static readonly CompositeFormat ColumnNotInDestinationFormat =
+        CompositeFormat.Parse(FAnsiStrings.BulkCopy_ColumnNotInDestinationTable);
 
     /// <summary>
-    /// The database connection on which the bulk insert operation is underway
+    ///     The database connection on which the bulk insert operation is underway
     /// </summary>
     protected readonly IManagedConnection Connection;
 
     /// <summary>
-    /// The target table on the database server to which records are being uploaded
+    ///     The target table on the database server to which records are being uploaded
     /// </summary>
     protected readonly DiscoveredTable TargetTable;
-
-    /// <summary>
-    /// The cached columns found on the <see cref="TargetTable"/>.  If you alter the table midway through a bulk insert you must
-    /// call <see cref="InvalidateTableSchema"/> to refresh this.
-    /// </summary>
-    protected DiscoveredColumn[] TargetTableColumns => _targetTableColumns.Value;
 
     private Lazy<DiscoveredColumn[]> _targetTableColumns;
 
     /// <summary>
-    /// When calling GetMapping if there are DataColumns in the input table that you are trying to bulk insert that are not matched
-    /// in the destination table then the default behaviour is to throw a KeyNotFoundException.  Set this to false to ignore that
-    /// behaviour.  This will result in loosing data from your DataTable.
-    ///
-    /// <para>Defaults to false</para>
-    /// </summary>
-    public bool AllowUnmatchedInputColumns { get; private set; }
-
-    /// <inheritdoc/>
-    public DateTimeTypeDecider DateTimeDecider { get; protected set; }
-
-    /// <summary>
-    /// Begins a new bulk copy operation in which one or more data tables are uploaded to the <paramref name="targetTable"/>.  The API entrypoint for this is
-    /// <see cref="DiscoveredTable.BeginBulkInsert(IManagedTransaction)"/>.
-    ///
+    ///     Begins a new bulk copy operation in which one or more data tables are uploaded to the
+    ///     <paramref name="targetTable" />.  The API entrypoint for this is
+    ///     <see cref="DiscoveredTable.BeginBulkInsert(IManagedTransaction)" />.
     /// </summary>
     /// <param name="targetTable"></param>
     /// <param name="connection"></param>
@@ -98,11 +83,34 @@ public abstract class BulkCopy : IBulkCopy
         DateTimeDecider = new DateTimeTypeDecider(culture);
     }
 
-    /// <inheritdoc/>
+    public CultureInfo Culture { get; }
+
+    /// <summary>
+    ///     The cached columns found on the <see cref="TargetTable" />.  If you alter the table midway through a bulk insert
+    ///     you must
+    ///     call <see cref="InvalidateTableSchema" /> to refresh this.
+    /// </summary>
+    protected DiscoveredColumn[] TargetTableColumns => _targetTableColumns.Value;
+
+    /// <summary>
+    ///     When calling GetMapping if there are DataColumns in the input table that you are trying to bulk insert that are not
+    ///     matched
+    ///     in the destination table then the default behaviour is to throw a KeyNotFoundException.  Set this to false to
+    ///     ignore that
+    ///     behaviour.  This will result in loosing data from your DataTable.
+    ///     <para>Defaults to false</para>
+    /// </summary>
+    public bool AllowUnmatchedInputColumns { get; }
+
+    /// <inheritdoc />
+    public DateTimeTypeDecider DateTimeDecider { get; protected set; }
+
+    /// <inheritdoc />
     public virtual int Timeout { get; set; }
 
     /// <summary>
-    /// Updates <see cref="TargetTableColumns"/>.  Call if you are making modifications to the <see cref="TargetTable"/> midway through a bulk insert.
+    ///     Updates <see cref="TargetTableColumns" />.  Call if you are making modifications to the <see cref="TargetTable" />
+    ///     midway through a bulk insert.
     /// </summary>
     public void InvalidateTableSchema()
     {
@@ -112,8 +120,9 @@ public abstract class BulkCopy : IBulkCopy
     }
 
     /// <summary>
-    /// Closes the connection and completes the bulk insert operation (including committing the transaction).  If this method is not called
-    /// then the records may not be committed.
+    ///     Closes the connection and completes the bulk insert operation (including committing the transaction).  If this
+    ///     method is not called
+    ///     then the records may not be committed.
     /// </summary>
     public virtual void Dispose()
     {
@@ -121,7 +130,7 @@ public abstract class BulkCopy : IBulkCopy
         Connection.Dispose();
     }
 
-    /// <inheritdoc/>
+    /// <inheritdoc />
     public virtual int Upload(DataTable dt)
     {
         TargetTable.Database.Helper.ThrowIfObjectColumns(dt);
@@ -134,8 +143,8 @@ public abstract class BulkCopy : IBulkCopy
     public abstract int UploadImpl(DataTable dt);
 
     /// <summary>
-    /// Replaces all string representations for data types that can be problematic/ambiguous (e.g. DateTime or TimeSpan)
-    ///  into hard typed objects using appropriate decider e.g. <see cref="DateTimeDecider"/>.
+    ///     Replaces all string representations for data types that can be problematic/ambiguous (e.g. DateTime or TimeSpan)
+    ///     into hard typed objects using appropriate decider e.g. <see cref="DateTimeDecider" />.
     /// </summary>
     /// <param name="dt"></param>
     protected void ConvertStringTypesToHardTypes(DataTable dt)
@@ -165,7 +174,8 @@ public abstract class BulkCopy : IBulkCopy
             {
                 //also use this one in case the user has set up explicit stuff on it e.g. Culture/Settings
                 decider = DateTimeDecider;
-                DateTimeDecider.GuessDateFormat(dt.Rows.Cast<DataRow>().Take(500).Select(r => r[dataColumn] as string).OfType<string>());
+                DateTimeDecider.GuessDateFormat(dt.Rows.Cast<DataRow>().Take(500).Select(r => r[dataColumn] as string)
+                    .OfType<string>());
             }
 
 
@@ -198,15 +208,26 @@ public abstract class BulkCopy : IBulkCopy
     }
 
     /// <summary>
-    /// Returns a case insensitive mapping between columns in your DataTable that you are trying to upload and the columns that actually exist in the destination
-    /// table.
-    /// <para>This overload gives you a list of all unmatched destination columns, these should be given null/default automatically by your database API</para>
-    /// <para>Throws <exception cref="KeyNotFoundException"> if there are unmatched input columns unless <see cref="AllowUnmatchedInputColumns"/> is true.</exception></para>
+    ///     Returns a case insensitive mapping between columns in your DataTable that you are trying to upload and the columns
+    ///     that actually exist in the destination
+    ///     table.
+    ///     <para>
+    ///         This overload gives you a list of all unmatched destination columns, these should be given null/default
+    ///         automatically by your database API
+    ///     </para>
+    ///     <para>
+    ///         Throws
+    ///         <exception cref="KeyNotFoundException">
+    ///             if there are unmatched input columns unless
+    ///             <see cref="AllowUnmatchedInputColumns" /> is true.
+    ///         </exception>
+    ///     </para>
     /// </summary>
     /// <param name="inputColumns"></param>
     /// <param name="unmatchedColumnsInDestination"></param>
     /// <returns></returns>
-    protected Dictionary<DataColumn, DiscoveredColumn> GetMapping(IEnumerable<DataColumn> inputColumns, out DiscoveredColumn[] unmatchedColumnsInDestination)
+    protected Dictionary<DataColumn, DiscoveredColumn> GetMapping(IEnumerable<DataColumn> inputColumns,
+        out DiscoveredColumn[] unmatchedColumnsInDestination)
     {
         var mapping = new Dictionary<DataColumn, DiscoveredColumn>();
 
@@ -217,23 +238,24 @@ public abstract class BulkCopy : IBulkCopy
             // Manual loop optimization to avoid LINQ allocations and use span comparisons
             // CodeQL[cs/linq/missed-where-opportunity]: Intentional - manual loop for performance (avoids LINQ allocations)
             foreach (var targetColumn in TargetTableColumns)
-            {
                 if (StringComparisonHelper.RuntimeNamesEqual(targetColumn.GetRuntimeName(), colInSource.ColumnName))
                 {
                     match = targetColumn;
                     break;
                 }
-            }
 
             if (match == null)
             {
                 if (!AllowUnmatchedInputColumns)
-                    throw new ColumnMappingException(string.Format(CultureInfo.InvariantCulture, ColumnNotInDestinationFormat, colInSource.ColumnName, TargetTable));
+                    throw new ColumnMappingException(string.Format(CultureInfo.InvariantCulture,
+                        ColumnNotInDestinationFormat, colInSource.ColumnName, TargetTable));
 
                 //user is ignoring the fact there are unmatched items in DataTable!
             }
             else
+            {
                 mapping.Add(colInSource, match);
+            }
         }
 
         //unmatched columns in the destination is fine, these usually get populated with the default column values or nulls
@@ -243,24 +265,36 @@ public abstract class BulkCopy : IBulkCopy
     }
 
     /// <summary>
-    /// Returns a case insensitive mapping between columns in your DataTable that you are trying to upload and the columns that actually exist in the destination
-    /// table.
-    /// <para>Throws <exception cref="KeyNotFoundException"> if there are unmatched input columns unless <see cref="AllowUnmatchedInputColumns"/> is true.</exception></para>
+    ///     Returns a case insensitive mapping between columns in your DataTable that you are trying to upload and the columns
+    ///     that actually exist in the destination
+    ///     table.
+    ///     <para>
+    ///         Throws
+    ///         <exception cref="KeyNotFoundException">
+    ///             if there are unmatched input columns unless
+    ///             <see cref="AllowUnmatchedInputColumns" /> is true.
+    ///         </exception>
+    ///     </para>
     /// </summary>
     /// <param name="inputColumns"></param>
     /// <returns></returns>
-    protected Dictionary<DataColumn, DiscoveredColumn> GetMapping(IEnumerable<DataColumn> inputColumns) => GetMapping(inputColumns, out _);
+    protected Dictionary<DataColumn, DiscoveredColumn> GetMapping(IEnumerable<DataColumn> inputColumns) =>
+        GetMapping(inputColumns, out _);
 
     /// <summary>
-    /// Pre-processes and validates all data in a single pass through the DataTable.
-    /// Performs: empty string to NULL conversion, string length validation, decimal validation,
-    /// integer range validation, and NOT NULL constraint validation.
+    ///     Pre-processes and validates all data in a single pass through the DataTable.
+    ///     Performs: empty string to NULL conversion, string length validation, decimal validation,
+    ///     integer range validation, and NOT NULL constraint validation.
     /// </summary>
     /// <param name="dt">The DataTable to validate</param>
     /// <param name="mapping">Column mapping from source to destination</param>
     /// <param name="validateNotNull">Whether to validate NOT NULL constraints (default true)</param>
-    /// <param name="validateDecimalPrecision">Whether to validate decimal precision/scale (default true). Set to false for databases with dynamic typing like SQLite.</param>
-    protected void PreProcessAndValidate(DataTable dt, Dictionary<DataColumn, DiscoveredColumn> mapping, bool validateNotNull = true, bool validateDecimalPrecision = true)
+    /// <param name="validateDecimalPrecision">
+    ///     Whether to validate decimal precision/scale (default true). Set to false for
+    ///     databases with dynamic typing like SQLite.
+    /// </param>
+    protected void PreProcessAndValidate(DataTable dt, Dictionary<DataColumn, DiscoveredColumn> mapping,
+        bool validateNotNull = true, bool validateDecimalPrecision = true)
     {
         // Pre-compute validation rules for each column (once per table, not per row)
         var rules = new ColumnValidationRule[mapping.Count];
@@ -269,10 +303,11 @@ public abstract class BulkCopy : IBulkCopy
         foreach (var (dataColumn, discoveredColumn) in mapping)
         {
             var isString = dataColumn.DataType == typeof(string);
-            var isDecimal = validateDecimalPrecision && (dataColumn.DataType == typeof(decimal) || dataColumn.DataType == typeof(decimal?));
+            var isDecimal = validateDecimalPrecision &&
+                            (dataColumn.DataType == typeof(decimal) || dataColumn.DataType == typeof(decimal?));
             var isInteger = IsIntegerType(dataColumn.DataType);
 
-            int maxStringLength = 0;
+            var maxStringLength = 0;
             int decimalPrecision = 0, decimalScale = 0;
             decimal maxDecimalValue = 0;
             BigInteger intMin = long.MinValue, intMax = long.MaxValue;
@@ -364,7 +399,8 @@ public abstract class BulkCopy : IBulkCopy
                     if (d > rule.MaxDecimalValue)
                         throw new InvalidOperationException(string.Format(CultureInfo.InvariantCulture,
                             "Value {0} in column '{1}' (row {2}) exceeds the maximum allowed for decimal({3},{4}). Maximum value is {5}.",
-                            value, rule.SourceName, rowIndex + 1, rule.DecimalPrecision, rule.DecimalScale, rule.MaxDecimalValue));
+                            value, rule.SourceName, rowIndex + 1, rule.DecimalPrecision, rule.DecimalScale,
+                            rule.MaxDecimalValue));
 
                     var vs = d.ToString(CultureInfo.InvariantCulture);
                     if (vs.Contains('.', StringComparison.Ordinal))
@@ -373,7 +409,8 @@ public abstract class BulkCopy : IBulkCopy
                         if (places > rule.DecimalScale)
                             throw new InvalidOperationException(string.Format(CultureInfo.InvariantCulture,
                                 "Value {0} in column '{1}' (row {2}) has {3} decimal places, but column is defined as decimal({4},{5}) which allows only {5} decimal places.",
-                                value, rule.SourceName, rowIndex + 1, places, rule.DecimalPrecision, rule.DecimalScale));
+                                value, rule.SourceName, rowIndex + 1, places, rule.DecimalPrecision,
+                                rule.DecimalScale));
                     }
                 }
 
@@ -390,7 +427,8 @@ public abstract class BulkCopy : IBulkCopy
                         short sVal => new BigInteger(sVal),
                         byte bVal => new BigInteger(bVal),
                         sbyte sbVal => new BigInteger(sbVal),
-                        _ => BigInteger.Parse(Convert.ToString(value, CultureInfo.InvariantCulture) ?? "0", CultureInfo.InvariantCulture)
+                        _ => BigInteger.Parse(Convert.ToString(value, CultureInfo.InvariantCulture) ?? "0",
+                            CultureInfo.InvariantCulture)
                     };
                     if (v < rule.IntegerMin || v > rule.IntegerMax)
                         throw new InvalidOperationException(string.Format(CultureInfo.InvariantCulture,
@@ -408,8 +446,8 @@ public abstract class BulkCopy : IBulkCopy
     }
 
     /// <summary>
-    /// Called before row-by-row validation begins. Override in subclasses to perform
-    /// database-specific checks (e.g., SQL Server's float column rejection).
+    ///     Called before row-by-row validation begins. Override in subclasses to perform
+    ///     database-specific checks (e.g., SQL Server's float column rejection).
     /// </summary>
     /// <param name="dt">The DataTable being validated</param>
     /// <param name="mapping">Column mapping from source to destination</param>
@@ -419,8 +457,8 @@ public abstract class BulkCopy : IBulkCopy
     }
 
     /// <summary>
-    /// Returns the valid integer range for a SQL type. Override in subclasses to handle
-    /// database-specific integer types (e.g., MySQL's MEDIUMINT, TINYINT UNSIGNED, BIGINT UNSIGNED).
+    ///     Returns the valid integer range for a SQL type. Override in subclasses to handle
+    ///     database-specific integer types (e.g., MySQL's MEDIUMINT, TINYINT UNSIGNED, BIGINT UNSIGNED).
     /// </summary>
     /// <param name="sqlType">The SQL type name (uppercase)</param>
     /// <returns>Tuple of (min, max) values for the type</returns>
@@ -436,7 +474,7 @@ public abstract class BulkCopy : IBulkCopy
         };
 
     /// <summary>
-    /// Checks if a CLR type is an integer type that should have range validation.
+    ///     Checks if a CLR type is an integer type that should have range validation.
     /// </summary>
     /// <param name="type">The CLR type to check</param>
     /// <returns>True if the type is an integer type</returns>

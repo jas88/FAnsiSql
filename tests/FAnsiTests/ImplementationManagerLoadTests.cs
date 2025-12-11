@@ -5,7 +5,6 @@ using FAnsi.Implementations.Oracle;
 using FAnsi.Implementations.PostgreSql;
 using FAnsi.Implementations.Sqlite;
 using NUnit.Framework;
-using System.Linq;
 
 #pragma warning disable NUnit2022 // IEnumerable<IImplementation> Count analyzer false positive
 

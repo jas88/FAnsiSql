@@ -1,9 +1,6 @@
-using System;
-using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Globalization;
-using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using FAnsi.Connections;
@@ -17,17 +14,21 @@ namespace FAnsi.Implementations.MicrosoftSQL;
 
 public sealed partial class MicrosoftSQLTableHelper : DiscoveredTableHelper
 {
-    private static readonly CompositeFormat FormatCreatePrimaryKeyFailed = CompositeFormat.Parse(FAnsiStrings.DiscoveredTableHelper_CreatePrimaryKey_Failed_to_create_primary_key_on_table__0__using_columns___1__);
-    private static readonly CompositeFormat FormatMakeDistinctSql = CompositeFormat.Parse("""
-                           DELETE f
-                                       FROM (
-                                       SELECT	ROW_NUMBER() OVER (PARTITION BY {0} ORDER BY {0}) AS RowNum
-                                       FROM {1}
+    private static readonly CompositeFormat FormatCreatePrimaryKeyFailed = CompositeFormat.Parse(FAnsiStrings
+        .DiscoveredTableHelper_CreatePrimaryKey_Failed_to_create_primary_key_on_table__0__using_columns___1__);
 
-                                       ) as f
-                                       where RowNum > 1
-                           """);
-    public override IEnumerable<DiscoveredColumn> DiscoverColumns(DiscoveredTable discoveredTable, IManagedConnection connection, string database)
+    private static readonly CompositeFormat FormatMakeDistinctSql = CompositeFormat.Parse("""
+        DELETE f
+                    FROM (
+                    SELECT	ROW_NUMBER() OVER (PARTITION BY {0} ORDER BY {0}) AS RowNum
+                    FROM {1}
+
+                    ) as f
+                    where RowNum > 1
+        """);
+
+    public override IEnumerable<DiscoveredColumn> DiscoverColumns(DiscoveredTable discoveredTable,
+        IManagedConnection connection, string database)
     {
         //don't bother looking for pks if it is a table valued function
         var pks = discoveredTable is DiscoveredTableValuedFunction
@@ -35,7 +36,8 @@ public sealed partial class MicrosoftSQLTableHelper : DiscoveredTableHelper
             : ListPrimaryKeys(connection, discoveredTable).ToHashSet();
 
         using var cmd = discoveredTable.GetCommand(
-            $"use [{database}];\r\nSELECT  \r\nsys.columns.name AS COLUMN_NAME,\r\n sys.types.name AS TYPE_NAME,\r\n  sys.columns.collation_name AS COLLATION_NAME,\r\n   sys.columns.max_length as LENGTH,\r\n   sys.columns.scale as SCALE,\r\n    sys.columns.is_identity,\r\n    sys.columns.is_nullable,\r\n   sys.columns.precision as PRECISION,\r\nsys.columns.collation_name\r\nfrom sys.columns \r\njoin \r\nsys.types on sys.columns.user_type_id = sys.types.user_type_id\r\nwhere object_id = OBJECT_ID(@tableName)", connection.Connection, connection.Transaction);
+            $"use [{database}];\r\nSELECT  \r\nsys.columns.name AS COLUMN_NAME,\r\n sys.types.name AS TYPE_NAME,\r\n  sys.columns.collation_name AS COLLATION_NAME,\r\n   sys.columns.max_length as LENGTH,\r\n   sys.columns.scale as SCALE,\r\n    sys.columns.is_identity,\r\n    sys.columns.is_nullable,\r\n   sys.columns.precision as PRECISION,\r\nsys.columns.collation_name\r\nfrom sys.columns \r\njoin \r\nsys.types on sys.columns.user_type_id = sys.types.user_type_id\r\nwhere object_id = OBJECT_ID(@tableName)",
+            connection.Connection, connection.Transaction);
         var p = cmd.CreateParameter();
         p.ParameterName = "@tableName";
         p.Value = GetObjectName(discoveredTable);
@@ -63,7 +65,7 @@ public sealed partial class MicrosoftSQLTableHelper : DiscoveredTableHelper
     }
 
     /// <summary>
-    /// Returns the table name suitable for being passed into OBJECT_ID including schema if any
+    ///     Returns the table name suitable for being passed into OBJECT_ID including schema if any
     /// </summary>
     /// <param name="table"></param>
     /// <returns></returns>
@@ -88,7 +90,9 @@ public sealed partial class MicrosoftSQLTableHelper : DiscoveredTableHelper
                 if (connection.Database != tableToDrop.Database.GetRuntimeName())
                     connection.ChangeDatabase(tableToDrop.GetRuntimeName());
 
-                if (!connection.Database.ToLower(CultureInfo.InvariantCulture).Equals(tableToDrop.Database.GetRuntimeName().ToLower(CultureInfo.InvariantCulture), StringComparison.Ordinal))
+                if (!connection.Database.ToLower(CultureInfo.InvariantCulture).Equals(
+                        tableToDrop.Database.GetRuntimeName().ToLower(CultureInfo.InvariantCulture),
+                        StringComparison.Ordinal))
                     throw new NotSupportedException(
                         $"Cannot drop view {tableToDrop} because it exists in database {tableToDrop.Database.GetRuntimeName()} while the current current database connection is pointed at database:{connection.Database} (use .ChangeDatabase on the connection first) - SQL Server does not support cross database view dropping");
 
@@ -101,28 +105,34 @@ public sealed partial class MicrosoftSQLTableHelper : DiscoveredTableHelper
                 DropFunction(connection, (DiscoveredTableValuedFunction)tableToDrop);
                 return;
             default:
-                throw new ArgumentOutOfRangeException(nameof(tableToDrop), $"Unknown table type {tableToDrop.TableType}");
+                throw new ArgumentOutOfRangeException(nameof(tableToDrop),
+                    $"Unknown table type {tableToDrop.TableType}");
         }
 
         using (cmd)
+        {
             cmd.ExecuteNonQuery();
+        }
     }
 
     public override void DropFunction(DbConnection connection, DiscoveredTableValuedFunction functionToDrop)
     {
-        using var cmd = new SqlCommand($"DROP FUNCTION {functionToDrop.Schema ?? "dbo"}.{functionToDrop.GetRuntimeName()}", (SqlConnection)connection);
+        using var cmd =
+            new SqlCommand($"DROP FUNCTION {functionToDrop.Schema ?? "dbo"}.{functionToDrop.GetRuntimeName()}",
+                (SqlConnection)connection);
         cmd.ExecuteNonQuery();
     }
 
     public override void DropColumn(DbConnection connection, DiscoveredColumn columnToDrop)
     {
         using var cmd = new SqlCommand(
-            $"ALTER TABLE {columnToDrop.Table.GetFullyQualifiedName()} DROP column {columnToDrop.GetWrappedName()}", (SqlConnection)connection);
+            $"ALTER TABLE {columnToDrop.Table.GetFullyQualifiedName()} DROP column {columnToDrop.GetWrappedName()}",
+            (SqlConnection)connection);
         cmd.ExecuteNonQuery();
     }
 
     /// <summary>
-    /// Checks if the table exists using the provided connection.
+    ///     Checks if the table exists using the provided connection.
     /// </summary>
     /// <param name="table">The table to check</param>
     /// <param name="connection">The managed connection to use</param>
@@ -136,19 +146,19 @@ public sealed partial class MicrosoftSQLTableHelper : DiscoveredTableHelper
         var objectType = table.TableType switch
         {
             TableType.Table => "'U'", // U = user table
-            TableType.View => "'V'",  // V = view
+            TableType.View => "'V'", // V = view
             _ => "'U', 'V'" // For TableValuedFunction or unknown, check both
         };
 
         var sql = $"""
-            SELECT CASE WHEN EXISTS (
-                SELECT 1 FROM sys.objects o
-                INNER JOIN sys.schemas s ON o.schema_id = s.schema_id
-                WHERE o.name = @tableName
-                AND s.name = @schemaName
-                AND o.type IN ({objectType})
-            ) THEN 1 ELSE 0 END
-            """;
+                   SELECT CASE WHEN EXISTS (
+                       SELECT 1 FROM sys.objects o
+                       INNER JOIN sys.schemas s ON o.schema_id = s.schema_id
+                       WHERE o.name = @tableName
+                       AND s.name = @schemaName
+                       AND o.type IN ({objectType})
+                   ) THEN 1 ELSE 0 END
+                   """;
 
         using var cmd = table.GetCommand(sql, connection.Connection, connection.Transaction);
 
@@ -174,7 +184,7 @@ public sealed partial class MicrosoftSQLTableHelper : DiscoveredTableHelper
     }
 
     /// <summary>
-    /// Checks if the table has a primary key using the provided connection.
+    ///     Checks if the table has a primary key using the provided connection.
     /// </summary>
     /// <param name="table">The table to check</param>
     /// <param name="connection">The managed connection to use</param>
@@ -182,15 +192,15 @@ public sealed partial class MicrosoftSQLTableHelper : DiscoveredTableHelper
     public override bool HasPrimaryKey(DiscoveredTable table, IManagedConnection connection)
     {
         const string sql = """
-            SELECT CASE WHEN EXISTS (
-                SELECT 1 FROM sys.indexes i
-                INNER JOIN sys.objects o ON i.object_id = o.object_id
-                INNER JOIN sys.schemas s ON o.schema_id = s.schema_id
-                WHERE i.is_primary_key = 1
-                AND o.name = @tableName
-                AND s.name = @schemaName
-            ) THEN 1 ELSE 0 END
-            """;
+                           SELECT CASE WHEN EXISTS (
+                               SELECT 1 FROM sys.indexes i
+                               INNER JOIN sys.objects o ON i.object_id = o.object_id
+                               INNER JOIN sys.schemas s ON o.schema_id = s.schema_id
+                               WHERE i.is_primary_key = 1
+                               AND o.name = @tableName
+                               AND s.name = @schemaName
+                           ) THEN 1 ELSE 0 END
+                           """;
 
         using var cmd = table.GetCommand(sql, connection.Connection, connection.Transaction);
 
@@ -208,7 +218,8 @@ public sealed partial class MicrosoftSQLTableHelper : DiscoveredTableHelper
         return Convert.ToInt32(result, CultureInfo.InvariantCulture) == 1;
     }
 
-    [Obsolete("Prefer using HasPrimaryKey(DiscoveredTable, IManagedConnection) to reuse connections and improve performance")]
+    [Obsolete(
+        "Prefer using HasPrimaryKey(DiscoveredTable, IManagedConnection) to reuse connections and improve performance")]
     public override bool HasPrimaryKey(DiscoveredTable table, IManagedTransaction? transaction = null)
     {
         using var connection = table.Database.Server.GetManagedConnection(transaction);
@@ -216,7 +227,8 @@ public sealed partial class MicrosoftSQLTableHelper : DiscoveredTableHelper
     }
 
     /// <summary>
-    /// Gets the auto-increment column for the table using a database-specific SQL query (90-99% faster than discovering all columns).
+    ///     Gets the auto-increment column for the table using a database-specific SQL query (90-99% faster than discovering
+    ///     all columns).
     /// </summary>
     /// <returns>The auto-increment column, or null if none exists</returns>
     public DiscoveredColumn? GetAutoIncrementColumn(DiscoveredTable table, IManagedConnection connection)
@@ -247,7 +259,8 @@ public sealed partial class MicrosoftSQLTableHelper : DiscoveredTableHelper
         DiscoveredTableValuedFunction discoveredTableValuedFunction, DbTransaction? transaction)
     {
         if (connection.State != ConnectionState.Open)
-            throw new ArgumentException($@"Connection state was {connection.State} but had to be Open", nameof(connection));
+            throw new ArgumentException($@"Connection state was {connection.State} but had to be Open",
+                nameof(connection));
 
         const string query = """
                              select
@@ -284,15 +297,18 @@ public sealed partial class MicrosoftSQLTableHelper : DiscoveredTableHelper
         }
     }
 
-    public override IBulkCopy BeginBulkInsert(DiscoveredTable discoveredTable, IManagedConnection connection, CultureInfo culture) => new MicrosoftSQLBulkCopy(discoveredTable, connection, culture);
+    public override IBulkCopy BeginBulkInsert(DiscoveredTable discoveredTable, IManagedConnection connection,
+        CultureInfo culture) => new MicrosoftSQLBulkCopy(discoveredTable, connection, culture);
 
-    public override void CreatePrimaryKey(DatabaseOperationArgs args, DiscoveredTable table, DiscoveredColumn[] discoverColumns)
+    public override void CreatePrimaryKey(DatabaseOperationArgs args, DiscoveredTable table,
+        DiscoveredColumn[] discoverColumns)
     {
         try
         {
             using var connection = args.GetManagedConnection(table);
             var columnHelper = GetColumnHelper();
-            foreach (var alterSql in discoverColumns.Where(static dc => dc.AllowNulls).Select(col => columnHelper.GetAlterColumnToSql(col, col.DataType!.SQLType!, false)))
+            foreach (var alterSql in discoverColumns.Where(static dc => dc.AllowNulls)
+                         .Select(col => columnHelper.GetAlterColumnToSql(col, col.DataType!.SQLType!, false)))
             {
                 using var alterCmd = table.GetCommand(alterSql, connection.Connection, connection.Transaction);
                 args.ExecuteNonQuery(alterCmd);
@@ -300,13 +316,16 @@ public sealed partial class MicrosoftSQLTableHelper : DiscoveredTableHelper
         }
         catch (DbException e)
         {
-            throw new AlterFailedException(string.Format(CultureInfo.InvariantCulture, FormatCreatePrimaryKeyFailed, table, string.Join(",", discoverColumns.Select(static c => c.GetRuntimeName()))), e);
+            throw new AlterFailedException(
+                string.Format(CultureInfo.InvariantCulture, FormatCreatePrimaryKeyFailed, table,
+                    string.Join(",", discoverColumns.Select(static c => c.GetRuntimeName()))), e);
         }
 
         base.CreatePrimaryKey(args, table, discoverColumns);
     }
 
-    public override DiscoveredRelationship[] DiscoverRelationships(DiscoveredTable table, DbConnection connection, IManagedTransaction? transaction = null)
+    public override DiscoveredRelationship[] DiscoverRelationships(DiscoveredTable table, DbConnection connection,
+        IManagedTransaction? transaction = null)
     {
         var toReturn = new Dictionary<string, DiscoveredRelationship>();
 
@@ -341,20 +360,25 @@ public sealed partial class MicrosoftSQLTableHelper : DiscoveredTableHelper
 
             foreach (DataRow r in dt.Rows)
             {
-                var fkName = r["FK_NAME"].ToString() ?? throw new InvalidOperationException("Null foreign key name returned");
+                var fkName = r["FK_NAME"].ToString() ??
+                             throw new InvalidOperationException("Null foreign key name returned");
 
                 //could be a 2+ columns foreign key?
                 if (!toReturn.TryGetValue(fkName, out var current))
                 {
-                    var pkdb = r["PKTABLE_QUALIFIER"].ToString() ?? throw new InvalidOperationException("Null primary key database name returned");
+                    var pkdb = r["PKTABLE_QUALIFIER"].ToString() ??
+                               throw new InvalidOperationException("Null primary key database name returned");
                     var pkschema = r["PKTABLE_OWNER"].ToString();
-                    var pktableName = r["PKTABLE_NAME"].ToString() ?? throw new InvalidOperationException("Null primary key table name returned");
+                    var pktableName = r["PKTABLE_NAME"].ToString() ??
+                                      throw new InvalidOperationException("Null primary key table name returned");
 
                     var pktable = table.Database.Server.ExpectDatabase(pkdb).ExpectTable(pktableName, pkschema);
 
-                    var fkdb = r["FKTABLE_QUALIFIER"].ToString() ?? throw new InvalidOperationException("Null foreign key database name returned");
+                    var fkdb = r["FKTABLE_QUALIFIER"].ToString() ??
+                               throw new InvalidOperationException("Null foreign key database name returned");
                     var fkschema = r["FKTABLE_OWNER"].ToString();
-                    var fktableName = r["FKTABLE_NAME"].ToString() ?? throw new InvalidOperationException("Null foreign key name returned");
+                    var fktableName = r["FKTABLE_NAME"].ToString() ??
+                                      throw new InvalidOperationException("Null foreign key name returned");
 
                     var fktable = table.Database.Server.ExpectDatabase(fkdb).ExpectTable(fktableName, fkschema);
 
@@ -386,7 +410,6 @@ public sealed partial class MicrosoftSQLTableHelper : DiscoveredTableHelper
         }
 
         return [.. toReturn.Values];
-
     }
 
     protected override string GetRenameTableSql(DiscoveredTable discoveredTable, string newName)
@@ -408,7 +431,8 @@ public sealed partial class MicrosoftSQLTableHelper : DiscoveredTableHelper
         var columnList = string.Join(",",
             discoveredTable.DiscoverColumns().Select(c => syntax.EnsureWrapped(c.GetRuntimeName())));
 
-        var sqlToExecute = string.Format(CultureInfo.InvariantCulture, FormatMakeDistinctSql, columnList, discoveredTable.GetFullyQualifiedName());
+        var sqlToExecute = string.Format(CultureInfo.InvariantCulture, FormatMakeDistinctSql, columnList,
+            discoveredTable.GetFullyQualifiedName());
 
         var server = discoveredTable.Database.Server;
 
@@ -418,7 +442,8 @@ public sealed partial class MicrosoftSQLTableHelper : DiscoveredTableHelper
     }
 
 
-    public override string GetTopXSqlForTable(IHasFullyQualifiedNameToo table, int topX) => $"SELECT TOP {topX} * FROM {table.GetFullyQualifiedName()}";
+    public override string GetTopXSqlForTable(IHasFullyQualifiedNameToo table, int topX) =>
+        $"SELECT TOP {topX} * FROM {table.GetFullyQualifiedName()}";
 
     private string GetSQLType_FromSpColumnsResult(DbDataReader r)
     {
@@ -431,7 +456,9 @@ public sealed partial class MicrosoftSQLTableHelper : DiscoveredTableHelper
 
         if (HasPrecisionAndScale(columnType ?? throw new InvalidOperationException("Null type name returned")))
             lengthQualifier = $"({r["PRECISION"]},{r["SCALE"]})";
-        else if (RequiresLength(columnType)) lengthQualifier = $"({AdjustForUnicodeAndNegativeOne(columnType, Convert.ToInt32(r["LENGTH"], CultureInfo.InvariantCulture))})";
+        else if (RequiresLength(columnType))
+            lengthQualifier =
+                $"({AdjustForUnicodeAndNegativeOne(columnType, Convert.ToInt32(r["LENGTH"], CultureInfo.InvariantCulture))})";
 
         return columnType + lengthQualifier;
     }

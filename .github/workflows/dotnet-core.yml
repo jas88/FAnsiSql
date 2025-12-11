@@ -72,6 +72,17 @@ jobs:
     - name: Build
       run: dotnet build FAnsi.sln -c Release --nologo
 
+    - name: Install ReSharper CLI
+      run: dotnet tool install -g JetBrains.ReSharper.GlobalTools
+
+    - name: Run ReSharper InspectCode
+      run: |
+        jb inspectcode FAnsi.sln \
+          --output=resharper-report.sarif \
+          --severity=WARNING \
+          --no-build \
+          --exclude="**/obj/**;**/bin/**;**/*.g.cs;**/*.Designer.cs"
+
     - name: Wait for Oracle database
       run: |
         # Wait for Oracle to be fully ready (container reports healthy but may not accept connections yet)
@@ -138,6 +149,12 @@ jobs:
       uses: github/codeql-action/upload-sarif@v4
       with:
         sarif_file: sarif-results/csharp.sarif
+
+    - name: Upload ReSharper SARIF
+      uses: github/codeql-action/upload-sarif@v4
+      with:
+        sarif_file: resharper-report.sarif
+        category: resharper
 
     # AOT Compatibility Tests (reuses same databases)
     - name: Test SQL Server AOT Compatibility

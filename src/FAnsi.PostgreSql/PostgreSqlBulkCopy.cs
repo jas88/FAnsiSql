@@ -1,7 +1,5 @@
-using System;
 using System.Data;
 using System.Globalization;
-using System.Linq;
 using System.Text;
 using FAnsi.Connections;
 using FAnsi.Discovery;
@@ -9,7 +7,10 @@ using Npgsql;
 
 namespace FAnsi.Implementations.PostgreSql;
 
-public sealed class PostgreSqlBulkCopy(DiscoveredTable discoveredTable, IManagedConnection connection, CultureInfo culture) : BulkCopy(discoveredTable, connection, culture)
+public sealed class PostgreSqlBulkCopy(
+    DiscoveredTable discoveredTable,
+    IManagedConnection connection,
+    CultureInfo culture) : BulkCopy(discoveredTable, connection, culture)
 {
     private bool _disposed;
 
@@ -65,7 +66,7 @@ public sealed class PostgreSqlBulkCopy(DiscoveredTable discoveredTable, IManaged
         ObjectDisposedException.ThrowIf(_disposed, this);
 
     /// <summary>
-    /// Releases all resources used by the PostgreSqlBulkCopy.
+    ///     Releases all resources used by the PostgreSqlBulkCopy.
     /// </summary>
     public new void Dispose()
     {

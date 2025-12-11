@@ -1,4 +1,3 @@
-using System.Linq;
 using FAnsi.Discovery;
 using NUnit.Framework;
 

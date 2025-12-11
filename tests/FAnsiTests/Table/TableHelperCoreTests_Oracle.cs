@@ -44,7 +44,8 @@ internal sealed class TableHelperCoreTests_Oracle : TableHelperCoreTestsBase
     public void GetRowCount_EmptyTable_ReturnsZero() => GetRowCount_EmptyTable_ReturnsZero(DbType);
 
     [Test]
-    public void GetRowCount_TableWithRows_ReturnsCorrectCount() => GetRowCount_TableWithRows_ReturnsCorrectCount(DbType);
+    public void GetRowCount_TableWithRows_ReturnsCorrectCount() =>
+        GetRowCount_TableWithRows_ReturnsCorrectCount(DbType);
 
     [Test]
     public void GetRowCount_AfterInsert_ReturnsUpdatedCount() => GetRowCount_AfterInsert_ReturnsUpdatedCount(DbType);
@@ -66,5 +67,4 @@ internal sealed class TableHelperCoreTests_Oracle : TableHelperCoreTestsBase
 
     [Test]
     public void FillDataTableWithTopX_PreservesColumnTypes() => FillDataTableWithTopX_PreservesColumnTypes(DbType);
-
 }

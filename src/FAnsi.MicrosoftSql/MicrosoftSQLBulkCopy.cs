@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Data;
+﻿using System.Data;
 using System.Diagnostics.Contracts;
 using System.Globalization;
-using System.IO;
-using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using FAnsi.Connections;
@@ -16,28 +12,28 @@ namespace FAnsi.Implementations.MicrosoftSQL;
 
 public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
 {
-    private readonly SqlBulkCopy _bulkCopy;
     private static readonly Regex ColumnLevelComplaint = ColumnLevelComplaintRe();
+
+    private static readonly CompositeFormat FormatFailedToBulkInsert =
+        CompositeFormat.Parse(SR.MicrosoftSQLBulkCopy_BulkInsertWithBetterErrorMessages_Failed_to_bulk_insert__0_);
+
+    private static readonly CompositeFormat FormatBulkInsertFailedOnDataRow =
+        CompositeFormat.Parse(SR.MicrosoftSQLBulkCopy_AttemptLineByLineInsert_BulkInsert_failed_on_data_row__0___1_);
+
+    private static readonly CompositeFormat FormatBulkInsertFailedOnDataRowWithDetails = CompositeFormat.Parse(
+        SR
+            .MicrosoftSQLBulkCopy_AttemptLineByLineInsert_BulkInsert_failed_on_data_row__0__the_complaint_was_about_source_column____1____which_had_value____2____destination_data_type_was____3____4__5_);
+
+    private static readonly CompositeFormat FormatSecondPassException =
+        CompositeFormat.Parse(SR
+            .MicrosoftSQLBulkCopy_AttemptLineByLineInsert_Second_Pass_Exception__Failed_to_load_data_row__0__the_following_values_were_rejected_by_the_database___1__2__3_);
+
+    private readonly SqlBulkCopy _bulkCopy;
     private Dictionary<int, ColumnMappingMetadata>? _columnMetadataCache;
 
-    private static readonly CompositeFormat FormatFailedToBulkInsert = CompositeFormat.Parse(SR.MicrosoftSQLBulkCopy_BulkInsertWithBetterErrorMessages_Failed_to_bulk_insert__0_);
-    private static readonly CompositeFormat FormatBulkInsertFailedOnDataRow = CompositeFormat.Parse(SR.MicrosoftSQLBulkCopy_AttemptLineByLineInsert_BulkInsert_failed_on_data_row__0___1_);
-    private static readonly CompositeFormat FormatBulkInsertFailedOnDataRowWithDetails = CompositeFormat.Parse(SR.MicrosoftSQLBulkCopy_AttemptLineByLineInsert_BulkInsert_failed_on_data_row__0__the_complaint_was_about_source_column____1____which_had_value____2____destination_data_type_was____3____4__5_);
-    private static readonly CompositeFormat FormatSecondPassException = CompositeFormat.Parse(SR.MicrosoftSQLBulkCopy_AttemptLineByLineInsert_Second_Pass_Exception__Failed_to_load_data_row__0__the_following_values_were_rejected_by_the_database___1__2__3_);
 
-    /// <summary>
-    /// Metadata for a column mapping, cached to avoid reflection when enhancing error messages.
-    /// </summary>
-    private sealed class ColumnMappingMetadata
-    {
-        public required string SourceColumn { get; init; }
-        public required string DestinationColumn { get; init; }
-        public int? MaxLength { get; init; }
-        public string? DataType { get; init; }
-    }
-
-
-    public MicrosoftSQLBulkCopy(DiscoveredTable targetTable, IManagedConnection connection, CultureInfo culture) : base(targetTable, connection,
+    public MicrosoftSQLBulkCopy(DiscoveredTable targetTable, IManagedConnection connection, CultureInfo culture) : base(
+        targetTable, connection,
         culture)
     {
         // Match upstream HicServices/FAnsiSql implementation
@@ -45,7 +41,8 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
         if (connection.Transaction == null)
             options |= SqlBulkCopyOptions.UseInternalTransaction;
 
-        _bulkCopy = new SqlBulkCopy((SqlConnection)connection.Connection, options, (SqlTransaction?)connection.Transaction)
+        _bulkCopy = new SqlBulkCopy((SqlConnection)connection.Connection, options,
+            (SqlTransaction?)connection.Transaction)
         {
             BulkCopyTimeout = 50000,
             DestinationTableName = targetTable.GetFullyQualifiedName()
@@ -66,8 +63,8 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
     }
 
     /// <summary>
-    /// Builds the column metadata cache from current SqlBulkCopy column mappings.
-    /// This is called lazily when error enhancement is needed (AOT-compatible approach).
+    ///     Builds the column metadata cache from current SqlBulkCopy column mappings.
+    ///     This is called lazily when error enhancement is needed (AOT-compatible approach).
     /// </summary>
     /// <param name="insert">The SqlBulkCopy instance with configured column mappings</param>
     /// <returns>Dictionary mapping colid (1-based) to column metadata</returns>
@@ -104,7 +101,8 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
         return cache;
     }
 
-    private int BulkInsertWithBetterErrorMessages(SqlBulkCopy insert, DataTable dt, DiscoveredServer serverForLineByLineInvestigation)
+    private int BulkInsertWithBetterErrorMessages(SqlBulkCopy insert, DataTable dt,
+        DiscoveredServer serverForLineByLineInvestigation)
     {
         var rowsWritten = 0;
 
@@ -144,6 +142,7 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
                             .MicrosoftSQLBulkCopy_BulkInsertWithBetterErrorMessages_Failed_to_bulk_insert_batch__line_by_line_investigation_also_failed___InnerException_0__is_the_original_Exception__InnerException_1__is_the_line_by_line_failure,
                         e, exception);
                 }
+
                 throw better;
             }
 
@@ -158,21 +157,23 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
     }
 
     /// <summary>
-    /// Creates a new transaction and does one line at a time bulk insertions of the <paramref name="insert"/> to determine which line (and value)
-    /// is causing the problem.  Transaction is always rolled back.
-    ///
+    ///     Creates a new transaction and does one line at a time bulk insertions of the <paramref name="insert" /> to
+    ///     determine which line (and value)
+    ///     is causing the problem.  Transaction is always rolled back.
     /// </summary>
     /// <param name="e"></param>
     /// <param name="insert"></param>
     /// <param name="dt"></param>
     /// <param name="serverForLineByLineInvestigation"></param>
     /// <returns></returns>
-    private Exception AttemptLineByLineInsert(Exception e, SqlBulkCopy insert, DataTable dt, DiscoveredServer serverForLineByLineInvestigation)
+    private Exception AttemptLineByLineInsert(Exception e, SqlBulkCopy insert, DataTable dt,
+        DiscoveredServer serverForLineByLineInvestigation)
     {
         var line = 1;
         var firstPass = ExceptionToListOfInnerMessages(e, true);
         firstPass = firstPass.Replace(Environment.NewLine, $"{Environment.NewLine}\t");
-        firstPass = Environment.NewLine + SR.MicrosoftSQLBulkCopy_AttemptLineByLineInsert_First_Pass_Exception_ + Environment.NewLine + firstPass;
+        firstPass = Environment.NewLine + SR.MicrosoftSQLBulkCopy_AttemptLineByLineInsert_First_Pass_Exception_ +
+                    Environment.NewLine + firstPass;
 
         //have to use a new object because current one could have a broken transaction associated with it
         using var con = (SqlConnection)serverForLineByLineInvestigation.GetConnection();
@@ -181,7 +182,8 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
         try
         {
             // Transaction will auto-dispose and rollback on scope exit
-            using (var investigationOneLineAtATime = new SqlBulkCopy(con, SqlBulkCopyOptions.KeepIdentity, investigationTransaction))
+            using (var investigationOneLineAtATime =
+                   new SqlBulkCopy(con, SqlBulkCopyOptions.KeepIdentity, investigationTransaction))
             {
                 investigationOneLineAtATime.DestinationTableName = insert.DestinationTableName;
 
@@ -197,7 +199,8 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
                     }
                     catch (Exception exception) when (exception is SqlException or DataException)
                     {
-                        if (BcpColIdToString(investigationOneLineAtATime, exception as SqlException, out var result, out var badMapping))
+                        if (BcpColIdToString(investigationOneLineAtATime, exception as SqlException, out var result,
+                                out var badMapping))
                         {
                             if (badMapping is null || !dt.Columns.Contains(badMapping.SourceColumn))
                                 return new InvalidOperationException(
@@ -207,22 +210,31 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
 
                             var sourceValue = dr[badMapping.SourceColumn];
                             var destColumn = TargetTableColumns.SingleOrDefault(c =>
-                                StringComparisonHelper.ColumnNamesEqual(c.GetRuntimeName(), badMapping.DestinationColumn));
+                                StringComparisonHelper.ColumnNamesEqual(c.GetRuntimeName(),
+                                    badMapping.DestinationColumn));
 
                             if (destColumn != null)
                                 return new FileLoadException(
-                                    string.Format(CultureInfo.InvariantCulture, FormatBulkInsertFailedOnDataRowWithDetails, line, badMapping.SourceColumn, sourceValue, destColumn.DataType, Environment.NewLine, result), exception);
+                                    string.Format(CultureInfo.InvariantCulture,
+                                        FormatBulkInsertFailedOnDataRowWithDetails, line, badMapping.SourceColumn,
+                                        sourceValue, destColumn.DataType, Environment.NewLine, result), exception);
 
-                            return new InvalidOperationException(string.Format(CultureInfo.InvariantCulture, FormatBulkInsertFailedOnDataRow, line, result), e);
+                            return new InvalidOperationException(
+                                string.Format(CultureInfo.InvariantCulture, FormatBulkInsertFailedOnDataRow, line,
+                                    result), e);
                         }
 
                         return new FileLoadException(
-                            string.Format(CultureInfo.InvariantCulture, FormatSecondPassException, line, Environment.NewLine, string.Join(Environment.NewLine, dr.ItemArray), firstPass),
+                            string.Format(CultureInfo.InvariantCulture, FormatSecondPassException, line,
+                                Environment.NewLine, string.Join(Environment.NewLine, dr.ItemArray), firstPass),
                             exception);
                     }
 
                 //it worked... how!?
-                return new InvalidOperationException(SR.MicrosoftSQLBulkCopy_AttemptLineByLineInsert_Second_Pass_Exception__Bulk_insert_failed_but_when_we_tried_to_repeat_it_a_line_at_a_time_it_worked + firstPass, e);
+                return new InvalidOperationException(
+                    SR
+                        .MicrosoftSQLBulkCopy_AttemptLineByLineInsert_Second_Pass_Exception__Bulk_insert_failed_but_when_we_tried_to_repeat_it_a_line_at_a_time_it_worked +
+                    firstPass, e);
             }
         }
         finally
@@ -234,15 +246,17 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
     }
 
     /// <summary>
-    /// Inspects exception message <paramref name="ex"/> for references to bcp client colid and displays the user recognizable name of the column.
-    /// Uses cached metadata to avoid reflection (AOT-compatible). Cache is built lazily on first error.
+    ///     Inspects exception message <paramref name="ex" /> for references to bcp client colid and displays the user
+    ///     recognizable name of the column.
+    ///     Uses cached metadata to avoid reflection (AOT-compatible). Cache is built lazily on first error.
     /// </summary>
     /// <param name="insert"></param>
     /// <param name="ex">The Exception you caught.  If null method returns false and output variables are null.</param>
     /// <param name="newMessage"></param>
     /// <param name="badMapping"></param>
     /// <returns></returns>
-    private bool BcpColIdToString(SqlBulkCopy insert, SqlException? ex, out string? newMessage, out SqlBulkCopyColumnMapping? badMapping)
+    private bool BcpColIdToString(SqlBulkCopy insert, SqlException? ex, out string? newMessage,
+        out SqlBulkCopyColumnMapping? badMapping)
     {
         var match = ColumnLevelComplaint.Match(ex?.Message ?? "");
         if (ex == null || !match.Success)
@@ -296,8 +310,8 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
     }
 
     /// <summary>
-    /// SQL Server-specific pre-validation: rejects float columns/values because SqlBulkCopy
-    /// introduces precision loss (0.85 becomes 0.850000023841858).
+    ///     SQL Server-specific pre-validation: rejects float columns/values because SqlBulkCopy
+    ///     introduces precision loss (0.85 becomes 0.850000023841858).
     /// </summary>
     protected override void OnBeforeRowValidation(DataTable dt, Dictionary<DataColumn, DiscoveredColumn> mapping)
     {
@@ -328,11 +342,22 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
     private static partial Regex ColumnLevelComplaintRe();
 
     /// <summary>
-    /// Disposes the SqlBulkCopy instance.
+    ///     Disposes the SqlBulkCopy instance.
     /// </summary>
     public override void Dispose()
     {
         ((IDisposable?)_bulkCopy)?.Dispose();
         base.Dispose();
+    }
+
+    /// <summary>
+    ///     Metadata for a column mapping, cached to avoid reflection when enhancing error messages.
+    /// </summary>
+    private sealed class ColumnMappingMetadata
+    {
+        public required string SourceColumn { get; init; }
+        public required string DestinationColumn { get; init; }
+        public int? MaxLength { get; init; }
+        public string? DataType { get; init; }
     }
 }

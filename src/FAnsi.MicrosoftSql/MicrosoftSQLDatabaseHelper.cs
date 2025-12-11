@@ -1,10 +1,6 @@
-using System;
-using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
-using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
-using System.IO;
 using FAnsi.Discovery;
 using FAnsi.Discovery.QuerySyntax;
 using Microsoft.Data.SqlClient;
@@ -14,19 +10,22 @@ namespace FAnsi.Implementations.MicrosoftSQL;
 public sealed class MicrosoftSQLDatabaseHelper : DiscoveredDatabaseHelper
 {
     /// <summary>
-    /// True to attempt sending "ALTER DATABASE MyDatabase SET SINGLE_USER WITH ROLLBACK IMMEDIATE"
-    /// before DROP DATABASE command when using <see cref="DropDatabase(DiscoveredDatabase)"/>.
-    /// Defaults to true.  This command makes dropping databases more robust so is recommended but
-    /// is not supported by some servers (e.g. Microsoft Azure)
+    ///     True to attempt sending "ALTER DATABASE MyDatabase SET SINGLE_USER WITH ROLLBACK IMMEDIATE"
+    ///     before DROP DATABASE command when using <see cref="DropDatabase(DiscoveredDatabase)" />.
+    ///     Defaults to true.  This command makes dropping databases more robust so is recommended but
+    ///     is not supported by some servers (e.g. Microsoft Azure)
     /// </summary>
     public static bool SetSingleUserWhenDroppingDatabases { get; set; } = true;
 
-    public override IEnumerable<DiscoveredTable> ListTables(DiscoveredDatabase parent, IQuerySyntaxHelper querySyntaxHelper, DbConnection connection, string database, bool includeViews, DbTransaction? transaction = null)
+    public override IEnumerable<DiscoveredTable> ListTables(DiscoveredDatabase parent,
+        IQuerySyntaxHelper querySyntaxHelper, DbConnection connection, string database, bool includeViews,
+        DbTransaction? transaction = null)
     {
         if (connection.State == ConnectionState.Closed)
             throw new InvalidOperationException("Expected connection to be open");
 
-        using var cmd = new SqlCommand($"use {querySyntaxHelper.EnsureWrapped(database)}; EXEC sp_tables", (SqlConnection)connection);
+        using var cmd = new SqlCommand($"use {querySyntaxHelper.EnsureWrapped(database)}; EXEC sp_tables",
+            (SqlConnection)connection);
         cmd.Transaction = transaction as SqlTransaction;
 
         using var r = cmd.ExecuteReader();
@@ -51,10 +50,13 @@ public sealed class MicrosoftSQLDatabaseHelper : DiscoveredDatabaseHelper
         }
     }
 
-    public override IEnumerable<DiscoveredTableValuedFunction> ListTableValuedFunctions(DiscoveredDatabase parent, IQuerySyntaxHelper querySyntaxHelper, DbConnection connection, string database, DbTransaction? transaction = null)
+    public override IEnumerable<DiscoveredTableValuedFunction> ListTableValuedFunctions(DiscoveredDatabase parent,
+        IQuerySyntaxHelper querySyntaxHelper, DbConnection connection, string database,
+        DbTransaction? transaction = null)
     {
         using (DbCommand cmd = new SqlCommand(
-                   $"use {querySyntaxHelper.EnsureWrapped(database)};select name,\r\n (select name from sys.schemas s where s.schema_id = o.schema_id) as schema_name\r\n  from sys.objects o\r\nWHERE type_desc = 'SQL_INLINE_TABLE_VALUED_FUNCTION' OR type_desc = 'SQL_TABLE_VALUED_FUNCTION' OR type_desc ='CLR_TABLE_VALUED_FUNCTION'", (SqlConnection)connection))
+                   $"use {querySyntaxHelper.EnsureWrapped(database)};select name,\r\n (select name from sys.schemas s where s.schema_id = o.schema_id) as schema_name\r\n  from sys.objects o\r\nWHERE type_desc = 'SQL_INLINE_TABLE_VALUED_FUNCTION' OR type_desc = 'SQL_TABLE_VALUED_FUNCTION' OR type_desc ='CLR_TABLE_VALUED_FUNCTION'",
+                   (SqlConnection)connection))
 
         {
             cmd.Transaction = transaction;
@@ -73,7 +75,8 @@ public sealed class MicrosoftSQLDatabaseHelper : DiscoveredDatabaseHelper
         }
     }
 
-    public override IEnumerable<DiscoveredStoredprocedure> ListStoredprocedures(DbConnectionStringBuilder builder, string database)
+    public override IEnumerable<DiscoveredStoredprocedure> ListStoredprocedures(DbConnectionStringBuilder builder,
+        string database)
     {
         var querySyntaxHelper = MicrosoftQuerySyntaxHelper.Instance;
 
@@ -91,7 +94,8 @@ public sealed class MicrosoftSQLDatabaseHelper : DiscoveredDatabaseHelper
 
     public override void DropDatabase(DiscoveredDatabase database)
     {
-        var userIsCurrentlyInDatabase = database.Server.GetCurrentDatabase()!.GetRuntimeName().Equals(database.GetRuntimeName(), StringComparison.Ordinal);
+        var userIsCurrentlyInDatabase = database.Server.GetCurrentDatabase()!.GetRuntimeName()
+            .Equals(database.GetRuntimeName(), StringComparison.Ordinal);
 
         var serverConnectionBuilder = new SqlConnectionStringBuilder(database.Server.Builder.ConnectionString);
         if (userIsCurrentlyInDatabase)
@@ -120,15 +124,16 @@ public sealed class MicrosoftSQLDatabaseHelper : DiscoveredDatabaseHelper
     }
 
     /// <summary>
-    /// Sends a DROP database command to the <paramref name="server"/>.  Optionally sets to SINGLE_USER
-    /// first in order to more reliably drop the database.
+    ///     Sends a DROP database command to the <paramref name="server" />.  Optionally sets to SINGLE_USER
+    ///     first in order to more reliably drop the database.
     /// </summary>
     /// <param name="databaseToDrop"></param>
     /// <param name="server"></param>
     /// <param name="setSingleUserModeFirst"></param>
     private static void DropDatabase(string databaseToDrop, DiscoveredServer server, bool setSingleUserModeFirst)
     {
-        var sql = setSingleUserModeFirst ? $"ALTER DATABASE {databaseToDrop} SET SINGLE_USER WITH ROLLBACK IMMEDIATE{Environment.NewLine}"
+        var sql = setSingleUserModeFirst
+            ? $"ALTER DATABASE {databaseToDrop} SET SINGLE_USER WITH ROLLBACK IMMEDIATE{Environment.NewLine}"
             : "";
         sql += $"DROP DATABASE {databaseToDrop}";
 
@@ -148,7 +153,9 @@ public sealed class MicrosoftSQLDatabaseHelper : DiscoveredDatabaseHelper
         using var ds = new DataSet();
         using (var cmd = new SqlCommand("exec sp_spaceused", con))
         using (var da = new SqlDataAdapter(cmd))
+        {
             da.Fill(ds);
+        }
 
         toReturn.Add(ds.Tables[0].Columns[0].ColumnName, ds.Tables[0].Rows[0][0].ToString() ?? string.Empty);
         toReturn.Add(ds.Tables[0].Columns[1].ColumnName, ds.Tables[1].Rows[0][1].ToString() ?? string.Empty);
@@ -182,7 +189,9 @@ public sealed class MicrosoftSQLDatabaseHelper : DiscoveredDatabaseHelper
         using var con = (SqlConnection)server.GetConnection();
         con.Open();
         using (var cmd = new SqlCommand(sql, con))
+        {
             cmd.ExecuteNonQuery();
+        }
 
         // other operations must be done on master
         server.ChangeDatabase("master");
@@ -190,18 +199,24 @@ public sealed class MicrosoftSQLDatabaseHelper : DiscoveredDatabaseHelper
         // set single user before detaching
         sql = $"ALTER DATABASE {databaseToDetach} SET SINGLE_USER WITH ROLLBACK IMMEDIATE;";
         using (var cmd = new SqlCommand(sql, con))
+        {
             cmd.ExecuteNonQuery();
+        }
 
         var dbLiteralName = database.Server.GetQuerySyntaxHelper().Escape(database.GetRuntimeName());
 
         // detach!
         sql = $@"EXEC sys.sp_detach_db '{dbLiteralName}';";
         using (var cmd = new SqlCommand(sql, con))
+        {
             cmd.ExecuteNonQuery();
+        }
 
         // get data-files path from SQL Server
         using (var cmd = new SqlCommand(getDefaultSqlServerDatabaseDirectory, con))
+        {
             dataFolder = (string)cmd.ExecuteScalar();
+        }
 
         return dataFolder == null ? null : new DirectoryInfo(dataFolder);
     }

@@ -1,9 +1,8 @@
+using System.Data;
+using System.Globalization;
 using FAnsi;
 using FAnsi.Discovery;
 using NUnit.Framework;
-using System;
-using System.Data;
-using System.Globalization;
 
 namespace FAnsiTests.Table;
 
@@ -28,7 +27,8 @@ public sealed class TableTypeTests : DatabaseTests
         var syntax = tbl.GetQuerySyntaxHelper();
 
         //oracle likes to create stuff under your user account not the database your actually using!
-        if (dbType == DatabaseType.Oracle) viewName = syntax.EnsureFullyQualified(tbl.Database.GetRuntimeName(), null, "MyView");
+        if (dbType == DatabaseType.Oracle)
+            viewName = syntax.EnsureFullyQualified(tbl.Database.GetRuntimeName(), null, "MyView");
 
         var sql = string.Format(CultureInfo.InvariantCulture, @"CREATE VIEW {0} AS
 SELECT {2}
@@ -67,6 +67,5 @@ FROM {1}",
 
         var ex = Assert.Throws<NotSupportedException>(() => view.Rename("Lolz"));
         Assert.That(ex?.Message, Is.EqualTo("Rename is not supported for TableType View"));
-
     }
 }

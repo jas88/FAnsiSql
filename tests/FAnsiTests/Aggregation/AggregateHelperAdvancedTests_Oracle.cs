@@ -41,9 +41,9 @@ internal sealed class AggregateHelperAdvancedTests_Oracle : AggregateHelperAdvan
     public void Test_AggregateWithCaseExpression() => Test_AggregateWithCaseExpression(DbType);
 
     [Test]
-    public void Test_GetDatePartOfColumn_AllIncrements_Consistency() => Test_GetDatePartOfColumn_AllIncrements_Consistency(DbType);
+    public void Test_GetDatePartOfColumn_AllIncrements_Consistency() =>
+        Test_GetDatePartOfColumn_AllIncrements_Consistency(DbType);
 
     [Test]
     public void Test_AggregateWithJoin() => Test_AggregateWithJoin(DbType);
-
 }

@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using FAnsi;
 using FAnsi.Discovery;
 using FAnsi.Discovery.ConnectionStringDefaults;
@@ -8,18 +6,19 @@ using FAnsi.Implementations.MySql;
 using FAnsi.Implementations.Oracle;
 using FAnsi.Implementations.PostgreSql;
 using NUnit.Framework;
+using Oracle.ManagedDataAccess.Client;
 
 namespace FAnsiTests.Server;
 
 public sealed class ConnectionStringKeywordAccumulatorTests
 {
     private readonly Dictionary<DatabaseType, IDiscoveredServerHelper> _helpers = new()
-        {
-            {DatabaseType.MicrosoftSQLServer, MicrosoftSQLServerHelper.Instance},
-            {DatabaseType.MySql, MySqlServerHelper.Instance},
-            {DatabaseType.Oracle, OracleServerHelper.Instance},
-            {DatabaseType.PostgreSql, PostgreSqlServerHelper.Instance}
-        };
+    {
+        { DatabaseType.MicrosoftSQLServer, MicrosoftSQLServerHelper.Instance },
+        { DatabaseType.MySql, MySqlServerHelper.Instance },
+        { DatabaseType.Oracle, OracleServerHelper.Instance },
+        { DatabaseType.PostgreSql, PostgreSqlServerHelper.Instance }
+    };
 
     [Test]
     public void TestKeywords()
@@ -27,13 +26,15 @@ public sealed class ConnectionStringKeywordAccumulatorTests
         var acc = new ConnectionStringKeywordAccumulator(DatabaseType.MySql);
         acc.AddOrUpdateKeyword("Auto Enlist", "false", ConnectionStringKeywordPriority.SystemDefaultLow);
 
-        var connectionStringBuilder = _helpers[DatabaseType.MySql].GetConnectionStringBuilder("localhost", "mydb", "frank", "kangaro");
+        var connectionStringBuilder = _helpers[DatabaseType.MySql]
+            .GetConnectionStringBuilder("localhost", "mydb", "frank", "kangaro");
 
         Assert.That(connectionStringBuilder.ConnectionString, Does.Not.Contain("auto enlist"));
 
         acc.EnforceOptions(connectionStringBuilder);
 
-        Assert.That(connectionStringBuilder.ConnectionString.Contains("Auto Enlist=false", StringComparison.InvariantCultureIgnoreCase));
+        Assert.That(connectionStringBuilder.ConnectionString.Contains("Auto Enlist=false",
+            StringComparison.InvariantCultureIgnoreCase));
     }
 
 
@@ -43,7 +44,8 @@ public sealed class ConnectionStringKeywordAccumulatorTests
         var acc = new ConnectionStringKeywordAccumulator(DatabaseType.MicrosoftSQLServer);
         acc.AddOrUpdateKeyword("Pooling", "false", ConnectionStringKeywordPriority.SystemDefaultHigh);
 
-        var connectionStringBuilder = _helpers[DatabaseType.MicrosoftSQLServer].GetConnectionStringBuilder("localhost", "mydb", "frank", "kangaro");
+        var connectionStringBuilder = _helpers[DatabaseType.MicrosoftSQLServer]
+            .GetConnectionStringBuilder("localhost", "mydb", "frank", "kangaro");
 
         Assert.That(connectionStringBuilder.ConnectionString, Does.Not.Contain("pooling"));
 
@@ -59,12 +61,14 @@ public sealed class ConnectionStringKeywordAccumulatorTests
         Assert.That(connectionStringBuilder.ConnectionString, Does.Contain("Pooling=False"));
     }
 
-    public void TestKeywords_OverrideWithNovelButEquivalentKeyword_Ignored(DatabaseType databaseType, string key1, string value1, string equivalentKey, string value2)
+    public void TestKeywords_OverrideWithNovelButEquivalentKeyword_Ignored(DatabaseType databaseType, string key1,
+        string value1, string equivalentKey, string value2)
     {
         var acc = new ConnectionStringKeywordAccumulator(databaseType);
         acc.AddOrUpdateKeyword(key1, value1, ConnectionStringKeywordPriority.SystemDefaultHigh);
 
-        var connectionStringBuilder = _helpers[databaseType].GetConnectionStringBuilder("localhost", "mydb", "frank", "kangaro");
+        var connectionStringBuilder =
+            _helpers[databaseType].GetConnectionStringBuilder("localhost", "mydb", "frank", "kangaro");
 
         acc.EnforceOptions(connectionStringBuilder);
 
@@ -75,8 +79,10 @@ public sealed class ConnectionStringKeywordAccumulatorTests
 
         acc.EnforceOptions(connectionStringBuilder);
 
-        Assert.That(connectionStringBuilder.ConnectionString, Does.Contain($"{key1}={value1}"), "ConnectionStringKeywordAccumulator did not realise that keywords are equivalent");
+        Assert.That(connectionStringBuilder.ConnectionString, Does.Contain($"{key1}={value1}"),
+            "ConnectionStringKeywordAccumulator did not realise that keywords are equivalent");
     }
+
     [TestCase(ConnectionStringKeywordPriority.SystemDefaultHigh)] //same as current (still results in override)
     [TestCase(ConnectionStringKeywordPriority.ApiRule)]
     public void TestKeywords_OverrideWithHigherPriority_Respected(ConnectionStringKeywordPriority newPriority)
@@ -84,7 +90,8 @@ public sealed class ConnectionStringKeywordAccumulatorTests
         var acc = new ConnectionStringKeywordAccumulator(DatabaseType.MicrosoftSQLServer);
         acc.AddOrUpdateKeyword("Pooling", "false", ConnectionStringKeywordPriority.SystemDefaultHigh);
 
-        var connectionStringBuilder = _helpers[DatabaseType.MicrosoftSQLServer].GetConnectionStringBuilder("localhost", "mydb", "frank", "kangaro");
+        var connectionStringBuilder = _helpers[DatabaseType.MicrosoftSQLServer]
+            .GetConnectionStringBuilder("localhost", "mydb", "frank", "kangaro");
 
         Assert.That(connectionStringBuilder.ConnectionString, Does.Not.Contain("pooling"));
 
@@ -108,11 +115,12 @@ public sealed class ConnectionStringKeywordAccumulatorTests
 
         // Oracle driver throws OracleException instead of ArgumentException for invalid keywords
         // Accept either exception type since the behavior is inconsistent across drivers
-        var ex = Assert.Catch<Exception>(() => acc.AddOrUpdateKeyword("FLIBBLE", "false", ConnectionStringKeywordPriority.SystemDefaultLow));
+        var ex = Assert.Catch<Exception>(() =>
+            acc.AddOrUpdateKeyword("FLIBBLE", "false", ConnectionStringKeywordPriority.SystemDefaultLow));
 
         Assert.Multiple(() =>
         {
-            Assert.That(ex, Is.InstanceOf<ArgumentException>().Or.InstanceOf<Oracle.ManagedDataAccess.Client.OracleException>(),
+            Assert.That(ex, Is.InstanceOf<ArgumentException>().Or.InstanceOf<OracleException>(),
                 "Expected ArgumentException or OracleException for invalid connection string keyword");
             Assert.That(ex?.Message, Does.Contain("FLIBBLE"),
                 "Exception message should contain the invalid keyword name");

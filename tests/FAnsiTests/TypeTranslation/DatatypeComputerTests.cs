@@ -1,6 +1,3 @@
-using System;
-using System.Globalization;
-using FAnsi.Discovery.TypeTranslation;
 using FAnsi.Implementations.MicrosoftSQL;
 using NUnit.Framework;
 using TypeGuesser;
@@ -8,11 +5,15 @@ using TypeGuesser;
 namespace FAnsiTests.TypeTranslation;
 
 /// <summary>
-/// <para>These tests cover the systems ability to compute a final <see cref="DatabaseTypeRequest"/> from a set of mixed data types.</para>
-///
-/// <para>Critically it covers fallback from one data type estimate to another based on new data e.g. if you see a "100" then a "1" then a "1.1"
-/// the final estimate should be decimal(4,1) to allow for both 100.0f and 1.1f.
-/// </para>
+///     <para>
+///         These tests cover the systems ability to compute a final <see cref="DatabaseTypeRequest" /> from a set of
+///         mixed data types.
+///     </para>
+///     <para>
+///         Critically it covers fallback from one data type estimate to another based on new data e.g. if you see a "100"
+///         then a "1" then a "1.1"
+///         the final estimate should be decimal(4,1) to allow for both 100.0f and 1.1f.
+///     </para>
 /// </summary>
 public sealed class GuesserTests
 {
@@ -131,10 +132,11 @@ public sealed class GuesserTests
             var origSize = orig.Size;
             var revSize = reverseEngineered.Size;
             Assert.Fail($"Round-trip failed:\n" +
-                       $"  Original: CSharpType={orig.CSharpType}, Width={orig.Width}, Unicode={orig.Unicode}, Size=({origSize?.NumbersBeforeDecimalPlace},{origSize?.NumbersAfterDecimalPlace})\n" +
-                       $"  Reversed: CSharpType={reverseEngineered.CSharpType}, Width={reverseEngineered.Width}, Unicode={reverseEngineered.Unicode}, Size=({revSize?.NumbersBeforeDecimalPlace},{revSize?.NumbersAfterDecimalPlace})");
+                        $"  Original: CSharpType={orig.CSharpType}, Width={orig.Width}, Unicode={orig.Unicode}, Size=({origSize?.NumbersBeforeDecimalPlace},{origSize?.NumbersAfterDecimalPlace})\n" +
+                        $"  Reversed: CSharpType={reverseEngineered.CSharpType}, Width={reverseEngineered.Width}, Unicode={reverseEngineered.Unicode}, Size=({revSize?.NumbersBeforeDecimalPlace},{revSize?.NumbersAfterDecimalPlace})");
         }
     }
+
     [Test]
     public void TestGuesser_IntAndDecimal_MustUseDecimalThenString()
     {
@@ -154,7 +156,8 @@ public sealed class GuesserTests
     [TestCase("true", typeof(bool), "11", typeof(int))]
     [TestCase("1", typeof(bool), "1.1", typeof(decimal))]
     [TestCase("true", typeof(bool), "1.1", typeof(decimal))]
-    public void TestGuesser_FallbackCompatible(string input1, Type expectedTypeAfterFirstInput, string input2, Type expectedTypeAfterSecondInput)
+    public void TestGuesser_FallbackCompatible(string input1, Type expectedTypeAfterFirstInput, string input2,
+        Type expectedTypeAfterSecondInput)
     {
         var t = new Guesser();
         t.AdjustToCompensateForValue(input1);
@@ -273,6 +276,7 @@ public sealed class GuesserTests
 
         Assert.That(t.Guess.CSharpType, Is.EqualTo(typeof(string)));
     }
+
     [Test]
     public void TestGuesser_Negatives()
     {
@@ -359,6 +363,7 @@ public sealed class GuesserTests
 
         Assert.That(ex?.Message, Does.Contain("Cannot process int value when already primed with type System.Int16"));
     }
+
     [Test]
     public void TestGuesser_Int16s()
     {
@@ -376,9 +381,8 @@ public sealed class GuesserTests
             Assert.That(t.Guess.Size.NumbersBeforeDecimalPlace, Is.EqualTo(3));
             Assert.That(t.Guess.Size.NumbersAfterDecimalPlace, Is.EqualTo(0));
         });
-
-
     }
+
     [Test]
     public void TestGuesser_Byte()
     {
@@ -465,6 +469,7 @@ public sealed class GuesserTests
             Assert.That(t.GetSqlDBType(_translater), Is.EqualTo("varchar(4)"));
         });
     }
+
     [Test]
     public void TestGuesser_Time()
     {
@@ -503,6 +508,7 @@ public sealed class GuesserTests
             Assert.That(t.GetSqlDBType(_translater), Is.EqualTo("time"));
         });
     }
+
     [Test]
     public void TestGuesser_24Hour()
     {
@@ -515,6 +521,7 @@ public sealed class GuesserTests
             Assert.That(t.GetSqlDBType(_translater), Is.EqualTo("time"));
         });
     }
+
     [Test]
     public void TestGuesser_Midnight()
     {
@@ -527,6 +534,7 @@ public sealed class GuesserTests
             Assert.That(t.GetSqlDBType(_translater), Is.EqualTo("time"));
         });
     }
+
     [Test]
     public void TestGuesser_TimeObject()
     {
@@ -539,6 +547,7 @@ public sealed class GuesserTests
             Assert.That(t.GetSqlDBType(_translater), Is.EqualTo("time"));
         });
     }
+
     [Test]
     public void TestGuesser_MixedDateAndTime_FallbackToString()
     {
@@ -605,7 +614,7 @@ public sealed class GuesserTests
         t.AdjustToCompensateForValue(100.203);
         t.AdjustToCompensateForValue(100.20000);
         t.AdjustToCompensateForValue(null);
-        t.AdjustToCompensateForValue(10000d);//<- d is required because Types must be homogenous
+        t.AdjustToCompensateForValue(10000d); //<- d is required because Types must be homogenous
         t.AdjustToCompensateForValue(DBNull.Value);
 
         Assert.Multiple(() =>
@@ -622,7 +631,8 @@ public sealed class GuesserTests
     [TestCase("false", typeof(bool), "FF", 5)]
     [TestCase("2001-01-01", typeof(DateTime), "FF", 27)]
     [TestCase("2001-01-01", typeof(DateTime), "FingersMcNultyFishBonesdlsiea", 29)]
-    public void TestGuesser_FallbackOntoStringLength(string legitType, Type expectedLegitType, string str, int expectedLength)
+    public void TestGuesser_FallbackOntoStringLength(string legitType, Type expectedLegitType, string str,
+        int expectedLength)
     {
         var t = new Guesser();
 
@@ -639,7 +649,6 @@ public sealed class GuesserTests
             //the length should be the max of the length of the legit string and the string str
             Assert.That(t.Guess.Width, Is.EqualTo(expectedLength));
         });
-
     }
 
     [Test]

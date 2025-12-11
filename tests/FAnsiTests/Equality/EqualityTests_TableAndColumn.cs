@@ -52,7 +52,9 @@ internal sealed class EqualityTests_TableAndColumn
     }
 
 
-    public void EqualityTest_DiscoveredTable_AreNotEqual(DatabaseType type1, string constr1, string dbname1, string tablename1, string? schema1, DatabaseType type2, string constr2, string dbname2, string tablename2, string? schema2)
+    public void EqualityTest_DiscoveredTable_AreNotEqual(DatabaseType type1, string constr1, string dbname1,
+        string tablename1, string? schema1, DatabaseType type2, string constr2, string dbname2, string tablename2,
+        string? schema2)
     {
         var s1 = new DiscoveredServer(constr1, type1);
         var s2 = new DiscoveredServer(constr2, type2);

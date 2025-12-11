@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using FAnsi.Discovery;
 using FAnsi.Discovery.QuerySyntax;
 using FAnsi.Discovery.QuerySyntax.Update;
@@ -8,33 +5,35 @@ using FAnsi.Discovery.QuerySyntax.Update;
 namespace FAnsi.Implementations.Sqlite.Update;
 
 /// <summary>
-/// SQLite-specific implementation of update query helper. Provides functionality for building
-/// UPDATE statements with JOIN conditions.
+///     SQLite-specific implementation of update query helper. Provides functionality for building
+///     UPDATE statements with JOIN conditions.
 /// </summary>
 /// <remarks>
-/// SQLite supports UPDATE...FROM syntax for multi-table updates since version 3.33.0 (2020-08-14).
-/// This implementation uses the UPDATE...FROM pattern for cross-table updates.
+///     SQLite supports UPDATE...FROM syntax for multi-table updates since version 3.33.0 (2020-08-14).
+///     This implementation uses the UPDATE...FROM pattern for cross-table updates.
 /// </remarks>
 public sealed class SqliteUpdateHelper : UpdateHelper
 {
     /// <summary>
-    /// Gets the singleton instance of <see cref="SqliteUpdateHelper"/>.
+    ///     Gets the singleton instance of <see cref="SqliteUpdateHelper" />.
     /// </summary>
     public static readonly SqliteUpdateHelper Instance = new();
 
-    private SqliteUpdateHelper() { }
+    private SqliteUpdateHelper()
+    {
+    }
 
     /// <summary>
-    /// Builds an UPDATE query that updates one table based on values from another table.
+    ///     Builds an UPDATE query that updates one table based on values from another table.
     /// </summary>
     /// <param name="table1">The table to update</param>
     /// <param name="table2">The table to join with</param>
     /// <param name="lines">The custom lines containing JOIN, SET, and WHERE clauses</param>
     /// <returns>SQL UPDATE statement using UPDATE...FROM syntax</returns>
     /// <remarks>
-    /// <para>SQLite supports UPDATE...FROM syntax since version 3.33.0 (2020-08-14).</para>
-    /// <para>This implementation uses:</para>
-    /// <code>
+    ///     <para>SQLite supports UPDATE...FROM syntax since version 3.33.0 (2020-08-14).</para>
+    ///     <para>This implementation uses:</para>
+    ///     <code>
     /// UPDATE table1
     /// SET column = value
     /// FROM table2 AS t2
@@ -80,10 +79,10 @@ public sealed class SqliteUpdateHelper : UpdateHelper
             : string.Empty;
 
         return $"""
-               UPDATE {table1Name}
-               SET
-                   {string.Join($", {Environment.NewLine}", setStatements)}
-               FROM {table2.GetFullyQualifiedName()} AS t2{whereClause}
-               """;
+                UPDATE {table1Name}
+                SET
+                    {string.Join($", {Environment.NewLine}", setStatements)}
+                FROM {table2.GetFullyQualifiedName()} AS t2{whereClause}
+                """;
     }
 }

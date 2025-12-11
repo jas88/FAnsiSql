@@ -1,5 +1,3 @@
-using System;
-using System.Linq;
 using System.Data;
 using FAnsi;
 using FAnsi.Discovery;
@@ -9,11 +7,47 @@ using TypeGuesser;
 namespace FAnsiTests.Table;
 
 /// <summary>
-/// Tests core TableHelper operations: Exists, Drop, Truncate, and basic metadata operations.
-/// These tests target uncovered functionality in all TableHelper implementations.
+///     Tests core TableHelper operations: Exists, Drop, Truncate, and basic metadata operations.
+///     These tests target uncovered functionality in all TableHelper implementations.
 /// </summary>
 internal abstract class TableHelperCoreTestsBase : DatabaseTests
 {
+    #region GetTopXSql Tests
+
+    protected void GetTopXSql_ReturnsValidSql(DatabaseType type)
+    {
+        var db = GetTestDatabase(type);
+        using var dt = new DataTable();
+        dt.Columns.Add("Id", typeof(int));
+        dt.Columns.Add("Value", typeof(string));
+        for (var i = 1; i <= 20; i++) dt.Rows.Add(i, $"Value{i}");
+
+        var table = db.CreateTable("TopXTable", dt);
+
+        try
+        {
+            var topSql = table.Helper.GetTopXSqlForTable(table, 5);
+
+            Assert.That(topSql, Is.Not.Null.And.Not.Empty);
+
+            using var con = db.Server.GetConnection();
+            con.Open();
+            using var cmd = db.Server.GetCommand(topSql, con);
+            using var reader = cmd.ExecuteReader();
+
+            var count = 0;
+            while (reader.Read()) count++;
+
+            Assert.That(count, Is.EqualTo(5), "Should return exactly 5 rows");
+        }
+        finally
+        {
+            table.Drop();
+        }
+    }
+
+    #endregion
+
     #region Exists Tests
 
     protected void Exists_TableExists_ReturnsTrue(DatabaseType type)
@@ -196,10 +230,7 @@ internal abstract class TableHelperCoreTestsBase : DatabaseTests
         using var dt = new DataTable();
         dt.Columns.Add("Id", typeof(int));
         dt.Columns.Add("Value", typeof(string));
-        for (var i = 0; i < 100; i++)
-        {
-            dt.Rows.Add(i, $"Value{i}");
-        }
+        for (var i = 0; i < 100; i++) dt.Rows.Add(i, $"Value{i}");
 
         var table = db.CreateTable("TableToTruncate", dt);
 
@@ -247,7 +278,7 @@ internal abstract class TableHelperCoreTestsBase : DatabaseTests
             new DatabaseColumnRequest("Age", new DatabaseTypeRequest(typeof(int)))
         ]);
 
-        table.Insert(new System.Collections.Generic.Dictionary<string, object>
+        table.Insert(new Dictionary<string, object>
         {
             { "Id", 1 },
             { "Name", "Test" },
@@ -295,10 +326,7 @@ internal abstract class TableHelperCoreTestsBase : DatabaseTests
         dt.Columns.Add("Id", typeof(int));
         dt.Columns.Add("Value", typeof(string));
 
-        for (var i = 0; i < 42; i++)
-        {
-            dt.Rows.Add(i, $"Value{i}");
-        }
+        for (var i = 0; i < 42; i++) dt.Rows.Add(i, $"Value{i}");
 
         var table = db.CreateTable("CountTable", dt);
 
@@ -317,10 +345,10 @@ internal abstract class TableHelperCoreTestsBase : DatabaseTests
 
         Assert.That(table.GetRowCount(), Is.EqualTo(0));
 
-        table.Insert(new System.Collections.Generic.Dictionary<string, object> { { "Id", 1 } });
+        table.Insert(new Dictionary<string, object> { { "Id", 1 } });
         Assert.That(table.GetRowCount(), Is.EqualTo(1));
 
-        table.Insert(new System.Collections.Generic.Dictionary<string, object> { { "Id", 2 } });
+        table.Insert(new Dictionary<string, object> { { "Id", 2 } });
         Assert.That(table.GetRowCount(), Is.EqualTo(2));
 
         table.Drop();
@@ -351,7 +379,7 @@ internal abstract class TableHelperCoreTestsBase : DatabaseTests
             new DatabaseColumnRequest("Id", new DatabaseTypeRequest(typeof(int)))
         ]);
 
-        table.Insert(new System.Collections.Generic.Dictionary<string, object> { { "Id", 1 } });
+        table.Insert(new Dictionary<string, object> { { "Id", 1 } });
 
         Assert.That(table.IsEmpty(), Is.False);
 
@@ -366,55 +394,13 @@ internal abstract class TableHelperCoreTestsBase : DatabaseTests
             new DatabaseColumnRequest("Id", new DatabaseTypeRequest(typeof(int)))
         ]);
 
-        table.Insert(new System.Collections.Generic.Dictionary<string, object> { { "Id", 1 } });
+        table.Insert(new Dictionary<string, object> { { "Id", 1 } });
         Assert.That(table.IsEmpty(), Is.False);
 
         table.Truncate();
         Assert.That(table.IsEmpty(), Is.True);
 
         table.Drop();
-    }
-
-    #endregion
-
-    #region GetTopXSql Tests
-
-    protected void GetTopXSql_ReturnsValidSql(DatabaseType type)
-    {
-        var db = GetTestDatabase(type);
-        using var dt = new DataTable();
-        dt.Columns.Add("Id", typeof(int));
-        dt.Columns.Add("Value", typeof(string));
-        for (var i = 1; i <= 20; i++)
-        {
-            dt.Rows.Add(i, $"Value{i}");
-        }
-
-        var table = db.CreateTable("TopXTable", dt);
-
-        try
-        {
-            var topSql = table.Helper.GetTopXSqlForTable(table, 5);
-
-            Assert.That(topSql, Is.Not.Null.And.Not.Empty);
-
-            using var con = db.Server.GetConnection();
-            con.Open();
-            using var cmd = db.Server.GetCommand(topSql, con);
-            using var reader = cmd.ExecuteReader();
-
-            var count = 0;
-            while (reader.Read())
-            {
-                count++;
-            }
-
-            Assert.That(count, Is.EqualTo(5), "Should return exactly 5 rows");
-        }
-        finally
-        {
-            table.Drop();
-        }
     }
 
     #endregion
@@ -427,10 +413,7 @@ internal abstract class TableHelperCoreTestsBase : DatabaseTests
         using var sourceData = new DataTable();
         sourceData.Columns.Add("Id", typeof(int));
         sourceData.Columns.Add("Value", typeof(string));
-        for (var i = 1; i <= 50; i++)
-        {
-            sourceData.Rows.Add(i, $"Value{i}");
-        }
+        for (var i = 1; i <= 50; i++) sourceData.Rows.Add(i, $"Value{i}");
 
         var table = db.CreateTable("FillTopXTable", sourceData);
 

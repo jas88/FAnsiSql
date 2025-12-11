@@ -1,21 +1,19 @@
+using System.Data;
 using FAnsi;
 using FAnsi.Discovery.QuerySyntax;
 using NUnit.Framework;
-using System.Collections.Generic;
-using System.Data;
-using System.Linq;
 
 namespace FAnsiTests.Aggregation;
 
 /// <summary>
-/// Tests for PIVOT operations combined with TOP X (LIMIT) functionality.
-/// Addresses GitHub Issue #38: MySQL PIVOT+TOP query generation bug.
+///     Tests for PIVOT operations combined with TOP X (LIMIT) functionality.
+///     Addresses GitHub Issue #38: MySQL PIVOT+TOP query generation bug.
 /// </summary>
 internal abstract class PivotWithTopXTestsBase : AggregationTests
 {
     /// <summary>
-    /// Tests basic PIVOT with TOP 2 ordered by count descending.
-    /// Expected: Top 2 most common categories (T and E&amp;, %a' mp;E) should appear as columns.
+    ///     Tests basic PIVOT with TOP 2 ordered by count descending.
+    ///     Expected: Top 2 most common categories (T and E&amp;, %a' mp;E) should appear as columns.
     /// </summary>
     protected void Test_PivotWithTop2_OrderByCountDesc(DatabaseType type)
     {
@@ -65,8 +63,8 @@ internal abstract class PivotWithTopXTestsBase : AggregationTests
     }
 
     /// <summary>
-    /// Tests PIVOT with TOP 2 and a HAVING clause.
-    /// Expected: Only categories with count > 1, then TOP 2 of those.
+    ///     Tests PIVOT with TOP 2 and a HAVING clause.
+    ///     Expected: Only categories with count > 1, then TOP 2 of those.
     /// </summary>
     protected void Test_PivotWithTop2_WithHaving(DatabaseType type)
     {
@@ -108,8 +106,8 @@ internal abstract class PivotWithTopXTestsBase : AggregationTests
     }
 
     /// <summary>
-    /// Tests PIVOT with TOP 2 and a WHERE clause.
-    /// Expected: Filter data first with WHERE, then PIVOT on TOP 2.
+    ///     Tests PIVOT with TOP 2 and a WHERE clause.
+    ///     Expected: Filter data first with WHERE, then PIVOT on TOP 2.
     /// </summary>
     protected void Test_PivotWithTop2_WithWhere(DatabaseType type)
     {
@@ -151,8 +149,8 @@ internal abstract class PivotWithTopXTestsBase : AggregationTests
     }
 
     /// <summary>
-    /// Tests PIVOT with TOP 2 using custom ORDER BY (alphabetical).
-    /// Expected: First 2 categories alphabetically.
+    ///     Tests PIVOT with TOP 2 using custom ORDER BY (alphabetical).
+    ///     Expected: First 2 categories alphabetically.
     /// </summary>
     protected void Test_PivotWithTop2_OrderByAlphabetical(DatabaseType type)
     {
@@ -192,8 +190,8 @@ internal abstract class PivotWithTopXTestsBase : AggregationTests
     }
 
     /// <summary>
-    /// Tests PIVOT with TOP 2, combining both WHERE and HAVING clauses.
-    /// Expected: Complex filtering before and after grouping, then TOP 2.
+    ///     Tests PIVOT with TOP 2, combining both WHERE and HAVING clauses.
+    ///     Expected: Complex filtering before and after grouping, then TOP 2.
     /// </summary>
     protected void Test_PivotWithTop2_WhereAndHaving(DatabaseType type)
     {
@@ -239,8 +237,8 @@ internal abstract class PivotWithTopXTestsBase : AggregationTests
     }
 
     /// <summary>
-    /// Tests PIVOT with TOP 1 to verify single-column pivot works.
-    /// Edge case: TOP 1 should produce only 1 pivot column.
+    ///     Tests PIVOT with TOP 1 to verify single-column pivot works.
+    ///     Edge case: TOP 1 should produce only 1 pivot column.
     /// </summary>
     protected void Test_PivotWithTop1_SingleColumn(DatabaseType type)
     {

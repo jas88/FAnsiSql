@@ -1,11 +1,8 @@
-using System;
-using System.Collections.Generic;
 using System.Data;
 using System.Globalization;
 using FAnsi;
 using FAnsi.Discovery;
 using NUnit.Framework;
-using System.Linq;
 
 namespace FAnsiTests.Aggregation;
 
@@ -17,9 +14,9 @@ internal abstract class AggregationTests : DatabaseTests
     [OneTimeSetUp]
     public void Setup()
     {
-        SetupDatabaseTable(true, "AggregateDataBasedTestsEasy", cleanDatabaseFirst: true);
+        SetupDatabaseTable(true, "AggregateDataBasedTestsEasy", true);
 
-        SetupDatabaseTable(false, "AggregateDataBasedTestsHard", cleanDatabaseFirst: false);
+        SetupDatabaseTable(false, "AggregateDataBasedTestsHard", false);
     }
 
     private void SetupDatabaseTable(bool easy, string name, bool cleanDatabaseFirst)
@@ -48,7 +45,8 @@ internal abstract class AggregationTests : DatabaseTests
         {
             dt.Rows.Add("2001-01-01", "E&, %a' mp;E", "37");
             dt.Rows.Add("2002-01-01", "E&, %a' mp;E", "41");
-            dt.Rows.Add("2005-01-01", "E&, %a' mp;E", "59"); //note there are no records in 2004 it is important for axis tests (axis involves you having to build a calendar table)
+            dt.Rows.Add("2005-01-01", "E&, %a' mp;E",
+                "59"); //note there are no records in 2004 it is important for axis tests (axis involves you having to build a calendar table)
         }
 
 
@@ -59,7 +57,7 @@ internal abstract class AggregationTests : DatabaseTests
         foreach (var (key, _) in TestConnectionStrings)
             try
             {
-                var db = GetTestDatabase(key, cleanDatabase: cleanDatabaseFirst);
+                var db = GetTestDatabase(key, cleanDatabaseFirst);
                 var tbl = db.CreateTable(name, dt);
 
                 var dic = easy ? _easyTables : _hardTables;
@@ -73,11 +71,12 @@ internal abstract class AggregationTests : DatabaseTests
 
     protected static void AssertHasRow(DataTable dt, params object?[] cells)
     {
-        Assert.That(dt.Rows.Cast<DataRow>().Any(r => IsMatch(r, cells)), $"Did not find expected row:{string.Join("|", cells)}");
+        Assert.That(dt.Rows.Cast<DataRow>().Any(r => IsMatch(r, cells)),
+            $"Did not find expected row:{string.Join("|", cells)}");
     }
 
     /// <summary>
-    /// Confirms that the first x cells of <paramref name="r"/> match the contents of <paramref name="cells"/>
+    ///     Confirms that the first x cells of <paramref name="r" /> match the contents of <paramref name="cells" />
     /// </summary>
     /// <param name="r"></param>
     /// <param name="cells"></param>
@@ -102,6 +101,7 @@ internal abstract class AggregationTests : DatabaseTests
                         return false;
                     continue;
                 }
+
                 if (a is DateTime dt && b is DateOnly dOnly)
                 {
                     if (DateOnly.FromDateTime(dt) != dOnly)
@@ -119,6 +119,7 @@ internal abstract class AggregationTests : DatabaseTests
                             return false;
                         continue;
                     }
+
                     return false; // String couldn't be parsed as DateTime
                 }
 
@@ -197,5 +198,4 @@ internal abstract class AggregationTests : DatabaseTests
 
         return dic[type];
     }
-
 }

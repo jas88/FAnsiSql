@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Globalization;
@@ -16,13 +14,16 @@ public sealed partial class MySqlTableHelper : DiscoveredTableHelper
 {
     public static readonly MySqlTableHelper Instance = new();
 
-    private MySqlTableHelper() { }
-
     private static readonly Regex IntParentheses = IntParenthesesRe();
     private static readonly Regex SmallintParentheses = SmallintParenthesesRe();
     private static readonly Regex BitParentheses = BitParenthesesRe();
 
-    public override IEnumerable<DiscoveredColumn> DiscoverColumns(DiscoveredTable discoveredTable, IManagedConnection connection,
+    private MySqlTableHelper()
+    {
+    }
+
+    public override IEnumerable<DiscoveredColumn> DiscoverColumns(DiscoveredTable discoveredTable,
+        IManagedConnection connection,
         string database)
     {
         var tableName = discoveredTable.GetRuntimeName();
@@ -48,7 +49,8 @@ public sealed partial class MySqlTableHelper : DiscoveredTableHelper
 
         using var r = cmd.ExecuteReader();
         if (!r.HasRows)
-            throw new InvalidOperationException($"Could not find any columns for table {tableName} in database {database}");
+            throw new InvalidOperationException(
+                $"Could not find any columns for table {tableName} in database {database}");
 
         while (r.Read())
         {
@@ -108,7 +110,7 @@ public sealed partial class MySqlTableHelper : DiscoveredTableHelper
     }
 
     /// <summary>
-    /// Checks if the table exists using the provided connection.
+    ///     Checks if the table exists using the provided connection.
     /// </summary>
     /// <param name="table">The table to check</param>
     /// <param name="connection">The managed connection to use</param>
@@ -127,13 +129,13 @@ public sealed partial class MySqlTableHelper : DiscoveredTableHelper
         };
 
         var sql = $"""
-            SELECT EXISTS (
-                SELECT 1 FROM information_schema.`TABLES`
-                WHERE table_schema = @db
-                AND table_name = @tbl
-                AND table_type IN ({tableType})
-            )
-            """;
+                   SELECT EXISTS (
+                       SELECT 1 FROM information_schema.`TABLES`
+                       WHERE table_schema = @db
+                       AND table_name = @tbl
+                       AND table_type IN ({tableType})
+                   )
+                   """;
 
         using var cmd = table.Database.Server.Helper.GetCommand(sql, connection.Connection, connection.Transaction);
 
@@ -161,7 +163,7 @@ public sealed partial class MySqlTableHelper : DiscoveredTableHelper
     }
 
     /// <summary>
-    /// Checks if the table has a primary key using the provided connection.
+    ///     Checks if the table has a primary key using the provided connection.
     /// </summary>
     /// <param name="table">The table to check</param>
     /// <param name="connection">The managed connection to use</param>
@@ -182,13 +184,13 @@ public sealed partial class MySqlTableHelper : DiscoveredTableHelper
             freshConnection.Open();
 
             const string sql = """
-                SELECT EXISTS (
-                    SELECT 1 FROM information_schema.`TABLE_CONSTRAINTS`
-                    WHERE table_schema = @db
-                    AND table_name = @tbl
-                    AND constraint_type = 'PRIMARY KEY'
-                )
-                """;
+                               SELECT EXISTS (
+                                   SELECT 1 FROM information_schema.`TABLE_CONSTRAINTS`
+                                   WHERE table_schema = @db
+                                   AND table_name = @tbl
+                                   AND constraint_type = 'PRIMARY KEY'
+                               )
+                               """;
 
             using var cmd = table.Database.Server.Helper.GetCommand(sql, freshConnection);
 
@@ -204,13 +206,13 @@ public sealed partial class MySqlTableHelper : DiscoveredTableHelper
         {
             // No transaction - safe to reuse connection
             const string sql = """
-                SELECT EXISTS (
-                    SELECT 1 FROM information_schema.`TABLE_CONSTRAINTS`
-                    WHERE table_schema = @db
-                    AND table_name = @tbl
-                    AND constraint_type = 'PRIMARY KEY'
-                )
-                """;
+                               SELECT EXISTS (
+                                   SELECT 1 FROM information_schema.`TABLE_CONSTRAINTS`
+                                   WHERE table_schema = @db
+                                   AND table_name = @tbl
+                                   AND constraint_type = 'PRIMARY KEY'
+                               )
+                               """;
 
             using var cmd = table.Database.Server.Helper.GetCommand(sql, connection.Connection);
 
@@ -224,7 +226,8 @@ public sealed partial class MySqlTableHelper : DiscoveredTableHelper
         }
     }
 
-    [Obsolete("Prefer using HasPrimaryKey(DiscoveredTable, IManagedConnection) to reuse connections and improve performance")]
+    [Obsolete(
+        "Prefer using HasPrimaryKey(DiscoveredTable, IManagedConnection) to reuse connections and improve performance")]
     public override bool HasPrimaryKey(DiscoveredTable table, IManagedTransaction? transaction = null)
     {
         // Do NOT use transaction parameter - information_schema queries must run outside transactions
@@ -233,13 +236,13 @@ public sealed partial class MySqlTableHelper : DiscoveredTableHelper
         connection.Open();
 
         const string sql = """
-            SELECT EXISTS (
-                SELECT 1 FROM information_schema.`TABLE_CONSTRAINTS`
-                WHERE table_schema = @db
-                AND table_name = @tbl
-                AND constraint_type = 'PRIMARY KEY'
-            )
-            """;
+                           SELECT EXISTS (
+                               SELECT 1 FROM information_schema.`TABLE_CONSTRAINTS`
+                               WHERE table_schema = @db
+                               AND table_name = @tbl
+                               AND constraint_type = 'PRIMARY KEY'
+                           )
+                           """;
 
         using var cmd = table.Database.Server.Helper.GetCommand(sql, connection);
         // No transaction set on this command
@@ -261,7 +264,8 @@ public sealed partial class MySqlTableHelper : DiscoveredTableHelper
     }
 
     /// <summary>
-    /// Gets the auto-increment column for the table using a database-specific SQL query (90-99% faster than discovering all columns).
+    ///     Gets the auto-increment column for the table using a database-specific SQL query (90-99% faster than discovering
+    ///     all columns).
     /// </summary>
     /// <param name="table">The table to check</param>
     /// <param name="connection">The managed connection to use</param>
@@ -332,7 +336,8 @@ public sealed partial class MySqlTableHelper : DiscoveredTableHelper
     public override void DropColumn(DbConnection connection, DiscoveredColumn columnToDrop)
     {
         using var cmd = new MySqlCommand(
-            $"alter table {columnToDrop.Table.GetFullyQualifiedName()} drop column {columnToDrop.GetWrappedName()}", (MySqlConnection)connection);
+            $"alter table {columnToDrop.Table.GetFullyQualifiedName()} drop column {columnToDrop.GetWrappedName()}",
+            (MySqlConnection)connection);
         cmd.ExecuteNonQuery();
     }
 
@@ -344,7 +349,8 @@ public sealed partial class MySqlTableHelper : DiscoveredTableHelper
     public override IBulkCopy BeginBulkInsert(DiscoveredTable discoveredTable, IManagedConnection connection,
         CultureInfo culture) => new MySqlBulkCopy(discoveredTable, connection, culture);
 
-    public override DiscoveredRelationship[] DiscoverRelationships(DiscoveredTable table, DbConnection connection, IManagedTransaction? transaction = null)
+    public override DiscoveredRelationship[] DiscoverRelationships(DiscoveredTable table, DbConnection connection,
+        IManagedTransaction? transaction = null)
     {
         var toReturn = new Dictionary<string, DiscoveredRelationship>();
 
@@ -367,7 +373,8 @@ public sealed partial class MySqlTableHelper : DiscoveredTableHelper
                              u.REFERENCED_TABLE_NAME = @tbl
                            """;
 
-        using (var cmd = new MySqlCommand(sql, (MySqlConnection)connection, (MySqlTransaction?)transaction?.Transaction))
+        using (var cmd = new MySqlCommand(sql, (MySqlConnection)connection,
+                   (MySqlTransaction?)transaction?.Transaction))
         {
             var p = new MySqlParameter("@db", MySqlDbType.String)
             {
@@ -438,7 +445,8 @@ public sealed partial class MySqlTableHelper : DiscoveredTableHelper
         return $"RENAME TABLE {discoveredTable.GetWrappedName()} TO {syntax.EnsureWrapped(newName)};";
     }
 
-    public override string GetTopXSqlForTable(IHasFullyQualifiedNameToo table, int topX) => $"SELECT * FROM {table.GetFullyQualifiedName()} LIMIT {topX}";
+    public override string GetTopXSqlForTable(IHasFullyQualifiedNameToo table, int topX) =>
+        $"SELECT * FROM {table.GetFullyQualifiedName()} LIMIT {topX}";
 
 
     public override void DropFunction(DbConnection connection, DiscoveredTableValuedFunction functionToDrop)
@@ -449,7 +457,8 @@ public sealed partial class MySqlTableHelper : DiscoveredTableHelper
     [GeneratedRegex(@"^int\(\d+\)", RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]
     private static partial Regex IntParenthesesRe();
 
-    [GeneratedRegex(@"^smallint\(\d+\)", RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]
+    [GeneratedRegex(@"^smallint\(\d+\)",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]
     private static partial Regex SmallintParenthesesRe();
 
     [GeneratedRegex(@"^bit\(\d+\)", RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]

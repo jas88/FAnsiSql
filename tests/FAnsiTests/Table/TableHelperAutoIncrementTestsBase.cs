@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using System.Data;
 using System.Globalization;
 using FAnsi;
@@ -10,11 +8,124 @@ using TypeGuesser;
 namespace FAnsiTests.Table;
 
 /// <summary>
-/// Tests TableHelper auto-increment/identity operations: ExecuteInsertReturningIdentity and related functionality.
-/// These tests target uncovered functionality in all TableHelper implementations.
+///     Tests TableHelper auto-increment/identity operations: ExecuteInsertReturningIdentity and related functionality.
+///     These tests target uncovered functionality in all TableHelper implementations.
 /// </summary>
 internal abstract class TableHelperAutoIncrementTestsBase : DatabaseTests
 {
+    #region Auto-increment Column Discovery Tests
+
+    protected void DiscoverColumns_IdentifiesAutoIncrement_Correctly(DatabaseType type)
+    {
+        var db = GetTestDatabase(type);
+        var table = db.CreateTable("DiscoverAutoIncTable",
+        [
+            new DatabaseColumnRequest("Id", new DatabaseTypeRequest(typeof(int)))
+            {
+                IsAutoIncrement = true,
+                IsPrimaryKey = true
+            },
+            new DatabaseColumnRequest("NotAutoInc", new DatabaseTypeRequest(typeof(int)))
+        ]);
+
+        try
+        {
+            var columns = table.DiscoverColumns();
+
+            var idCol = columns.First(c =>
+                c.GetRuntimeName()?.Equals("Id", StringComparison.OrdinalIgnoreCase) == true);
+            var notAutoIncCol = columns.First(c =>
+                c.GetRuntimeName()?.Equals("NotAutoInc", StringComparison.OrdinalIgnoreCase) == true);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(idCol.IsAutoIncrement, Is.True, "Id column should be auto-increment");
+                Assert.That(notAutoIncCol.IsAutoIncrement, Is.False, "NotAutoInc column should not be auto-increment");
+            });
+        }
+        finally
+        {
+            table.Drop();
+        }
+    }
+
+    #endregion
+
+    #region BulkInsert with Auto-increment Tests
+
+    protected void BulkInsert_AutoIncrementTable_GeneratesIdentities(DatabaseType type)
+    {
+        var db = GetTestDatabase(type);
+        var table = db.CreateTable("BulkAutoIncTable",
+        [
+            new DatabaseColumnRequest("Id", new DatabaseTypeRequest(typeof(int)))
+            {
+                IsAutoIncrement = true,
+                IsPrimaryKey = true
+            },
+            new DatabaseColumnRequest("Value", new DatabaseTypeRequest(typeof(string), 100))
+        ]);
+
+        try
+        {
+            using var dt = new DataTable();
+            dt.Columns.Add("Value", typeof(string));
+            for (var i = 0; i < 10; i++) dt.Rows.Add($"Bulk{i}");
+
+            using (var bulk = table.BeginBulkInsert(CultureInfo.InvariantCulture))
+            {
+                bulk.Upload(dt);
+            }
+
+            Assert.That(table.GetRowCount(), Is.EqualTo(10));
+
+            var resultDt = table.GetDataTable();
+            Assert.That(resultDt.Rows[0]["Id"], Is.Not.EqualTo(DBNull.Value));
+        }
+        finally
+        {
+            table.Drop();
+        }
+    }
+
+    #endregion
+
+    #region Identity Column Constraints Tests
+
+    protected void AutoIncrement_Column_IsPrimaryKey(DatabaseType type)
+    {
+        var db = GetTestDatabase(type);
+        var table = db.CreateTable("AutoIncPkTable",
+        [
+            new DatabaseColumnRequest("Id", new DatabaseTypeRequest(typeof(int)))
+            {
+                IsAutoIncrement = true,
+                IsPrimaryKey = true
+            },
+            new DatabaseColumnRequest("Value", new DatabaseTypeRequest(typeof(string), 100))
+        ]);
+
+        try
+        {
+            var columns = table.DiscoverColumns();
+            var idCol = columns.First(c =>
+                c.GetRuntimeName()?.Equals("Id", StringComparison.OrdinalIgnoreCase) == true);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(idCol.IsAutoIncrement, Is.True);
+                Assert.That(idCol.IsPrimaryKey, Is.True);
+                Assert.That(idCol.AllowNulls, Is.False, "Auto-increment primary key should not allow nulls");
+            });
+        }
+        finally
+        {
+            table.Drop();
+        }
+    }
+
+    #endregion
+
     #region ExecuteInsertReturningIdentity Tests
 
     protected void ExecuteInsertReturningIdentity_SingleInsert_ReturnsIdentity(DatabaseType type)
@@ -36,7 +147,8 @@ internal abstract class TableHelperAutoIncrementTestsBase : DatabaseTests
             con.Open();
 
             var syntax = table.GetQuerySyntaxHelper();
-            var insertSql = $"INSERT INTO {table.GetFullyQualifiedName()} ({syntax.EnsureWrapped("Value")}) VALUES ('Test1')";
+            var insertSql =
+                $"INSERT INTO {table.GetFullyQualifiedName()} ({syntax.EnsureWrapped("Value")}) VALUES ('Test1')";
 
             using var cmd = db.Server.GetCommand(insertSql, con);
             var identity = table.Helper.ExecuteInsertReturningIdentity(table, cmd);
@@ -76,7 +188,8 @@ internal abstract class TableHelperAutoIncrementTestsBase : DatabaseTests
 
             for (var i = 0; i < 5; i++)
             {
-                var insertSql = $"INSERT INTO {table.GetFullyQualifiedName()} ({syntax.EnsureWrapped("Value")}) VALUES ('Test{i}')";
+                var insertSql =
+                    $"INSERT INTO {table.GetFullyQualifiedName()} ({syntax.EnsureWrapped("Value")}) VALUES ('Test{i}')";
                 using var cmd = db.Server.GetCommand(insertSql, con);
                 var identity = table.Helper.ExecuteInsertReturningIdentity(table, cmd);
                 identities.Add(identity);
@@ -115,7 +228,8 @@ internal abstract class TableHelperAutoIncrementTestsBase : DatabaseTests
             using var con = db.Server.BeginNewTransactedConnection();
 
             var syntax = table.GetQuerySyntaxHelper();
-            var insertSql = $"INSERT INTO {table.GetFullyQualifiedName()} ({syntax.EnsureWrapped("Value")}) VALUES ('TransTest')";
+            var insertSql =
+                $"INSERT INTO {table.GetFullyQualifiedName()} ({syntax.EnsureWrapped("Value")}) VALUES ('TransTest')";
 
             using var cmd = db.Server.GetCommand(insertSql, con.Connection);
             cmd.Transaction = con.Transaction;
@@ -128,42 +242,6 @@ internal abstract class TableHelperAutoIncrementTestsBase : DatabaseTests
 
             // Verify the insert was committed
             Assert.That(table.GetRowCount(), Is.EqualTo(1));
-        }
-        finally
-        {
-            table.Drop();
-        }
-    }
-
-    #endregion
-
-    #region Auto-increment Column Discovery Tests
-
-    protected void DiscoverColumns_IdentifiesAutoIncrement_Correctly(DatabaseType type)
-    {
-        var db = GetTestDatabase(type);
-        var table = db.CreateTable("DiscoverAutoIncTable",
-        [
-            new DatabaseColumnRequest("Id", new DatabaseTypeRequest(typeof(int)))
-            {
-                IsAutoIncrement = true,
-                IsPrimaryKey = true
-            },
-            new DatabaseColumnRequest("NotAutoInc", new DatabaseTypeRequest(typeof(int)))
-        ]);
-
-        try
-        {
-            var columns = table.DiscoverColumns();
-
-            var idCol = System.Linq.Enumerable.First(columns, c => c.GetRuntimeName()?.Equals("Id", StringComparison.OrdinalIgnoreCase) == true);
-            var notAutoIncCol = System.Linq.Enumerable.First(columns, c => c.GetRuntimeName()?.Equals("NotAutoInc", StringComparison.OrdinalIgnoreCase) == true);
-
-            Assert.Multiple(() =>
-            {
-                Assert.That(idCol.IsAutoIncrement, Is.True, "Id column should be auto-increment");
-                Assert.That(notAutoIncCol.IsAutoIncrement, Is.False, "NotAutoInc column should not be auto-increment");
-            });
         }
         finally
         {
@@ -226,12 +304,10 @@ internal abstract class TableHelperAutoIncrementTestsBase : DatabaseTests
         try
         {
             for (var i = 0; i < 3; i++)
-            {
                 table.Insert(new Dictionary<string, object>
                 {
                     { "Value", $"Row{i}" }
                 });
-            }
 
             // Oracle doesn't guarantee row order without ORDER BY, so we need to query with explicit ordering
             using var con = db.Server.GetConnection();
@@ -265,83 +341,6 @@ internal abstract class TableHelperAutoIncrementTestsBase : DatabaseTests
 
     #endregion
 
-    #region BulkInsert with Auto-increment Tests
-
-    protected void BulkInsert_AutoIncrementTable_GeneratesIdentities(DatabaseType type)
-    {
-        var db = GetTestDatabase(type);
-        var table = db.CreateTable("BulkAutoIncTable",
-        [
-            new DatabaseColumnRequest("Id", new DatabaseTypeRequest(typeof(int)))
-            {
-                IsAutoIncrement = true,
-                IsPrimaryKey = true
-            },
-            new DatabaseColumnRequest("Value", new DatabaseTypeRequest(typeof(string), 100))
-        ]);
-
-        try
-        {
-            using var dt = new DataTable();
-            dt.Columns.Add("Value", typeof(string));
-            for (var i = 0; i < 10; i++)
-            {
-                dt.Rows.Add($"Bulk{i}");
-            }
-
-            using (var bulk = table.BeginBulkInsert(CultureInfo.InvariantCulture))
-            {
-                bulk.Upload(dt);
-            }
-
-            Assert.That(table.GetRowCount(), Is.EqualTo(10));
-
-            var resultDt = table.GetDataTable();
-            Assert.That(resultDt.Rows[0]["Id"], Is.Not.EqualTo(DBNull.Value));
-        }
-        finally
-        {
-            table.Drop();
-        }
-    }
-
-    #endregion
-
-    #region Identity Column Constraints Tests
-
-    protected void AutoIncrement_Column_IsPrimaryKey(DatabaseType type)
-    {
-        var db = GetTestDatabase(type);
-        var table = db.CreateTable("AutoIncPkTable",
-        [
-            new DatabaseColumnRequest("Id", new DatabaseTypeRequest(typeof(int)))
-            {
-                IsAutoIncrement = true,
-                IsPrimaryKey = true
-            },
-            new DatabaseColumnRequest("Value", new DatabaseTypeRequest(typeof(string), 100))
-        ]);
-
-        try
-        {
-            var columns = table.DiscoverColumns();
-            var idCol = System.Linq.Enumerable.First(columns, c => c.GetRuntimeName()?.Equals("Id", StringComparison.OrdinalIgnoreCase) == true);
-
-            Assert.Multiple(() =>
-            {
-                Assert.That(idCol.IsAutoIncrement, Is.True);
-                Assert.That(idCol.IsPrimaryKey, Is.True);
-                Assert.That(idCol.AllowNulls, Is.False, "Auto-increment primary key should not allow nulls");
-            });
-        }
-        finally
-        {
-            table.Drop();
-        }
-    }
-
-    #endregion
-
     #region Script Generation with Identity Tests
 
     protected void ScriptTableCreation_WithAutoIncrement_IncludesIdentity(DatabaseType type)
@@ -359,7 +358,7 @@ internal abstract class TableHelperAutoIncrementTestsBase : DatabaseTests
 
         try
         {
-            var sql = table.ScriptTableCreation(dropPrimaryKeys: false, dropNullability: false, convertIdentityToInt: false);
+            var sql = table.ScriptTableCreation(false, false, false);
 
             Assert.That(sql, Is.Not.Null.And.Not.Empty);
             // The script should contain some form of auto-increment/identity specification
@@ -385,10 +384,11 @@ internal abstract class TableHelperAutoIncrementTestsBase : DatabaseTests
 
         try
         {
-            var sqlWithIdentity = table.ScriptTableCreation(dropPrimaryKeys: false, dropNullability: false, convertIdentityToInt: false);
-            var sqlWithoutIdentity = table.ScriptTableCreation(dropPrimaryKeys: false, dropNullability: false, convertIdentityToInt: true);
+            var sqlWithIdentity = table.ScriptTableCreation(false, false, false);
+            var sqlWithoutIdentity = table.ScriptTableCreation(false, false, true);
 
-            Assert.That(sqlWithIdentity, Is.Not.EqualTo(sqlWithoutIdentity), "Scripts should differ when converting identity");
+            Assert.That(sqlWithIdentity, Is.Not.EqualTo(sqlWithoutIdentity),
+                "Scripts should differ when converting identity");
         }
         finally
         {

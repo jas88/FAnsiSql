@@ -29,6 +29,5 @@ internal sealed class TestRename : DatabaseTests
             Assert.That(tbl.GetRuntimeName(), Is.EqualTo("MYTABLE2"));
             Assert.That(tbl2.GetRuntimeName(), Is.EqualTo("MYTABLE2"));
         });
-
     }
 }

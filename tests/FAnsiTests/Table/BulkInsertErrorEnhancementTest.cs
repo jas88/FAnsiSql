@@ -1,24 +1,22 @@
-using System;
 using System.Data;
 using System.Globalization;
 using FAnsi;
 using FAnsi.Discovery;
-using FAnsi.Discovery.QuerySyntax;
 using NUnit.Framework;
 using TypeGuesser;
 
 namespace FAnsiTests.Table;
 
 /// <summary>
-/// Tests for enhanced error messages in bulk insert operations, specifically testing
-/// the AOT-compatible column mapping error enhancement implementation.
+///     Tests for enhanced error messages in bulk insert operations, specifically testing
+///     the AOT-compatible column mapping error enhancement implementation.
 /// </summary>
 internal sealed class BulkInsertErrorEnhancementTest : DatabaseTests
 {
     /// <summary>
-    /// Tests that string length violations produce enhanced error messages with source column names.
-    /// This is the primary use case for error enhancement - helping users identify which column
-    /// in their DataTable is causing the problem.
+    ///     Tests that string length violations produce enhanced error messages with source column names.
+    ///     This is the primary use case for error enhancement - helping users identify which column
+    ///     in their DataTable is causing the problem.
     /// </summary>
     public void TestBulkInsert_StringLengthViolation_EnhancedErrorMessage(DatabaseType type)
     {
@@ -69,7 +67,6 @@ internal sealed class BulkInsertErrorEnhancementTest : DatabaseTests
 
         // For SQL Server, verify the enhanced error message contains the source column name
         if (type == DatabaseType.MicrosoftSQLServer)
-        {
             Assert.Multiple(() =>
             {
                 // Should mention it's on row 3 (0-based = row 2, but error messages are 1-based)
@@ -92,15 +89,14 @@ internal sealed class BulkInsertErrorEnhancementTest : DatabaseTests
                 Assert.That(ex.Message, Does.Contain("5"),
                     "Error should mention the MaxLength constraint");
             });
-        }
 
         tbl.Drop();
     }
 
     /// <summary>
-    /// Tests error enhancement with multiple columns to verify the sorting logic works correctly.
-    /// SQL Server internally sorts column mappings by destination column name, and our cache
-    /// must replicate this sorting to correctly map colid to column names.
+    ///     Tests error enhancement with multiple columns to verify the sorting logic works correctly.
+    ///     SQL Server internally sorts column mappings by destination column name, and our cache
+    ///     must replicate this sorting to correctly map colid to column names.
     /// </summary>
     public void TestBulkInsert_MultipleColumns_SortingWorks(DatabaseType type)
     {
@@ -140,7 +136,6 @@ internal sealed class BulkInsertErrorEnhancementTest : DatabaseTests
         Assert.That(ex, Is.Not.Null);
 
         if (type == DatabaseType.MicrosoftSQLServer)
-        {
             Assert.Multiple(() =>
             {
                 // Should correctly identify the banana column despite the ordering
@@ -150,14 +145,13 @@ internal sealed class BulkInsertErrorEnhancementTest : DatabaseTests
                 Assert.That(ex.Message, Does.Contain("Banana").IgnoreCase,
                     "Error should contain destination column name 'Banana'");
             });
-        }
 
         tbl.Drop();
     }
 
     /// <summary>
-    /// Tests that the error enhancement works with case-insensitive column name matching,
-    /// as SQL Server uses case-insensitive collation by default.
+    ///     Tests that the error enhancement works with case-insensitive column name matching,
+    ///     as SQL Server uses case-insensitive collation by default.
     /// </summary>
     public void TestBulkInsert_CaseInsensitiveMatching(DatabaseType type)
     {
@@ -188,18 +182,16 @@ internal sealed class BulkInsertErrorEnhancementTest : DatabaseTests
         Assert.That(ex, Is.Not.Null);
 
         if (type == DatabaseType.MicrosoftSQLServer)
-        {
             // Should still work despite case mismatch
             Assert.That(ex!.Message, Does.Contain("TESTCOLUMN").Or.Contain("TestColumn"),
                 "Error should identify column despite case difference");
-        }
 
         tbl.Drop();
     }
 
     /// <summary>
-    /// Tests that error enhancement gracefully handles edge cases where the column
-    /// might not be found in the cache.
+    ///     Tests that error enhancement gracefully handles edge cases where the column
+    ///     might not be found in the cache.
     /// </summary>
     public void TestBulkInsert_EdgeCase_EmptyTable(DatabaseType type)
     {

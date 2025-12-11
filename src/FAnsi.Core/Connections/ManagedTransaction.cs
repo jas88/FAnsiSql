@@ -1,17 +1,12 @@
-using System;
 using System.Data.Common;
 using System.Diagnostics;
 
 namespace FAnsi.Connections;
 
-/// <inheritdoc/>
+/// <inheritdoc />
 public sealed class ManagedTransaction : IManagedTransaction
 {
-    /// <inheritdoc/>
-    public DbConnection Connection { get; }
-
-    /// <inheritdoc/>
-    public DbTransaction Transaction { get; }
+    private bool _closed;
 
     internal ManagedTransaction(DbConnection connection, DbTransaction transaction)
     {
@@ -19,10 +14,14 @@ public sealed class ManagedTransaction : IManagedTransaction
         Transaction = transaction;
     }
 
-    private bool _closed;
+    /// <inheritdoc />
+    public DbConnection Connection { get; }
+
+    /// <inheritdoc />
+    public DbTransaction Transaction { get; }
 
     /// <summary>
-    /// Attempts to rollback the DbTransaction (swallowing any Exception) and closes/disposes the DbConnection
+    ///     Attempts to rollback the DbTransaction (swallowing any Exception) and closes/disposes the DbConnection
     /// </summary>
     public void AbandonAndCloseConnection()
     {
@@ -49,7 +48,7 @@ public sealed class ManagedTransaction : IManagedTransaction
     }
 
     /// <summary>
-    /// Attempts to commit the DbTransaction and then closes/disposes the DbConnection
+    ///     Attempts to commit the DbTransaction and then closes/disposes the DbConnection
     /// </summary>
     public void CommitAndCloseConnection()
     {

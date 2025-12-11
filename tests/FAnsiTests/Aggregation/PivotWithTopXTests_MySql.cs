@@ -24,5 +24,4 @@ internal sealed class PivotWithTopXTests_MySql : PivotWithTopXTestsBase
 
     [Test]
     public void Test_PivotWithTop1_SingleColumn() => Test_PivotWithTop1_SingleColumn(DbType);
-
 }

@@ -1,37 +1,35 @@
-using System;
-using System.Collections.Generic;
 using System.Data;
 using System.Globalization;
-using System.IO;
-using System.Linq;
 using System.Text;
 using FAnsi;
 using FAnsi.Discovery;
 using FAnsi.Discovery.QuerySyntax;
-using FAnsi.Exceptions;
 using NUnit.Framework;
 using TypeGuesser;
 
 namespace FAnsiTests.Table;
 
 /// <summary>
-/// Abstract base class providing comprehensive test methods for BulkCopy implementations across all database providers.
-/// Tests cover basic operations, error handling, column mapping, transactions, and special data types.
-/// This class is inherited by database-specific test classes that call these protected methods with specific DatabaseType values.
+///     Abstract base class providing comprehensive test methods for BulkCopy implementations across all database
+///     providers.
+///     Tests cover basic operations, error handling, column mapping, transactions, and special data types.
+///     This class is inherited by database-specific test classes that call these protected methods with specific
+///     DatabaseType values.
 /// </summary>
 internal abstract class BulkCopyTestsBase : DatabaseTests
 {
     /// <summary>
-    /// Helper method to assert that an operation throws an exception.
-    /// Different databases throw different exception types:
-    /// - SQLite: FileLoadException for constraint violations, InvalidOperationException for disposal issues
-    /// - MySQL: InvalidOperationException (wraps MySqlException)
-    /// - PostgreSQL: PostgresException
-    /// - Oracle: OracleException
-    /// - SQL Server: InvalidOperationException or FileLoadException
-    /// Note: SQLite doesn't enforce some constraints (e.g., string length, integer overflow) so may not throw.
+    ///     Helper method to assert that an operation throws an exception.
+    ///     Different databases throw different exception types:
+    ///     - SQLite: FileLoadException for constraint violations, InvalidOperationException for disposal issues
+    ///     - MySQL: InvalidOperationException (wraps MySqlException)
+    ///     - PostgreSQL: PostgresException
+    ///     - Oracle: OracleException
+    ///     - SQL Server: InvalidOperationException or FileLoadException
+    ///     Note: SQLite doesn't enforce some constraints (e.g., string length, integer overflow) so may not throw.
     /// </summary>
-    private static void AssertThrowsException(DatabaseType type, TestDelegate code, string? messageContains = null, bool sqliteMayNotThrow = false)
+    private static void AssertThrowsException(DatabaseType type, TestDelegate code, string? messageContains = null,
+        bool sqliteMayNotThrow = false)
     {
         if (type == DatabaseType.Sqlite && sqliteMayNotThrow)
         {
@@ -59,6 +57,96 @@ internal abstract class BulkCopyTestsBase : DatabaseTests
                 Assert.That(ex.Message, Does.Contain(messageContains));
         }
     }
+
+    #region Timeout and Cancellation
+
+    protected void Upload_WithTimeout_RespectsSetting(DatabaseType type)
+    {
+        var db = GetTestDatabase(type);
+        var tbl = db.CreateTable("TestTimeout",
+        [
+            new DatabaseColumnRequest("Id", new DatabaseTypeRequest(typeof(int))),
+            new DatabaseColumnRequest("Data", new DatabaseTypeRequest(typeof(string), 50))
+        ]);
+
+        using var dt = new DataTable();
+        dt.Columns.Add("Id", typeof(int));
+        dt.Columns.Add("Data", typeof(string));
+        dt.Rows.Add(1, "Test");
+
+        using var bulk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture);
+        bulk.Timeout = 60; // Set explicit timeout
+        bulk.Upload(dt);
+
+        Assert.That(tbl.GetRowCount(), Is.EqualTo(1));
+    }
+
+    #endregion
+
+    #region Auto-Increment and Identity Columns
+
+    protected void Upload_WithAutoIncrementColumn_GeneratesValues(DatabaseType type)
+    {
+        var db = GetTestDatabase(type);
+        var tbl = db.CreateTable("TestAutoIncrement",
+        [
+            new DatabaseColumnRequest("Id", new DatabaseTypeRequest(typeof(int)))
+            {
+                IsAutoIncrement = true,
+                IsPrimaryKey = true,
+                AllowNulls = false
+            },
+            new DatabaseColumnRequest("Value", new DatabaseTypeRequest(typeof(string), 50))
+        ]);
+
+        using var dt = new DataTable();
+        // Don't include Id column - let DB generate it
+        dt.Columns.Add("Value", typeof(string));
+        dt.Rows.Add("Row1");
+        dt.Rows.Add("Row2");
+        dt.Rows.Add("Row3");
+
+        using var bulk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture);
+        bulk.Upload(dt);
+
+        using var result = tbl.GetDataTable();
+        Assert.That(result.Rows, Has.Count.EqualTo(3));
+
+        // Auto-increment should have generated unique IDs
+        var ids = new HashSet<int>();
+        foreach (DataRow row in result.Rows)
+            ids.Add(Convert.ToInt32(row["Id"], CultureInfo.InvariantCulture));
+
+        Assert.That(ids, Has.Count.EqualTo(3)); // All unique
+    }
+
+    #endregion
+
+    #region Disposal and Resource Management
+
+    protected void Upload_AfterDispose_ThrowsException(DatabaseType type)
+    {
+        var db = GetTestDatabase(type);
+        var tbl = db.CreateTable("TestDispose",
+        [
+            new DatabaseColumnRequest("Id", new DatabaseTypeRequest(typeof(int))),
+            new DatabaseColumnRequest("Value", new DatabaseTypeRequest(typeof(string), 50))
+        ]);
+
+        var bulk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture);
+        bulk.Dispose();
+
+        using var dt = new DataTable();
+        dt.Columns.Add("Id", typeof(int));
+        dt.Columns.Add("Value", typeof(string));
+        dt.Rows.Add(1, "Test");
+
+        // Should throw after disposal
+        AssertThrowsException(type, () => bulk.Upload(dt));
+    }
+
+    #endregion
+
     #region Basic Upload Operations
 
     protected void Upload_EmptyDataTable_ReturnsZero(DatabaseType type)
@@ -187,7 +275,8 @@ internal abstract class BulkCopyTestsBase : DatabaseTests
         var tbl = db.CreateTable("TestNulls",
         [
             new DatabaseColumnRequest("Id", new DatabaseTypeRequest(typeof(int))) { AllowNulls = false },
-            new DatabaseColumnRequest("NullableString", new DatabaseTypeRequest(typeof(string), 50)) { AllowNulls = true },
+            new DatabaseColumnRequest("NullableString", new DatabaseTypeRequest(typeof(string), 50))
+                { AllowNulls = true },
             new DatabaseColumnRequest("NullableInt", new DatabaseTypeRequest(typeof(int))) { AllowNulls = true }
         ]);
 
@@ -282,14 +371,15 @@ internal abstract class BulkCopyTestsBase : DatabaseTests
         var tbl = db.CreateTable("TestDecimalRange",
         [
             new DatabaseColumnRequest("Id", new DatabaseTypeRequest(typeof(int))),
-            new DatabaseColumnRequest("SmallDecimal", new DatabaseTypeRequest(typeof(decimal), null, new DecimalSize(3, 2)))
+            new DatabaseColumnRequest("SmallDecimal",
+                new DatabaseTypeRequest(typeof(decimal), null, new DecimalSize(3, 2)))
         ]);
 
         using var dt = new DataTable();
         dt.Columns.Add("Id", typeof(int));
         dt.Columns.Add("SmallDecimal", typeof(decimal));
 
-        dt.Rows.Add(1, 9.99m);      // Valid
+        dt.Rows.Add(1, 9.99m); // Valid
         dt.Rows.Add(2, 999999.99m); // Too large for decimal(5,2)!
 
         using var bulk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture);
@@ -354,7 +444,8 @@ internal abstract class BulkCopyTestsBase : DatabaseTests
         var tbl = db.CreateTable("TestNotNull",
         [
             new DatabaseColumnRequest("Id", new DatabaseTypeRequest(typeof(int))) { AllowNulls = false },
-            new DatabaseColumnRequest("RequiredValue", new DatabaseTypeRequest(typeof(string), 50)) { AllowNulls = false }
+            new DatabaseColumnRequest("RequiredValue", new DatabaseTypeRequest(typeof(string), 50))
+                { AllowNulls = false }
         ]);
 
         using var dt = new DataTable();
@@ -551,7 +642,9 @@ internal abstract class BulkCopyTestsBase : DatabaseTests
         {
             using var checkCon = tbl.Database.Server.GetConnection();
             checkCon.Open();
-            using var cmd = tbl.Database.Server.GetCommand("SELECT CASE transaction_isolation_level WHEN 0 THEN 'Unspecified' WHEN 1 THEN 'ReadUncommitted' WHEN 2 THEN 'ReadCommitted' WHEN 3 THEN 'Repeatable' WHEN 4 THEN 'Serializable' WHEN 5 THEN 'Snapshot' END FROM sys.dm_exec_sessions WHERE session_id = @@SPID", checkCon);
+            using var cmd = tbl.Database.Server.GetCommand(
+                "SELECT CASE transaction_isolation_level WHEN 0 THEN 'Unspecified' WHEN 1 THEN 'ReadUncommitted' WHEN 2 THEN 'ReadCommitted' WHEN 3 THEN 'Repeatable' WHEN 4 THEN 'Serializable' WHEN 5 THEN 'Snapshot' END FROM sys.dm_exec_sessions WHERE session_id = @@SPID",
+                checkCon);
             var isolationLevel = cmd.ExecuteScalar();
             TestContext.Out.WriteLine($"[{type}] Isolation level: {isolationLevel}");
         }
@@ -572,10 +665,8 @@ internal abstract class BulkCopyTestsBase : DatabaseTests
         // Skip checking row count from outside transaction for SQL Server
         // TableLock blocks reads from other connections during active transaction
         if (type != DatabaseType.MicrosoftSQLServer)
-        {
             // Outside transaction - should be 0 before commit
             Assert.That(tbl.GetRowCount(), Is.EqualTo(0));
-        }
 
         transaction.ManagedTransaction?.CommitAndCloseConnection();
 
@@ -618,7 +709,8 @@ internal abstract class BulkCopyTestsBase : DatabaseTests
         var db = GetTestDatabase(type);
         var tbl = db.CreateTable("TestAutoRollback",
         [
-            new DatabaseColumnRequest("Id", new DatabaseTypeRequest(typeof(int))) { IsPrimaryKey = true, AllowNulls = false },
+            new DatabaseColumnRequest("Id", new DatabaseTypeRequest(typeof(int)))
+                { IsPrimaryKey = true, AllowNulls = false },
             new DatabaseColumnRequest("Value", new DatabaseTypeRequest(typeof(string), 10))
         ]);
 
@@ -682,7 +774,8 @@ internal abstract class BulkCopyTestsBase : DatabaseTests
     protected void Upload_DateTimeValues_PreservedCorrectly(DatabaseType type)
     {
         if (type == DatabaseType.Sqlite)
-            Assert.Ignore("SQLite stores DateTime as TEXT strings; ADO.NET returns string type. Fundamental SQLite limitation.");
+            Assert.Ignore(
+                "SQLite stores DateTime as TEXT strings; ADO.NET returns string type. Fundamental SQLite limitation.");
 
         var db = GetTestDatabase(type);
         var tbl = db.CreateTable("TestDateTime",
@@ -709,7 +802,8 @@ internal abstract class BulkCopyTestsBase : DatabaseTests
         using var result = tbl.GetDataTable();
         Assert.Multiple(() =>
         {
-            Assert.That(((DateTime)result.Rows[0]["EventDate"]).ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
+            Assert.That(
+                ((DateTime)result.Rows[0]["EventDate"]).ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
                 Is.EqualTo(date1.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)));
             Assert.That(((DateTime)result.Rows[1]["EventDate"]).Date, Is.EqualTo(date2.Date));
         });
@@ -718,7 +812,8 @@ internal abstract class BulkCopyTestsBase : DatabaseTests
     protected void Upload_DateTimeStrings_ParsedCorrectly(DatabaseType type)
     {
         if (type == DatabaseType.Sqlite)
-            Assert.Ignore("SQLite stores DateTime as TEXT strings; ADO.NET returns string type. Fundamental SQLite limitation.");
+            Assert.Ignore(
+                "SQLite stores DateTime as TEXT strings; ADO.NET returns string type. Fundamental SQLite limitation.");
 
         var db = GetTestDatabase(type);
         var tbl = db.CreateTable("TestDateTimeStrings",
@@ -868,9 +963,7 @@ internal abstract class BulkCopyTestsBase : DatabaseTests
         // Create table with many columns
         var columns = new List<DatabaseColumnRequest>();
         for (var i = 1; i <= 30; i++)
-        {
             columns.Add(new DatabaseColumnRequest($"Col{i}", new DatabaseTypeRequest(typeof(int))));
-        }
 
         var tbl = db.CreateTable("TestWideTable", [.. columns]);
 
@@ -895,70 +988,6 @@ internal abstract class BulkCopyTestsBase : DatabaseTests
 
     #endregion
 
-    #region Timeout and Cancellation
-
-    protected void Upload_WithTimeout_RespectsSetting(DatabaseType type)
-    {
-        var db = GetTestDatabase(type);
-        var tbl = db.CreateTable("TestTimeout",
-        [
-            new DatabaseColumnRequest("Id", new DatabaseTypeRequest(typeof(int))),
-            new DatabaseColumnRequest("Data", new DatabaseTypeRequest(typeof(string), 50))
-        ]);
-
-        using var dt = new DataTable();
-        dt.Columns.Add("Id", typeof(int));
-        dt.Columns.Add("Data", typeof(string));
-        dt.Rows.Add(1, "Test");
-
-        using var bulk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture);
-        bulk.Timeout = 60; // Set explicit timeout
-        bulk.Upload(dt);
-
-        Assert.That(tbl.GetRowCount(), Is.EqualTo(1));
-    }
-
-    #endregion
-
-    #region Auto-Increment and Identity Columns
-
-    protected void Upload_WithAutoIncrementColumn_GeneratesValues(DatabaseType type)
-    {
-        var db = GetTestDatabase(type);
-        var tbl = db.CreateTable("TestAutoIncrement",
-        [
-            new DatabaseColumnRequest("Id", new DatabaseTypeRequest(typeof(int)))
-            {
-                IsAutoIncrement = true,
-                IsPrimaryKey = true,
-                AllowNulls = false
-            },
-            new DatabaseColumnRequest("Value", new DatabaseTypeRequest(typeof(string), 50))
-        ]);
-
-        using var dt = new DataTable();
-        // Don't include Id column - let DB generate it
-        dt.Columns.Add("Value", typeof(string));
-        dt.Rows.Add("Row1");
-        dt.Rows.Add("Row2");
-        dt.Rows.Add("Row3");
-
-        using var bulk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture);
-        bulk.Upload(dt);
-
-        using var result = tbl.GetDataTable();
-        Assert.That(result.Rows, Has.Count.EqualTo(3));
-
-        // Auto-increment should have generated unique IDs
-        var ids = new HashSet<int>();
-        foreach (DataRow row in result.Rows)
-            ids.Add(Convert.ToInt32(row["Id"], CultureInfo.InvariantCulture));
-
-        Assert.That(ids, Has.Count.EqualTo(3)); // All unique
-    }
-
-    #endregion
-
     #region Decimal Precision and Scale Validation
 
     protected void Upload_DecimalExceedsPrecision_ThrowsException(DatabaseType type)
@@ -976,15 +1005,15 @@ internal abstract class BulkCopyTestsBase : DatabaseTests
         dt.Columns.Add("Amount", typeof(decimal));
 
         // Valid value first
-        dt.Rows.Add(1, 999.99m);  // Valid: fits in decimal(5,2)
+        dt.Rows.Add(1, 999.99m); // Valid: fits in decimal(5,2)
         // Invalid value: 1000.00 has 4 integer digits, but decimal(5,2) allows only 3
         dt.Rows.Add(2, 1000.00m); // Invalid: exceeds precision
 
         using var bulk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture);
 
         AssertThrowsException(type, () => bulk.Upload(dt),
-            messageContains: type == DatabaseType.Sqlite ? null : "1000",
-            sqliteMayNotThrow: true);
+            type == DatabaseType.Sqlite ? null : "1000",
+            true);
     }
 
     protected void Upload_DecimalExceedsScale_ThrowsException(DatabaseType type)
@@ -1002,16 +1031,16 @@ internal abstract class BulkCopyTestsBase : DatabaseTests
         dt.Columns.Add("Price", typeof(decimal));
 
         // Valid values first
-        dt.Rows.Add(1, 99.99m);   // Valid: 2 decimal places
-        dt.Rows.Add(2, 10.5m);    // Valid: 1 decimal place
+        dt.Rows.Add(1, 99.99m); // Valid: 2 decimal places
+        dt.Rows.Add(2, 10.5m); // Valid: 1 decimal place
         // Invalid value: too many decimal places
-        dt.Rows.Add(3, 99.999m);  // Invalid: 3 decimal places, but scale=2 allows only 2
+        dt.Rows.Add(3, 99.999m); // Invalid: 3 decimal places, but scale=2 allows only 2
 
         using var bulk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture);
 
         AssertThrowsException(type, () => bulk.Upload(dt),
-            messageContains: type == DatabaseType.Sqlite ? null : "99.999",
-            sqliteMayNotThrow: true);
+            type == DatabaseType.Sqlite ? null : "99.999",
+            true);
     }
 
     protected void Upload_DecimalMaxPrecisionAndScale_Success(DatabaseType type)
@@ -1029,11 +1058,11 @@ internal abstract class BulkCopyTestsBase : DatabaseTests
         dt.Columns.Add("Value", typeof(decimal));
 
         // Test boundary values that should succeed
-        dt.Rows.Add(1, 999.99m);   // Max positive value for decimal(5,2)
-        dt.Rows.Add(2, -999.99m);  // Max negative value for decimal(5,2)
-        dt.Rows.Add(3, 0.01m);     // Min positive value with scale=2
-        dt.Rows.Add(4, 0.00m);     // Zero
-        dt.Rows.Add(5, 123.45m);   // Mid-range value
+        dt.Rows.Add(1, 999.99m); // Max positive value for decimal(5,2)
+        dt.Rows.Add(2, -999.99m); // Max negative value for decimal(5,2)
+        dt.Rows.Add(3, 0.01m); // Min positive value with scale=2
+        dt.Rows.Add(4, 0.00m); // Zero
+        dt.Rows.Add(5, 123.45m); // Mid-range value
 
         using var bulk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture);
         var affected = bulk.Upload(dt);
@@ -1062,7 +1091,8 @@ internal abstract class BulkCopyTestsBase : DatabaseTests
         [
             new DatabaseColumnRequest("Id", new DatabaseTypeRequest(typeof(int))),
             // decimal(10,4) = 6 digits before decimal + 4 digits after = DecimalSize(6, 4)
-            new DatabaseColumnRequest("BigNumber", new DatabaseTypeRequest(typeof(decimal), null, new DecimalSize(6, 4)))
+            new DatabaseColumnRequest("BigNumber",
+                new DatabaseTypeRequest(typeof(decimal), null, new DecimalSize(6, 4)))
         ]);
 
         using var dt = new DataTable();
@@ -1070,15 +1100,15 @@ internal abstract class BulkCopyTestsBase : DatabaseTests
         dt.Columns.Add("BigNumber", typeof(decimal));
 
         // Valid values
-        dt.Rows.Add(1, 999999.9999m);   // Valid: fits in decimal(10,4) - 6 integer digits + 4 decimal
+        dt.Rows.Add(1, 999999.9999m); // Valid: fits in decimal(10,4) - 6 integer digits + 4 decimal
         // Invalid value: too many total digits
-        dt.Rows.Add(2, 9999999.9999m);  // Invalid: 7 integer digits + 4 decimal = 11 total, exceeds precision=10
+        dt.Rows.Add(2, 9999999.9999m); // Invalid: 7 integer digits + 4 decimal = 11 total, exceeds precision=10
 
         using var bulk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture);
 
         AssertThrowsException(type, () => bulk.Upload(dt),
-            messageContains: type == DatabaseType.Sqlite ? null : "9999999",
-            sqliteMayNotThrow: true);
+            type == DatabaseType.Sqlite ? null : "9999999",
+            true);
     }
 
     protected void Upload_DecimalZeroScale_Success(DatabaseType type)
@@ -1087,7 +1117,8 @@ internal abstract class BulkCopyTestsBase : DatabaseTests
         var tbl = db.CreateTable("TestDecimalZeroScale",
         [
             new DatabaseColumnRequest("Id", new DatabaseTypeRequest(typeof(int))),
-            new DatabaseColumnRequest("IntegerOnly", new DatabaseTypeRequest(typeof(decimal), null, new DecimalSize(5, 0)))
+            new DatabaseColumnRequest("IntegerOnly",
+                new DatabaseTypeRequest(typeof(decimal), null, new DecimalSize(5, 0)))
         ]);
 
         using var dt = new DataTable();
@@ -1095,9 +1126,9 @@ internal abstract class BulkCopyTestsBase : DatabaseTests
         dt.Columns.Add("IntegerOnly", typeof(decimal));
 
         // Test integer-only decimals (scale=0)
-        dt.Rows.Add(1, 99999m);   // Valid: max value for decimal(5,0)
-        dt.Rows.Add(2, -99999m);  // Valid: min value for decimal(5,0)
-        dt.Rows.Add(3, 0m);       // Valid: zero
+        dt.Rows.Add(1, 99999m); // Valid: max value for decimal(5,0)
+        dt.Rows.Add(2, -99999m); // Valid: min value for decimal(5,0)
+        dt.Rows.Add(3, 0m); // Valid: zero
 
         using var bulk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture);
         var affected = bulk.Upload(dt);
@@ -1115,21 +1146,22 @@ internal abstract class BulkCopyTestsBase : DatabaseTests
         var tbl = db.CreateTable("TestDecimalZeroScaleViolation",
         [
             new DatabaseColumnRequest("Id", new DatabaseTypeRequest(typeof(int))),
-            new DatabaseColumnRequest("IntegerOnly", new DatabaseTypeRequest(typeof(decimal), null, new DecimalSize(5, 0)))
+            new DatabaseColumnRequest("IntegerOnly",
+                new DatabaseTypeRequest(typeof(decimal), null, new DecimalSize(5, 0)))
         ]);
 
         using var dt = new DataTable();
         dt.Columns.Add("Id", typeof(int));
         dt.Columns.Add("IntegerOnly", typeof(decimal));
 
-        dt.Rows.Add(1, 12345m);   // Valid
-        dt.Rows.Add(2, 123.45m);  // Invalid: has decimal places when scale=0
+        dt.Rows.Add(1, 12345m); // Valid
+        dt.Rows.Add(2, 123.45m); // Invalid: has decimal places when scale=0
 
         using var bulk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture);
 
         AssertThrowsException(type, () => bulk.Upload(dt),
-            messageContains: type == DatabaseType.Sqlite ? null : "123.45",
-            sqliteMayNotThrow: true);
+            type == DatabaseType.Sqlite ? null : "123.45",
+            true);
     }
 
     protected void Upload_DecimalNullValues_IgnoredInValidation(DatabaseType type)
@@ -1139,7 +1171,8 @@ internal abstract class BulkCopyTestsBase : DatabaseTests
         [
             new DatabaseColumnRequest("Id", new DatabaseTypeRequest(typeof(int))),
             // decimal(5,2) = 3 digits before decimal + 2 digits after = DecimalSize(3, 2)
-            new DatabaseColumnRequest("NullableAmount", new DatabaseTypeRequest(typeof(decimal), null, new DecimalSize(3, 2)))
+            new DatabaseColumnRequest("NullableAmount",
+                new DatabaseTypeRequest(typeof(decimal), null, new DecimalSize(3, 2)))
             {
                 AllowNulls = true
             }
@@ -1150,10 +1183,10 @@ internal abstract class BulkCopyTestsBase : DatabaseTests
         dt.Columns.Add("NullableAmount", typeof(decimal));
 
         // Test that NULL values don't trigger validation errors
-        dt.Rows.Add(1, 99.99m);       // Valid value
-        dt.Rows.Add(2, DBNull.Value);  // NULL - should not be validated
-        dt.Rows.Add(3, null);          // NULL - should not be validated
-        dt.Rows.Add(4, 50.00m);       // Valid value
+        dt.Rows.Add(1, 99.99m); // Valid value
+        dt.Rows.Add(2, DBNull.Value); // NULL - should not be validated
+        dt.Rows.Add(3, null); // NULL - should not be validated
+        dt.Rows.Add(4, 50.00m); // Valid value
 
         using var bulk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture);
         var affected = bulk.Upload(dt);
@@ -1163,31 +1196,6 @@ internal abstract class BulkCopyTestsBase : DatabaseTests
             Assert.That(affected, Is.EqualTo(4));
             Assert.That(tbl.GetRowCount(), Is.EqualTo(4));
         });
-    }
-
-    #endregion
-
-    #region Disposal and Resource Management
-
-    protected void Upload_AfterDispose_ThrowsException(DatabaseType type)
-    {
-        var db = GetTestDatabase(type);
-        var tbl = db.CreateTable("TestDispose",
-        [
-            new DatabaseColumnRequest("Id", new DatabaseTypeRequest(typeof(int))),
-            new DatabaseColumnRequest("Value", new DatabaseTypeRequest(typeof(string), 50))
-        ]);
-
-        var bulk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture);
-        bulk.Dispose();
-
-        using var dt = new DataTable();
-        dt.Columns.Add("Id", typeof(int));
-        dt.Columns.Add("Value", typeof(string));
-        dt.Rows.Add(1, "Test");
-
-        // Should throw after disposal
-        AssertThrowsException(type, () => bulk.Upload(dt));
     }
 
     #endregion

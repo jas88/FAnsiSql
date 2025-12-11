@@ -1,8 +1,4 @@
-using System;
-using System.Collections.Generic;
 using System.Data.Common;
-using System.IO;
-using System.Linq;
 using FAnsi.Discovery;
 using FAnsi.Discovery.QuerySyntax;
 using Npgsql;
@@ -12,12 +8,15 @@ namespace FAnsi.Implementations.PostgreSql;
 public sealed class PostgreSqlDatabaseHelper : DiscoveredDatabaseHelper
 {
     public static readonly PostgreSqlDatabaseHelper Instance = new();
-    private PostgreSqlDatabaseHelper() { }
 
-    public override IEnumerable<DiscoveredTable> ListTables(DiscoveredDatabase parent, IQuerySyntaxHelper querySyntaxHelper, DbConnection connection,
+    private PostgreSqlDatabaseHelper()
+    {
+    }
+
+    public override IEnumerable<DiscoveredTable> ListTables(DiscoveredDatabase parent,
+        IQuerySyntaxHelper querySyntaxHelper, DbConnection connection,
         string database, bool includeViews, DbTransaction? transaction = null)
     {
-
         const string sqlTables = """
                                  SELECT
                                                  *
@@ -68,14 +67,16 @@ public sealed class PostgreSqlDatabaseHelper : DiscoveredDatabaseHelper
                 var schema = r["schemaname"] as string;
 
                 if (querySyntaxHelper.IsValidTableName((string)r["viewname"], out _))
-                    tables.Add(new DiscoveredTable(parent, (string)r["viewname"], querySyntaxHelper, schema, TableType.View));
+                    tables.Add(new DiscoveredTable(parent, (string)r["viewname"], querySyntaxHelper, schema,
+                        TableType.View));
             }
         }
 
         return tables.ToArray();
     }
 
-    public override IEnumerable<DiscoveredTableValuedFunction> ListTableValuedFunctions(DiscoveredDatabase parent, IQuerySyntaxHelper querySyntaxHelper,
+    public override IEnumerable<DiscoveredTableValuedFunction> ListTableValuedFunctions(DiscoveredDatabase parent,
+        IQuerySyntaxHelper querySyntaxHelper,
         DbConnection connection, string database, DbTransaction? transaction = null) =>
         Enumerable.Empty<DiscoveredTableValuedFunction>();
 
@@ -97,28 +98,37 @@ public sealed class PostgreSqlDatabaseHelper : DiscoveredDatabaseHelper
 
             // https://dba.stackexchange.com/a/11895
 
-            using (var cmd = new NpgsqlCommand($"UPDATE pg_database SET datallowconn = 'false' WHERE datname = '{database.GetRuntimeName()}';", con))
+            using (var cmd = new NpgsqlCommand(
+                       $"UPDATE pg_database SET datallowconn = 'false' WHERE datname = '{database.GetRuntimeName()}';",
+                       con))
+            {
                 cmd.ExecuteNonQuery();
+            }
 
             using (var cmd = new NpgsqlCommand($"""
-                                               SELECT pg_terminate_backend(pid)
-                                                               FROM pg_stat_activity
-                                                               WHERE datname = '{database.GetRuntimeName()}';
-                                               """
-                      , con))
+                                                SELECT pg_terminate_backend(pid)
+                                                                FROM pg_stat_activity
+                                                                WHERE datname = '{database.GetRuntimeName()}';
+                                                """
+                       , con))
+            {
                 cmd.ExecuteNonQuery();
+            }
 
             using (var cmd = new NpgsqlCommand($"DROP DATABASE \"{database.GetRuntimeName()}\"", con))
+            {
                 cmd.ExecuteNonQuery();
+            }
         }
 
         NpgsqlConnection.ClearAllPools();
-
     }
 
-    public override Dictionary<string, string> DescribeDatabase(DbConnectionStringBuilder builder, string database) => throw new NotImplementedException();
+    public override Dictionary<string, string> DescribeDatabase(DbConnectionStringBuilder builder, string database) =>
+        throw new NotImplementedException();
 
-    protected override string GetCreateTableSqlLineForColumn(DatabaseColumnRequest col, string datatype, IQuerySyntaxHelper syntaxHelper) =>
+    protected override string GetCreateTableSqlLineForColumn(DatabaseColumnRequest col, string datatype,
+        IQuerySyntaxHelper syntaxHelper) =>
         //Collations generally have to be in quotes (unless maybe they are very weird user generated ones?)
         $"{syntaxHelper.EnsureWrapped(col.ColumnName)} {datatype} {(col.Default != MandatoryScalarFunctions.None ? $"default {syntaxHelper.GetScalarFunctionSql(col.Default)}" : "")} {(string.IsNullOrWhiteSpace(col.Collation) ? "" : $"COLLATE \"{col.Collation.Trim('"')}\"")} {(col.AllowNulls && !col.IsPrimaryKey ? " NULL" : " NOT NULL")} {(col.IsAutoIncrement ? syntaxHelper.GetAutoIncrementKeywordIfAny() : "")}";
 

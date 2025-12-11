@@ -1,11 +1,7 @@
-using System;
-using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Globalization;
-using System.Linq;
 using System.Text;
-using System.Threading;
 using FAnsi.Connections;
 using FAnsi.Discovery;
 using FAnsi.Discovery.Constraints;
@@ -18,13 +14,19 @@ namespace FAnsi.Implementations.Oracle;
 public sealed class OracleTableHelper : DiscoveredTableHelper
 {
     public static readonly OracleTableHelper Instance = new();
-    private OracleTableHelper() { }
 
-    private static readonly CompositeFormat FormatDropIndexFailed = CompositeFormat.Parse(FAnsiStrings.DiscoveredTableHelper_DropIndex_Failed);
+    private static readonly CompositeFormat FormatDropIndexFailed =
+        CompositeFormat.Parse(FAnsiStrings.DiscoveredTableHelper_DropIndex_Failed);
 
-    public override string GetTopXSqlForTable(IHasFullyQualifiedNameToo table, int topX) => $"SELECT * FROM {table.GetFullyQualifiedName()} OFFSET 0 ROWS FETCH NEXT {topX} ROWS ONLY";
+    private OracleTableHelper()
+    {
+    }
 
-    public override DiscoveredColumn[] DiscoverColumns(DiscoveredTable discoveredTable, IManagedConnection connection, string database)
+    public override string GetTopXSqlForTable(IHasFullyQualifiedNameToo table, int topX) =>
+        $"SELECT * FROM {table.GetFullyQualifiedName()} OFFSET 0 ROWS FETCH NEXT {topX} ROWS ONLY";
+
+    public override DiscoveredColumn[] DiscoverColumns(DiscoveredTable discoveredTable, IManagedConnection connection,
+        string database)
     {
         var server = discoveredTable.Database.Server;
 
@@ -51,11 +53,14 @@ public sealed class OracleTableHelper : DiscoveredTableHelper
 
             using var r = cmd.ExecuteReader();
             if (!r.HasRows)
-                throw new InvalidOperationException($"Could not find any columns for table {tableName} in database {database}");
+                throw new InvalidOperationException(
+                    $"Could not find any columns for table {tableName} in database {database}");
 
             while (r.Read())
             {
-                var toAdd = new DiscoveredColumn(discoveredTable, (string)r["COLUMN_NAME"], r["NULLABLE"].ToString() != "N") { Format = r["CHARACTER_SET_NAME"] as string };
+                var toAdd = new DiscoveredColumn(discoveredTable, (string)r["COLUMN_NAME"],
+                    r["NULLABLE"].ToString() != "N")
+                { Format = r["CHARACTER_SET_NAME"] as string };
                 toAdd.DataType = new DiscoveredDataType(r, GetSQLType_From_all_tab_cols_Result(r), toAdd);
                 columns.Add(toAdd);
             }
@@ -90,14 +95,14 @@ public sealed class OracleTableHelper : DiscoveredTableHelper
 
         //get primary key information
         using (var cmd = new OracleCommand("""
-                                          SELECT cols.table_name, cols.column_name, cols.position, cons.status, cons.owner
-                                          FROM all_constraints cons, all_cons_columns cols
-                                          WHERE cols.table_name = :table_name AND cols.owner = :owner
-                                          AND cons.constraint_type = 'P'
-                                          AND cons.constraint_name = cols.constraint_name
-                                          AND cons.owner = cols.owner
-                                          ORDER BY cols.table_name, cols.position
-                                          """, (OracleConnection)connection.Connection))
+                                           SELECT cols.table_name, cols.column_name, cols.position, cons.status, cons.owner
+                                           FROM all_constraints cons, all_cons_columns cols
+                                           WHERE cols.table_name = :table_name AND cols.owner = :owner
+                                           AND cons.constraint_type = 'P'
+                                           AND cons.constraint_name = cols.constraint_name
+                                           AND cons.owner = cols.owner
+                                           ORDER BY cols.table_name, cols.position
+                                           """, (OracleConnection)connection.Connection))
         {
             cmd.Transaction = (OracleTransaction?)connection.Transaction;
             cmd.Parameters.Add(new OracleParameter("table_name", OracleDbType.Varchar2)
@@ -111,7 +116,8 @@ public sealed class OracleTableHelper : DiscoveredTableHelper
 
             using var r = cmd.ExecuteReader();
             while (r.Read())
-                columns.Single(c => c.GetRuntimeName().Equals(r["COLUMN_NAME"])).IsPrimaryKey = true;//mark all primary keys as primary
+                columns.Single(c => c.GetRuntimeName().Equals(r["COLUMN_NAME"])).IsPrimaryKey =
+                    true; //mark all primary keys as primary
         }
 
 
@@ -119,7 +125,7 @@ public sealed class OracleTableHelper : DiscoveredTableHelper
     }
 
     /// <summary>
-    /// Checks if the table exists using the provided connection.
+    ///     Checks if the table exists using the provided connection.
     /// </summary>
     /// <param name="table">The table to check</param>
     /// <param name="connection">The managed connection to use</param>
@@ -134,19 +140,19 @@ public sealed class OracleTableHelper : DiscoveredTableHelper
         string sql;
         sql = table.TableType == TableType.View
             ? """
-                SELECT CASE WHEN EXISTS (
-                    SELECT 1 FROM ALL_VIEWS
-                    WHERE UPPER(view_name) = UPPER(:tableName)
-                    AND UPPER(owner) = UPPER(:owner)
-                ) THEN 1 ELSE 0 END FROM DUAL
-                """
+              SELECT CASE WHEN EXISTS (
+                  SELECT 1 FROM ALL_VIEWS
+                  WHERE UPPER(view_name) = UPPER(:tableName)
+                  AND UPPER(owner) = UPPER(:owner)
+              ) THEN 1 ELSE 0 END FROM DUAL
+              """
             : """
-                SELECT CASE WHEN EXISTS (
-                    SELECT 1 FROM ALL_TABLES
-                    WHERE UPPER(table_name) = UPPER(:tableName)
-                    AND UPPER(owner) = UPPER(:owner)
-                ) THEN 1 ELSE 0 END FROM DUAL
-                """;
+              SELECT CASE WHEN EXISTS (
+                  SELECT 1 FROM ALL_TABLES
+                  WHERE UPPER(table_name) = UPPER(:tableName)
+                  AND UPPER(owner) = UPPER(:owner)
+              ) THEN 1 ELSE 0 END FROM DUAL
+              """;
 
         using var cmd = new OracleCommand(sql, (OracleConnection)connection.Connection);
         cmd.Transaction = (OracleTransaction?)connection.Transaction;
@@ -172,7 +178,7 @@ public sealed class OracleTableHelper : DiscoveredTableHelper
     }
 
     /// <summary>
-    /// Checks if the table has a primary key using the provided connection.
+    ///     Checks if the table has a primary key using the provided connection.
     /// </summary>
     /// <param name="table">The table to check</param>
     /// <param name="connection">The managed connection to use</param>
@@ -180,13 +186,13 @@ public sealed class OracleTableHelper : DiscoveredTableHelper
     public override bool HasPrimaryKey(DiscoveredTable table, IManagedConnection connection)
     {
         const string sql = """
-            SELECT CASE WHEN EXISTS (
-                SELECT 1 FROM ALL_CONSTRAINTS
-                WHERE UPPER(table_name) = UPPER(:tableName)
-                AND UPPER(owner) = UPPER(:owner)
-                AND constraint_type = 'P'
-            ) THEN 1 ELSE 0 END FROM DUAL
-            """;
+                           SELECT CASE WHEN EXISTS (
+                               SELECT 1 FROM ALL_CONSTRAINTS
+                               WHERE UPPER(table_name) = UPPER(:tableName)
+                               AND UPPER(owner) = UPPER(:owner)
+                               AND constraint_type = 'P'
+                           ) THEN 1 ELSE 0 END FROM DUAL
+                           """;
 
         using var cmd = new OracleCommand(sql, (OracleConnection)connection.Connection);
         cmd.Transaction = (OracleTransaction?)connection.Transaction;
@@ -205,9 +211,11 @@ public sealed class OracleTableHelper : DiscoveredTableHelper
     }
 
     /// <summary>
-    /// Checks if the table has a primary key. Consider using the overload that accepts IManagedConnection for better performance when calling multiple methods.
+    ///     Checks if the table has a primary key. Consider using the overload that accepts IManagedConnection for better
+    ///     performance when calling multiple methods.
     /// </summary>
-    [Obsolete("Prefer using HasPrimaryKey(DiscoveredTable, IManagedConnection) to reuse connections and improve performance")]
+    [Obsolete(
+        "Prefer using HasPrimaryKey(DiscoveredTable, IManagedConnection) to reuse connections and improve performance")]
     public override bool HasPrimaryKey(DiscoveredTable table, IManagedTransaction? transaction = null)
     {
         using var connection = table.Database.Server.GetManagedConnection(transaction);
@@ -215,7 +223,8 @@ public sealed class OracleTableHelper : DiscoveredTableHelper
     }
 
     /// <summary>
-    /// Gets the auto-increment column for the table using a database-specific SQL query (90-99% faster than discovering all columns).
+    ///     Gets the auto-increment column for the table using a database-specific SQL query (90-99% faster than discovering
+    ///     all columns).
     /// </summary>
     /// <returns>The auto-increment column, or null if none exists</returns>
     public DiscoveredColumn? GetAutoIncrementColumn(DiscoveredTable table, IManagedConnection connection)
@@ -253,7 +262,6 @@ public sealed class OracleTableHelper : DiscoveredTableHelper
         using var connection = args.GetManagedConnection(table);
         try
         {
-
             var sql =
                 $"DROP INDEX {indexName}";
 
@@ -262,7 +270,8 @@ public sealed class OracleTableHelper : DiscoveredTableHelper
         }
         catch (DbException e)
         {
-            throw new AlterFailedException(string.Format(CultureInfo.InvariantCulture, FormatDropIndexFailed, table), e);
+            throw new AlterFailedException(string.Format(CultureInfo.InvariantCulture, FormatDropIndexFailed, table),
+                e);
         }
     }
 
@@ -281,11 +290,11 @@ public sealed class OracleTableHelper : DiscoveredTableHelper
         try
         {
             const string findSequenceSql = """
-                SELECT sequence_name
-                FROM all_tab_identity_cols
-                WHERE table_name COLLATE BINARY_CI = :tableName
-                AND owner COLLATE BINARY_CI = :owner
-                """;
+                                           SELECT sequence_name
+                                           FROM all_tab_identity_cols
+                                           WHERE table_name COLLATE BINARY_CI = :tableName
+                                           AND owner COLLATE BINARY_CI = :owner
+                                           """;
 
             using var findCmd = new OracleCommand(findSequenceSql, oracleConnection);
             findCmd.Parameters.Add(new OracleParameter(":tableName", OracleDbType.Varchar2) { Value = runtimeName });
@@ -296,7 +305,6 @@ public sealed class OracleTableHelper : DiscoveredTableHelper
             {
                 var sequenceName = reader["sequence_name"].ToString();
                 if (!string.IsNullOrEmpty(sequenceName))
-                {
                     try
                     {
                         // Drop the sequence - no PURGE needed for sequences
@@ -308,7 +316,6 @@ public sealed class OracleTableHelper : DiscoveredTableHelper
                     {
                         // Ignore sequence drop failures - table drop will cascade them anyway
                     }
-                }
             }
         }
         catch (OracleException)
@@ -333,7 +340,6 @@ public sealed class OracleTableHelper : DiscoveredTableHelper
         Exception? lastException = null;
 
         for (var attempt = 0; attempt < maxRetries; attempt++)
-        {
             try
             {
                 using var cmd = new OracleCommand(dropSql, oracleConnection);
@@ -348,18 +354,13 @@ public sealed class OracleTableHelper : DiscoveredTableHelper
             catch (OracleException ex) when (ex.Number == 54) // ORA-00054: resource busy
             {
                 lastException = ex;
-                if (attempt < maxRetries - 1)
-                {
-                    Thread.Sleep(retryDelayMs * (attempt + 1)); // Exponential backoff
-                    continue;
-                }
+                if (attempt < maxRetries - 1) Thread.Sleep(retryDelayMs * (attempt + 1)); // Exponential backoff
             }
             catch (OracleException ex) when (ex.Number == 942) // ORA-00942: table or view does not exist
             {
                 // Table does not exist - throw exception to match expected behavior
                 throw;
             }
-        }
 
         // If we got here, all retries failed
         throw lastException ?? new InvalidOperationException($"Failed to drop table {fullyQualifiedName}");
@@ -368,7 +369,8 @@ public sealed class OracleTableHelper : DiscoveredTableHelper
     public override void DropColumn(DbConnection connection, DiscoveredColumn columnToDrop)
     {
         using var cmd = new OracleCommand(
-            $"ALTER TABLE {columnToDrop.Table.GetFullyQualifiedName()}  DROP COLUMN {columnToDrop.GetWrappedName()}", (OracleConnection)connection);
+            $"ALTER TABLE {columnToDrop.Table.GetFullyQualifiedName()}  DROP COLUMN {columnToDrop.GetWrappedName()}",
+            (OracleConnection)connection);
         cmd.ExecuteNonQuery();
     }
 
@@ -402,7 +404,8 @@ public sealed class OracleTableHelper : DiscoveredTableHelper
             case "FLOAT":
                 return "double";
             default:
-                return r["DATA_TYPE"].ToString()?.ToLower(CultureInfo.InvariantCulture) ?? throw new InvalidOperationException("Null DATA_TYPE in db");
+                return r["DATA_TYPE"].ToString()?.ToLower(CultureInfo.InvariantCulture) ??
+                       throw new InvalidOperationException("Null DATA_TYPE in db");
         }
     }
 
@@ -414,8 +417,7 @@ public sealed class OracleTableHelper : DiscoveredTableHelper
 
         if (HasPrecisionAndScale(columnType))
             lengthQualifier = $"({r["DATA_PRECISION"]},{r["DATA_SCALE"]})";
-        else
-        if (RequiresLength(columnType))
+        else if (RequiresLength(columnType))
             lengthQualifier = $"({r["DATA_LENGTH"]})";
 
         return columnType + lengthQualifier;
@@ -430,9 +432,11 @@ public sealed class OracleTableHelper : DiscoveredTableHelper
         DiscoveredTableValuedFunction discoveredTableValuedFunction, DbTransaction? transaction) =>
         throw new NotImplementedException();
 
-    public override IBulkCopy BeginBulkInsert(DiscoveredTable discoveredTable, IManagedConnection connection, CultureInfo culture) => new OracleBulkCopy(discoveredTable, connection, culture);
+    public override IBulkCopy BeginBulkInsert(DiscoveredTable discoveredTable, IManagedConnection connection,
+        CultureInfo culture) => new OracleBulkCopy(discoveredTable, connection, culture);
 
-    public override int ExecuteInsertReturningIdentity(DiscoveredTable discoveredTable, DbCommand cmd, IManagedTransaction? transaction = null)
+    public override int ExecuteInsertReturningIdentity(DiscoveredTable discoveredTable, DbCommand cmd,
+        IManagedTransaction? transaction = null)
     {
         using var connection = discoveredTable.Database.Server.GetManagedConnection(transaction);
         var autoIncrement = GetAutoIncrementColumn(discoveredTable, connection);
@@ -541,7 +545,8 @@ public sealed class OracleTableHelper : DiscoveredTableHelper
         return [.. toReturn.Values];
     }
 
-    public override void FillDataTableWithTopX(DatabaseOperationArgs args, DiscoveredTable table, int topX, DataTable dt)
+    public override void FillDataTableWithTopX(DatabaseOperationArgs args, DiscoveredTable table, int topX,
+        DataTable dt)
     {
         using var con = args.GetManagedConnection(table);
         ((OracleConnection)con.Connection).PurgeStatementCache();
@@ -563,5 +568,8 @@ public sealed class OracleTableHelper : DiscoveredTableHelper
         newName = discoveredTable.GetQuerySyntaxHelper().EnsureWrapped(newName);
         return $@"alter table {discoveredTable.GetFullyQualifiedName()} rename to {newName}";
     }
-    public override bool RequiresLength(string columnType) => base.RequiresLength(columnType) || columnType.Equals("varchar2", StringComparison.OrdinalIgnoreCase);
+
+    public override bool RequiresLength(string columnType) => base.RequiresLength(columnType) ||
+                                                              columnType.Equals("varchar2",
+                                                                  StringComparison.OrdinalIgnoreCase);
 }

@@ -1,15 +1,13 @@
-using System;
 using System.Data;
 using System.Globalization;
 using FAnsi;
-using FAnsi.Discovery;
 using NUnit.Framework;
 
 namespace FAnsiTests.Server;
 
 /// <summary>
-/// Tests that involve moving data between different database types.
-/// These tests exercise cross-database compatibility.
+///     Tests that involve moving data between different database types.
+///     These tests exercise cross-database compatibility.
 /// </summary>
 internal sealed class CrossDatabaseServerTests : DatabaseTests
 {

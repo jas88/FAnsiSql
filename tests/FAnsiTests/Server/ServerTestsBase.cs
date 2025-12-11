@@ -1,6 +1,3 @@
-using System;
-using System.Data;
-using System.Globalization;
 using FAnsi;
 using FAnsi.Discovery;
 using FAnsi.Implementation;
@@ -10,9 +7,9 @@ using NUnit.Framework;
 namespace FAnsiTests.Server;
 
 /// <summary>
-/// Base class for server-level tests across all database types.
-/// To add a new test: Add a protected method taking DatabaseType parameter.
-/// Then add [Test] methods to each ServerTests_{Database}.cs file that call it.
+///     Base class for server-level tests across all database types.
+///     To add a new test: Add a protected method taking DatabaseType parameter.
+///     Then add [Test] methods to each ServerTests_{Database}.cs file that call it.
 /// </summary>
 internal abstract class ServerTestsBase : DatabaseTests
 {
@@ -40,7 +37,7 @@ internal abstract class ServerTestsBase : DatabaseTests
     }
 
     /// <summary>
-    /// Tests systems ability to deal with missing information in the connection string
+    ///     Tests systems ability to deal with missing information in the connection string
     /// </summary>
     protected void ServerHelper_GetCurrentDatabase_WhenNoneSpecified(DatabaseType type)
     {
@@ -68,7 +65,8 @@ internal abstract class ServerTestsBase : DatabaseTests
             Assert.That(server.Name, Is.EqualTo("loco"));
 
             //Oracle does not persist database in connection string
-            Assert.That(server.GetCurrentDatabase()?.GetRuntimeName(), type == DatabaseType.Oracle ? Is.Null : Is.EqualTo("bob"));
+            Assert.That(server.GetCurrentDatabase()?.GetRuntimeName(),
+                type == DatabaseType.Oracle ? Is.Null : Is.EqualTo("bob"));
             Assert.That(server.ExplicitUsernameIfAny, Is.EqualTo("franko"));
             Assert.That(server.ExplicitPasswordIfAny, Is.EqualTo("wacky"));
         });
@@ -108,7 +106,7 @@ internal abstract class ServerTestsBase : DatabaseTests
     protected void ServerHelper_ChangeDatabase(DatabaseType type)
     {
         // Oracle uppercases database names
-        bool expectCaps = type == DatabaseType.Oracle;
+        var expectCaps = type == DatabaseType.Oracle;
 
         var server = new DiscoveredServer("loco", "bob", type, "franko", "wacky");
 
@@ -136,8 +134,8 @@ internal abstract class ServerTestsBase : DatabaseTests
     }
 
     /// <summary>
-    /// Checks the API for <see cref="DiscoveredServer"/> respects both changes using the API and direct user changes made
-    /// to <see cref="DiscoveredServer.Builder"/>
+    ///     Checks the API for <see cref="DiscoveredServer" /> respects both changes using the API and direct user changes made
+    ///     to <see cref="DiscoveredServer.Builder" />
     /// </summary>
     [SkipDatabase(DatabaseType.Oracle, "Oracle cannot encode database in connection string")]
     [SkipDatabase(DatabaseType.Sqlite, "SQLite is file-based and doesn't have separate server/database concepts")]

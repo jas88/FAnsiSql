@@ -1,9 +1,8 @@
+using System.Data;
 using FAnsi;
+using FAnsi.Discovery;
 using FAnsi.Discovery.QuerySyntax;
 using NUnit.Framework;
-using System;
-using System.Data;
-using FAnsi.Discovery;
 
 namespace FAnsiTests.Table;
 
@@ -38,7 +37,8 @@ internal sealed class TopXTests : DatabaseTests
                 $"SELECT {topx.SQL} {f} FROM {tbl.GetFullyQualifiedName()} ORDER BY {f} {(asc ? "ASC" : "DESC")}",
             QueryComponent.Postfix =>
                 $"SELECT {f} FROM {tbl.GetFullyQualifiedName()} ORDER BY {f} {(asc ? "ASC " : "DESC ")}{topx.SQL}",
-            _ => throw new ArgumentOutOfRangeException(nameof(type), $"Did not expect location {topx.Location} for {type}")
+            _ => throw new ArgumentOutOfRangeException(nameof(type),
+                $"Did not expect location {topx.Location} for {type}")
         };
 
         using (var con = db.Server.GetConnection())

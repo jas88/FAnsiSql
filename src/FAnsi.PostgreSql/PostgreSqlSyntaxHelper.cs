@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using FAnsi.Discovery;
 using FAnsi.Discovery.QuerySyntax;
 using FAnsi.Implementations.PostgreSql.Aggregation;
@@ -9,8 +7,11 @@ namespace FAnsi.Implementations.PostgreSql;
 
 public sealed class PostgreSqlSyntaxHelper : QuerySyntaxHelper
 {
+    public const string DefaultPostgresSchema = "public";
     public static readonly PostgreSqlSyntaxHelper Instance = new();
-    private PostgreSqlSyntaxHelper() : base(PostgreSqlTypeTranslater.Instance, PostgreSqlAggregateHelper.Instance, PostgreSqlUpdateHelper.Instance, DatabaseType.PostgreSql)
+
+    private PostgreSqlSyntaxHelper() : base(PostgreSqlTypeTranslater.Instance, PostgreSqlAggregateHelper.Instance,
+        PostgreSqlUpdateHelper.Instance, DatabaseType.PostgreSql)
     {
     }
 
@@ -18,17 +19,17 @@ public sealed class PostgreSqlSyntaxHelper : QuerySyntaxHelper
     public override int MaximumTableLength => 63;
     public override int MaximumColumnLength => 63;
 
-    public const string DefaultPostgresSchema = "public";
-
     public override string OpenQualifier => "\"";
 
     public override string CloseQualifier => "\"";
 
-    ///<inheritdoc/>
-    public override string False => "FALSE"; // 'FALSE' is the string representation of the boolean false in PostgreSql, unlike 0 for the others
+    /// <inheritdoc />
+    public override string False =>
+        "FALSE"; // 'FALSE' is the string representation of the boolean false in PostgreSql, unlike 0 for the others
 
-    ///<inheritdoc/>
-    public override string True => "TRUE"; // 'TRUE' is the string representation of the boolean true in PostgreSql, unlike 1 for the others
+    /// <inheritdoc />
+    public override string True =>
+        "TRUE"; // 'TRUE' is the string representation of the boolean true in PostgreSql, unlike 1 for the others
 
     public override bool SupportsEmbeddedParameters() => false;
 
@@ -38,10 +39,11 @@ public sealed class PostgreSqlSyntaxHelper : QuerySyntaxHelper
         // Also it doesn't support DateTime.Kind.Local
         dateTime.Kind == DateTimeKind.Unspecified ? dateTime.ToUniversalTime() : dateTime;
 
-    public override string EnsureWrappedImpl(string databaseOrTableName) => $"\"{GetRuntimeNameWithDoubledDoubleQuotes(databaseOrTableName)}\"";
+    public override string EnsureWrappedImpl(string databaseOrTableName) =>
+        $"\"{GetRuntimeNameWithDoubledDoubleQuotes(databaseOrTableName)}\"";
 
     /// <summary>
-    /// Returns the runtime name of the string with all double quotes escaped (but resulting string is not wrapped itself)
+    ///     Returns the runtime name of the string with all double quotes escaped (but resulting string is not wrapped itself)
     /// </summary>
     /// <param name="s"></param>
     /// <returns></returns>
@@ -53,11 +55,13 @@ public sealed class PostgreSqlSyntaxHelper : QuerySyntaxHelper
         //if there is no schema address it as db..table (which is the same as db.dbo.table in Microsoft SQL Server)
         $"{EnsureWrapped(databaseName)}{DatabaseTableSeparator}{(string.IsNullOrWhiteSpace(schemaName) ? DefaultPostgresSchema : EnsureWrapped(schemaName))}{DatabaseTableSeparator}{EnsureWrapped(tableName)}";
 
-    public override string EnsureFullyQualified(string? databaseName, string? schemaName, string tableName, string columnName,
+    public override string EnsureFullyQualified(string? databaseName, string? schemaName, string tableName,
+        string columnName,
         bool isTableValuedFunction = false)
     {
         if (isTableValuedFunction)
-            return $"{EnsureWrapped(tableName)}.{EnsureWrapped(GetRuntimeName(columnName))}"; //table valued functions do not support database name being in the column level selection list area of sql queries
+            return
+                $"{EnsureWrapped(tableName)}.{EnsureWrapped(GetRuntimeName(columnName))}"; //table valued functions do not support database name being in the column level selection list area of sql queries
 
         return $"{EnsureFullyQualified(databaseName, schemaName, tableName)}.\"{GetRuntimeName(columnName)}\"";
     }
@@ -65,7 +69,8 @@ public sealed class PostgreSqlSyntaxHelper : QuerySyntaxHelper
 
     public override TopXResponse HowDoWeAchieveTopX(int x) => new($"fetch first {x} rows only", QueryComponent.Postfix);
 
-    public override string GetParameterDeclaration(string proposedNewParameterName, string sqlType) => throw new NotSupportedException();
+    public override string GetParameterDeclaration(string proposedNewParameterName, string sqlType) =>
+        throw new NotSupportedException();
 
     public override string GetScalarFunctionSql(MandatoryScalarFunctions function) =>
         function switch

@@ -1,11 +1,7 @@
-using System;
-using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Diagnostics;
 using System.Globalization;
-using System.IO;
-using System.Linq;
 using System.Text;
 using FAnsi.Discovery.QuerySyntax;
 using FAnsi.Discovery.TableCreation;
@@ -17,22 +13,32 @@ using TypeGuesser;
 namespace FAnsi.Discovery;
 
 /// <summary>
-/// DBMS specific implementation of all functionality that relates to interacting with existing databases (dropping databases, creating tables, finding stored procedures etc).  For
-/// database creation see <see cref="DiscoveredServerHelper"/>
+///     DBMS specific implementation of all functionality that relates to interacting with existing databases (dropping
+///     databases, creating tables, finding stored procedures etc).  For
+///     database creation see <see cref="DiscoveredServerHelper" />
 /// </summary>
 public abstract class DiscoveredDatabaseHelper : IDiscoveredDatabaseHelper
 {
     // Cached CompositeFormats for CA1863
-    private static readonly CompositeFormat ColumnRequestMustHaveTypeFormat = CompositeFormat.Parse(FAnsiStrings.DiscoveredDatabaseHelper_CreateTable_DatabaseColumnRequestMustHaveEitherTypeRequestedOrExplicitDbType);
-    private static readonly CompositeFormat ObjectColumnNotAllowedFormat = CompositeFormat.Parse(FAnsiStrings.DataTable_Column__0__was_of_DataType__1___this_is_not_allowed___Use_String_for_untyped_data);
+    private static readonly CompositeFormat ColumnRequestMustHaveTypeFormat = CompositeFormat.Parse(FAnsiStrings
+        .DiscoveredDatabaseHelper_CreateTable_DatabaseColumnRequestMustHaveEitherTypeRequestedOrExplicitDbType);
 
-    public abstract IEnumerable<DiscoveredTable> ListTables(DiscoveredDatabase parent, IQuerySyntaxHelper querySyntaxHelper, DbConnection connection,
+    private static readonly CompositeFormat ObjectColumnNotAllowedFormat = CompositeFormat.Parse(FAnsiStrings
+        .DataTable_Column__0__was_of_DataType__1___this_is_not_allowed___Use_String_for_untyped_data);
+
+    private static readonly string[] Separator = ["\n", "\r"];
+
+    public abstract IEnumerable<DiscoveredTable> ListTables(DiscoveredDatabase parent,
+        IQuerySyntaxHelper querySyntaxHelper, DbConnection connection,
         string database, bool includeViews, DbTransaction? transaction = null);
 
-    public abstract IEnumerable<DiscoveredTableValuedFunction> ListTableValuedFunctions(DiscoveredDatabase parent, IQuerySyntaxHelper querySyntaxHelper,
+    public abstract IEnumerable<DiscoveredTableValuedFunction> ListTableValuedFunctions(DiscoveredDatabase parent,
+        IQuerySyntaxHelper querySyntaxHelper,
         DbConnection connection, string database, DbTransaction? transaction = null);
 
-    public abstract IEnumerable<DiscoveredStoredprocedure> ListStoredprocedures(DbConnectionStringBuilder builder, string database);
+    public abstract IEnumerable<DiscoveredStoredprocedure> ListStoredprocedures(DbConnectionStringBuilder builder,
+        string database);
+
     public abstract IDiscoveredTableHelper GetTableHelper();
     public abstract void DropDatabase(DiscoveredDatabase database);
     public abstract Dictionary<string, string> DescribeDatabase(DbConnectionStringBuilder builder, string database);
@@ -48,14 +54,14 @@ public abstract class DiscoveredDatabaseHelper : IDiscoveredDatabaseHelper
 
         if (args.DataTable != null)
         {
-
             ThrowIfObjectColumns(args.DataTable);
 
             //If we have a data table from which to create the table from
             foreach (DataColumn column in args.DataTable.Columns)
             {
                 //do we have an explicit overriding column definition?
-                var overriding = customRequests.SingleOrDefault(c => c.ColumnName.Equals(column.ColumnName, StringComparison.OrdinalIgnoreCase));
+                var overriding = customRequests.SingleOrDefault(c =>
+                    c.ColumnName.Equals(column.ColumnName, StringComparison.OrdinalIgnoreCase));
 
                 //yes
                 if (overriding != null)
@@ -77,7 +83,10 @@ public abstract class DiscoveredDatabaseHelper : IDiscoveredDatabaseHelper
                             request = tt.GetDataTypeRequestForSQLDBType(overriding.ExplicitDbType);
                         }
                         else
-                            throw new ArgumentException(string.Format(CultureInfo.InvariantCulture, ColumnRequestMustHaveTypeFormat, column));
+                        {
+                            throw new ArgumentException(string.Format(CultureInfo.InvariantCulture,
+                                ColumnRequestMustHaveTypeFormat, column));
+                        }
 
                     var guesser = GetGuesser(request);
                     CopySettings(guesser, args);
@@ -98,10 +107,7 @@ public abstract class DiscoveredDatabaseHelper : IDiscoveredDatabaseHelper
 
                     // If column has no rows, use DataColumn.DataType instead of Guesser default
                     // Guesser defaults to bool when no data, causing PostgreSQL type mismatches
-                    if ((column.Table?.Rows.Count ?? 0) == 0)
-                    {
-                        guess.CSharpType = column.DataType;
-                    }
+                    if ((column.Table?.Rows.Count ?? 0) == 0) guess.CSharpType = column.DataType;
 
                     //if DoNotRetype is set on the column adjust the requested CSharpType to be the original type
                     if (column.GetDoNotReType())
@@ -109,7 +115,8 @@ public abstract class DiscoveredDatabaseHelper : IDiscoveredDatabaseHelper
 
                     typeDictionary.Add(column.ColumnName, guesser);
 
-                    columns.Add(new DatabaseColumnRequest(column.ColumnName, guess, column.AllowDBNull) { IsPrimaryKey = args.DataTable.PrimaryKey.Contains(column) });
+                    columns.Add(new DatabaseColumnRequest(column.ColumnName, guess, column.AllowDBNull)
+                    { IsPrimaryKey = args.DataTable.PrimaryKey.Contains(column) });
                 }
             }
         }
@@ -122,7 +129,8 @@ public abstract class DiscoveredDatabaseHelper : IDiscoveredDatabaseHelper
         args.Adjuster?.AdjustColumns(columns);
 
         //Get the table creation SQL
-        var bodySql = GetCreateTableSql(args.Database, args.TableName, [.. columns], args.ForeignKeyPairs, args.CascadeDelete, args.Schema);
+        var bodySql = GetCreateTableSql(args.Database, args.TableName, [.. columns], args.ForeignKeyPairs,
+            args.CascadeDelete, args.Schema);
 
         //connect to the server and send it
         var server = args.Database.Server;
@@ -149,17 +157,10 @@ public abstract class DiscoveredDatabaseHelper : IDiscoveredDatabaseHelper
         return tbl;
     }
 
-    private static void CopySettings(Guesser guesser, CreateTableArgs args)
-    {
-        //cannot change the instance so have to copy across the values.  If this gets new properties that's a problem
-        //See tests GuessSettings_CopyProperties
-        guesser.Settings.CharCanBeBoolean = args.GuessSettings.CharCanBeBoolean;
-        guesser.Settings.ExplicitDateFormats = args.GuessSettings.ExplicitDateFormats;
-    }
-
     /// <summary>
-    /// Throws an <see cref="NotSupportedException"/> if the <paramref name="dt"/> contains <see cref="DataColumn"/> with
-    /// the <see cref="DataColumn.DataType"/> of <see cref="System.Object"/>
+    ///     Throws an <see cref="NotSupportedException" /> if the <paramref name="dt" /> contains <see cref="DataColumn" />
+    ///     with
+    ///     the <see cref="DataColumn.DataType" /> of <see cref="System.Object" />
     /// </summary>
     /// <param name="dt"></param>
     public void ThrowIfObjectColumns(DataTable dt)
@@ -176,19 +177,16 @@ public abstract class DiscoveredDatabaseHelper : IDiscoveredDatabaseHelper
                 ));
     }
 
-    /// <inheritdoc/>
+    /// <inheritdoc />
     public abstract void CreateSchema(DiscoveredDatabase discoveredDatabase, string name);
-
-    protected virtual Guesser GetGuesser(DataColumn column) => new();
-
-    protected virtual Guesser GetGuesser(DatabaseTypeRequest request) => new(request);
 
     public virtual string GetCreateTableSql(DiscoveredDatabase database, string tableName,
         DatabaseColumnRequest[] columns, Dictionary<DatabaseColumnRequest, DiscoveredColumn>? foreignKeyPairs,
         bool cascadeDelete, string? schema)
     {
         if (string.IsNullOrWhiteSpace(tableName))
-            throw new ArgumentNullException(nameof(tableName), FAnsiStrings.DiscoveredDatabaseHelper_GetCreateTableSql_Table_name_cannot_be_null);
+            throw new ArgumentNullException(nameof(tableName),
+                FAnsiStrings.DiscoveredDatabaseHelper_GetCreateTableSql_Table_name_cannot_be_null);
 
         var bodySql = new StringBuilder();
 
@@ -213,7 +211,8 @@ public abstract class DiscoveredDatabaseHelper : IDiscoveredDatabaseHelper
             var datatype = col.GetSQLDbType(syntaxHelper.TypeTranslater);
 
             //add the column name and accompanying datatype
-            bodySql.AppendLine(CultureInfo.InvariantCulture, $"{GetCreateTableSqlLineForColumn(col, datatype, syntaxHelper)},");
+            bodySql.AppendLine(CultureInfo.InvariantCulture,
+                $"{GetCreateTableSqlLineForColumn(col, datatype, syntaxHelper)},");
         }
 
         var pks = columns.Where(static c => c.IsPrimaryKey).ToArray();
@@ -224,7 +223,8 @@ public abstract class DiscoveredDatabaseHelper : IDiscoveredDatabaseHelper
         {
             bodySql.AppendLine();
             bodySql.AppendLine(GetForeignKeyConstraintSql(tableName, syntaxHelper,
-                foreignKeyPairs.ToDictionary(static k => (IHasRuntimeName)k.Key, static v => v.Value), cascadeDelete, null));
+                foreignKeyPairs.ToDictionary(static k => (IHasRuntimeName)k.Key, static v => v.Value), cascadeDelete,
+                null));
         }
 
         var toReturn = bodySql.ToString().TrimEnd('\r', '\n', ',');
@@ -233,15 +233,6 @@ public abstract class DiscoveredDatabaseHelper : IDiscoveredDatabaseHelper
 
         return toReturn;
     }
-
-    /// <summary>
-    /// Return the line that represents the given <paramref name="col"/> for slotting into a CREATE statement SQL e.g. "description varchar(20)"
-    /// </summary>
-    /// <param name="col"></param>
-    /// <param name="datatype"></param>
-    /// <param name="syntaxHelper"></param>
-    /// <returns></returns>
-    protected virtual string GetCreateTableSqlLineForColumn(DatabaseColumnRequest col, string datatype, IQuerySyntaxHelper syntaxHelper) => $"{syntaxHelper.EnsureWrapped(col.ColumnName)} {datatype} {(col.Default != MandatoryScalarFunctions.None ? $"default {syntaxHelper.GetScalarFunctionSql(col.Default)}" : "")} {(string.IsNullOrWhiteSpace(col.Collation) ? "" : $"COLLATE {col.Collation}")} {(col.AllowNulls && !col.IsPrimaryKey ? " NULL" : " NOT NULL")} {(col.IsAutoIncrement ? syntaxHelper.GetAutoIncrementKeywordIfAny() : "")}";
 
     public virtual string GetForeignKeyConstraintSql(string foreignTable, IQuerySyntaxHelper syntaxHelper,
         Dictionary<IHasRuntimeName, DiscoveredColumn> foreignKeyPairs, bool cascadeDelete, string? constraintName)
@@ -258,14 +249,39 @@ public abstract class DiscoveredDatabaseHelper : IDiscoveredDatabaseHelper
              """;
     }
 
-    public string GetForeignKeyConstraintNameFor(DiscoveredTable foreignTable, DiscoveredTable primaryTable) => GetForeignKeyConstraintNameFor(foreignTable.GetRuntimeName(), primaryTable.GetRuntimeName());
-
-    private static string GetForeignKeyConstraintNameFor(string foreignTable, string primaryTable) =>
-        MakeSensibleConstraintName("FK_", $"{foreignTable}_{primaryTable}");
+    public string GetForeignKeyConstraintNameFor(DiscoveredTable foreignTable, DiscoveredTable primaryTable) =>
+        GetForeignKeyConstraintNameFor(foreignTable.GetRuntimeName(), primaryTable.GetRuntimeName());
 
     public abstract DirectoryInfo? Detach(DiscoveredDatabase database);
 
     public abstract void CreateBackup(DiscoveredDatabase discoveredDatabase, string backupName);
+
+    private static void CopySettings(Guesser guesser, CreateTableArgs args)
+    {
+        //cannot change the instance so have to copy across the values.  If this gets new properties that's a problem
+        //See tests GuessSettings_CopyProperties
+        guesser.Settings.CharCanBeBoolean = args.GuessSettings.CharCanBeBoolean;
+        guesser.Settings.ExplicitDateFormats = args.GuessSettings.ExplicitDateFormats;
+    }
+
+    protected virtual Guesser GetGuesser(DataColumn column) => new();
+
+    protected virtual Guesser GetGuesser(DatabaseTypeRequest request) => new(request);
+
+    /// <summary>
+    ///     Return the line that represents the given <paramref name="col" /> for slotting into a CREATE statement SQL e.g.
+    ///     "description varchar(20)"
+    /// </summary>
+    /// <param name="col"></param>
+    /// <param name="datatype"></param>
+    /// <param name="syntaxHelper"></param>
+    /// <returns></returns>
+    protected virtual string
+        GetCreateTableSqlLineForColumn(DatabaseColumnRequest col, string datatype, IQuerySyntaxHelper syntaxHelper) =>
+        $"{syntaxHelper.EnsureWrapped(col.ColumnName)} {datatype} {(col.Default != MandatoryScalarFunctions.None ? $"default {syntaxHelper.GetScalarFunctionSql(col.Default)}" : "")} {(string.IsNullOrWhiteSpace(col.Collation) ? "" : $"COLLATE {col.Collation}")} {(col.AllowNulls && !col.IsPrimaryKey ? " NULL" : " NOT NULL")} {(col.IsAutoIncrement ? syntaxHelper.GetAutoIncrementKeywordIfAny() : "")}";
+
+    private static string GetForeignKeyConstraintNameFor(string foreignTable, string primaryTable) =>
+        MakeSensibleConstraintName("FK_", $"{foreignTable}_{primaryTable}");
 
     private static string GetPrimaryKeyDeclarationSql(string tableName, IEnumerable<DatabaseColumnRequest> pks,
         IQuerySyntaxHelper syntaxHelper) =>
@@ -304,18 +320,15 @@ public abstract class DiscoveredDatabaseHelper : IDiscoveredDatabaseHelper
     }
 
     /// <summary>
-    /// Generates a deterministic 32-bit hash for a string.
-    /// Same input always produces same output, ensuring consistent FK names across runs.
+    ///     Generates a deterministic 32-bit hash for a string.
+    ///     Same input always produces same output, ensuring consistent FK names across runs.
     /// </summary>
     private static int GetDeterministicHash(string input)
     {
         unchecked
         {
-            int hash = 23;
-            foreach (char c in input)
-            {
-                hash = hash * 31 + c;
-            }
+            var hash = 23;
+            foreach (var c in input) hash = hash * 31 + c;
             return hash;
         }
     }
@@ -325,17 +338,16 @@ public abstract class DiscoveredDatabaseHelper : IDiscoveredDatabaseHelper
         ExecuteBatchNonQuery(sql, conn, transaction, out _, timeout);
     }
 
-    private static readonly string[] Separator = ["\n", "\r"];
-
     /// <summary>
-    /// Executes the given SQL against the database + sends GO delimited statements as separate batches
+    ///     Executes the given SQL against the database + sends GO delimited statements as separate batches
     /// </summary>
     /// <param name="sql">Collection of SQL queries which can be separated by the use of "GO" on a line (works for all DBMS)</param>
     /// <param name="conn"></param>
     /// <param name="transaction"></param>
     /// <param name="performanceFigures">Line number the batch started at and the time it took to complete it</param>
-    /// <param name="timeout">Timeout in seconds to run each batch in the <paramref name="sql"/></param>
-    public void ExecuteBatchNonQuery(string sql, DbConnection conn, DbTransaction? transaction, out Dictionary<int, Stopwatch> performanceFigures, int timeout = 30)
+    /// <param name="timeout">Timeout in seconds to run each batch in the <paramref name="sql" /></param>
+    public void ExecuteBatchNonQuery(string sql, DbConnection conn, DbTransaction? transaction,
+        out Dictionary<int, Stopwatch> performanceFigures, int timeout = 30)
     {
         performanceFigures = [];
 
@@ -348,14 +360,13 @@ public abstract class DiscoveredDatabaseHelper : IDiscoveredDatabaseHelper
 
         if (conn.State != ConnectionState.Open)
         {
-
             conn.Open();
             hadToOpen = true;
         }
 
         var lineNumber = 1;
 
-        sql += "\nGO";   // make sure last batch is executed.
+        sql += "\nGO"; // make sure last batch is executed.
         try
         {
             foreach (var line in sql.Split(Separator, StringSplitOptions.RemoveEmptyEntries))

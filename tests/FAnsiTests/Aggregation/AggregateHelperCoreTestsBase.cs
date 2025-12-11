@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using System.Data;
 using System.Globalization;
 using FAnsi;
@@ -10,8 +8,8 @@ using NUnit.Framework;
 namespace FAnsiTests.Aggregation;
 
 /// <summary>
-/// Tests for core AggregateHelper functionality across all database types.
-/// These tests target the GetDatePartOfColumn method and basic aggregate building.
+///     Tests for core AggregateHelper functionality across all database types.
+///     These tests target the GetDatePartOfColumn method and basic aggregate building.
 /// </summary>
 internal abstract class AggregateHelperCoreTestsBase : AggregationTests
 {
@@ -28,6 +26,7 @@ internal abstract class AggregateHelperCoreTestsBase : AggregationTests
         // Result should contain the column name
         Assert.That(result, Does.Contain(eventDateCol.GetRuntimeName()));
     }
+
     protected void Test_GetDatePartOfColumn_Month(DatabaseType type)
     {
         var tbl = GetTestTable(type);
@@ -40,6 +39,7 @@ internal abstract class AggregateHelperCoreTestsBase : AggregationTests
         Assert.That(result, Is.Not.Empty);
         Assert.That(result, Does.Contain(eventDateCol.GetRuntimeName()));
     }
+
     protected void Test_GetDatePartOfColumn_Year(DatabaseType type)
     {
         var tbl = GetTestTable(type);
@@ -52,6 +52,7 @@ internal abstract class AggregateHelperCoreTestsBase : AggregationTests
         Assert.That(result, Is.Not.Empty);
         Assert.That(result, Does.Contain(eventDateCol.GetRuntimeName()));
     }
+
     protected void Test_GetDatePartOfColumn_Quarter(DatabaseType type)
     {
         var tbl = GetTestTable(type);
@@ -64,6 +65,7 @@ internal abstract class AggregateHelperCoreTestsBase : AggregationTests
         Assert.That(result, Is.Not.Empty);
         Assert.That(result, Does.Contain(eventDateCol.GetRuntimeName()));
     }
+
     protected void Test_SumAggregate(DatabaseType type)
     {
         var tbl = GetTestTable(type);
@@ -89,6 +91,7 @@ internal abstract class AggregateHelperCoreTestsBase : AggregationTests
         // Sum of all NumberInTrouble values: 7+11+49+13+17+19+23+29+31+37+41+59+47+53 = 436
         Assert.That(result, Is.EqualTo(436));
     }
+
     protected void Test_AvgAggregate(DatabaseType type)
     {
         var tbl = GetTestTable(type);
@@ -115,6 +118,7 @@ internal abstract class AggregateHelperCoreTestsBase : AggregationTests
         Assert.That(result, Is.GreaterThan(30));
         Assert.That(result, Is.LessThan(32));
     }
+
     protected void Test_MinAggregate(DatabaseType type)
     {
         var tbl = GetTestTable(type);
@@ -139,6 +143,7 @@ internal abstract class AggregateHelperCoreTestsBase : AggregationTests
 
         Assert.That(result, Is.EqualTo(7));
     }
+
     protected void Test_MaxAggregate(DatabaseType type)
     {
         var tbl = GetTestTable(type);
@@ -163,6 +168,7 @@ internal abstract class AggregateHelperCoreTestsBase : AggregationTests
 
         Assert.That(result, Is.EqualTo(59));
     }
+
     protected void Test_GroupByWithSum(DatabaseType type)
     {
         var tbl = GetTestTable(type);
@@ -197,17 +203,17 @@ internal abstract class AggregateHelperCoreTestsBase : AggregationTests
         // Find row with category "E&, %a' mp;E" and verify sum
         DataRow? row = null;
         foreach (DataRow r in dt.Rows)
-        {
             if (r[1].ToString() == "E&, %a' mp;E")
             {
                 row = r;
                 break;
             }
-        }
+
         Assert.That(row, Is.Not.Null);
         // Sum for this category: 37+41+59 = 137
         Assert.That(Convert.ToInt32(row![0], CultureInfo.InvariantCulture), Is.EqualTo(137));
     }
+
     protected void Test_GroupByWithAvg(DatabaseType type)
     {
         var tbl = GetTestTable(type);
@@ -240,6 +246,7 @@ internal abstract class AggregateHelperCoreTestsBase : AggregationTests
         Assert.That(dt.Rows, Has.Count.EqualTo(4));
         Assert.That(dt.Columns, Has.Count.EqualTo(2));
     }
+
     protected void Test_CountDistinct(DatabaseType type)
     {
         var tbl = GetTestTable(type);
@@ -265,6 +272,7 @@ internal abstract class AggregateHelperCoreTestsBase : AggregationTests
         // There are 4 distinct categories: T, F, E&, %a' mp;E, G
         Assert.That(result, Is.EqualTo(4));
     }
+
     protected void Test_HavingClause_GreaterThan(DatabaseType type)
     {
         var tbl = GetTestTable(type);
@@ -303,6 +311,7 @@ internal abstract class AggregateHelperCoreTestsBase : AggregationTests
         // G: 47+53 = 100 = 100 (not greater)
         Assert.That(dt.Rows, Has.Count.EqualTo(2));
     }
+
     protected void Test_HavingClause_Count(DatabaseType type)
     {
         var tbl = GetTestTable(type);
@@ -339,6 +348,7 @@ internal abstract class AggregateHelperCoreTestsBase : AggregationTests
         // G: 2 rows (excluded)
         Assert.That(dt.Rows, Has.Count.EqualTo(2));
     }
+
     protected void Test_CustomAggregateAlias(DatabaseType type)
     {
         var tbl = GetTestTable(type);
@@ -366,6 +376,7 @@ internal abstract class AggregateHelperCoreTestsBase : AggregationTests
         // Verify the alias is preserved
         Assert.That(dt.Columns[0].ColumnName, Does.Contain("GrandTotal").IgnoreCase);
     }
+
     protected void Test_MultipleGroupByColumns(DatabaseType type)
     {
         var tbl = GetTestTable(type);
@@ -403,6 +414,7 @@ internal abstract class AggregateHelperCoreTestsBase : AggregationTests
         Assert.That(dt.Rows.Count, Is.GreaterThan(4));
         Assert.That(dt.Columns, Has.Count.EqualTo(3));
     }
+
     protected void Test_WhereClauseWithAggregate(DatabaseType type)
     {
         var tbl = GetTestTable(type);
@@ -429,6 +441,7 @@ internal abstract class AggregateHelperCoreTestsBase : AggregationTests
         // There are 7 rows with category 'T'
         Assert.That(result, Is.EqualTo(7));
     }
+
     protected void Test_WhereAndGroupBy(DatabaseType type)
     {
         var tbl = GetTestTable(type);

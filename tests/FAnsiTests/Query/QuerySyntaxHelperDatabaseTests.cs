@@ -1,4 +1,3 @@
-using System;
 using System.Data;
 using FAnsi;
 using FAnsi.Discovery.QuerySyntax;
@@ -8,7 +7,6 @@ namespace FAnsiTests.Query;
 
 internal sealed class QuerySyntaxHelperDatabaseTests : DatabaseTests
 {
-
     [TestCaseSource(typeof(All), nameof(All.DatabaseTypesExceptSqlite))]
     public void Test_HowDoWeAchieveMd5(DatabaseType dbType)
     {

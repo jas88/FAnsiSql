@@ -1,25 +1,24 @@
 using FAnsi;
-using FAnsi.Discovery;
 using NUnit.Framework;
 
 namespace FAnsiTests.Database;
 
 /// <summary>
-/// Tests for DiscoveredDatabase.Exists() method across all database types.
-/// Verifies that checking for non-existent databases returns false instead of throwing exceptions.
+///     Tests for DiscoveredDatabase.Exists() method across all database types.
+///     Verifies that checking for non-existent databases returns false instead of throwing exceptions.
 /// </summary>
 internal sealed class DatabaseExistsTests : DatabaseTests
 {
     /// <summary>
-    /// Test that DiscoveredDatabase.Exists() returns false for non-existent databases
-    /// without throwing exceptions. This is critical for PostgreSQL where connecting
-    /// to a non-existent database throws an exception.
+    ///     Test that DiscoveredDatabase.Exists() returns false for non-existent databases
+    ///     without throwing exceptions. This is critical for PostgreSQL where connecting
+    ///     to a non-existent database throws an exception.
     /// </summary>
     /// <remarks>
-    /// Upstream issue: HicServices/FAnsiSql#335
-    /// PostgreSQL requires connecting to a system database (postgres) first to query pg_database.
-    /// This fork's implementation correctly handles this by using DatabaseExists() which connects
-    /// to the postgres system database before checking.
+    ///     Upstream issue: HicServices/FAnsiSql#335
+    ///     PostgreSQL requires connecting to a system database (postgres) first to query pg_database.
+    ///     This fork's implementation correctly handles this by using DatabaseExists() which connects
+    ///     to the postgres system database before checking.
     /// </remarks>
     [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void DiscoveredDatabase_Exists_NonExistentDatabase_ReturnsFalse(DatabaseType dbType)
@@ -33,7 +32,7 @@ internal sealed class DatabaseExistsTests : DatabaseTests
     }
 
     /// <summary>
-    /// Test that DiscoveredDatabase.Exists() returns true for existing databases
+    ///     Test that DiscoveredDatabase.Exists() returns true for existing databases
     /// </summary>
     [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void DiscoveredDatabase_Exists_ExistingDatabase_ReturnsTrue(DatabaseType dbType)
@@ -45,13 +44,13 @@ internal sealed class DatabaseExistsTests : DatabaseTests
     }
 
     /// <summary>
-    /// Test that creating and then checking a database works correctly
+    ///     Test that creating and then checking a database works correctly
     /// </summary>
     [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void DiscoveredDatabase_Exists_AfterCreate_ReturnsTrue(DatabaseType dbType)
     {
         var server = GetTestServer(dbType);
-        var dbName = $"TestExistsDB_{dbType}_{System.Guid.NewGuid():N}".Substring(0, 30);
+        var dbName = $"TestExistsDB_{dbType}_{Guid.NewGuid():N}".Substring(0, 30);
         var db = server.ExpectDatabase(dbName);
 
         try
