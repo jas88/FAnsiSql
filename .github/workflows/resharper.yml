@@ -35,8 +35,8 @@ jobs:
       - name: Install ReSharper CLI
         run: dotnet tool install -g JetBrains.ReSharper.GlobalTools
 
-      - name: Restore dependencies
-        run: dotnet restore FAnsi.sln
+      - name: Build solution
+        run: dotnet build FAnsi.sln
 
       - name: Run ReSharper InspectCode
         run: |
@@ -98,8 +98,8 @@ jobs:
       - name: Install ReSharper CLI
         run: dotnet tool install -g JetBrains.ReSharper.GlobalTools
 
-      - name: Restore dependencies
-        run: dotnet restore FAnsi.sln
+      - name: Build solution
+        run: dotnet build FAnsi.sln
 
       - name: Run ReSharper CleanupCode
         run: |
