@@ -1,6 +1,4 @@
-using System;
 using System.Globalization;
-using System.Linq;
 using FAnsi.Discovery.QuerySyntax;
 using FAnsi.Discovery.QuerySyntax.Aggregation;
 
@@ -9,12 +7,15 @@ namespace FAnsi.Implementations.MySql.Aggregation;
 public sealed class MySqlAggregateHelper : AggregateHelper
 {
     public static readonly MySqlAggregateHelper Instance = new();
-    private MySqlAggregateHelper() { }
+
+    private MySqlAggregateHelper()
+    {
+    }
 
     /// <summary>
-    /// Generates a date axis CTE using MySQL 8.0+ recursive CTEs.
-    /// Much simpler and more efficient than the legacy cross-join approach.
-    /// Sets recursion depth to 50000 to support large date ranges (up to ~137 years of daily data).
+    ///     Generates a date axis CTE using MySQL 8.0+ recursive CTEs.
+    ///     Much simpler and more efficient than the legacy cross-join approach.
+    ///     Sets recursion depth to 50000 to support large date ranges (up to ~137 years of daily data).
     /// </summary>
     private static string GetDateAxisTableDeclaration(IQueryAxis axis)
     {
@@ -66,7 +67,8 @@ public sealed class MySqlAggregateHelper : AggregateHelper
         var axisColumnAlias = query.AxisSelect.GetAliasFromText(query.SyntaxHelper);
 
         if (string.IsNullOrWhiteSpace(axisColumnAlias))
-            axisColumnAlias = query.SyntaxHelper.GetRuntimeName(query.AxisSelect.GetTextWithoutAlias(query.SyntaxHelper));
+            axisColumnAlias =
+                query.SyntaxHelper.GetRuntimeName(query.AxisSelect.GetTextWithoutAlias(query.SyntaxHelper));
 
         WrapAxisColumnWithDatePartFunction(query, axisColumnAlias);
 
@@ -77,33 +79,34 @@ public sealed class MySqlAggregateHelper : AggregateHelper
 
         var sql = string.Format(CultureInfo.InvariantCulture, """
 
-                                 {0}
+                                                              {0}
 
-                                 SET SESSION cte_max_recursion_depth = 50000;
+                                                              SET SESSION cte_max_recursion_depth = 50000;
 
-                                 {1}
-                                 SELECT
-                                 {2} AS "joinDt",
-                                 dataset.{3} AS "{3}"
-                                 FROM
-                                 dateAxis
-                                 LEFT JOIN
-                                 (
-                                    {4}
-                                 ) dataset
-                                 ON dataset.{5} = {2}
-                                 ORDER BY
-                                 {2}
+                                                              {1}
+                                                              SELECT
+                                                              {2} AS "joinDt",
+                                                              dataset.{3} AS "{3}"
+                                                              FROM
+                                                              dateAxis
+                                                              LEFT JOIN
+                                                              (
+                                                                 {4}
+                                                              ) dataset
+                                                              ON dataset.{5} = {2}
+                                                              ORDER BY
+                                                              {2}
 
-                                 """,
+                                                              """,
             string.Join(Environment.NewLine, query.Lines.Where(static c => c.LocationToInsert < QueryComponent.SELECT)),
             GetDateAxisTableDeclaration(query.Axis),
-
             GetDatePartOfColumn(query.Axis.AxisIncrement, "dateAxis.dt"),
             countAlias,
 
             //the entire query
-            string.Join(Environment.NewLine, query.Lines.Where(static c => c.LocationToInsert is >= QueryComponent.SELECT and <= QueryComponent.Having)),
+            string.Join(Environment.NewLine,
+                query.Lines.Where(static c =>
+                    c.LocationToInsert is >= QueryComponent.SELECT and <= QueryComponent.Having)),
             axisColumnAlias
         ).Trim();
 
@@ -125,51 +128,54 @@ public sealed class MySqlAggregateHelper : AggregateHelper
 
         return string.Format(CultureInfo.InvariantCulture, """
 
-                             SET SESSION cte_max_recursion_depth = 50000, group_concat_max_len = 1000000;
+                                                           SET SESSION cte_max_recursion_depth = 50000, group_concat_max_len = 1000000;
 
-                             {0}
+                                                           {0}
 
-                             {1}
+                                                           {1}
 
-                             SET @sql =
+                                                           SET @sql =
 
-                             CONCAT(
-                             '{2}
-                             SELECT
-                             {3} as joinDt,',@columnsSelectFromDataset,'
-                             FROM
-                             dateAxis
-                             LEFT JOIN
-                             (
-                                 {4}
-                                 {5} AS joinDt,
-                             '
-                                 ,@columnsSelectCases,
-                             '
-                             {6}
-                             group by
-                             {5}
-                             ) dataset
-                             ON {3} = dataset.joinDt
-                             ORDER BY
-                             {3}
-                             ');
+                                                           CONCAT(
+                                                           '{2}
+                                                           SELECT
+                                                           {3} as joinDt,',@columnsSelectFromDataset,'
+                                                           FROM
+                                                           dateAxis
+                                                           LEFT JOIN
+                                                           (
+                                                               {4}
+                                                               {5} AS joinDt,
+                                                           '
+                                                               ,@columnsSelectCases,
+                                                           '
+                                                           {6}
+                                                           group by
+                                                           {5}
+                                                           ) dataset
+                                                           ON {3} = dataset.joinDt
+                                                           ORDER BY
+                                                           {3}
+                                                           ');
 
-                             PREPARE stmt FROM @sql;
-                             EXECUTE stmt;
-                             DEALLOCATE PREPARE stmt;
-                             """,
+                                                           PREPARE stmt FROM @sql;
+                                                           EXECUTE stmt;
+                                                           DEALLOCATE PREPARE stmt;
+                                                           """,
             string.Join(Environment.NewLine, query.Lines.Where(static l => l.LocationToInsert < QueryComponent.SELECT)),
             part1,
             query.SyntaxHelper.Escape(dateAxisCte),
             query.SyntaxHelper.Escape(GetDatePartOfColumn(query.Axis.AxisIncrement, "dateAxis.dt")),
-            string.Join(Environment.NewLine, query.Lines.Where(static c => c.LocationToInsert == QueryComponent.SELECT)),
+            string.Join(Environment.NewLine,
+                query.Lines.Where(static c => c.LocationToInsert == QueryComponent.SELECT)),
 
             //the from including all table joins and where but no calendar table join
             query.SyntaxHelper.Escape(GetDatePartOfColumn(query.Axis.AxisIncrement, axisColumnWithoutAlias)),
 
             //the from/where/join clauses (stopping before GROUP BY since it's hardcoded in the template)
-            string.Join(Environment.NewLine, query.Lines.Where(static c => c.LocationToInsert is >= QueryComponent.FROM and < QueryComponent.GroupBy).Select(x => query.SyntaxHelper.Escape(x.Text)))
+            string.Join(Environment.NewLine,
+                query.Lines.Where(static c => c.LocationToInsert is >= QueryComponent.FROM and < QueryComponent.GroupBy)
+                    .Select(x => query.SyntaxHelper.Escape(x.Text)))
         );
     }
 
@@ -181,50 +187,51 @@ public sealed class MySqlAggregateHelper : AggregateHelper
 
         return string.Format(CultureInfo.InvariantCulture, """
 
-                             {0}
+                                                           {0}
 
-                             {1}
+                                                           {1}
 
-                             SET @sql =
+                                                           SET @sql =
 
-                             CONCAT(
-                             '
-                             SELECT
-                             {2}',@columnsSelectCases,'
+                                                           CONCAT(
+                                                           '
+                                                           SELECT
+                                                           {2}',@columnsSelectCases,'
 
-                             {3}
-                             GROUP BY
-                             {4}
-                             {5}
-                             ORDER BY
-                             {4}
-                             ');
+                                                           {3}
+                                                           GROUP BY
+                                                           {4}
+                                                           {5}
+                                                           ORDER BY
+                                                           {4}
+                                                           ');
 
-                             PREPARE stmt FROM @sql;
-                             EXECUTE stmt;
-                             DEALLOCATE PREPARE stmt;
-                             """,
+                                                           PREPARE stmt FROM @sql;
+                                                           EXECUTE stmt;
+                                                           DEALLOCATE PREPARE stmt;
+                                                           """,
             string.Join(Environment.NewLine, query.Lines.Where(static l => l.LocationToInsert < QueryComponent.SELECT)),
             part1,
             nonPivotColumn,
 
             //everything inclusive of FROM but stopping before GROUP BY
-            query.SyntaxHelper.Escape(string.Join(Environment.NewLine, query.Lines.Where(static c => c.LocationToInsert is >= QueryComponent.FROM and < QueryComponent.GroupBy))),
-
+            query.SyntaxHelper.Escape(string.Join(Environment.NewLine,
+                query.Lines.Where(static c =>
+                    c.LocationToInsert is >= QueryComponent.FROM and < QueryComponent.GroupBy))),
             joinAlias,
 
             //any HAVING SQL
-            query.SyntaxHelper.Escape(string.Join(Environment.NewLine, query.Lines.Where(static c => c.LocationToInsert == QueryComponent.Having)))
+            query.SyntaxHelper.Escape(string.Join(Environment.NewLine,
+                query.Lines.Where(static c => c.LocationToInsert == QueryComponent.Having)))
         );
     }
 
     /// <summary>
-    /// Returns the section of the PIVOT which identifies unique values.
-    /// For MySQL 8.0+ this uses a CTE instead of a temporary table and builds dynamic CASE statements.
-    ///
-    /// IMPORTANT: When using TOP X (LIMIT), the LIMIT clause must be placed at the CTE level
-    /// AFTER the GROUP BY and HAVING clauses, NOT inside the ROW_NUMBER() OVER() window function.
-    /// MySQL does not allow LIMIT inside window function OVER() clauses (GitHub Issue #38).
+    ///     Returns the section of the PIVOT which identifies unique values.
+    ///     For MySQL 8.0+ this uses a CTE instead of a temporary table and builds dynamic CASE statements.
+    ///     IMPORTANT: When using TOP X (LIMIT), the LIMIT clause must be placed at the CTE level
+    ///     AFTER the GROUP BY and HAVING clauses, NOT inside the ROW_NUMBER() OVER() window function.
+    ///     MySQL does not allow LIMIT inside window function OVER() clauses (GitHub Issue #38).
     /// </summary>
     private static string GetPivotPart1(AggregateCustomLineCollection query)
     {
@@ -247,7 +254,9 @@ public sealed class MySqlAggregateHelper : AggregateHelper
         if (query.AxisSelect != null)
         {
             var axisColumnWithoutAlias = query.AxisSelect.GetTextWithoutAlias(query.SyntaxHelper);
-            whereDateColumnNotNull += query.Lines.Any(static l => l.LocationToInsert == QueryComponent.WHERE) ? "AND " : "WHERE ";
+            whereDateColumnNotNull += query.Lines.Any(static l => l.LocationToInsert == QueryComponent.WHERE)
+                ? "AND "
+                : "WHERE ";
             whereDateColumnNotNull += $"{axisColumnWithoutAlias} IS NOT NULL";
         }
 
@@ -255,12 +264,14 @@ public sealed class MySqlAggregateHelper : AggregateHelper
         var orderBy = $"{countSqlWithoutAlias} desc";
 
         var topXOrderByLine =
-            query.Lines.SingleOrDefault(static c => c.LocationToInsert == QueryComponent.OrderBy && c.Role == CustomLineRole.TopX);
+            query.Lines.SingleOrDefault(static c =>
+                c.LocationToInsert == QueryComponent.OrderBy && c.Role == CustomLineRole.TopX);
         if (topXOrderByLine != null)
             orderBy = topXOrderByLine.Text;
 
         var topXLimitLine =
-            query.Lines.SingleOrDefault(static c => c.LocationToInsert == QueryComponent.Postfix && c.Role == CustomLineRole.TopX);
+            query.Lines.SingleOrDefault(static c =>
+                c.LocationToInsert == QueryComponent.Postfix && c.Role == CustomLineRole.TopX);
         var topXLimitSqlIfAny = topXLimitLine != null ? topXLimitLine.Text : "";
 
         var havingSqlIfAny = string.Join(Environment.NewLine,
@@ -268,32 +279,32 @@ public sealed class MySqlAggregateHelper : AggregateHelper
 
         return string.Format(CultureInfo.InvariantCulture, """
 
-                             /* Get unique pivot values and build both column lists in a single query */
-                             WITH pivotValues AS (
-                                 SELECT
-                                 {1} as piv,
-                                 ROW_NUMBER() OVER (ORDER BY {6}) as rn
-                                 {3}
-                                 {4}
-                                 GROUP BY
-                                 {1}
-                                 {7}
-                                 ORDER BY {6}
-                                 {5}
-                             )
-                             SELECT
-                               GROUP_CONCAT(
-                                 CONCAT(
-                                   '{0}(CASE WHEN {1} = ', QUOTE(piv), ' COLLATE utf8mb4_bin THEN {2} ELSE NULL END) AS `', piv,'`'
-                                 ) ORDER BY rn
-                               ),
-                               GROUP_CONCAT(
-                                 CONCAT('dataset.`', piv,'`') ORDER BY rn
-                               )
-                             INTO @columnsSelectCases, @columnsSelectFromDataset
-                             FROM pivotValues;
+                                                           /* Get unique pivot values and build both column lists in a single query */
+                                                           WITH pivotValues AS (
+                                                               SELECT
+                                                               {1} as piv,
+                                                               ROW_NUMBER() OVER (ORDER BY {6}) as rn
+                                                               {3}
+                                                               {4}
+                                                               GROUP BY
+                                                               {1}
+                                                               {7}
+                                                               ORDER BY {6}
+                                                               {5}
+                                                           )
+                                                           SELECT
+                                                             GROUP_CONCAT(
+                                                               CONCAT(
+                                                                 '{0}(CASE WHEN {1} = ', QUOTE(piv), ' COLLATE utf8mb4_bin THEN {2} ELSE NULL END) AS `', piv,'`'
+                                                               ) ORDER BY rn
+                                                             ),
+                                                             GROUP_CONCAT(
+                                                               CONCAT('dataset.`', piv,'`') ORDER BY rn
+                                                             )
+                                                           INTO @columnsSelectCases, @columnsSelectFromDataset
+                                                           FROM pivotValues;
 
-                             """,
+                                                           """,
             aggregateMethod,
             pivotSqlWithoutAlias,
             aggregateParameter,

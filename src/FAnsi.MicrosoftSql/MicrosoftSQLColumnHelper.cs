@@ -7,16 +7,19 @@ namespace FAnsi.Implementations.MicrosoftSQL;
 
 public sealed class MicrosoftSQLColumnHelper : IDiscoveredColumnHelper
 {
-    public string GetTopXSqlForColumn(IHasRuntimeName database, IHasFullyQualifiedNameToo table, IHasRuntimeName column, int topX, bool discardNulls)
+    public string GetTopXSqlForColumn(IHasRuntimeName database, IHasFullyQualifiedNameToo table, IHasRuntimeName column,
+        int topX, bool discardNulls)
     {
         var syntax = MicrosoftQuerySyntaxHelper.Instance;
 
         //[dbx].[table]
         var sql =
-            new StringBuilder($"SELECT TOP {topX} {syntax.EnsureWrapped(column.GetRuntimeName())} FROM {table.GetFullyQualifiedName()}");
+            new StringBuilder(
+                $"SELECT TOP {topX} {syntax.EnsureWrapped(column.GetRuntimeName())} FROM {table.GetFullyQualifiedName()}");
 
         if (discardNulls)
-            sql.Append(CultureInfo.InvariantCulture, $" WHERE {syntax.EnsureWrapped(column.GetRuntimeName())} IS NOT NULL");
+            sql.Append(CultureInfo.InvariantCulture,
+                $" WHERE {syntax.EnsureWrapped(column.GetRuntimeName())} IS NOT NULL");
 
         return sql.ToString();
     }

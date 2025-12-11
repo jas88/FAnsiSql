@@ -1,6 +1,7 @@
 using System.Data;
 using FAnsi;
 using FAnsi.Connections;
+using FAnsi.Discovery;
 using NUnit.Framework;
 
 namespace FAnsiTests;
@@ -20,9 +21,9 @@ internal abstract class ManagedConnectionTestsBase : DatabaseTests
     }
 
     /// <summary>
-    /// Tests that a managed connection is automatically opened when created.
-    /// Thread-local pooling is currently disabled (all database types use ADO.NET pooling),
-    /// so connections close on disposal and return to ADO.NET's pool.
+    ///     Tests that a managed connection is automatically opened when created.
+    ///     Thread-local pooling is currently disabled (all database types use ADO.NET pooling),
+    ///     so connections close on disposal and return to ADO.NET's pool.
     /// </summary>
     protected void Test_GetManagedConnection_AutoOpenClose()
     {
@@ -42,8 +43,8 @@ internal abstract class ManagedConnectionTestsBase : DatabaseTests
 
 
     /// <summary>
-    /// Tests that a managed connection is automatically opened and closed in dispose when starting
-    /// a new transaction
+    ///     Tests that a managed connection is automatically opened and closed in dispose when starting
+    ///     a new transaction
     /// </summary>
     protected void Test_BeginNewTransactedConnection_AutoOpenClose()
     {
@@ -61,12 +62,15 @@ internal abstract class ManagedConnectionTestsBase : DatabaseTests
     }
 
     /// <summary>
-    /// Tests that when passed an ongoing managed transaction the GetManagedConnection method
-    /// reuses the exist <see cref="IDbConnection"/> and <see cref="IDbTransaction"/> and does
-    /// not open or close them.
-    ///
-    /// <para>This is a design by the API to let us have using statements that either don't have a <see cref="IManagedTransaction"/> and handle
-    /// opening and closing their own connections or do have a <see cref="IManagedTransaction"/> and ignore open/dispose step</para>
+    ///     Tests that when passed an ongoing managed transaction the GetManagedConnection method
+    ///     reuses the exist <see cref="IDbConnection" /> and <see cref="IDbTransaction" /> and does
+    ///     not open or close them.
+    ///     <para>
+    ///         This is a design by the API to let us have using statements that either don't have a
+    ///         <see cref="IManagedTransaction" /> and handle
+    ///         opening and closing their own connections or do have a <see cref="IManagedTransaction" /> and ignore
+    ///         open/dispose step
+    ///     </para>
     /// </summary>
     protected void Test_GetManagedConnection_OngoingTransaction()
     {
@@ -95,8 +99,8 @@ internal abstract class ManagedConnectionTestsBase : DatabaseTests
                     Assert.That(con.Connection.State, Is.EqualTo(ConnectionState.Open));
                     Assert.That(con.Connection, Is.EqualTo(ongoingCon.Connection)); //same underlying connection
                 });
-
             }
+
             //it should still be open after this finally block
             Assert.That(con.Connection.State, Is.EqualTo(ConnectionState.Open));
         }
@@ -107,8 +111,9 @@ internal abstract class ManagedConnectionTestsBase : DatabaseTests
 
 
     /// <summary>
-    /// Same as Test_GetManagedConnection_OngoingTransaction except we call <see cref="IManagedTransaction.CommitAndCloseConnection"/> or
-    /// <see cref="IManagedTransaction.AbandonAndCloseConnection"/> instead of relying on the outermost using finally
+    ///     Same as Test_GetManagedConnection_OngoingTransaction except we call
+    ///     <see cref="IManagedTransaction.CommitAndCloseConnection" /> or
+    ///     <see cref="IManagedTransaction.AbandonAndCloseConnection" /> instead of relying on the outermost using finally
     /// </summary>
     /// <param name="commit">Whether to commit</param>
     protected void Test_GetManagedConnection_OngoingTransaction_WithCommitRollback(bool commit)
@@ -138,8 +143,8 @@ internal abstract class ManagedConnectionTestsBase : DatabaseTests
                     Assert.That(con.Connection.State, Is.EqualTo(ConnectionState.Open));
                     Assert.That(con.Connection, Is.EqualTo(ongoingCon.Connection)); //same underlying connection
                 });
-
             }
+
             //it should still be open after this finally block
             Assert.That(con.Connection.State, Is.EqualTo(ConnectionState.Open));
 
@@ -173,8 +178,8 @@ internal abstract class ManagedConnectionTestsBase : DatabaseTests
     }
 
     /// <summary>
-    /// Tests that a managed connection is automatically opened and closed in dispose when starting
-    /// a new transaction
+    ///     Tests that a managed connection is automatically opened and closed in dispose when starting
+    ///     a new transaction
     /// </summary>
     protected void Test_Clone_AutoOpenClose()
     {
@@ -200,7 +205,6 @@ internal abstract class ManagedConnectionTestsBase : DatabaseTests
 
             //GetManagedConnection should not have closed because we told the clone not to
             Assert.That(con.Connection.State, Is.EqualTo(ConnectionState.Open));
-
         } //now disposing the non clone
 
         //finally should close it
@@ -208,17 +212,17 @@ internal abstract class ManagedConnectionTestsBase : DatabaseTests
     }
 
     /// <summary>
-    /// Tests that connections with dangling transactions (@@TRANCOUNT > 0) are properly detected
-    /// and rejected from the thread-local pool. Reproduces issue where HasDanglingTransaction
-    /// catch block incorrectly returned false when the validation query itself failed due to
-    /// pending transaction.
+    ///     Tests that connections with dangling transactions (@@TRANCOUNT > 0) are properly detected
+    ///     and rejected from the thread-local pool. Reproduces issue where HasDanglingTransaction
+    ///     catch block incorrectly returned false when the validation query itself failed due to
+    ///     pending transaction.
     /// </summary>
     protected void Test_DanglingTransaction_IsDetectedAndRejected()
     {
         var db = GetTestDatabase(DatabaseType);
 
         // Clear pool to start fresh
-        FAnsi.Discovery.DiscoveredServer.ClearCurrentThreadConnectionPool();
+        DiscoveredServer.ClearCurrentThreadConnectionPool();
 
         IManagedConnection firstCon;
         using (firstCon = db.Server.GetManagedConnection())
@@ -259,6 +263,6 @@ internal abstract class ManagedConnectionTestsBase : DatabaseTests
         }
 
         // Cleanup
-        FAnsi.Discovery.DiscoveredServer.ClearCurrentThreadConnectionPool();
+        DiscoveredServer.ClearCurrentThreadConnectionPool();
     }
 }

@@ -30,5 +30,4 @@ internal sealed class PivotWithTopXTests_Oracle : PivotWithTopXTestsBase
     [Test]
     [Ignore("Pivot with TOP X not supported on this database")]
     public void Test_PivotWithTop1_SingleColumn() => Test_PivotWithTop1_SingleColumn(DbType);
-
 }

@@ -1,6 +1,4 @@
-using System;
 using System.Collections.Frozen;
-using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -14,7 +12,8 @@ public sealed partial class PostgreSqlTypeTranslater : TypeTranslater
     public static readonly PostgreSqlTypeTranslater Instance = new();
 
     private static readonly CompositeFormat TypeNotMappedExceptionFormat =
-        CompositeFormat.Parse(FAnsiStrings.TypeTranslater_GetSQLDBTypeForCSharpType_Unsure_what_SQL_type_to_use_for_CSharp_Type___0_____TypeTranslater_was___1__);
+        CompositeFormat.Parse(FAnsiStrings
+            .TypeTranslater_GetSQLDBTypeForCSharpType_Unsure_what_SQL_type_to_use_for_CSharp_Type___0_____TypeTranslater_was___1__);
 
     private static readonly FrozenDictionary<Type, NpgsqlDbType> TypeMappings =
         new Dictionary<Type, NpgsqlDbType>
@@ -60,7 +59,8 @@ public sealed partial class PostgreSqlTypeTranslater : TypeTranslater
 
     public override string GetStringDataTypeWithUnlimitedWidth() => "text";
 
-    protected override string GetUnicodeStringDataTypeImpl(int maxExpectedStringWidth) => GetStringDataType(maxExpectedStringWidth);
+    protected override string GetUnicodeStringDataTypeImpl(int maxExpectedStringWidth) =>
+        GetStringDataType(maxExpectedStringWidth);
 
     protected override string GetStringDataTypeImpl(int maxExpectedStringWidth) => $"varchar({maxExpectedStringWidth})";
 
@@ -73,13 +73,15 @@ public sealed partial class PostgreSqlTypeTranslater : TypeTranslater
     public NpgsqlDbType GetNpgsqlDbTypeForCSharpType(Type t) =>
         TypeMappings.TryGetValue(t, out var npgsqlType)
             ? npgsqlType
-            : throw new TypeNotMappedException(string.Format(CultureInfo.InvariantCulture, TypeNotMappedExceptionFormat, t.Name, GetType().Name));
+            : throw new TypeNotMappedException(string.Format(CultureInfo.InvariantCulture, TypeNotMappedExceptionFormat,
+                t.Name, GetType().Name));
 
     protected override bool IsByteArray(string sqlType) =>
         sqlType?.StartsWith("bytea", StringComparison.OrdinalIgnoreCase) ?? false;
 
     [GeneratedRegex("timestamp", RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]
     private static partial Regex DateRegexImpl();
+
     [GeneratedRegex("^time ", RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]
     private static partial Regex TimeRegexImpl();
 }

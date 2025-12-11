@@ -1,7 +1,5 @@
-using System;
-using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
+using System.Text;
 using FAnsi.Discovery.QuerySyntax;
 using FAnsi.Discovery.QuerySyntax.Aggregation;
 
@@ -10,13 +8,17 @@ namespace FAnsi.Implementations.Oracle.Aggregation;
 public sealed class OracleAggregateHelper : AggregateHelper
 {
     public static readonly OracleAggregateHelper Instance = new();
-    private OracleAggregateHelper() { }
+
+    private OracleAggregateHelper()
+    {
+    }
+
     protected override IQuerySyntaxHelper GetQuerySyntaxHelper() => OracleQuerySyntaxHelper.Instance;
 
     /// <summary>
-    /// Wraps AVG() function calls with ROUND() to prevent decimal overflow.
-    /// Oracle's NUMBER type can have up to 38 digits of precision, while .NET decimal only supports 28-29.
-    /// This limits precision to 10 decimal places which is sufficient for most use cases.
+    ///     Wraps AVG() function calls with ROUND() to prevent decimal overflow.
+    ///     Oracle's NUMBER type can have up to 38 digits of precision, while .NET decimal only supports 28-29.
+    ///     This limits precision to 10 decimal places which is sufficient for most use cases.
     /// </summary>
     private static string WrapAvgWithRound(string text)
     {
@@ -25,11 +27,10 @@ public sealed class OracleAggregateHelper : AggregateHelper
 
         // Simple approach: find AVG( and wrap the entire AVG(...) with ROUND(..., 10)
         // Handle nested parentheses properly
-        var result = new System.Text.StringBuilder();
+        var result = new StringBuilder();
         var i = 0;
 
         while (i < text.Length)
-        {
             // Look for AVG(
             if (i <= text.Length - 4 &&
                 text.AsSpan(i, 4).Equals("AVG(", StringComparison.OrdinalIgnoreCase))
@@ -56,13 +57,12 @@ public sealed class OracleAggregateHelper : AggregateHelper
                 result.Append(text[i]);
                 i++;
             }
-        }
 
         return result.ToString();
     }
 
     /// <summary>
-    /// Override BuildBasicAggregate to wrap AVG functions with ROUND
+    ///     Override BuildBasicAggregate to wrap AVG functions with ROUND
     /// </summary>
     protected override string BuildBasicAggregate(AggregateCustomLineCollection query)
     {
@@ -192,11 +192,11 @@ order by dt*/
             GetDatePartOfColumn(query.Axis!.AxisIncrement, "dt"),
             countAlias,
             //the entire query
-            string.Join(Environment.NewLine, query.Lines.Where(static c => c.LocationToInsert is >= QueryComponent.SELECT and <= QueryComponent.Having)),
+            string.Join(Environment.NewLine,
+                query.Lines.Where(static c =>
+                    c.LocationToInsert is >= QueryComponent.SELECT and <= QueryComponent.Having)),
             axisColumnAlias
-
         );
-
     }
 
     protected override string BuildPivotOnlyAggregate(AggregateCustomLineCollection query, CustomLine nonPivotColumn)
@@ -212,7 +212,8 @@ order by dt*/
 
         var nonPivotColumnAlias = nonPivotColumn.GetAliasFromText(query.SyntaxHelper);
         if (string.IsNullOrWhiteSpace(nonPivotColumnAlias))
-            nonPivotColumnAlias = query.SyntaxHelper.GetRuntimeName(nonPivotColumn.GetTextWithoutAlias(query.SyntaxHelper));
+            nonPivotColumnAlias =
+                query.SyntaxHelper.GetRuntimeName(nonPivotColumn.GetTextWithoutAlias(query.SyntaxHelper));
 
         var havingSqlIfAny = string.Join(Environment.NewLine,
             query.Lines.Where(static l => l.LocationToInsert == QueryComponent.Having).Select(static l => l.Text));
@@ -252,7 +253,8 @@ order by dt*/
             """,
             string.Join(Environment.NewLine, query.Lines.Where(static l => l.LocationToInsert < QueryComponent.SELECT)),
             string.Join(Environment.NewLine,
-                query.Lines.Where(static c => c.LocationToInsert is >= QueryComponent.SELECT and < QueryComponent.GroupBy)),
+                query.Lines.Where(static c =>
+                    c.LocationToInsert is >= QueryComponent.SELECT and < QueryComponent.GroupBy)),
             pivotSqlWithoutAlias,
             nonPivotColumnAlias,
             wrappedAggregateMethod,
@@ -305,7 +307,8 @@ order by dt*/
             string.Join(Environment.NewLine, query.Lines.Where(static c => c.LocationToInsert < QueryComponent.SELECT)),
             calendar,
             string.Join(Environment.NewLine,
-                query.Lines.Where(static c => c.LocationToInsert is >= QueryComponent.SELECT and <= QueryComponent.Having)),
+                query.Lines.Where(static c =>
+                    c.LocationToInsert is >= QueryComponent.SELECT and <= QueryComponent.Having)),
             pivotSqlWithoutAlias,
             GetDatePartOfColumn(query.Axis!.AxisIncrement, "calendar.dt"),
             $"{aggregateMethod}(case when {pivotSqlWithoutAlias} = pivot_values.piv then {aggregateParameter} else null end)",

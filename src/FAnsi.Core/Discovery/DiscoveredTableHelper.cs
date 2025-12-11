@@ -1,9 +1,6 @@
-using System;
-using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Globalization;
-using System.Linq;
 using System.Text;
 using FAnsi.Connections;
 using FAnsi.Discovery.Constraints;
@@ -14,49 +11,50 @@ using FAnsi.Naming;
 namespace FAnsi.Discovery;
 
 /// <summary>
-/// DBMS specific implementation of all functionality that relates to interacting with existing tables (altering, dropping, truncating etc).  For table creation
-/// see <see cref="DiscoveredDatabaseHelper"/>.
+///     DBMS specific implementation of all functionality that relates to interacting with existing tables (altering,
+///     dropping, truncating etc).  For table creation
+///     see <see cref="DiscoveredDatabaseHelper" />.
 /// </summary>
 public abstract class DiscoveredTableHelper : IDiscoveredTableHelper
 {
     // Cached CompositeFormats for CA1863
-    private static readonly CompositeFormat RenameNotSupportedFormat = CompositeFormat.Parse(FAnsiStrings.DiscoveredTableHelper_RenameTable_Rename_is_not_supported_for_TableType__0_);
-    private static readonly CompositeFormat CreateIndexFailedFormat = CompositeFormat.Parse(FAnsiStrings.DiscoveredTableHelper_CreateIndex_Failed);
-    private static readonly CompositeFormat DropIndexFailedFormat = CompositeFormat.Parse(FAnsiStrings.DiscoveredTableHelper_DropIndex_Failed);
-    private static readonly CompositeFormat CreatePrimaryKeyFailedFormat = CompositeFormat.Parse(FAnsiStrings.DiscoveredTableHelper_CreatePrimaryKey_Failed_to_create_primary_key_on_table__0__using_columns___1__);
+    private static readonly CompositeFormat RenameNotSupportedFormat =
+        CompositeFormat.Parse(FAnsiStrings.DiscoveredTableHelper_RenameTable_Rename_is_not_supported_for_TableType__0_);
+
+    private static readonly CompositeFormat CreateIndexFailedFormat =
+        CompositeFormat.Parse(FAnsiStrings.DiscoveredTableHelper_CreateIndex_Failed);
+
+    private static readonly CompositeFormat DropIndexFailedFormat =
+        CompositeFormat.Parse(FAnsiStrings.DiscoveredTableHelper_DropIndex_Failed);
+
+    private static readonly CompositeFormat CreatePrimaryKeyFailedFormat = CompositeFormat.Parse(FAnsiStrings
+        .DiscoveredTableHelper_CreatePrimaryKey_Failed_to_create_primary_key_on_table__0__using_columns___1__);
 
     /// <summary>
-    /// <para>Default fallback implementation checks existence by listing all tables and filtering in memory.</para>
-    /// <para>Database-specific helpers should override this method to use direct SQL queries for better performance (80-99% faster).</para>
+    ///     <para>Default fallback implementation checks existence by listing all tables and filtering in memory.</para>
+    ///     <para>
+    ///         Database-specific helpers should override this method to use direct SQL queries for better performance
+    ///         (80-99% faster).
+    ///     </para>
     /// </summary>
     [Obsolete("Prefer using Exists(DiscoveredTable, IManagedConnection) to reuse connections and improve performance")]
     public virtual bool Exists(DiscoveredTable table, IManagedTransaction? transaction = null)
     {
         // This is an inefficient fallback implementation
         // Database-specific implementations override this with targeted EXISTS queries
-        return table.Database.DiscoverTables(includeViews: table.TableType == TableType.View, transaction)
+        return table.Database.DiscoverTables(table.TableType == TableType.View, transaction)
             .Any(t => StringComparisonHelper.DatabaseObjectNamesEqual(t.GetRuntimeName(), table.GetRuntimeName()));
     }
 
     /// <summary>
-    /// <para>Checks if the table exists using the provided connection.</para>
-    /// <para>Default fallback implementation lists all tables and filters in memory.</para>
-    /// <para>Database-specific helpers should override this method to use direct SQL queries for better performance (80-99% faster).</para>
+    ///     <para>Default fallback implementation checks for primary key by discovering all columns and checking IsPrimaryKey.</para>
+    ///     <para>
+    ///         Database-specific helpers should override this method to use direct SQL queries for better performance
+    ///         (90-99% faster).
+    ///     </para>
     /// </summary>
-    public virtual bool Exists(DiscoveredTable table, IManagedConnection connection)
-    {
-        // Default fallback implementation - database-specific helpers override this with targeted SQL queries
-        // Note: We use Helper.ListTables directly to avoid creating a new connection
-        return table.Database.Helper.ListTables(table.Database, table.GetQuerySyntaxHelper(), connection.Connection,
-                table.Database.GetRuntimeName(), table.TableType == TableType.View, connection.Transaction)
-            .Any(t => StringComparisonHelper.DatabaseObjectNamesEqual(t.GetRuntimeName(), table.GetRuntimeName()));
-    }
-
-    /// <summary>
-    /// <para>Default fallback implementation checks for primary key by discovering all columns and checking IsPrimaryKey.</para>
-    /// <para>Database-specific helpers should override this method to use direct SQL queries for better performance (90-99% faster).</para>
-    /// </summary>
-    [Obsolete("Prefer using HasPrimaryKey(DiscoveredTable, IManagedConnection) to reuse connections and improve performance")]
+    [Obsolete(
+        "Prefer using HasPrimaryKey(DiscoveredTable, IManagedConnection) to reuse connections and improve performance")]
     public virtual bool HasPrimaryKey(DiscoveredTable table, IManagedTransaction? transaction = null)
     {
         // This is an inefficient fallback implementation
@@ -64,22 +62,13 @@ public abstract class DiscoveredTableHelper : IDiscoveredTableHelper
         return table.DiscoverColumns(transaction).Any(static c => c.IsPrimaryKey);
     }
 
-    /// <summary>
-    /// <para>Checks if the table has a primary key using the provided connection.</para>
-    /// <para>Default fallback implementation checks for primary key by discovering all columns and checking IsPrimaryKey.</para>
-    /// <para>Database-specific helpers should override this method to use direct SQL queries for better performance (90-99% faster).</para>
-    /// </summary>
-    public virtual bool HasPrimaryKey(DiscoveredTable table, IManagedConnection connection)
-    {
-        // Default fallback implementation - database-specific helpers override this with targeted SQL queries
-        return DiscoverColumns(table, connection, table.Database.GetRuntimeName()).Any(static c => c.IsPrimaryKey);
-    }
-
     public abstract string GetTopXSqlForTable(IHasFullyQualifiedNameToo table, int topX);
 
-    public abstract IEnumerable<DiscoveredColumn> DiscoverColumns(DiscoveredTable discoveredTable, IManagedConnection connection, string database);
+    public abstract IEnumerable<DiscoveredColumn> DiscoverColumns(DiscoveredTable discoveredTable,
+        IManagedConnection connection, string database);
 
     public abstract IDiscoveredColumnHelper GetColumnHelper();
+
     public virtual void DropTable(DbConnection connection, DiscoveredTable tableToDrop)
     {
         var sql = tableToDrop.TableType switch
@@ -90,36 +79,43 @@ public abstract class DiscoveredTableHelper : IDiscoveredTableHelper
             _ => throw new ArgumentOutOfRangeException(nameof(tableToDrop), "Unknown TableType")
         };
 
-        using var cmd = tableToDrop.GetCommand(string.Format(CultureInfo.InvariantCulture, sql, tableToDrop.GetFullyQualifiedName()), connection);
+        using var cmd =
+            tableToDrop.GetCommand(
+                string.Format(CultureInfo.InvariantCulture, sql, tableToDrop.GetFullyQualifiedName()), connection);
         cmd.ExecuteNonQuery();
     }
 
     public abstract void DropFunction(DbConnection connection, DiscoveredTableValuedFunction functionToDrop);
     public abstract void DropColumn(DbConnection connection, DiscoveredColumn columnToDrop);
 
-    public virtual void AddColumn(DatabaseOperationArgs args, DiscoveredTable table, string name, string dataType, bool allowNulls)
+    public virtual void AddColumn(DatabaseOperationArgs args, DiscoveredTable table, string name, string dataType,
+        bool allowNulls)
     {
         var syntax = table.GetQuerySyntaxHelper();
 
         using var con = args.GetManagedConnection(table);
         using var cmd = table.Database.Server.GetCommand(
-            $"ALTER TABLE {table.GetFullyQualifiedName()} ADD {syntax.EnsureWrapped(name)} {dataType} {(allowNulls ? "NULL" : "NOT NULL")}", con);
+            $"ALTER TABLE {table.GetFullyQualifiedName()} ADD {syntax.EnsureWrapped(name)} {dataType} {(allowNulls ? "NULL" : "NOT NULL")}",
+            con);
         args.ExecuteNonQuery(cmd);
     }
 
     public virtual int GetRowCount(DatabaseOperationArgs args, DiscoveredTable table)
     {
         using var connection = args.GetManagedConnection(table);
-        using var cmd = table.Database.Server.GetCommand($"SELECT count(*) FROM {table.GetFullyQualifiedName()}", connection);
+        using var cmd =
+            table.Database.Server.GetCommand($"SELECT count(*) FROM {table.GetFullyQualifiedName()}", connection);
         return Convert.ToInt32(args.ExecuteScalar(cmd), CultureInfo.InvariantCulture);
     }
 
-    public abstract IEnumerable<DiscoveredParameter> DiscoverTableValuedFunctionParameters(DbConnection connection, DiscoveredTableValuedFunction discoveredTableValuedFunction, DbTransaction? transaction);
+    public abstract IEnumerable<DiscoveredParameter> DiscoverTableValuedFunctionParameters(DbConnection connection,
+        DiscoveredTableValuedFunction discoveredTableValuedFunction, DbTransaction? transaction);
 
-    public abstract IBulkCopy BeginBulkInsert(DiscoveredTable discoveredTable, IManagedConnection connection, CultureInfo culture);
+    public abstract IBulkCopy BeginBulkInsert(DiscoveredTable discoveredTable, IManagedConnection connection,
+        CultureInfo culture);
 
     /// <summary>
-    /// Truncates the table (deletes all rows but preserves the table structure)
+    ///     Truncates the table (deletes all rows but preserves the table structure)
     /// </summary>
     /// <param name="discoveredTable">The table to truncate</param>
     public virtual void TruncateTable(DiscoveredTable discoveredTable)
@@ -128,20 +124,9 @@ public abstract class DiscoveredTableHelper : IDiscoveredTableHelper
         TruncateTable(discoveredTable, con.Connection);
     }
 
-    /// <summary>
-    /// Truncates the table (deletes all rows but preserves the table structure) using an existing connection
-    /// </summary>
-    /// <param name="discoveredTable">The table to truncate</param>
-    /// <param name="connection">An existing open connection to use</param>
-    public virtual void TruncateTable(DiscoveredTable discoveredTable, DbConnection connection)
-    {
-        var server = discoveredTable.Database.Server;
-        using var cmd = server.GetCommand($"TRUNCATE TABLE {discoveredTable.GetFullyQualifiedName()}", connection);
-        cmd.ExecuteNonQuery();
-    }
-
-    /// <inheritdoc/>
-    public string ScriptTableCreation(DiscoveredTable table, bool dropPrimaryKeys, bool dropNullability, bool convertIdentityToInt, DiscoveredTable? toCreateTable = null)
+    /// <inheritdoc />
+    public string ScriptTableCreation(DiscoveredTable table, bool dropPrimaryKeys, bool dropNullability,
+        bool convertIdentityToInt, DiscoveredTable? toCreateTable = null)
     {
         var columns = new List<DatabaseColumnRequest>();
 
@@ -153,7 +138,8 @@ public abstract class DiscoveredTableHelper : IDiscoveredTableHelper
                 sqlType = "int";
 
             //translate types if going to a different database type
-            if (toCreateTable != null && toCreateTable.Database.Server.DatabaseType != table.Database.Server.DatabaseType)
+            if (toCreateTable != null &&
+                toCreateTable.Database.Server.DatabaseType != table.Database.Server.DatabaseType)
             {
                 var fromtt = table.Database.Server.GetQuerySyntaxHelper().TypeTranslater;
                 var tott = toCreateTable.Database.Server.GetQuerySyntaxHelper().TypeTranslater;
@@ -171,7 +157,8 @@ public abstract class DiscoveredTableHelper : IDiscoveredTableHelper
 
             //if there is a collation
             if (!string.IsNullOrWhiteSpace(c.Collation) &&
-                (toCreateTable == null || toCreateTable.Database.Server.DatabaseType == table.Database.Server.DatabaseType))
+                (toCreateTable == null ||
+                 toCreateTable.Database.Server.DatabaseType == table.Database.Server.DatabaseType))
                 //if the script is to be run on a database of the same type
                 //then specify that the column should use the live collation
                 colRequest.Collation = c.Collation;
@@ -183,23 +170,28 @@ public abstract class DiscoveredTableHelper : IDiscoveredTableHelper
 
         var schema = toCreateTable != null ? toCreateTable.Schema : table.Schema;
 
-        return table.Database.Helper.GetCreateTableSql(destinationTable.Database, destinationTable.GetRuntimeName(), [.. columns], null, false, schema);
+        return table.Database.Helper.GetCreateTableSql(destinationTable.Database, destinationTable.GetRuntimeName(),
+            [.. columns], null, false, schema);
     }
 
-    public virtual bool IsEmpty(DatabaseOperationArgs args, DiscoveredTable discoveredTable) => GetRowCount(args, discoveredTable) == 0;
+    public virtual bool IsEmpty(DatabaseOperationArgs args, DiscoveredTable discoveredTable) =>
+        GetRowCount(args, discoveredTable) == 0;
 
     public virtual void RenameTable(DiscoveredTable discoveredTable, string newName, IManagedConnection connection)
     {
         if (discoveredTable.TableType != TableType.Table)
-            throw new NotSupportedException(string.Format(CultureInfo.InvariantCulture, RenameNotSupportedFormat, discoveredTable.TableType));
+            throw new NotSupportedException(string.Format(CultureInfo.InvariantCulture, RenameNotSupportedFormat,
+                discoveredTable.TableType));
 
         discoveredTable.GetQuerySyntaxHelper().ValidateTableName(newName);
 
-        using var cmd = discoveredTable.Database.Server.Helper.GetCommand(GetRenameTableSql(discoveredTable, newName), connection.Connection, connection.Transaction);
+        using var cmd = discoveredTable.Database.Server.Helper.GetCommand(GetRenameTableSql(discoveredTable, newName),
+            connection.Connection, connection.Transaction);
         cmd.ExecuteNonQuery();
     }
 
-    public virtual void CreateIndex(DatabaseOperationArgs args, DiscoveredTable table, string indexName, DiscoveredColumn[] columns, bool isUnique = false)
+    public virtual void CreateIndex(DatabaseOperationArgs args, DiscoveredTable table, string indexName,
+        DiscoveredColumn[] columns, bool isUnique = false)
     {
         var syntax = table.GetQuerySyntaxHelper();
 
@@ -216,7 +208,8 @@ public abstract class DiscoveredTableHelper : IDiscoveredTableHelper
         }
         catch (DbException e)
         {
-            throw new AlterFailedException(string.Format(CultureInfo.InvariantCulture, CreateIndexFailedFormat, table), e);
+            throw new AlterFailedException(string.Format(CultureInfo.InvariantCulture, CreateIndexFailedFormat, table),
+                e);
         }
     }
 
@@ -225,7 +218,6 @@ public abstract class DiscoveredTableHelper : IDiscoveredTableHelper
         using var connection = args.GetManagedConnection(table);
         try
         {
-
             var sql =
                 $"DROP INDEX {indexName} ON {table.GetFullyQualifiedName()}";
 
@@ -234,18 +226,19 @@ public abstract class DiscoveredTableHelper : IDiscoveredTableHelper
         }
         catch (DbException e)
         {
-            throw new AlterFailedException(string.Format(CultureInfo.InvariantCulture, DropIndexFailedFormat, table), e);
+            throw new AlterFailedException(string.Format(CultureInfo.InvariantCulture, DropIndexFailedFormat, table),
+                e);
         }
     }
 
-    public virtual void CreatePrimaryKey(DatabaseOperationArgs args, DiscoveredTable table, DiscoveredColumn[] discoverColumns)
+    public virtual void CreatePrimaryKey(DatabaseOperationArgs args, DiscoveredTable table,
+        DiscoveredColumn[] discoverColumns)
     {
         var syntax = table.GetQuerySyntaxHelper();
 
         using var connection = args.GetManagedConnection(table);
         try
         {
-
             var sql =
                 $"ALTER TABLE {table.GetFullyQualifiedName()} ADD PRIMARY KEY ({string.Join(",", discoverColumns.Select(c => syntax.EnsureWrapped(c.GetRuntimeName())))})";
 
@@ -254,11 +247,14 @@ public abstract class DiscoveredTableHelper : IDiscoveredTableHelper
         }
         catch (DbException e)
         {
-            throw new AlterFailedException(string.Format(CultureInfo.InvariantCulture, CreatePrimaryKeyFailedFormat, table, string.Join(",", discoverColumns.Select(static c => c.GetRuntimeName()))), e);
+            throw new AlterFailedException(
+                string.Format(CultureInfo.InvariantCulture, CreatePrimaryKeyFailedFormat, table,
+                    string.Join(",", discoverColumns.Select(static c => c.GetRuntimeName()))), e);
         }
     }
 
-    public virtual int ExecuteInsertReturningIdentity(DiscoveredTable discoveredTable, DbCommand cmd, IManagedTransaction? transaction = null)
+    public virtual int ExecuteInsertReturningIdentity(DiscoveredTable discoveredTable, DbCommand cmd,
+        IManagedTransaction? transaction = null)
     {
         cmd.CommandText += ";SELECT @@IDENTITY";
 
@@ -270,7 +266,8 @@ public abstract class DiscoveredTableHelper : IDiscoveredTableHelper
         return Convert.ToInt32(result, CultureInfo.InvariantCulture);
     }
 
-    public abstract IEnumerable<DiscoveredRelationship> DiscoverRelationships(DiscoveredTable table, DbConnection connection, IManagedTransaction? transaction = null);
+    public abstract IEnumerable<DiscoveredRelationship> DiscoverRelationships(DiscoveredTable table,
+        DbConnection connection, IManagedTransaction? transaction = null);
 
     public virtual void FillDataTableWithTopX(DatabaseOperationArgs args, DiscoveredTable table, int topX, DataTable dt)
     {
@@ -282,14 +279,17 @@ public abstract class DiscoveredTableHelper : IDiscoveredTableHelper
         args.Fill(da, cmd, dt);
     }
 
-    /// <inheritdoc/>
-    public virtual DiscoveredRelationship AddForeignKey(DatabaseOperationArgs args, Dictionary<DiscoveredColumn, DiscoveredColumn> foreignKeyPairs, bool cascadeDeletes, string? constraintName = null)
+    /// <inheritdoc />
+    public virtual DiscoveredRelationship AddForeignKey(DatabaseOperationArgs args,
+        Dictionary<DiscoveredColumn, DiscoveredColumn> foreignKeyPairs, bool cascadeDeletes,
+        string? constraintName = null)
     {
         var foreignTables = foreignKeyPairs.Select(static c => c.Key.Table).Distinct().ToArray();
         var primaryTables = foreignKeyPairs.Select(static c => c.Value.Table).Distinct().ToArray();
 
         if (primaryTables.Length != 1 || foreignTables.Length != 1)
-            throw new ArgumentException("Primary and foreign keys must all belong to the same table", nameof(foreignKeyPairs));
+            throw new ArgumentException("Primary and foreign keys must all belong to the same table",
+                nameof(foreignKeyPairs));
 
 
         var primary = primaryTables[0];
@@ -297,7 +297,8 @@ public abstract class DiscoveredTableHelper : IDiscoveredTableHelper
 
         constraintName ??= primary.Database.Helper.GetForeignKeyConstraintNameFor(foreign, primary);
 
-        var constraintBit = primary.Database.Helper.GetForeignKeyConstraintSql(foreign.GetRuntimeName(), primary.GetQuerySyntaxHelper(),
+        var constraintBit = primary.Database.Helper.GetForeignKeyConstraintSql(foreign.GetRuntimeName(),
+            primary.GetQuerySyntaxHelper(),
             foreignKeyPairs
                 .ToDictionary(static k => (IHasRuntimeName)k.Key, static v => v.Value), cascadeDeletes, constraintName);
 
@@ -324,15 +325,11 @@ public abstract class DiscoveredTableHelper : IDiscoveredTableHelper
         // CodeQL[cs/linq/missed-where-opportunity]: Intentional - manual loop for performance (avoids LINQ allocations and uses span comparisons)
         var constraintNameSpan = constraintName.AsSpan();
         foreach (var relationship in primary.DiscoverRelationships(args.TransactionIfAny))
-        {
             if (constraintNameSpan.Equals(relationship.Name.AsSpan(), StringComparison.OrdinalIgnoreCase))
                 return relationship;
-        }
 
         throw new InvalidOperationException($"Relationship with constraint name '{constraintName}' not found");
     }
-
-    protected abstract string GetRenameTableSql(DiscoveredTable discoveredTable, string newName);
 
     public virtual void MakeDistinct(DatabaseOperationArgs args, DiscoveredTable discoveredTable)
     {
@@ -348,11 +345,15 @@ public abstract class DiscoveredTableHelper : IDiscoveredTableHelper
             return;
 
         var tableName = discoveredTable.GetFullyQualifiedName();
-        var tempTable = discoveredTable.Database.ExpectTable($"{discoveredTable.GetRuntimeName()}_DistinctingTemp").GetFullyQualifiedName();
+        var tempTable = discoveredTable.Database.ExpectTable($"{discoveredTable.GetRuntimeName()}_DistinctingTemp")
+            .GetFullyQualifiedName();
         using (var cmdDistinct =
                server.GetCommand(
-                   string.Format(CultureInfo.InvariantCulture, "CREATE TABLE {1} AS SELECT distinct * FROM {0}", tableName, tempTable), con))
+                   string.Format(CultureInfo.InvariantCulture, "CREATE TABLE {1} AS SELECT distinct * FROM {0}",
+                       tableName, tempTable), con))
+        {
             args.ExecuteNonQuery(cmdDistinct);
+        }
 
         //this is the point of no return so don't cancel after this point
         using (var cmdTruncate = server.GetCommand($"DELETE FROM {tableName}", con))
@@ -377,6 +378,51 @@ public abstract class DiscoveredTableHelper : IDiscoveredTableHelper
         if (args.TransactionIfAny == null)
             con.ManagedTransaction?.CommitAndCloseConnection();
     }
+
+    /// <summary>
+    ///     <para>Checks if the table exists using the provided connection.</para>
+    ///     <para>Default fallback implementation lists all tables and filters in memory.</para>
+    ///     <para>
+    ///         Database-specific helpers should override this method to use direct SQL queries for better performance
+    ///         (80-99% faster).
+    ///     </para>
+    /// </summary>
+    public virtual bool Exists(DiscoveredTable table, IManagedConnection connection)
+    {
+        // Default fallback implementation - database-specific helpers override this with targeted SQL queries
+        // Note: We use Helper.ListTables directly to avoid creating a new connection
+        return table.Database.Helper.ListTables(table.Database, table.GetQuerySyntaxHelper(), connection.Connection,
+                table.Database.GetRuntimeName(), table.TableType == TableType.View, connection.Transaction)
+            .Any(t => StringComparisonHelper.DatabaseObjectNamesEqual(t.GetRuntimeName(), table.GetRuntimeName()));
+    }
+
+    /// <summary>
+    ///     <para>Checks if the table has a primary key using the provided connection.</para>
+    ///     <para>Default fallback implementation checks for primary key by discovering all columns and checking IsPrimaryKey.</para>
+    ///     <para>
+    ///         Database-specific helpers should override this method to use direct SQL queries for better performance
+    ///         (90-99% faster).
+    ///     </para>
+    /// </summary>
+    public virtual bool HasPrimaryKey(DiscoveredTable table, IManagedConnection connection)
+    {
+        // Default fallback implementation - database-specific helpers override this with targeted SQL queries
+        return DiscoverColumns(table, connection, table.Database.GetRuntimeName()).Any(static c => c.IsPrimaryKey);
+    }
+
+    /// <summary>
+    ///     Truncates the table (deletes all rows but preserves the table structure) using an existing connection
+    /// </summary>
+    /// <param name="discoveredTable">The table to truncate</param>
+    /// <param name="connection">An existing open connection to use</param>
+    public virtual void TruncateTable(DiscoveredTable discoveredTable, DbConnection connection)
+    {
+        var server = discoveredTable.Database.Server;
+        using var cmd = server.GetCommand($"TRUNCATE TABLE {discoveredTable.GetFullyQualifiedName()}", connection);
+        cmd.ExecuteNonQuery();
+    }
+
+    protected abstract string GetRenameTableSql(DiscoveredTable discoveredTable, string newName);
 
     public virtual bool RequiresLength(string columnType) =>
         columnType.ToLowerInvariant() switch

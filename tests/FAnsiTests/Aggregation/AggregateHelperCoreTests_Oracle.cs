@@ -57,5 +57,4 @@ internal sealed class AggregateHelperCoreTests_Oracle : AggregateHelperCoreTests
 
     [Test]
     public void Test_WhereAndGroupBy() => Test_WhereAndGroupBy(DbType);
-
 }

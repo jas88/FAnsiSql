@@ -11,7 +11,8 @@ internal sealed class TableHelperErrorHandlingTests_Sqlite : TableHelperErrorHan
     public void Drop_NonExistentTable_ThrowsException() => Drop_NonExistentTable_ThrowsException(DbType);
 
     [Test]
-    public void AddColumn_DuplicateColumnName_ThrowsException() => AddColumn_DuplicateColumnName_ThrowsException(DbType);
+    public void AddColumn_DuplicateColumnName_ThrowsException() =>
+        AddColumn_DuplicateColumnName_ThrowsException(DbType);
 
     [Test]
     public void DropColumn_NonExistentColumn_ThrowsException() => DropColumn_NonExistentColumn_ThrowsException(DbType);
@@ -20,7 +21,8 @@ internal sealed class TableHelperErrorHandlingTests_Sqlite : TableHelperErrorHan
     public void Truncate_NonExistentTable_ThrowsException() => Truncate_NonExistentTable_ThrowsException(DbType);
 
     [Test]
-    public void CreateIndex_DuplicateIndexName_ThrowsException() => CreateIndex_DuplicateIndexName_ThrowsException(DbType);
+    public void CreateIndex_DuplicateIndexName_ThrowsException() =>
+        CreateIndex_DuplicateIndexName_ThrowsException(DbType);
 
     [Test]
     public void DropIndex_NonExistentIndex_ThrowsException() => DropIndex_NonExistentIndex_ThrowsException(DbType);
@@ -38,7 +40,8 @@ internal sealed class TableHelperErrorHandlingTests_Sqlite : TableHelperErrorHan
     public void AddColumn_EmptyColumnName_ThrowsException() => AddColumn_EmptyColumnName_ThrowsException(DbType);
 
     [Test]
-    public void Insert_WithAutoIncrement_Concurrent_NoCollisions() => Insert_WithAutoIncrement_Concurrent_NoCollisions(DbType);
+    public void Insert_WithAutoIncrement_Concurrent_NoCollisions() =>
+        Insert_WithAutoIncrement_Concurrent_NoCollisions(DbType);
 
     [Test]
     public void Insert_NullIntoNotNullColumn_ThrowsException() => Insert_NullIntoNotNullColumn_ThrowsException(DbType);
@@ -57,5 +60,4 @@ internal sealed class TableHelperErrorHandlingTests_Sqlite : TableHelperErrorHan
 
     [Test]
     public void Insert_SpecialCharactersInString_Success() => Insert_SpecialCharactersInString_Success(DbType);
-
 }

@@ -1,10 +1,8 @@
+using System.Data;
+using System.Globalization;
 using FAnsi;
 using FAnsi.Discovery.QuerySyntax;
 using NUnit.Framework;
-using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Globalization;
 
 namespace FAnsiTests.Aggregation;
 

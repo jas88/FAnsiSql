@@ -13,10 +13,13 @@ internal sealed class LongNamesTests : DatabaseTests
     {
         var db = GetTestDatabase(dbType);
 
-        var tableName = new StringBuilder(db.Server.GetQuerySyntaxHelper().MaximumTableLength).Append('a', db.Server.GetQuerySyntaxHelper().MaximumTableLength).ToString();
-        var columnName = new StringBuilder(db.Server.GetQuerySyntaxHelper().MaximumColumnLength).Append('b', db.Server.GetQuerySyntaxHelper().MaximumColumnLength).ToString();
+        var tableName = new StringBuilder(db.Server.GetQuerySyntaxHelper().MaximumTableLength)
+            .Append('a', db.Server.GetQuerySyntaxHelper().MaximumTableLength).ToString();
+        var columnName = new StringBuilder(db.Server.GetQuerySyntaxHelper().MaximumColumnLength)
+            .Append('b', db.Server.GetQuerySyntaxHelper().MaximumColumnLength).ToString();
 
-        var tbl = db.CreateTable(tableName, [new DatabaseColumnRequest(columnName, new DatabaseTypeRequest(typeof(string), 100))]);
+        var tbl = db.CreateTable(tableName,
+            [new DatabaseColumnRequest(columnName, new DatabaseTypeRequest(typeof(string), 100))]);
 
         Assert.Multiple(() =>
         {

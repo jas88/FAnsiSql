@@ -1,6 +1,4 @@
-using System;
 using System.Data;
-using System.Linq;
 using FAnsi;
 using FAnsi.Discovery;
 using NUnit.Framework;
@@ -9,11 +7,49 @@ using TypeGuesser;
 namespace FAnsiTests.Table;
 
 /// <summary>
-/// Tests TableHelper column operations: AddColumn, DropColumn, and column alterations.
-/// These tests target uncovered functionality in all TableHelper implementations.
+///     Tests TableHelper column operations: AddColumn, DropColumn, and column alterations.
+///     These tests target uncovered functionality in all TableHelper implementations.
 /// </summary>
 internal abstract class TableHelperColumnOperationTestsBase : DatabaseTests
 {
+    #region Column Type Tests
+
+    protected void AddColumn_AllBasicTypes_Success(DatabaseType type)
+    {
+        var db = GetTestDatabase(type);
+        var table = db.CreateTable("AllTypesTable",
+        [
+            new DatabaseColumnRequest("Id", new DatabaseTypeRequest(typeof(int))) { IsPrimaryKey = true }
+        ]);
+
+        try
+        {
+            var syntax = table.GetQuerySyntaxHelper();
+
+            // Add columns of different types
+            table.AddColumn("IntCol",
+                syntax.TypeTranslater.GetSQLDBTypeForCSharpType(new DatabaseTypeRequest(typeof(int))), true, 30);
+            table.AddColumn("LongCol",
+                syntax.TypeTranslater.GetSQLDBTypeForCSharpType(new DatabaseTypeRequest(typeof(long))), true, 30);
+            table.AddColumn("ShortCol",
+                syntax.TypeTranslater.GetSQLDBTypeForCSharpType(new DatabaseTypeRequest(typeof(short))), true, 30);
+            table.AddColumn("StringCol",
+                syntax.TypeTranslater.GetSQLDBTypeForCSharpType(new DatabaseTypeRequest(typeof(string), 100)), true,
+                30);
+            table.AddColumn("DateCol",
+                syntax.TypeTranslater.GetSQLDBTypeForCSharpType(new DatabaseTypeRequest(typeof(DateTime))), true, 30);
+
+            var columns = table.DiscoverColumns();
+            Assert.That(columns.Length, Is.GreaterThanOrEqualTo(6), "Should have at least 6 columns");
+        }
+        finally
+        {
+            table.Drop();
+        }
+    }
+
+    #endregion
+
     #region AddColumn Tests
 
     protected void AddColumn_IntColumn_Success(DatabaseType type)
@@ -35,10 +71,13 @@ internal abstract class TableHelperColumnOperationTestsBase : DatabaseTests
             Assert.Multiple(() =>
             {
                 Assert.That(columnsAfter, Has.Length.EqualTo(2));
-                Assert.That(columnsAfter.Any(c => c.GetRuntimeName()?.Equals("NewIntCol", StringComparison.OrdinalIgnoreCase) == true), Is.True);
+                Assert.That(
+                    columnsAfter.Any(c =>
+                        c.GetRuntimeName()?.Equals("NewIntCol", StringComparison.OrdinalIgnoreCase) == true), Is.True);
             });
 
-            var newCol = columnsAfter.First(c => c.GetRuntimeName()?.Equals("NewIntCol", StringComparison.OrdinalIgnoreCase) == true);
+            var newCol = columnsAfter.First(c =>
+                c.GetRuntimeName()?.Equals("NewIntCol", StringComparison.OrdinalIgnoreCase) == true);
             Assert.Multiple(() =>
             {
                 Assert.That(newCol.DataType?.GetCSharpDataType(), Is.EqualTo(typeof(int)));
@@ -62,7 +101,8 @@ internal abstract class TableHelperColumnOperationTestsBase : DatabaseTests
         try
         {
             var syntax = table.GetQuerySyntaxHelper();
-            var stringType = syntax.TypeTranslater.GetSQLDBTypeForCSharpType(new DatabaseTypeRequest(typeof(string), 255));
+            var stringType =
+                syntax.TypeTranslater.GetSQLDBTypeForCSharpType(new DatabaseTypeRequest(typeof(string), 255));
 
             table.AddColumn("NewStringCol", stringType, true, 30);
 
@@ -179,7 +219,9 @@ internal abstract class TableHelperColumnOperationTestsBase : DatabaseTests
             var syntax = table.GetQuerySyntaxHelper();
 
             table.AddColumn("Col1", "int", true, 30);
-            table.AddColumn("Col2", syntax.TypeTranslater.GetSQLDBTypeForCSharpType(new DatabaseTypeRequest(typeof(string), 100)), true, 30);
+            table.AddColumn("Col2",
+                syntax.TypeTranslater.GetSQLDBTypeForCSharpType(new DatabaseTypeRequest(typeof(string), 100)), true,
+                30);
             table.AddColumn("Col3", "int", true, 30);
 
             var columns = table.DiscoverColumns();
@@ -216,7 +258,9 @@ internal abstract class TableHelperColumnOperationTestsBase : DatabaseTests
             Assert.Multiple(() =>
             {
                 Assert.That(columnsAfter, Has.Length.EqualTo(1));
-                Assert.That(columnsAfter.Any(c => c.GetRuntimeName()?.Equals("ToDelete", StringComparison.OrdinalIgnoreCase) == true), Is.False);
+                Assert.That(
+                    columnsAfter.Any(c =>
+                        c.GetRuntimeName()?.Equals("ToDelete", StringComparison.OrdinalIgnoreCase) == true), Is.False);
             });
         }
         finally
@@ -405,7 +449,7 @@ internal abstract class TableHelperColumnOperationTestsBase : DatabaseTests
         try
         {
             // Insert data
-            table.Insert(new System.Collections.Generic.Dictionary<string, object>
+            table.Insert(new Dictionary<string, object>
             {
                 { "Id", 1 },
                 { "Value", "Test1" }
@@ -415,7 +459,7 @@ internal abstract class TableHelperColumnOperationTestsBase : DatabaseTests
             table.AddColumn("Extra", "int", true, 30);
 
             // Insert more data
-            table.Insert(new System.Collections.Generic.Dictionary<string, object>
+            table.Insert(new Dictionary<string, object>
             {
                 { "Id", 2 },
                 { "Value", "Test2" },
@@ -433,38 +477,6 @@ internal abstract class TableHelperColumnOperationTestsBase : DatabaseTests
                 Assert.That(table.GetRowCount(), Is.EqualTo(2), "Rows should be preserved");
                 Assert.That(table.DiscoverColumns(), Has.Length.EqualTo(2), "Should have original 2 columns");
             });
-        }
-        finally
-        {
-            table.Drop();
-        }
-    }
-
-    #endregion
-
-    #region Column Type Tests
-
-    protected void AddColumn_AllBasicTypes_Success(DatabaseType type)
-    {
-        var db = GetTestDatabase(type);
-        var table = db.CreateTable("AllTypesTable",
-        [
-            new DatabaseColumnRequest("Id", new DatabaseTypeRequest(typeof(int))) { IsPrimaryKey = true }
-        ]);
-
-        try
-        {
-            var syntax = table.GetQuerySyntaxHelper();
-
-            // Add columns of different types
-            table.AddColumn("IntCol", syntax.TypeTranslater.GetSQLDBTypeForCSharpType(new DatabaseTypeRequest(typeof(int))), true, 30);
-            table.AddColumn("LongCol", syntax.TypeTranslater.GetSQLDBTypeForCSharpType(new DatabaseTypeRequest(typeof(long))), true, 30);
-            table.AddColumn("ShortCol", syntax.TypeTranslater.GetSQLDBTypeForCSharpType(new DatabaseTypeRequest(typeof(short))), true, 30);
-            table.AddColumn("StringCol", syntax.TypeTranslater.GetSQLDBTypeForCSharpType(new DatabaseTypeRequest(typeof(string), 100)), true, 30);
-            table.AddColumn("DateCol", syntax.TypeTranslater.GetSQLDBTypeForCSharpType(new DatabaseTypeRequest(typeof(DateTime))), true, 30);
-
-            var columns = table.DiscoverColumns();
-            Assert.That(columns.Length, Is.GreaterThanOrEqualTo(6), "Should have at least 6 columns");
         }
         finally
         {

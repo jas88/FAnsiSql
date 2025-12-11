@@ -1,7 +1,6 @@
 using FAnsi;
 using FAnsi.Discovery;
 using NUnit.Framework;
-using System.Collections.Generic;
 using TypeGuesser;
 
 namespace FAnsiTests.Table;
@@ -12,15 +11,15 @@ internal sealed class BasicInsertTests : DatabaseTests
     {
         var db = GetTestDatabase(type);
         var tbl = db.CreateTable("InsertTable",
-            [
-                new DatabaseColumnRequest("Name",new DatabaseTypeRequest(value.GetType(),100,new DecimalSize(5,5)))
-            ]);
+        [
+            new DatabaseColumnRequest("Name", new DatabaseTypeRequest(value.GetType(), 100, new DecimalSize(5, 5)))
+        ]);
 
         var nameCol = tbl.DiscoverColumn("Name");
 
         tbl.Insert(new Dictionary<DiscoveredColumn, object>
         {
-            {nameCol,value}
+            { nameCol, value }
         });
 
         var result = tbl.GetDataTable();
@@ -34,13 +33,13 @@ internal sealed class BasicInsertTests : DatabaseTests
     {
         var db = GetTestDatabase(type);
         var tbl = db.CreateTable("InsertTable",
-            [
-                new DatabaseColumnRequest("Name",new DatabaseTypeRequest(value.GetType(),100,new DecimalSize(5,5)))
-            ]);
+        [
+            new DatabaseColumnRequest("Name", new DatabaseTypeRequest(value.GetType(), 100, new DecimalSize(5, 5)))
+        ]);
 
         tbl.Insert(new Dictionary<string, object>
         {
-            {"Name",value}
+            { "Name", value }
         });
 
         var result = tbl.GetDataTable();
@@ -55,16 +54,17 @@ internal sealed class BasicInsertTests : DatabaseTests
     {
         var db = GetTestDatabase(type);
         var tbl = db.CreateTable("InsertTable",
-            [
-                new DatabaseColumnRequest("myidentity",new DatabaseTypeRequest(typeof(int))){IsPrimaryKey = true,IsAutoIncrement = true},
-                new DatabaseColumnRequest("Name",new DatabaseTypeRequest(typeof(string),100))
-            ]);
+        [
+            new DatabaseColumnRequest("myidentity", new DatabaseTypeRequest(typeof(int)))
+                { IsPrimaryKey = true, IsAutoIncrement = true },
+            new DatabaseColumnRequest("Name", new DatabaseTypeRequest(typeof(string), 100))
+        ]);
 
         var nameCol = tbl.DiscoverColumn("Name");
 
         var result = tbl.Insert(new Dictionary<DiscoveredColumn, object>
         {
-            {nameCol,"fish"}
+            { nameCol, "fish" }
         });
 
         Assert.That(result, Is.EqualTo(1));
@@ -72,7 +72,7 @@ internal sealed class BasicInsertTests : DatabaseTests
 
         result = tbl.Insert(new Dictionary<DiscoveredColumn, object>
         {
-            {nameCol,"fish"}
+            { nameCol, "fish" }
         });
 
         Assert.That(result, Is.EqualTo(2));

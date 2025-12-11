@@ -1,8 +1,5 @@
-using System;
-using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
-using System.IO;
 using FAnsi.Discovery;
 using FAnsi.Discovery.QuerySyntax;
 using Oracle.ManagedDataAccess.Client;
@@ -13,7 +10,11 @@ namespace FAnsi.Implementations.Oracle;
 public sealed class OracleDatabaseHelper : DiscoveredDatabaseHelper
 {
     public static readonly OracleDatabaseHelper Instance = new();
-    private OracleDatabaseHelper() { }
+
+    private OracleDatabaseHelper()
+    {
+    }
+
     public override IDiscoveredTableHelper GetTableHelper() => OracleTableHelper.Instance;
 
     public override void DropDatabase(DiscoveredDatabase database)
@@ -24,9 +25,11 @@ public sealed class OracleDatabaseHelper : DiscoveredDatabaseHelper
         cmd.ExecuteNonQuery();
     }
 
-    public override Dictionary<string, string> DescribeDatabase(DbConnectionStringBuilder builder, string database) => throw new NotImplementedException();
+    public override Dictionary<string, string> DescribeDatabase(DbConnectionStringBuilder builder, string database) =>
+        throw new NotImplementedException();
 
-    protected override string GetCreateTableSqlLineForColumn(DatabaseColumnRequest col, string datatype, IQuerySyntaxHelper syntaxHelper)
+    protected override string GetCreateTableSqlLineForColumn(DatabaseColumnRequest col, string datatype,
+        IQuerySyntaxHelper syntaxHelper)
     {
         if (col.IsAutoIncrement)
             return $"{col.ColumnName} INTEGER {syntaxHelper.GetAutoIncrementKeywordIfAny()}";
@@ -43,10 +46,13 @@ public sealed class OracleDatabaseHelper : DiscoveredDatabaseHelper
         throw new NotImplementedException();
     }
 
-    public override IEnumerable<DiscoveredTable> ListTables(DiscoveredDatabase parent, IQuerySyntaxHelper querySyntaxHelper, DbConnection connection, string database, bool includeViews, DbTransaction? transaction = null)
+    public override IEnumerable<DiscoveredTable> ListTables(DiscoveredDatabase parent,
+        IQuerySyntaxHelper querySyntaxHelper, DbConnection connection, string database, bool includeViews,
+        DbTransaction? transaction = null)
     {
         //find all the tables
-        using (var cmd = new OracleCommand("SELECT table_name FROM all_tables WHERE owner COLLATE BINARY_CI = :owner", (OracleConnection)connection))
+        using (var cmd = new OracleCommand("SELECT table_name FROM all_tables WHERE owner COLLATE BINARY_CI = :owner",
+                   (OracleConnection)connection))
         {
             cmd.Transaction = transaction as OracleTransaction;
             cmd.CommandTimeout = 60; // Increased timeout for Docker environments
@@ -81,11 +87,13 @@ public sealed class OracleDatabaseHelper : DiscoveredDatabaseHelper
         }
     }
 
-    public override IEnumerable<DiscoveredTableValuedFunction> ListTableValuedFunctions(DiscoveredDatabase parent, IQuerySyntaxHelper querySyntaxHelper,
+    public override IEnumerable<DiscoveredTableValuedFunction> ListTableValuedFunctions(DiscoveredDatabase parent,
+        IQuerySyntaxHelper querySyntaxHelper,
         DbConnection connection, string database, DbTransaction? transaction = null) =>
         Array.Empty<DiscoveredTableValuedFunction>();
 
-    public override DiscoveredStoredprocedure[] ListStoredprocedures(DbConnectionStringBuilder builder, string database) => [];
+    public override DiscoveredStoredprocedure[]
+        ListStoredprocedures(DbConnectionStringBuilder builder, string database) => [];
 
     protected override Guesser GetGuesser(DatabaseTypeRequest request) =>
         new(request)
@@ -96,5 +104,6 @@ public sealed class OracleDatabaseHelper : DiscoveredDatabaseHelper
         //Oracle doesn't really have schemas especially since a User is a Database
     }
 
-    protected override Guesser GetGuesser(DataColumn column) => new() { ExtraLengthPerNonAsciiCharacter = OracleTypeTranslater.ExtraLengthPerNonAsciiCharacter };
+    protected override Guesser GetGuesser(DataColumn column) => new()
+    { ExtraLengthPerNonAsciiCharacter = OracleTypeTranslater.ExtraLengthPerNonAsciiCharacter };
 }

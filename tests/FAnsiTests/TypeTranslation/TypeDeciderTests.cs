@@ -1,4 +1,3 @@
-using System;
 using System.Globalization;
 using FAnsi.Discovery.TypeTranslation;
 using FAnsi.Implementations.MicrosoftSQL;
@@ -9,8 +8,8 @@ using TypeGuesser.Deciders;
 namespace FAnsiTests.TypeTranslation;
 
 /// <summary>
-/// Database-agnostic tests for type guessers and deciders (TypeGuesser library)
-/// These tests don't require a database connection
+///     Database-agnostic tests for type guessers and deciders (TypeGuesser library)
+///     These tests don't require a database connection
 /// </summary>
 internal sealed class TypeDeciderTests
 {

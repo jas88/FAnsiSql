@@ -23,6 +23,6 @@ internal sealed class CalendarAggregationTests_MySql : CalendarAggregationTestsB
     public void Test_Calendar_ToToday() => Test_Calendar_ToToday(DbType);
 
     [Test]
-    public void Test_Calendar_SELECTColumnOrder_CountAfterAxisColumn() => Test_Calendar_SELECTColumnOrder_CountAfterAxisColumn(DbType);
-
+    public void Test_Calendar_SELECTColumnOrder_CountAfterAxisColumn() =>
+        Test_Calendar_SELECTColumnOrder_CountAfterAxisColumn(DbType);
 }

@@ -1,19 +1,14 @@
-using System;
 using System.Collections.Frozen;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Data.Common;
 using System.Globalization;
-using System.Linq;
 using System.Reflection;
 using System.Text;
-using System.Threading;
 using FAnsi.Exceptions;
 
 namespace FAnsi.Implementation;
 
 /// <summary>
-/// Handles detecting and loading implementations
+///     Handles detecting and loading implementations
 /// </summary>
 public sealed class ImplementationManager
 {
@@ -21,21 +16,26 @@ public sealed class ImplementationManager
     private static readonly object _lock = new();
 
     /// <summary>
-    /// Fast read-only lookup for O(1) access by any supported type (DatabaseType, ConnectionStringBuilder, or Connection)
+    ///     Fast O(1) array lookup for DatabaseType to implementation mapping. Initialized with nulls.
+    /// </summary>
+    private static readonly IImplementation?[]
+        _databaseTypeLookup = new IImplementation[5]; // 5 DatabaseType enum values
+
+    // Cached CompositeFormat for CA1863
+    private static readonly CompositeFormat NoDatabaseTypeImplementationFormat =
+        CompositeFormat.Parse(FAnsiStrings
+            .ImplementationManager_GetImplementation_No_implementation_found_for_DatabaseType__0_);
+
+    private static readonly CompositeFormat NoAdoNetImplementationFormat = CompositeFormat.Parse(FAnsiStrings
+        .ImplementationManager_GetImplementation_No_implementation_found_for_ADO_Net_object_of_Type__0_);
+
+    /// <summary>
+    ///     Fast read-only lookup for O(1) access by any supported type (DatabaseType, ConnectionStringBuilder, or Connection)
     /// </summary>
     private volatile FrozenDictionary<Type, IImplementation> _lookup = FrozenDictionary<Type, IImplementation>.Empty;
 
     /// <summary>
-    /// Fast O(1) array lookup for DatabaseType to implementation mapping. Initialized with nulls.
-    /// </summary>
-    private static readonly IImplementation?[] _databaseTypeLookup = new IImplementation[5]; // 5 DatabaseType enum values
-
-    // Cached CompositeFormat for CA1863
-    private static readonly CompositeFormat NoDatabaseTypeImplementationFormat = CompositeFormat.Parse(FAnsiStrings.ImplementationManager_GetImplementation_No_implementation_found_for_DatabaseType__0_);
-    private static readonly CompositeFormat NoAdoNetImplementationFormat = CompositeFormat.Parse(FAnsiStrings.ImplementationManager_GetImplementation_No_implementation_found_for_ADO_Net_object_of_Type__0_);
-
-    /// <summary>
-    /// Registers an implementation instance for fast O(1) lookups
+    ///     Registers an implementation instance for fast O(1) lookups
     /// </summary>
     /// <param name="implementation">The implementation to register</param>
     public static void Register(IImplementation implementation)
@@ -60,10 +60,11 @@ public sealed class ImplementationManager
     }
 
     /// <summary>
-    /// loads all implementations in the assembly hosting the <typeparamref name="T"/>
+    ///     loads all implementations in the assembly hosting the <typeparamref name="T" />
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    [Obsolete("Implementations now auto-register via static constructor in DiscoveredServer. To force assembly loading, call {TypeName}.EnsureLoaded() instead (e.g., MicrosoftSQLImplementation.EnsureLoaded()).")]
+    [Obsolete(
+        "Implementations now auto-register via static constructor in DiscoveredServer. To force assembly loading, call {TypeName}.EnsureLoaded() instead (e.g., MicrosoftSQLImplementation.EnsureLoaded()).")]
     public static void Load<T>() where T : IImplementation, new()
     {
         var loading = new T();
@@ -110,8 +111,9 @@ public sealed class ImplementationManager
             NoAdoNetImplementationFormat,
             connection.GetType()));
     }
+
     /// <summary>
-    /// Returns all currently loaded implementations
+    ///     Returns all currently loaded implementations
     /// </summary>
     /// <returns></returns>
     public static IEnumerable<IImplementation> GetImplementations() => Instance._lookup.Values.Distinct();

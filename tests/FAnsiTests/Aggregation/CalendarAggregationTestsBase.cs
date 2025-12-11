@@ -1,10 +1,8 @@
+using System.Data;
 using FAnsi;
 using FAnsi.Discovery.QuerySyntax;
 using FAnsi.Discovery.QuerySyntax.Aggregation;
 using NUnit.Framework;
-using System;
-using System.Collections.Generic;
-using System.Data;
 
 namespace FAnsiTests.Aggregation;
 
@@ -23,11 +21,13 @@ internal abstract class CalendarAggregationTestsBase : AggregationTests
             new("SELECT", QueryComponent.SELECT),
             new("count(*) as MyCount,", QueryComponent.QueryTimeColumn)
                 { Role = CustomLineRole.CountFunction },
-            new(eventDate.GetFullyQualifiedName(), QueryComponent.QueryTimeColumn) { Role = CustomLineRole.Axis }, //tell it which the axis are
+            new(eventDate.GetFullyQualifiedName(), QueryComponent.QueryTimeColumn)
+                { Role = CustomLineRole.Axis }, //tell it which the axis are
             new("FROM ", QueryComponent.FROM),
             new(tbl.GetFullyQualifiedName(), QueryComponent.FROM),
             new("GROUP BY", QueryComponent.GroupBy),
-            new(eventDate.GetFullyQualifiedName(), QueryComponent.GroupBy) { Role = CustomLineRole.Axis } //tell it which the axis are
+            new(eventDate.GetFullyQualifiedName(), QueryComponent.GroupBy)
+                { Role = CustomLineRole.Axis } //tell it which the axis are
         };
 
         var axis = new QueryAxis
@@ -46,7 +46,9 @@ internal abstract class CalendarAggregationTestsBase : AggregationTests
         using var dt = new DataTable();
         da.Fill(dt);
 
-        Assert.That(dt.Rows, Has.Count.EqualTo(10)); //there are 10 years between 2001 and 2010 even though not all years are represented in the data
+        Assert.That(dt.Rows,
+            Has.Count.EqualTo(
+                10)); //there are 10 years between 2001 and 2010 even though not all years are represented in the data
         Assert.Multiple(() =>
         {
             Assert.That(dt.Rows[0][0], Is.EqualTo(2001));
@@ -71,6 +73,7 @@ internal abstract class CalendarAggregationTestsBase : AggregationTests
             Assert.That(dt.Rows[9][1], Is.EqualTo(DBNull.Value));
         });
     }
+
     protected void Test_Calendar_Quarter(DatabaseType type)
     {
         var tbl = GetTestTable(type);
@@ -81,11 +84,13 @@ internal abstract class CalendarAggregationTestsBase : AggregationTests
         {
             new("SELECT", QueryComponent.SELECT),
             new("count(*) as MyCount,", QueryComponent.QueryTimeColumn) { Role = CustomLineRole.CountFunction },
-            new(col.GetFullyQualifiedName(), QueryComponent.QueryTimeColumn) { Role = CustomLineRole.Axis },                      //tell it which the axis are
+            new(col.GetFullyQualifiedName(), QueryComponent.QueryTimeColumn)
+                { Role = CustomLineRole.Axis }, //tell it which the axis are
             new("FROM ", QueryComponent.FROM),
             new(tbl.GetFullyQualifiedName(), QueryComponent.FROM),
             new("GROUP BY", QueryComponent.GroupBy),
-            new(col.GetFullyQualifiedName(), QueryComponent.GroupBy) { Role = CustomLineRole.Axis }                                           //tell it which the axis are
+            new(col.GetFullyQualifiedName(), QueryComponent.GroupBy)
+                { Role = CustomLineRole.Axis } //tell it which the axis are
         };
 
         var axis = new QueryAxis
@@ -112,6 +117,7 @@ internal abstract class CalendarAggregationTestsBase : AggregationTests
         AssertHasRow(dt, "2001Q1", 5);
         AssertHasRow(dt, "2001Q2", null);
     }
+
     protected void Test_Calendar_Month(DatabaseType type)
     {
         var tbl = GetTestTable(type);
@@ -124,11 +130,13 @@ internal abstract class CalendarAggregationTestsBase : AggregationTests
             new("SELECT", QueryComponent.SELECT),
             new("count(*) as MyCount,", QueryComponent.QueryTimeColumn)
                 { Role = CustomLineRole.CountFunction },
-            new(syntax.EnsureWrapped("EventDate"), QueryComponent.QueryTimeColumn) { Role = CustomLineRole.Axis }, //tell it which the axis are
+            new(syntax.EnsureWrapped("EventDate"), QueryComponent.QueryTimeColumn)
+                { Role = CustomLineRole.Axis }, //tell it which the axis are
             new("FROM ", QueryComponent.FROM),
             new(tbl.GetFullyQualifiedName(), QueryComponent.FROM),
             new("GROUP BY", QueryComponent.GroupBy),
-            new(syntax.EnsureWrapped("EventDate"), QueryComponent.GroupBy) { Role = CustomLineRole.Axis } //tell it which the axis are
+            new(syntax.EnsureWrapped("EventDate"), QueryComponent.GroupBy)
+                { Role = CustomLineRole.Axis } //tell it which the axis are
         };
 
         var axis = new QueryAxis
@@ -155,6 +163,7 @@ internal abstract class CalendarAggregationTestsBase : AggregationTests
         AssertHasRow(dt, "2001-01", 5);
         AssertHasRow(dt, "2001-02", null);
     }
+
     protected void Test_Calendar_Day(DatabaseType type)
     {
         var tbl = GetTestTable(type);
@@ -166,11 +175,13 @@ internal abstract class CalendarAggregationTestsBase : AggregationTests
             new("SELECT", QueryComponent.SELECT),
             new("count(*) as MyCount,", QueryComponent.QueryTimeColumn)
                 { Role = CustomLineRole.CountFunction },
-            new(col.GetFullyQualifiedName(), QueryComponent.QueryTimeColumn) { Role = CustomLineRole.Axis }, //tell it which the axis are
+            new(col.GetFullyQualifiedName(), QueryComponent.QueryTimeColumn)
+                { Role = CustomLineRole.Axis }, //tell it which the axis are
             new("FROM ", QueryComponent.FROM),
             new(tbl.GetFullyQualifiedName(), QueryComponent.FROM),
             new("GROUP BY", QueryComponent.GroupBy),
-            new(col.GetFullyQualifiedName(), QueryComponent.GroupBy) { Role = CustomLineRole.Axis } //tell it which the axis are
+            new(col.GetFullyQualifiedName(), QueryComponent.GroupBy)
+                { Role = CustomLineRole.Axis } //tell it which the axis are
         };
 
         var axis = new QueryAxis
@@ -196,6 +207,7 @@ internal abstract class CalendarAggregationTestsBase : AggregationTests
         AssertHasRow(dt, new DateTime(2001, 1, 2), 1);
         AssertHasRow(dt, new DateTime(2001, 1, 3), null);
     }
+
     protected void Test_Calendar_ToToday(DatabaseType type)
     {
         var tbl = GetTestTable(type);
@@ -207,11 +219,13 @@ internal abstract class CalendarAggregationTestsBase : AggregationTests
             new("SELECT", QueryComponent.SELECT),
             new("count(*) as MyCount,", QueryComponent.QueryTimeColumn)
                 { Role = CustomLineRole.CountFunction },
-            new(eventDate.GetFullyQualifiedName(), QueryComponent.QueryTimeColumn) { Role = CustomLineRole.Axis }, //tell it which the axis are
+            new(eventDate.GetFullyQualifiedName(), QueryComponent.QueryTimeColumn)
+                { Role = CustomLineRole.Axis }, //tell it which the axis are
             new("FROM ", QueryComponent.FROM),
             new(tbl.GetFullyQualifiedName(), QueryComponent.FROM),
             new("GROUP BY", QueryComponent.GroupBy),
-            new(eventDate.GetFullyQualifiedName(), QueryComponent.GroupBy) { Role = CustomLineRole.Axis } //tell it which the axis are
+            new(eventDate.GetFullyQualifiedName(), QueryComponent.GroupBy)
+                { Role = CustomLineRole.Axis } //tell it which the axis are
         };
 
         var axis = new QueryAxis
@@ -231,7 +245,9 @@ internal abstract class CalendarAggregationTestsBase : AggregationTests
         using var dt = new DataTable();
         da.Fill(dt);
 
-        Assert.That(dt.Rows, Has.Count.GreaterThanOrEqualTo(19)); //there are 19 years between 2001 and 2019 (use greater than because we don't want test to fail in 2020)
+        Assert.That(dt.Rows,
+            Has.Count.GreaterThanOrEqualTo(
+                19)); //there are 19 years between 2001 and 2019 (use greater than because we don't want test to fail in 2020)
         Assert.Multiple(() =>
         {
             Assert.That(dt.Rows[0][0], Is.EqualTo(2001));
@@ -262,7 +278,7 @@ internal abstract class CalendarAggregationTestsBase : AggregationTests
     }
 
     /// <summary>
-    /// Tests to ensure that the order of the count(*) and EventDate columns don't matter
+    ///     Tests to ensure that the order of the count(*) and EventDate columns don't matter
     /// </summary>
     /// <param name="type"></param>
     protected void Test_Calendar_SELECTColumnOrder_CountAfterAxisColumn(DatabaseType type)
@@ -280,7 +296,8 @@ internal abstract class CalendarAggregationTestsBase : AggregationTests
             new("FROM ", QueryComponent.FROM),
             new(tbl.GetFullyQualifiedName(), QueryComponent.FROM),
             new("GROUP BY", QueryComponent.GroupBy),
-            new(eventDate.GetFullyQualifiedName(), QueryComponent.GroupBy) { Role = CustomLineRole.Axis } //tell it which the axis are
+            new(eventDate.GetFullyQualifiedName(), QueryComponent.GroupBy)
+                { Role = CustomLineRole.Axis } //tell it which the axis are
         };
 
         var axis = new QueryAxis
@@ -300,7 +317,9 @@ internal abstract class CalendarAggregationTestsBase : AggregationTests
         using var dt = new DataTable();
         da.Fill(dt);
 
-        Assert.That(dt.Rows, Has.Count.EqualTo(10)); //there are 10 years between 2001 and 2010 even though not all years are represented in the data
+        Assert.That(dt.Rows,
+            Has.Count.EqualTo(
+                10)); //there are 10 years between 2001 and 2010 even though not all years are represented in the data
         Assert.Multiple(() =>
         {
             Assert.That(dt.Rows[0][0], Is.EqualTo(2001));

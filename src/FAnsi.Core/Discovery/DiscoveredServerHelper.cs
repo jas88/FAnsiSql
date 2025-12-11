@@ -1,12 +1,7 @@
-using System;
-using System.Collections.Concurrent;
 using System.Collections.Frozen;
-using System.Collections.Generic;
 using System.Data.Common;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
-using System.Threading;
 using FAnsi.Connections;
 using FAnsi.Discovery.ConnectionStringDefaults;
 using FAnsi.Discovery.QuerySyntax;
@@ -16,66 +11,68 @@ using FAnsi.Naming;
 namespace FAnsi.Discovery;
 
 /// <summary>
-/// DBMS specific implementation of all functionality that relates to interacting with existing server (testing connections, creating databases, etc).
+///     DBMS specific implementation of all functionality that relates to interacting with existing server (testing
+///     connections, creating databases, etc).
 /// </summary>
 public abstract partial class DiscoveredServerHelper(DatabaseType databaseType) : IDiscoveredServerHelper
 {
     // Lazy-initialize accumulators for all DatabaseType values to avoid race conditions
     // Uses Lazy<T> to defer creation until implementations are loaded
     // Only creates accumulators for database types that have loaded implementations
-    private static readonly Lazy<FrozenDictionary<DatabaseType, ConnectionStringKeywordAccumulator>> ConnectionStringKeywordAccumulators =
-        new(() =>
-        {
-            var dict = new Dictionary<DatabaseType, ConnectionStringKeywordAccumulator>();
-            foreach (var dt in Enum.GetValues<DatabaseType>())
+    private static readonly Lazy<FrozenDictionary<DatabaseType, ConnectionStringKeywordAccumulator>>
+        ConnectionStringKeywordAccumulators =
+            new(() =>
             {
-                try
-                {
-                    dict[dt] = new ConnectionStringKeywordAccumulator(dt);
-                }
-                catch (ImplementationNotFoundException)
-                {
-                    // Skip database types without loaded implementations
-                }
-            }
-            return dict.ToFrozenDictionary();
-        }, LazyThreadSafetyMode.ExecutionAndPublication);
+                var dict = new Dictionary<DatabaseType, ConnectionStringKeywordAccumulator>();
+                foreach (var dt in Enum.GetValues<DatabaseType>())
+                    try
+                    {
+                        dict[dt] = new ConnectionStringKeywordAccumulator(dt);
+                    }
+                    catch (ImplementationNotFoundException)
+                    {
+                        // Skip database types without loaded implementations
+                    }
+
+                return dict.ToFrozenDictionary();
+            }, LazyThreadSafetyMode.ExecutionAndPublication);
+
+    private static readonly Regex RVagueVersion = RVagueVersionRe();
+
+
+    protected abstract string ServerKeyName { get; }
+    protected abstract string DatabaseKeyName { get; }
+    protected virtual string ConnectionTimeoutKeyName => "ConnectionTimeout";
 
     /// <summary>
-    /// Register a system-wide rule that all connection strings of <paramref name="databaseType"/> should include the given <paramref name="keyword"/>.
+    ///     Number of seconds to allow <see cref="CreateDatabase(DbConnectionStringBuilder, IHasRuntimeName)" /> to run for
+    ///     before timing out.
+    ///     Defaults to 30.
     /// </summary>
-    /// <param name="databaseType"></param>
-    /// <param name="keyword"></param>
-    /// <param name="value"></param>
-    /// <param name="priority">Resolves conflicts when multiple calls are made for the same <paramref name="keyword"/> at different times</param>
-    public static void AddConnectionStringKeyword(DatabaseType databaseType, string keyword, string value, ConnectionStringKeywordPriority priority)
-    {
-        var accumulator = ConnectionStringKeywordAccumulators.Value[databaseType];
-        accumulator.AddOrUpdateKeyword(keyword, value, priority);
-    }
+    public static int CreateDatabaseTimeoutInSeconds { get; set; } = 30;
 
     /// <summary>
-    /// Creates a new DbCommand for the specified database type.
+    ///     Creates a new DbCommand for the specified database type.
     /// </summary>
-    /// <include file='../../CommonMethods.doc.xml' path='Methods/Method[@name="GetCommand"]'/>
+    /// <include file='../../CommonMethods.doc.xml' path='Methods/Method[@name="GetCommand"]' />
     public abstract DbCommand GetCommand(string s, DbConnection con, DbTransaction? transaction = null);
 
     /// <summary>
-    /// Creates a new DbDataAdapter for the specified database type.
+    ///     Creates a new DbDataAdapter for the specified database type.
     /// </summary>
-    /// <include file='../../CommonMethods.doc.xml' path='Methods/Method[@name="GetDataAdapter"]'/>
+    /// <include file='../../CommonMethods.doc.xml' path='Methods/Method[@name="GetDataAdapter"]' />
     public abstract DbDataAdapter GetDataAdapter(DbCommand cmd);
 
     /// <summary>
-    /// Creates a new DbCommandBuilder for the specified database type.
+    ///     Creates a new DbCommandBuilder for the specified database type.
     /// </summary>
-    /// <include file='../../CommonMethods.doc.xml' path='Methods/Method[@name="GetCommandBuilder"]'/>
+    /// <include file='../../CommonMethods.doc.xml' path='Methods/Method[@name="GetCommandBuilder"]' />
     public abstract DbCommandBuilder GetCommandBuilder(DbCommand cmd);
 
     /// <summary>
-    /// Creates a new DbParameter for the specified database type.
+    ///     Creates a new DbParameter for the specified database type.
     /// </summary>
-    /// <include file='../../CommonMethods.doc.xml' path='Methods/Method[@name="GetParameter"]'/>
+    /// <include file='../../CommonMethods.doc.xml' path='Methods/Method[@name="GetParameter"]' />
     public abstract DbParameter GetParameter(string parameterName);
 
     public abstract DbConnection GetConnection(DbConnectionStringBuilder builder);
@@ -88,34 +85,14 @@ public abstract partial class DiscoveredServerHelper(DatabaseType databaseType) 
         return builder;
     }
 
-    /// <inheritdoc/>
-    public DbConnectionStringBuilder GetConnectionStringBuilder(string server, string? database, string username, string password)
+    /// <inheritdoc />
+    public DbConnectionStringBuilder GetConnectionStringBuilder(string server, string? database, string username,
+        string password)
     {
         var builder = GetConnectionStringBuilderImpl(server, database, username, password);
         EnforceKeywords(builder);
         return builder;
     }
-
-    /// <summary>
-    /// Modifies the <paramref name="builder"/> with the connection string keywords
-    /// specified in <see cref="ConnectionStringKeywordAccumulators"/>.  Override to
-    /// perform last second changes to connection strings.
-    /// </summary>
-    /// <param name="builder"></param>
-    protected virtual void EnforceKeywords(DbConnectionStringBuilder builder)
-    {
-        //if we have any keywords to enforce
-        if (ConnectionStringKeywordAccumulators.Value.TryGetValue(DatabaseType, out var accumulator))
-            accumulator.EnforceOptions(builder);
-    }
-
-    protected abstract DbConnectionStringBuilder GetConnectionStringBuilderImpl(string connectionString, string? database, string username, string password);
-    protected abstract DbConnectionStringBuilder GetConnectionStringBuilderImpl(string? connectionString);
-
-
-    protected abstract string ServerKeyName { get; }
-    protected abstract string DatabaseKeyName { get; }
-    protected virtual string ConnectionTimeoutKeyName => "ConnectionTimeout";
 
     public string? GetServerName(DbConnectionStringBuilder builder)
     {
@@ -141,7 +118,8 @@ public abstract partial class DiscoveredServerHelper(DatabaseType databaseType) 
     public abstract IEnumerable<string> ListDatabases(DbConnectionStringBuilder builder);
     public abstract IEnumerable<string> ListDatabases(DbConnection con);
 
-    public async IAsyncEnumerable<string> ListDatabasesAsync(DbConnectionStringBuilder builder, [EnumeratorCancellation] CancellationToken token)
+    public async IAsyncEnumerable<string> ListDatabasesAsync(DbConnectionStringBuilder builder,
+        [EnumeratorCancellation] CancellationToken token)
     {
         //list the database on the server
         await using var con = GetConnection(builder);
@@ -169,7 +147,7 @@ public abstract partial class DiscoveredServerHelper(DatabaseType databaseType) 
         return new ManagedTransaction(con, transaction);
     }
 
-    public DatabaseType DatabaseType { get; private set; } = databaseType;
+    public DatabaseType DatabaseType { get; } = databaseType;
     public abstract Dictionary<string, string> DescribeServer(DbConnectionStringBuilder builder);
 
     public bool RespondsWithinTime(DbConnectionStringBuilder builder, int timeoutInSeconds, out Exception? exception)
@@ -199,38 +177,9 @@ public abstract partial class DiscoveredServerHelper(DatabaseType databaseType) 
     public abstract string? GetExplicitPasswordIfAny(DbConnectionStringBuilder builder);
     public abstract Version? GetVersion(DiscoveredServer server);
 
-    private static readonly Regex RVagueVersion = RVagueVersionRe();
-
     /// <summary>
-    /// Number of seconds to allow <see cref="CreateDatabase(DbConnectionStringBuilder, IHasRuntimeName)"/> to run for before timing out.
-    /// Defaults to 30.
-    /// </summary>
-    public static int CreateDatabaseTimeoutInSeconds { get; set; } = 30;
-
-    /// <summary>
-    /// Returns a new <see cref="Version"/> by parsing the <paramref name="versionString"/>.  If the string
-    /// is a valid version the full version string is represented otherwise a regex match is used to find
-    /// numbers with dots separating them (e.g. 1.2.3  / 5.1 etc).
-    /// </summary>
-    /// <param name="versionString"></param>
-    /// <returns></returns>
-    protected static Version? CreateVersionFromString(string versionString)
-    {
-        if (Version.TryParse(versionString, out var result))
-            return result;
-
-        var m = RVagueVersion.Match(versionString);
-        return m.Success ? Version.Parse(m.Value) :
-            //whatever the string was it didn't even remotely resemble a Version
-            null;
-    }
-
-    [GeneratedRegex(@"\d+\.\d+(\.\d+)?(\.\d+)?", RegexOptions.Compiled | RegexOptions.CultureInvariant)]
-    private static partial Regex RVagueVersionRe();
-
-    /// <summary>
-    /// Validates that a connection is still alive and usable.
-    /// Override in database-specific implementations to provide DBMS-specific validation logic.
+    ///     Validates that a connection is still alive and usable.
+    ///     Override in database-specific implementations to provide DBMS-specific validation logic.
     /// </summary>
     /// <param name="connection">The connection to validate</param>
     /// <returns>True if the connection is alive and usable</returns>
@@ -256,27 +205,85 @@ public abstract partial class DiscoveredServerHelper(DatabaseType databaseType) 
     }
 
     /// <summary>
-    /// Checks if the connection has a dangling transaction from previous use.
-    /// Override in database-specific implementations to check the concrete connection type's Transaction property.
+    ///     Checks if the connection has a dangling transaction from previous use.
+    ///     Override in database-specific implementations to check the concrete connection type's Transaction property.
     /// </summary>
     /// <param name="connection">The connection to check</param>
     /// <returns>True if the connection has an uncommitted transaction</returns>
     public virtual bool HasDanglingTransaction(DbConnection connection) => false;
 
     /// <summary>
-    /// Efficiently checks if a database exists using a direct SQL query instead of listing all databases.
+    ///     Efficiently checks if a database exists using a direct SQL query instead of listing all databases.
     /// </summary>
     /// <param name="database">The database to check for existence</param>
     /// <returns>True if the database exists, false otherwise</returns>
     public abstract bool DatabaseExists(DiscoveredDatabase database);
 
     /// <summary>
-    /// Gets a server-level connection string key by removing database-specific information.
-    /// Default implementation returns the original connection string (no server-level pooling).
-    /// Override in database-specific implementations to enable server-level pooling.
+    ///     Gets a server-level connection string key by removing database-specific information.
+    ///     Default implementation returns the original connection string (no server-level pooling).
+    ///     Override in database-specific implementations to enable server-level pooling.
     /// </summary>
     /// <param name="connectionString">The full connection string</param>
     /// <returns>Connection string with database name removed, or original if not supported</returns>
     public virtual string GetServerLevelConnectionKey(string connectionString) => connectionString;
 
+    /// <summary>
+    ///     Register a system-wide rule that all connection strings of <paramref name="databaseType" /> should include the
+    ///     given <paramref name="keyword" />.
+    /// </summary>
+    /// <param name="databaseType"></param>
+    /// <param name="keyword"></param>
+    /// <param name="value"></param>
+    /// <param name="priority">
+    ///     Resolves conflicts when multiple calls are made for the same <paramref name="keyword" /> at
+    ///     different times
+    /// </param>
+    public static void AddConnectionStringKeyword(DatabaseType databaseType, string keyword, string value,
+        ConnectionStringKeywordPriority priority)
+    {
+        var accumulator = ConnectionStringKeywordAccumulators.Value[databaseType];
+        accumulator.AddOrUpdateKeyword(keyword, value, priority);
+    }
+
+    /// <summary>
+    ///     Modifies the <paramref name="builder" /> with the connection string keywords
+    ///     specified in <see cref="ConnectionStringKeywordAccumulators" />.  Override to
+    ///     perform last second changes to connection strings.
+    /// </summary>
+    /// <param name="builder"></param>
+    protected virtual void EnforceKeywords(DbConnectionStringBuilder builder)
+    {
+        //if we have any keywords to enforce
+        if (ConnectionStringKeywordAccumulators.Value.TryGetValue(DatabaseType, out var accumulator))
+            accumulator.EnforceOptions(builder);
+    }
+
+    protected abstract DbConnectionStringBuilder GetConnectionStringBuilderImpl(string connectionString,
+        string? database, string username, string password);
+
+    protected abstract DbConnectionStringBuilder GetConnectionStringBuilderImpl(string? connectionString);
+
+    /// <summary>
+    ///     Returns a new <see cref="Version" /> by parsing the <paramref name="versionString" />.  If the string
+    ///     is a valid version the full version string is represented otherwise a regex match is used to find
+    ///     numbers with dots separating them (e.g. 1.2.3  / 5.1 etc).
+    /// </summary>
+    /// <param name="versionString"></param>
+    /// <returns></returns>
+    protected static Version? CreateVersionFromString(string versionString)
+    {
+        if (Version.TryParse(versionString, out var result))
+            return result;
+
+        var m = RVagueVersion.Match(versionString);
+        return m.Success
+            ? Version.Parse(m.Value)
+            :
+            //whatever the string was it didn't even remotely resemble a Version
+            null;
+    }
+
+    [GeneratedRegex(@"\d+\.\d+(\.\d+)?(\.\d+)?", RegexOptions.Compiled | RegexOptions.CultureInvariant)]
+    private static partial Regex RVagueVersionRe();
 }

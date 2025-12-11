@@ -1,12 +1,14 @@
 namespace FAnsi.Discovery.QuerySyntax.Aggregation;
 
-/// <inheritdoc/>
+/// <inheritdoc />
 public sealed class QueryAxis : IQueryAxis
 {
-    /// <inheritdoc/>
+    /// <inheritdoc />
     public string? EndDate { get; set; }
-    /// <inheritdoc/>
+
+    /// <inheritdoc />
     public string? StartDate { get; set; }
-    /// <inheritdoc/>
+
+    /// <inheritdoc />
     public AxisIncrement AxisIncrement { get; set; }
 }

@@ -47,9 +47,9 @@ internal sealed class TableHelperColumnOperationTests_PostgreSql : TableHelperCo
     public void AddAndDropColumn_Sequence_Success() => AddAndDropColumn_Sequence_Success(DbType);
 
     [Test]
-    public void AddColumn_InsertData_DropColumn_DataPreserved() => AddColumn_InsertData_DropColumn_DataPreserved(DbType);
+    public void AddColumn_InsertData_DropColumn_DataPreserved() =>
+        AddColumn_InsertData_DropColumn_DataPreserved(DbType);
 
     [Test]
     public void AddColumn_AllBasicTypes_Success() => AddColumn_AllBasicTypes_Success(DbType);
-
 }

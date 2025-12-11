@@ -1,6 +1,4 @@
-using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Data.Common;
 using System.Globalization;
 using System.Text;
@@ -9,30 +7,37 @@ using FAnsi.Implementation;
 namespace FAnsi.Discovery.ConnectionStringDefaults;
 
 /// <summary>
-/// <para>Gathers keywords for use in building connection strings for a given <see cref="DatabaseType"/>.  Once created you can add keywords and then apply the template
-/// to new novel connection strings (see <see cref="EnforceOptions"/>).</para>
-///
-/// <para>Also handles connection string keyword aliases (where two words mean the same thing)</para>
+///     <para>
+///         Gathers keywords for use in building connection strings for a given <see cref="DatabaseType" />.  Once created
+///         you can add keywords and then apply the template
+///         to new novel connection strings (see <see cref="EnforceOptions" />).
+///     </para>
+///     <para>Also handles connection string keyword aliases (where two words mean the same thing)</para>
 /// </summary>
 /// <remarks>
-/// Initialises a new blank instance that does nothing.  Call <see cref="AddOrUpdateKeyword"/> to adjust the template connection string options.
+///     Initialises a new blank instance that does nothing.  Call <see cref="AddOrUpdateKeyword" /> to adjust the template
+///     connection string options.
 /// </remarks>
 /// <param name="databaseType"></param>
 public sealed class ConnectionStringKeywordAccumulator(DatabaseType databaseType)
 {
     // Cached CompositeFormat for CA1863
-    private static readonly CompositeFormat KeywordNotSupportedFormat = CompositeFormat.Parse(FAnsiStrings.ConnectionStringKeyword_ValueNotSupported);
+    private static readonly CompositeFormat KeywordNotSupportedFormat =
+        CompositeFormat.Parse(FAnsiStrings.ConnectionStringKeyword_ValueNotSupported);
+
+    private readonly DbConnectionStringBuilder _builder =
+        ImplementationManager.GetImplementation(databaseType).GetBuilder();
+
+    private readonly ConcurrentDictionary<string, Tuple<string, ConnectionStringKeywordPriority>> _keywords =
+        new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
-    /// <see cref="DatabaseType"/> describing what implementation of DbConnectionStringBuilder is being manipulated
+    ///     <see cref="DatabaseType" /> describing what implementation of DbConnectionStringBuilder is being manipulated
     /// </summary>
     public DatabaseType DatabaseType { get; private set; } = databaseType;
 
-    private readonly ConcurrentDictionary<string, Tuple<string, ConnectionStringKeywordPriority>> _keywords = new(StringComparer.OrdinalIgnoreCase);
-    private readonly DbConnectionStringBuilder _builder = ImplementationManager.GetImplementation(databaseType).GetBuilder();
-
     /// <summary>
-    /// Adds a new connection string option (which must be compatible with <see cref="DatabaseType"/>)
+    ///     Adds a new connection string option (which must be compatible with <see cref="DatabaseType" />)
     /// </summary>
     /// <param name="keyword"></param>
     /// <param name="value"></param>
@@ -61,8 +66,9 @@ public sealed class ConnectionStringKeywordAccumulator(DatabaseType databaseType
     }
 
     /// <summary>
-    /// Returns the best alias for <paramref name="keyword"/> or null if there are no known aliases.  This is because some builders allow multiple keys for changing the same underlying
-    /// property.
+    ///     Returns the best alias for <paramref name="keyword" /> or null if there are no known aliases.  This is because some
+    ///     builders allow multiple keys for changing the same underlying
+    ///     property.
     /// </summary>
     /// <param name="keyword"></param>
     /// <param name="value"></param>
@@ -83,7 +89,8 @@ public sealed class ConnectionStringKeywordAccumulator(DatabaseType databaseType
         catch (NotSupportedException ex)
         {
             //don't output the value since that could be a password
-            throw new ArgumentException(string.Format(CultureInfo.InvariantCulture, KeywordNotSupportedFormat, keyword), ex);
+            throw new ArgumentException(string.Format(CultureInfo.InvariantCulture, KeywordNotSupportedFormat, keyword),
+                ex);
         }
 
         //now iterate all the keys we had before and add those too, if the key count doesn't change for any of them we know it's a duplicate semantically
@@ -105,7 +112,7 @@ public sealed class ConnectionStringKeywordAccumulator(DatabaseType databaseType
     }
 
     /// <summary>
-    /// Adds the currently configured keywords to the connection string builder.
+    ///     Adds the currently configured keywords to the connection string builder.
     /// </summary>
     public void EnforceOptions(DbConnectionStringBuilder connectionStringBuilder)
     {

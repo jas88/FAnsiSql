@@ -1,4 +1,3 @@
-using System;
 using System.Text.RegularExpressions;
 using FAnsi.Discovery.TypeTranslation;
 
@@ -53,7 +52,8 @@ public sealed partial class MySqlTypeTranslater : TypeTranslater
 
     protected override string GetStringDataTypeImpl(int maxExpectedStringWidth) => $"varchar({maxExpectedStringWidth})";
 
-    protected override string GetUnicodeStringDataTypeImpl(int maxExpectedStringWidth) => $"varchar({maxExpectedStringWidth})";
+    protected override string GetUnicodeStringDataTypeImpl(int maxExpectedStringWidth) =>
+        $"varchar({maxExpectedStringWidth})";
 
     protected override bool IsBool(string sqlType)
     {
@@ -88,38 +88,46 @@ public sealed partial class MySqlTypeTranslater : TypeTranslater
         return base.IsString(sqlType) || AlsoStringRegex.IsMatch(sqlType);
     }
 
-    protected override bool IsFloatingPoint(string sqlType) => base.IsFloatingPoint(sqlType) || AlsoFloatingPoint.IsMatch(sqlType);
+    protected override bool IsFloatingPoint(string sqlType) =>
+        base.IsFloatingPoint(sqlType) || AlsoFloatingPoint.IsMatch(sqlType);
 
     protected override bool IsBit(string sqlType) => base.IsBit(sqlType) || AlsoBitRegex.IsMatch(sqlType);
 
     protected override string GetByteArrayDataType() => "longblob";
 
-    protected override string GetGuidDataType() => "char(36)";  // MySQL stores UUIDs as char(36) for compatibility
+    protected override string GetGuidDataType() => "char(36)"; // MySQL stores UUIDs as char(36) for compatibility
 
-    protected override string GetDateDateTimeDataType() => "datetime";  // Use datetime instead of timestamp to support full date range (1000-01-01 to 9999-12-31)
+    protected override string GetDateDateTimeDataType() =>
+        "datetime"; // Use datetime instead of timestamp to support full date range (1000-01-01 to 9999-12-31)
 
     // Optimized regex patterns with ReadOnlySpan<char> compatibility and better performance
     [GeneratedRegex(@"tinyint\(1\)", RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]
     private static partial Regex AlsoBitRe();
 
-    [GeneratedRegex("(long)|(enum)|(set)|(text)|(mediumtext)", RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]
+    [GeneratedRegex("(long)|(enum)|(set)|(text)|(mediumtext)",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]
     private static partial Regex AlsoStringRe();
 
-    [GeneratedRegex(@"^(tinyint)|(int1)", RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]
+    [GeneratedRegex(@"^(tinyint)|(int1)",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]
     private static partial Regex ByteRe();
 
     [GeneratedRegex("^(dec)|(fixed)", RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]
     private static partial Regex AlsoFloatingPointRe();
 
-    [GeneratedRegex(@"^(smallint)|(int2)", RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]
+    [GeneratedRegex(@"^(smallint)|(int2)",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]
     private static partial Regex SmallIntRe();
 
-    [GeneratedRegex(@"^(int)|(mediumint)|(middleint)|(int3)|(int4)", RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]
+    [GeneratedRegex(@"^(int)|(mediumint)|(middleint)|(int3)|(int4)",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]
     private static partial Regex IntRe();
 
-    [GeneratedRegex(@"^(bigint)|(int8)", RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]
+    [GeneratedRegex(@"^(bigint)|(int8)",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]
     private static partial Regex LongRe();
 
-    [GeneratedRegex(@"(date)|(timestamp)", RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]
+    [GeneratedRegex(@"(date)|(timestamp)",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]
     private static partial Regex DateRe();
 }

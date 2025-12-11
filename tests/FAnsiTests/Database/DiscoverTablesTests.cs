@@ -1,8 +1,5 @@
-﻿using System;
-using System.Linq;
-using FAnsi;
+﻿using FAnsi;
 using FAnsi.Discovery;
-using FAnsi.Discovery.QuerySyntax;
 using NUnit.Framework;
 using TypeGuesser;
 
@@ -16,31 +13,32 @@ internal sealed class DiscoverTablesTests : DatabaseTests
         var db = GetTestDatabase(dbType);
 
         db.CreateTable("AA",
-            [
-                new DatabaseColumnRequest("F",new DatabaseTypeRequest(typeof(int)))
-            ]);
+        [
+            new DatabaseColumnRequest("F", new DatabaseTypeRequest(typeof(int)))
+        ]);
 
         db.CreateTable("BB",
-            [
-                new DatabaseColumnRequest("F",new DatabaseTypeRequest(typeof(int)))
-            ]);
+        [
+            new DatabaseColumnRequest("F", new DatabaseTypeRequest(typeof(int)))
+        ]);
 
         var tbls = db.DiscoverTables(false);
 
         Assert.That(tbls, Has.Length.EqualTo(2));
         Assert.Multiple(() =>
         {
-            Assert.That(tbls.Count(static t => t.GetRuntimeName().Equals("AA", StringComparison.OrdinalIgnoreCase)), Is.EqualTo(1));
-            Assert.That(tbls.Count(static t => t.GetRuntimeName().Equals("BB", StringComparison.OrdinalIgnoreCase)), Is.EqualTo(1));
+            Assert.That(tbls.Count(static t => t.GetRuntimeName().Equals("AA", StringComparison.OrdinalIgnoreCase)),
+                Is.EqualTo(1));
+            Assert.That(tbls.Count(static t => t.GetRuntimeName().Equals("BB", StringComparison.OrdinalIgnoreCase)),
+                Is.EqualTo(1));
         });
-
     }
+
     /// <summary>
-    /// Tests that <see cref="DiscoveredDatabase.DiscoverTables"/> correctly discovers tables with special characters
-    /// in their names (parentheses, brackets, etc.) when using quoted identifiers.
-    ///
-    /// After removing IllegalNameChars validation, ALL databases now support special characters in quoted identifiers.
-    /// Tables like "BB (ff)" and "FF (troll)" should be discoverable across all database types.
+    ///     Tests that <see cref="DiscoveredDatabase.DiscoverTables" /> correctly discovers tables with special characters
+    ///     in their names (parentheses, brackets, etc.) when using quoted identifiers.
+    ///     After removing IllegalNameChars validation, ALL databases now support special characters in quoted identifiers.
+    ///     Tables like "BB (ff)" and "FF (troll)" should be discoverable across all database types.
     /// </summary>
     [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void Test_DiscoverTables_WithSpecialCharacters(DatabaseType dbType)
@@ -52,23 +50,25 @@ internal sealed class DiscoverTablesTests : DatabaseTests
 
         // After removing IllegalNameChars validation, ALL databases now support special characters in quoted identifiers
         db.CreateTable("FF (troll)",
-            [
-                new DatabaseColumnRequest("F", new DatabaseTypeRequest(typeof(int)))
-            ]);
+        [
+            new DatabaseColumnRequest("F", new DatabaseTypeRequest(typeof(int)))
+        ]);
 
         // Both tables should be discovered for all databases
         var tbls = db.DiscoverTables(false);
         Assert.That(tbls, Has.Length.EqualTo(2));
-        Assert.That(tbls.Count(static t => t.GetRuntimeName().Equals("FF (troll)", StringComparison.OrdinalIgnoreCase)), Is.EqualTo(1));
-        Assert.That(tbls.Count(static t => t.GetRuntimeName().Equals("BB (ff)", StringComparison.OrdinalIgnoreCase)), Is.EqualTo(1));
+        Assert.That(tbls.Count(static t => t.GetRuntimeName().Equals("FF (troll)", StringComparison.OrdinalIgnoreCase)),
+            Is.EqualTo(1));
+        Assert.That(tbls.Count(static t => t.GetRuntimeName().Equals("BB (ff)", StringComparison.OrdinalIgnoreCase)),
+            Is.EqualTo(1));
 
         DropBadTable(db, false);
     }
 
     /// <summary>
-    /// Tests that <see cref="DiscoveredDatabase.DiscoverTables"/> correctly discovers views with special characters
-    /// in their names when using quoted identifiers. Similar to <see cref="Test_DiscoverTables_WithSpecialCharacters"/>
-    /// but for views instead of tables.
+    ///     Tests that <see cref="DiscoveredDatabase.DiscoverTables" /> correctly discovers views with special characters
+    ///     in their names when using quoted identifiers. Similar to <see cref="Test_DiscoverTables_WithSpecialCharacters" />
+    ///     but for views instead of tables.
     /// </summary>
     /// <param name="dbType"></param>
     [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
@@ -82,9 +82,9 @@ internal sealed class DiscoverTablesTests : DatabaseTests
         // After removing IllegalNameChars validation, ALL databases support special characters
         // CreateBadView creates a view "BB (ff)", which should be discoverable on all databases
         db.CreateTable("FF",
-            [
-                new DatabaseColumnRequest("F",new DatabaseTypeRequest(typeof(int)))
-            ]);
+        [
+            new DatabaseColumnRequest("F", new DatabaseTypeRequest(typeof(int)))
+        ]);
 
         var tbls = db.DiscoverTables(true);
 
@@ -95,9 +95,13 @@ internal sealed class DiscoverTablesTests : DatabaseTests
         {
             // View with special characters should be discovered on all databases
             Assert.That(tbls.Count(static t => t.TableType == TableType.View), Is.EqualTo(1));
-            Assert.That(tbls.Count(static t => t.GetRuntimeName().Equals("BB (ff)", StringComparison.OrdinalIgnoreCase)), Is.EqualTo(1));
-            Assert.That(tbls.Count(static t => t.GetRuntimeName().Equals("FF", StringComparison.OrdinalIgnoreCase)), Is.EqualTo(1));
-            Assert.That(tbls.Count(static t => t.GetRuntimeName().Equals("ABC", StringComparison.OrdinalIgnoreCase)), Is.EqualTo(1));
+            Assert.That(
+                tbls.Count(static t => t.GetRuntimeName().Equals("BB (ff)", StringComparison.OrdinalIgnoreCase)),
+                Is.EqualTo(1));
+            Assert.That(tbls.Count(static t => t.GetRuntimeName().Equals("FF", StringComparison.OrdinalIgnoreCase)),
+                Is.EqualTo(1));
+            Assert.That(tbls.Count(static t => t.GetRuntimeName().Equals("ABC", StringComparison.OrdinalIgnoreCase)),
+                Is.EqualTo(1));
         });
 
         DropBadView(db, false);
@@ -129,7 +133,8 @@ internal sealed class DiscoverTablesTests : DatabaseTests
             DatabaseType.Oracle => $"{db.GetRuntimeName()}.\"BB (ff)\"",
             DatabaseType.PostgreSql => $"\"{db.GetRuntimeName()}\".public.\"BB (ff)\"",
             DatabaseType.Sqlite => "\"BB (ff)\"",
-            _ => throw new ArgumentOutOfRangeException(nameof(db), db.Server.DatabaseType, $"Unknown database type {db.Server.DatabaseType}")
+            _ => throw new ArgumentOutOfRangeException(nameof(db), db.Server.DatabaseType,
+                $"Unknown database type {db.Server.DatabaseType}")
         };
 
     private static void CreateBadTable(DiscoveredDatabase db)
@@ -146,7 +151,6 @@ internal sealed class DiscoverTablesTests : DatabaseTests
 
     private static void DropBadView(DiscoveredDatabase db, bool ignoreFailure)
     {
-
         using (var con = db.Server.GetConnection())
         {
             con.Open();
@@ -168,7 +172,6 @@ internal sealed class DiscoverTablesTests : DatabaseTests
         var abc = db.ExpectTable("ABC");
         if (abc.Exists())
             abc.Drop();
-
     }
 
 

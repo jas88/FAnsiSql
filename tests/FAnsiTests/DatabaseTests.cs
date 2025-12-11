@@ -1,16 +1,14 @@
-using System;
-using System.Collections.Generic;
 using System.Data;
-using System.IO;
-using System.Linq;
+using System.Globalization;
 using System.Xml.Linq;
 using FAnsi;
 using FAnsi.Discovery;
 using FAnsi.Discovery.Constraints;
+using FAnsi.Exceptions;
 using FAnsi.Implementation;
+using FAnsi.Implementations.MicrosoftSQL;
 using FAnsi.Implementations.MySql;
 using FAnsi.Implementations.Oracle;
-using FAnsi.Implementations.MicrosoftSQL;
 using FAnsi.Implementations.PostgreSql;
 using FAnsi.Implementations.Sqlite;
 using NUnit.Framework;
@@ -21,12 +19,11 @@ namespace FAnsiTests;
 [NonParallelizable]
 public abstract class DatabaseTests
 {
+    private const string TestFilename = "TestDatabases.xml";
     protected readonly Dictionary<DatabaseType, string> TestConnectionStrings = [];
 
     private bool _allowDatabaseCreation;
     private string _testScratchDatabase = null!;
-
-    private const string TestFilename = "TestDatabases.xml";
 
     [OneTimeSetUp]
     public void CheckFiles()
@@ -47,7 +44,8 @@ public abstract class DatabaseTests
 
         var doc = XDocument.Load(file);
 
-        var root = doc.Element("TestDatabases") ?? throw new InvalidOperationException($"Missing element 'TestDatabases' in {TestFilename}");
+        var root = doc.Element("TestDatabases") ??
+                   throw new InvalidOperationException($"Missing element 'TestDatabases' in {TestFilename}");
 
         var settings = root.Element("Settings") ??
                        throw new InvalidOperationException($"Missing element 'Settings' in {TestFilename}");
@@ -86,7 +84,6 @@ public abstract class DatabaseTests
 
                 // Check if database already exists
                 if (!db.Exists())
-                {
                     try
                     {
                         server.CreateDatabase(_testScratchDatabase);
@@ -97,12 +94,11 @@ public abstract class DatabaseTests
                         // Oracle: ORA-01920 (user already exists)
                         // PostgreSQL: 23505 (duplicate key in pg_database)
                         var isAlreadyExists = ex.Message.Contains("ORA-01920") ||
-                                             ex.Message.Contains("23505") ||
-                                             ex.Message.Contains("already exists");
+                                              ex.Message.Contains("23505") ||
+                                              ex.Message.Contains("already exists");
                         if (!isAlreadyExists)
                             throw;
                     }
-                }
             }
         }
     }
@@ -121,10 +117,13 @@ public abstract class DatabaseTests
         var db = server.ExpectDatabase(_testScratchDatabase);
 
         if (!db.Exists())
+        {
             if (_allowDatabaseCreation)
                 db.Create();
             else
-                AssertRequirement($"Database {_testScratchDatabase} does not exist and AllowDatabaseCreation is false in {TestFilename}");
+                AssertRequirement(
+                    $"Database {_testScratchDatabase} does not exist and AllowDatabaseCreation is false in {TestFilename}");
+        }
         else
         {
             if (!cleanDatabase) return db;
@@ -137,7 +136,7 @@ public abstract class DatabaseTests
                 var tree = new RelationshipTopologicalSort(db.DiscoverTables(true));
                 deleteTableOrder = tree.Order.Reverse();
             }
-            catch (FAnsi.Exceptions.CircularDependencyException)
+            catch (CircularDependencyException)
             {
                 deleteTableOrder = db.DiscoverTables(true);
             }
@@ -153,7 +152,7 @@ public abstract class DatabaseTests
     }
 
     /// <summary>
-    /// Asserts a test requirement is not met. In CI, this fails the test. On dev workstations, marks test as inconclusive.
+    ///     Asserts a test requirement is not met. In CI, this fails the test. On dev workstations, marks test as inconclusive.
     /// </summary>
     /// <param name="message">The assertion message</param>
     protected static void AssertRequirement(string message)
@@ -182,15 +181,11 @@ public abstract class DatabaseTests
 
         // Handle string to DateTime comparisons (for SQLite which stores DateTime as TEXT)
         if (o is DateTime dtObj && o2 is string str)
-        {
-            if (DateTime.TryParse(str, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var parsedDt))
+            if (DateTime.TryParse(str, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedDt))
                 return dtObj.Date == parsedDt.Date && dtObj.TimeOfDay == parsedDt.TimeOfDay;
-        }
         if (o is string str2 && o2 is DateTime dtObj2)
-        {
-            if (DateTime.TryParse(str2, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var parsedDt2))
+            if (DateTime.TryParse(str2, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedDt2))
                 return parsedDt2.Date == dtObj2.Date && parsedDt2.TimeOfDay == dtObj2.TimeOfDay;
-        }
 
         if (o is DateTime dt && o2 is DateOnly d)
             return dt.Date == d.ToDateTime(TimeOnly.MinValue).Date;
@@ -208,7 +203,8 @@ public abstract class DatabaseTests
 
         //they are not null so tostring them deals with int vs long etc that DbDataAdapters can be a bit flaky on
         if (handleSlashRSlashN)
-            return string.Equals(o?.ToString()?.Replace("\r", "").Replace("\n", ""), o2?.ToString()?.Replace("\r", "").Replace("\n", ""), StringComparison.Ordinal);
+            return string.Equals(o?.ToString()?.Replace("\r", "").Replace("\n", ""),
+                o2?.ToString()?.Replace("\r", "").Replace("\n", ""), StringComparison.Ordinal);
 
         return string.Equals(o?.ToString(), o2?.ToString(), StringComparison.Ordinal);
     }
@@ -223,9 +219,9 @@ public abstract class DatabaseTests
 
         foreach (DataRow row1 in dt1.Rows)
         {
-            var match = dt2.Rows.Cast<DataRow>().Any(row2 => dt1.Columns.Cast<DataColumn>().All(c => AreBasicallyEquals(row1[c.ColumnName], row2[c.ColumnName])));
+            var match = dt2.Rows.Cast<DataRow>().Any(row2 =>
+                dt1.Columns.Cast<DataColumn>().All(c => AreBasicallyEquals(row1[c.ColumnName], row2[c.ColumnName])));
             Assert.That(match, $"Couldn't find match for row:{string.Join(",", row1.ItemArray)}");
         }
-
     }
 }

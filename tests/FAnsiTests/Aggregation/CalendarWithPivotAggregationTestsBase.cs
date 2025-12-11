@@ -1,10 +1,8 @@
+using System.Data;
 using FAnsi;
 using FAnsi.Discovery.QuerySyntax;
 using FAnsi.Discovery.QuerySyntax.Aggregation;
 using NUnit.Framework;
-using System;
-using System.Collections.Generic;
-using System.Data;
 
 namespace FAnsiTests.Aggregation;
 
@@ -67,7 +65,9 @@ internal abstract class CalendarWithPivotAggregationTestsBase : AggregationTests
                     2010	0	0	            0	0
 */
 
-            Assert.That(dt.Rows, Has.Count.EqualTo(10)); //there are 10 years between 2001 and 2010 even though not all years are represented in the data
+            Assert.That(dt.Rows,
+                Has.Count.EqualTo(
+                    10)); //there are 10 years between 2001 and 2010 even though not all years are represented in the data
 
             // only validate hard output, we got rows on easy that's enough for now
             if (easy)
@@ -107,7 +107,8 @@ internal abstract class CalendarWithPivotAggregationTestsBase : AggregationTests
                 Assert.That(dt.Rows[3][2] == DBNull.Value
                         ? 0
                         : dt.Rows[3][
-                            1], Is.EqualTo(0)); //null is permitted because this row doesn't have any matching records... peculiarity of MySql implementation but null=0 is ok for aggregates
+                            1],
+                    Is.EqualTo(0)); //null is permitted because this row doesn't have any matching records... peculiarity of MySql implementation but null=0 is ok for aggregates
                 Assert.That(dt.Rows[3][3] == DBNull.Value ? 0 : dt.Rows[3][1], Is.EqualTo(0));
                 Assert.That(dt.Rows[3][4] == DBNull.Value ? 0 : dt.Rows[3][1], Is.EqualTo(0));
 

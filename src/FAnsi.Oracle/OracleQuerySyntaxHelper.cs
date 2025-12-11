@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using FAnsi.Discovery;
@@ -12,80 +10,9 @@ namespace FAnsi.Implementations.Oracle;
 public sealed class OracleQuerySyntaxHelper : QuerySyntaxHelper
 {
     public static readonly OracleQuerySyntaxHelper Instance = new();
-    public override int MaximumDatabaseLength => 30;    // JS 2023-05-11 Can be longer, but Oracle RAC limits to 30
-    public override int MaximumTableLength => 30;
-    public override int MaximumColumnLength => 30;
-
-
-    public override string OpenQualifier => "\"";
-
-    public override string CloseQualifier => "\"";
-
-    private OracleQuerySyntaxHelper() : base(OracleTypeTranslater.Instance, OracleAggregateHelper.Instance, OracleUpdateHelper.Instance, DatabaseType.Oracle)//no custom translater
-    {
-    }
-
-    public override char ParameterSymbol => ':';
-
-    [return: NotNullIfNotNull(nameof(s))]
-    public override string? GetRuntimeName(string? s)
-    {
-        var answer = base.GetRuntimeName(s);
-
-        return string.IsNullOrWhiteSpace(answer) ? s :
-            //upper it because oracle loves uppercase stuff
-            answer.Trim('"').ToUpper(CultureInfo.InvariantCulture);
-    }
-
-    public override bool SupportsEmbeddedParameters() => false;
-
-    public override string EnsureWrappedImpl(string databaseOrTableName) => $"\"{GetRuntimeName(databaseOrTableName)}\"";
-
-    public override string EnsureFullyQualified(string? databaseName, string? schemaName, string tableName)
-    {
-        //if there is no schema address it as db..table (which is the same as db.dbo.table in Microsoft SQL Server)
-        if (!string.IsNullOrWhiteSpace(schemaName))
-            throw new NotSupportedException("Schema (e.g. .dbo. not supported by Oracle)");
-
-        return $"\"{GetRuntimeName(databaseName)}\"{DatabaseTableSeparator}\"{GetRuntimeName(tableName)}\"";
-    }
-
-    public override string EnsureFullyQualified(string? databaseName, string? schemaName, string tableName, string columnName, bool isTableValuedFunction = false) => $"{EnsureFullyQualified(databaseName, schemaName, tableName)}.\"{GetRuntimeName(columnName)}\"";
-
-    public override TopXResponse HowDoWeAchieveTopX(int x) => new($"OFFSET 0 ROWS FETCH NEXT {x} ROWS ONLY", QueryComponent.Postfix);
-
-    public override string GetParameterDeclaration(string proposedNewParameterName, string sqlType) => throw new NotSupportedException();
-
-    public override HashSet<string> GetReservedWords() => ReservedWords;
-
-    public override string GetScalarFunctionSql(MandatoryScalarFunctions function) =>
-        function switch
-        {
-            MandatoryScalarFunctions.GetTodaysDate => "CURRENT_TIMESTAMP",
-            MandatoryScalarFunctions.GetGuid => "SYS_GUID()",
-            MandatoryScalarFunctions.Len => "LENGTH",
-            _ => throw new ArgumentOutOfRangeException(nameof(function))
-        };
-
-    /// <summary>
-    /// Works in Oracle 12c+ only https://oracle-base.com/articles/12c/identity-columns-in-oracle-12cr1
-    /// NOCACHE prevents sequence cache issues when mixing array-bound bulk inserts with regular inserts
-    /// </summary>
-    /// <returns></returns>
-    public override string GetAutoIncrementKeywordIfAny() =>
-        " GENERATED ALWAYS AS IDENTITY (NOCACHE)";
-
-    public override Dictionary<string, string> GetSQLFunctionsDictionary() => [];
-
-    public override string HowDoWeAchieveMd5(string selectSql) => $"RAWTOHEX(standard_hash({selectSql}, 'MD5'))";
-
-    protected override object FormatTimespanForDbParameter(TimeSpan timeSpan) =>
-        //Value must be a DateTime even if DBParameter is of Type DbType.Time
-        Convert.ToDateTime(timeSpan.ToString(), CultureInfo.InvariantCulture);
 
     private static readonly HashSet<string> ReservedWords = new(new[]
     {
-
         "ACCESS",
         "ACCOUNT",
         "ACTIVATE",
@@ -568,4 +495,82 @@ public sealed class OracleQuerySyntaxHelper : QuerySyntaxHelper
         "ZONE"
     }, StringComparer.CurrentCultureIgnoreCase);
 
+    private OracleQuerySyntaxHelper() : base(OracleTypeTranslater.Instance, OracleAggregateHelper.Instance,
+        OracleUpdateHelper.Instance, DatabaseType.Oracle) //no custom translater
+    {
+    }
+
+    public override int MaximumDatabaseLength => 30; // JS 2023-05-11 Can be longer, but Oracle RAC limits to 30
+    public override int MaximumTableLength => 30;
+    public override int MaximumColumnLength => 30;
+
+
+    public override string OpenQualifier => "\"";
+
+    public override string CloseQualifier => "\"";
+
+    public override char ParameterSymbol => ':';
+
+    [return: NotNullIfNotNull(nameof(s))]
+    public override string? GetRuntimeName(string? s)
+    {
+        var answer = base.GetRuntimeName(s);
+
+        return string.IsNullOrWhiteSpace(answer)
+            ? s
+            :
+            //upper it because oracle loves uppercase stuff
+            answer.Trim('"').ToUpper(CultureInfo.InvariantCulture);
+    }
+
+    public override bool SupportsEmbeddedParameters() => false;
+
+    public override string EnsureWrappedImpl(string databaseOrTableName) =>
+        $"\"{GetRuntimeName(databaseOrTableName)}\"";
+
+    public override string EnsureFullyQualified(string? databaseName, string? schemaName, string tableName)
+    {
+        //if there is no schema address it as db..table (which is the same as db.dbo.table in Microsoft SQL Server)
+        if (!string.IsNullOrWhiteSpace(schemaName))
+            throw new NotSupportedException("Schema (e.g. .dbo. not supported by Oracle)");
+
+        return $"\"{GetRuntimeName(databaseName)}\"{DatabaseTableSeparator}\"{GetRuntimeName(tableName)}\"";
+    }
+
+    public override string EnsureFullyQualified(string? databaseName, string? schemaName, string tableName,
+        string columnName, bool isTableValuedFunction = false) =>
+        $"{EnsureFullyQualified(databaseName, schemaName, tableName)}.\"{GetRuntimeName(columnName)}\"";
+
+    public override TopXResponse HowDoWeAchieveTopX(int x) =>
+        new($"OFFSET 0 ROWS FETCH NEXT {x} ROWS ONLY", QueryComponent.Postfix);
+
+    public override string GetParameterDeclaration(string proposedNewParameterName, string sqlType) =>
+        throw new NotSupportedException();
+
+    public override HashSet<string> GetReservedWords() => ReservedWords;
+
+    public override string GetScalarFunctionSql(MandatoryScalarFunctions function) =>
+        function switch
+        {
+            MandatoryScalarFunctions.GetTodaysDate => "CURRENT_TIMESTAMP",
+            MandatoryScalarFunctions.GetGuid => "SYS_GUID()",
+            MandatoryScalarFunctions.Len => "LENGTH",
+            _ => throw new ArgumentOutOfRangeException(nameof(function))
+        };
+
+    /// <summary>
+    ///     Works in Oracle 12c+ only https://oracle-base.com/articles/12c/identity-columns-in-oracle-12cr1
+    ///     NOCACHE prevents sequence cache issues when mixing array-bound bulk inserts with regular inserts
+    /// </summary>
+    /// <returns></returns>
+    public override string GetAutoIncrementKeywordIfAny() =>
+        " GENERATED ALWAYS AS IDENTITY (NOCACHE)";
+
+    public override Dictionary<string, string> GetSQLFunctionsDictionary() => [];
+
+    public override string HowDoWeAchieveMd5(string selectSql) => $"RAWTOHEX(standard_hash({selectSql}, 'MD5'))";
+
+    protected override object FormatTimespanForDbParameter(TimeSpan timeSpan) =>
+        //Value must be a DateTime even if DBParameter is of Type DbType.Time
+        Convert.ToDateTime(timeSpan.ToString(), CultureInfo.InvariantCulture);
 }

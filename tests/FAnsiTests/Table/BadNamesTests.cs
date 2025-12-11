@@ -1,13 +1,10 @@
+using System.Data;
+using System.Globalization;
 using FAnsi;
 using FAnsi.Discovery;
 using FAnsi.Discovery.QuerySyntax;
 using FAnsi.Discovery.TableCreation;
 using NUnit.Framework;
-using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Globalization;
-using System.Linq;
 using TypeGuesser;
 
 namespace FAnsiTests.Table;
@@ -15,7 +12,7 @@ namespace FAnsiTests.Table;
 internal sealed class BadNamesTests : DatabaseTests
 {
     /// <summary>
-    /// It would be a bad idea to name your column this but if you really wanted to...
+    ///     It would be a bad idea to name your column this but if you really wanted to...
     /// </summary>
     private static Tuple<string, string, string> GetBadNames(DatabaseType dbType)
     {
@@ -29,6 +26,7 @@ internal sealed class BadNamesTests : DatabaseTests
             colName1 = colName1.Replace("\"", "");
             colName2 = colName2.Replace("\"", "");
         }
+
         // SQLite uses backticks as alternative quoting, causing issues with ` in names
         if (dbType == DatabaseType.Sqlite)
         {
@@ -36,6 +34,7 @@ internal sealed class BadNamesTests : DatabaseTests
             colName1 = colName1.Replace("`", "");
             colName2 = colName2.Replace("`", "");
         }
+
         return new Tuple<string, string, string>(tblName, colName1, colName2);
     }
 
@@ -46,10 +45,9 @@ internal sealed class BadNamesTests : DatabaseTests
         var (badTableName, badColumnName, badColumnName2) = GetBadNames(dbType);
         return db.CreateTable(badTableName,
         [
-            new DatabaseColumnRequest(badColumnName,new DatabaseTypeRequest(typeof(string),100)),
-            new DatabaseColumnRequest(badColumnName2,new DatabaseTypeRequest(typeof(int)))
+            new DatabaseColumnRequest(badColumnName, new DatabaseTypeRequest(typeof(string), 100)),
+            new DatabaseColumnRequest(badColumnName2, new DatabaseTypeRequest(typeof(int)))
         ]);
-
     }
 
     [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
@@ -64,7 +62,6 @@ internal sealed class BadNamesTests : DatabaseTests
             Assert.That(syntax.EnsureWrapped("\t"), Is.EqualTo("\t"));
         });
         Assert.That(syntax.EnsureWrapped(null), Is.Null);
-
     }
 
     [Test]
@@ -103,7 +100,8 @@ internal sealed class BadNamesTests : DatabaseTests
         var col = tbl.DiscoverColumn(badColumnName);
         Assert.That(col.DataType?.GetLengthIfString(), Is.EqualTo(100));
 
-        var varcharType = tbl.Database.Server.GetQuerySyntaxHelper().TypeTranslater.GetSQLDBTypeForCSharpType(new DatabaseTypeRequest(typeof(string), 10));
+        var varcharType = tbl.Database.Server.GetQuerySyntaxHelper().TypeTranslater
+            .GetSQLDBTypeForCSharpType(new DatabaseTypeRequest(typeof(string), 10));
 
         // Can we ALTER its datatype
         Assert.That(col.DataType.GetLengthIfString(), Is.EqualTo(100));
@@ -111,7 +109,6 @@ internal sealed class BadNamesTests : DatabaseTests
         Assert.That(col.DataType.GetLengthIfString(), Is.EqualTo(10));
 
         tbl.Drop();
-
     }
 
     [TestCaseSource(typeof(All), nameof(All.DatabaseTypesWithBoolFlags))]
@@ -147,7 +144,6 @@ internal sealed class BadNamesTests : DatabaseTests
         }
 
         tbl.Drop();
-
     }
 
     [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
@@ -212,8 +208,9 @@ internal sealed class BadNamesTests : DatabaseTests
 
         var tbl1 = db.CreateTable(badTableName,
         [
-            new DatabaseColumnRequest(badColumnName,new DatabaseTypeRequest(typeof(string),100)){IsPrimaryKey = true },
-            new DatabaseColumnRequest("Frrrrr ##' ank",new DatabaseTypeRequest(typeof(int)))
+            new DatabaseColumnRequest(badColumnName, new DatabaseTypeRequest(typeof(string), 100))
+                { IsPrimaryKey = true },
+            new DatabaseColumnRequest("Frrrrr ##' ank", new DatabaseTypeRequest(typeof(int)))
         ]);
 
         var pk = tbl1.DiscoverColumns().Single(static c => c.IsPrimaryKey);
@@ -221,7 +218,8 @@ internal sealed class BadNamesTests : DatabaseTests
 
         var tbl2 = db.CreateTable(new CreateTableArgs(db, $"{badTableName}2", null)
         {
-            ExplicitColumnDefinitions = [fk = new DatabaseColumnRequest($"{badColumnName}2", new DatabaseTypeRequest(typeof(string), 100))],
+            ExplicitColumnDefinitions =
+                [fk = new DatabaseColumnRequest($"{badColumnName}2", new DatabaseTypeRequest(typeof(string), 100))],
             ForeignKeyPairs = new Dictionary<DatabaseColumnRequest, DiscoveredColumn> { { fk, pk } }
         });
 

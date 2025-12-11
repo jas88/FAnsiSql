@@ -1,37 +1,24 @@
-using System;
 using System.Data;
 using System.Data.Common;
-using System.Threading;
-using System.Threading.Tasks;
 using FAnsi.Connections;
 using FAnsi.Discovery;
 
 namespace FAnsi;
 
 /// <summary>
-/// Arguments for facilitating long running sql operations which the user/system might want to cancel mid way through.
+///     Arguments for facilitating long running sql operations which the user/system might want to cancel mid way through.
 /// </summary>
 public sealed class DatabaseOperationArgs
 {
     /// <summary>
-    /// If using an ongoing connection/transaction.  Otherwise null.
-    /// </summary>
-    public IManagedTransaction? TransactionIfAny { get; set; }
-
-    /// <summary>
-    /// Time to allow <see cref="DbCommand"/> to run before cancelling (this is db timeout and doesn't affect <see cref="CancellationToken"/>)
-    /// </summary>
-    public int TimeoutInSeconds { get; set; }
-
-    /// <summary>
-    /// Optional, if provided all commands interacting with these args should cancel if the command was cancelled
+    ///     Optional, if provided all commands interacting with these args should cancel if the command was cancelled
     /// </summary>
     public CancellationToken CancellationToken;
 
     public DatabaseOperationArgs()
     {
-
     }
+
     public DatabaseOperationArgs(IManagedTransaction transactionIfAny, int timeoutInSeconds,
         CancellationToken cancellationToken)
     {
@@ -41,9 +28,20 @@ public sealed class DatabaseOperationArgs
     }
 
     /// <summary>
-    /// Sets the timeout and cancellation on <paramref name="cmd"/> then runs <see cref="DbCommand.ExecuteNonQueryAsync()"/> with the
-    /// <see cref="CancellationToken"/> (if any) and blocks till the call completes.
-    ///
+    ///     If using an ongoing connection/transaction.  Otherwise null.
+    /// </summary>
+    public IManagedTransaction? TransactionIfAny { get; set; }
+
+    /// <summary>
+    ///     Time to allow <see cref="DbCommand" /> to run before cancelling (this is db timeout and doesn't affect
+    ///     <see cref="CancellationToken" />)
+    /// </summary>
+    public int TimeoutInSeconds { get; set; }
+
+    /// <summary>
+    ///     Sets the timeout and cancellation on <paramref name="cmd" /> then runs
+    ///     <see cref="DbCommand.ExecuteNonQueryAsync()" /> with the
+    ///     <see cref="CancellationToken" /> (if any) and blocks till the call completes.
     /// </summary>
     /// <param name="cmd"></param>
     /// <exception cref="OperationCanceledException"></exception>
@@ -51,10 +49,11 @@ public sealed class DatabaseOperationArgs
     {
         return Execute(cmd, () => cmd.ExecuteNonQueryAsync(CancellationToken));
     }
+
     /// <summary>
-    /// Sets the timeout and cancellation on <paramref name="cmd"/> then runs <see cref="DbCommand.ExecuteScalar()"/> with the
-    /// <see cref="CancellationToken"/> (if any) and blocks till the call completes.
-    ///
+    ///     Sets the timeout and cancellation on <paramref name="cmd" /> then runs <see cref="DbCommand.ExecuteScalar()" />
+    ///     with the
+    ///     <see cref="CancellationToken" /> (if any) and blocks till the call completes.
     /// </summary>
     /// <param name="cmd"></param>
     /// <exception cref="OperationCanceledException"></exception>
@@ -125,26 +124,29 @@ public sealed class DatabaseOperationArgs
     }
 
     /// <summary>
-    /// Opens a new connection or passes back an existing opened connection (that matches
-    /// <see cref="TransactionIfAny"/>).  This command should be wrapped in a using statement
+    ///     Opens a new connection or passes back an existing opened connection (that matches
+    ///     <see cref="TransactionIfAny" />).  This command should be wrapped in a using statement
     /// </summary>
     /// <param name="table"></param>
     /// <returns></returns>
-    public IManagedConnection GetManagedConnection(DiscoveredTable table) => GetManagedConnection(table.Database.Server);
+    public IManagedConnection GetManagedConnection(DiscoveredTable table) =>
+        GetManagedConnection(table.Database.Server);
 
     /// <summary>
-    /// Opens a new connection or passes back an existing opened connection (that matches
-    /// <see cref="TransactionIfAny"/>).  This command should be wrapped in a using statement
+    ///     Opens a new connection or passes back an existing opened connection (that matches
+    ///     <see cref="TransactionIfAny" />).  This command should be wrapped in a using statement
     /// </summary>
     /// <param name="database"></param>
     /// <returns></returns>
-    public IManagedConnection GetManagedConnection(DiscoveredDatabase database) => GetManagedConnection(database.Server);
+    public IManagedConnection GetManagedConnection(DiscoveredDatabase database) =>
+        GetManagedConnection(database.Server);
 
     /// <summary>
-    /// Opens a new connection or passes back an existing opened connection (that matches
-    /// <see cref="TransactionIfAny"/>).  This command should be wrapped in a using statement
+    ///     Opens a new connection or passes back an existing opened connection (that matches
+    ///     <see cref="TransactionIfAny" />).  This command should be wrapped in a using statement
     /// </summary>
     /// <param name="server"></param>
     /// <returns></returns>
-    public IManagedConnection GetManagedConnection(DiscoveredServer server) => server.GetManagedConnection(TransactionIfAny);
+    public IManagedConnection GetManagedConnection(DiscoveredServer server) =>
+        server.GetManagedConnection(TransactionIfAny);
 }

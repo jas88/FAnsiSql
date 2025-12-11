@@ -1,8 +1,7 @@
+using System.Data;
 using FAnsi;
 using FAnsi.Discovery.QuerySyntax;
 using NUnit.Framework;
-using System.Collections.Generic;
-using System.Data;
 
 namespace FAnsiTests.Aggregation;
 

@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using FAnsi.Discovery;
 using FAnsi.Discovery.QuerySyntax;
 using FAnsi.Implementations.MicrosoftSQL.Aggregation;
@@ -8,19 +6,22 @@ using Microsoft.Data.SqlClient;
 
 namespace FAnsi.Implementations.MicrosoftSQL;
 
-/// <inheritdoc/>
+/// <inheritdoc />
 public sealed class MicrosoftQuerySyntaxHelper : QuerySyntaxHelper
 {
     public static readonly MicrosoftQuerySyntaxHelper Instance = new();
-    private MicrosoftQuerySyntaxHelper() : base(MicrosoftSQLTypeTranslater.Instance, new MicrosoftSQLAggregateHelper(), new MicrosoftSQLUpdateHelper(), DatabaseType.MicrosoftSQLServer)
+
+    private MicrosoftQuerySyntaxHelper() : base(MicrosoftSQLTypeTranslater.Instance, new MicrosoftSQLAggregateHelper(),
+        new MicrosoftSQLUpdateHelper(), DatabaseType.MicrosoftSQLServer)
     {
     }
 
     /// <summary>
-    /// Maximum database name length.  This is less than 128 in order to allow for "_logs" etc getting appended to end.
-    /// See: https://stackoverflow.com/a/5096245/4824531
+    ///     Maximum database name length.  This is less than 128 in order to allow for "_logs" etc getting appended to end.
+    ///     See: https://stackoverflow.com/a/5096245/4824531
     /// </summary>
     public override int MaximumDatabaseLength => 100;
+
     public override int MaximumTableLength => 128;
     public override int MaximumColumnLength => 128;
 
@@ -30,7 +31,8 @@ public sealed class MicrosoftQuerySyntaxHelper : QuerySyntaxHelper
 
     public override TopXResponse HowDoWeAchieveTopX(int x) => new($"TOP {x}", QueryComponent.SELECT);
 
-    public override string GetParameterDeclaration(string proposedNewParameterName, string sqlType) => $"DECLARE {proposedNewParameterName} AS {sqlType};";
+    public override string GetParameterDeclaration(string proposedNewParameterName, string sqlType) =>
+        $"DECLARE {proposedNewParameterName} AS {sqlType};";
 
     public override string GetScalarFunctionSql(MandatoryScalarFunctions function) =>
         function switch
@@ -49,13 +51,13 @@ public sealed class MicrosoftQuerySyntaxHelper : QuerySyntaxHelper
             { "left", "LEFT ( character_expression , integer_expression )" },
             { "right", "RIGHT ( character_expression , integer_expression )" },
             { "upper", "UPPER ( character_expression )" },
-            { "substring","SUBSTRING ( expression ,start , length ) "},
-            { "dateadd","DATEADD (datepart , number , date )"},
-            { "datediff", "DATEDIFF ( datepart , startdate , enddate )  "},
-            { "getdate", "GETDATE()"},
-            { "cast", "CAST ( expression AS data_type [ ( length ) ] )"},
-            { "convert","CONVERT ( data_type [ ( length ) ] , expression [ , style ] ) "},
-            { "case","CASE WHEN x=y THEN 'something' WHEN x=z THEN 'something2' ELSE 'something3' END"}
+            { "substring", "SUBSTRING ( expression ,start , length ) " },
+            { "dateadd", "DATEADD (datepart , number , date )" },
+            { "datediff", "DATEDIFF ( datepart , startdate , enddate )  " },
+            { "getdate", "GETDATE()" },
+            { "cast", "CAST ( expression AS data_type [ ( length ) ] )" },
+            { "convert", "CONVERT ( data_type [ ( length ) ] , expression [ , style ] ) " },
+            { "case", "CASE WHEN x=y THEN 'something' WHEN x=z THEN 'something2' ELSE 'something3' END" }
         };
 
     public override bool IsTimeout(Exception exception)
@@ -71,19 +73,22 @@ public sealed class MicrosoftQuerySyntaxHelper : QuerySyntaxHelper
         };
     }
 
-    public override string HowDoWeAchieveMd5(string selectSql) => $"CONVERT(NVARCHAR(32),HASHBYTES('MD5', CONVERT(varbinary,{selectSql})),2)";
+    public override string HowDoWeAchieveMd5(string selectSql) =>
+        $"CONVERT(NVARCHAR(32),HASHBYTES('MD5', CONVERT(varbinary,{selectSql})),2)";
 
     public override string GetDefaultSchemaIfAny() => "dbo";
 
     public override bool SupportsEmbeddedParameters() => true;
 
-    public override string EnsureWrappedImpl(string databaseOrTableName) => $"[{GetRuntimeNameWithDoubledClosingSquareBrackets(databaseOrTableName)}]";
+    public override string EnsureWrappedImpl(string databaseOrTableName) =>
+        $"[{GetRuntimeNameWithDoubledClosingSquareBrackets(databaseOrTableName)}]";
 
 
     protected override string UnescapeWrappedNameBody(string name) => name.Replace("]]", "]");
 
     /// <summary>
-    /// Returns the runtime name of the string with all ending square brackets escaped by doubling up (but resulting string is not wrapped itself)
+    ///     Returns the runtime name of the string with all ending square brackets escaped by doubling up (but resulting string
+    ///     is not wrapped itself)
     /// </summary>
     /// <param name="s"></param>
     /// <returns></returns>
@@ -101,11 +106,16 @@ public sealed class MicrosoftQuerySyntaxHelper : QuerySyntaxHelper
             $"{EnsureWrapped(GetRuntimeName(databaseName))}{DatabaseTableSeparator}{EnsureWrapped(GetRuntimeName(schemaName))}{DatabaseTableSeparator}{EnsureWrapped(GetRuntimeName(tableName))}";
     }
 
-    public override string EnsureFullyQualified(string? databaseName, string? schemaName, string tableName, string columnName, bool isTableValuedFunction = false)
+    public override string EnsureFullyQualified(string? databaseName, string? schemaName, string tableName,
+        string columnName, bool isTableValuedFunction = false)
     {
         if (isTableValuedFunction)
-            return GetRuntimeName(tableName) + DatabaseTableSeparator + EnsureWrapped(GetRuntimeName(columnName));//table valued functions do not support database name being in the column level selection list area of sql queries
+            return GetRuntimeName(tableName) + DatabaseTableSeparator +
+                   EnsureWrapped(
+                       GetRuntimeName(
+                           columnName)); //table valued functions do not support database name being in the column level selection list area of sql queries
 
-        return EnsureFullyQualified(databaseName, schemaName, tableName) + DatabaseTableSeparator + EnsureWrapped(GetRuntimeName(columnName));
+        return EnsureFullyQualified(databaseName, schemaName, tableName) + DatabaseTableSeparator +
+               EnsureWrapped(GetRuntimeName(columnName));
     }
 }

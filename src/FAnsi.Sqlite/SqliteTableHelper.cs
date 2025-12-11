@@ -1,35 +1,41 @@
-using System;
-using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
-using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
-using System.Linq;
+using System.Text.RegularExpressions;
 using FAnsi.Connections;
 using FAnsi.Discovery;
 using FAnsi.Discovery.Constraints;
+using FAnsi.Exceptions;
 using FAnsi.Naming;
 using Microsoft.Data.Sqlite;
 
 namespace FAnsi.Implementations.Sqlite;
 
 /// <summary>
-/// SQLite-specific implementation of table helper functionality. Provides table-level operations
-/// including querying, schema discovery, indexing, and relationship management.
+///     SQLite-specific implementation of table helper functionality. Provides table-level operations
+///     including querying, schema discovery, indexing, and relationship management.
 /// </summary>
 /// <remarks>
-/// <para>SQLite limitations:</para>
-/// <list type="bullet">
-/// <item><description>Cannot alter column types or nullability (requires table recreation)</description></item>
-/// <item><description>Cannot add primary keys to existing tables</description></item>
-/// <item><description>DROP COLUMN supported in SQLite 3.35.0+ (2021)</description></item>
-/// <item><description>Auto-increment via INTEGER PRIMARY KEY</description></item>
-/// </list>
+///     <para>SQLite limitations:</para>
+///     <list type="bullet">
+///         <item>
+///             <description>Cannot alter column types or nullability (requires table recreation)</description>
+///         </item>
+///         <item>
+///             <description>Cannot add primary keys to existing tables</description>
+///         </item>
+///         <item>
+///             <description>DROP COLUMN supported in SQLite 3.35.0+ (2021)</description>
+///         </item>
+///         <item>
+///             <description>Auto-increment via INTEGER PRIMARY KEY</description>
+///         </item>
+///     </list>
 /// </remarks>
 public sealed class SqliteTableHelper : DiscoveredTableHelper
 {
     /// <summary>
-    /// Generates SQL to select the top X rows from a table.
+    ///     Generates SQL to select the top X rows from a table.
     /// </summary>
     /// <param name="table">The table to query</param>
     /// <param name="topX">The number of rows to return</param>
@@ -38,28 +44,31 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
         $"SELECT * FROM {table.GetFullyQualifiedName()} LIMIT {topX}";
 
     /// <summary>
-    /// Discovers all columns in a table by querying SQLite's PRAGMA table_info.
+    ///     Discovers all columns in a table by querying SQLite's PRAGMA table_info.
     /// </summary>
     /// <param name="discoveredTable">The table to discover columns for</param>
     /// <param name="connection">The managed database connection</param>
     /// <param name="database">The database name (file path for SQLite)</param>
     /// <returns>An enumerable of discovered columns with their properties</returns>
     /// <remarks>
-    /// Uses PRAGMA table_info() to retrieve column information including name, type, nullability,
-    /// and primary key status. Detects auto-increment by checking for INTEGER PRIMARY KEY.
+    ///     Uses PRAGMA table_info() to retrieve column information including name, type, nullability,
+    ///     and primary key status. Detects auto-increment by checking for INTEGER PRIMARY KEY.
     /// </remarks>
-    public override IEnumerable<DiscoveredColumn> DiscoverColumns(DiscoveredTable discoveredTable, IManagedConnection connection, string database)
+    public override IEnumerable<DiscoveredColumn> DiscoverColumns(DiscoveredTable discoveredTable,
+        IManagedConnection connection, string database)
     {
         // PRAGMA commands accept quoted identifiers
         var syntax = discoveredTable.GetQuerySyntaxHelper();
         var tableName = syntax.EnsureWrapped(discoveredTable.GetRuntimeName());
 
-        using var cmd = discoveredTable.Database.Server.Helper.GetCommand($"PRAGMA table_info({tableName})", connection.Connection);
+        using var cmd =
+            discoveredTable.Database.Server.Helper.GetCommand($"PRAGMA table_info({tableName})", connection.Connection);
         cmd.Transaction = connection.Transaction;
 
         using var r = cmd.ExecuteReader();
         if (!r.HasRows)
-            throw new InvalidOperationException($"Could not find any columns for table {tableName} in database {database}");
+            throw new InvalidOperationException(
+                $"Could not find any columns for table {tableName} in database {database}");
 
         while (r.Read())
         {
@@ -84,7 +93,7 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
     public override IDiscoveredColumnHelper GetColumnHelper() => new SqliteColumnHelper();
 
     /// <summary>
-    /// Drops a table-valued function.
+    ///     Drops a table-valued function.
     /// </summary>
     /// <param name="connection">The database connection</param>
     /// <param name="functionToDrop">The function to drop</param>
@@ -95,13 +104,13 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
     }
 
     /// <summary>
-    /// Drops a column from a table using ALTER TABLE DROP COLUMN (requires SQLite 3.35.0+).
+    ///     Drops a column from a table using ALTER TABLE DROP COLUMN (requires SQLite 3.35.0+).
     /// </summary>
     /// <param name="connection">The database connection</param>
     /// <param name="columnToDrop">The column to drop</param>
     /// <remarks>
-    /// SQLite 3.35.0+ supports ALTER TABLE DROP COLUMN.
-    /// Limitations: Column cannot be referenced by foreign keys, indexes, or constraints.
+    ///     SQLite 3.35.0+ supports ALTER TABLE DROP COLUMN.
+    ///     Limitations: Column cannot be referenced by foreign keys, indexes, or constraints.
     /// </remarks>
     public override void DropColumn(DbConnection connection, DiscoveredColumn columnToDrop)
     {
@@ -118,7 +127,7 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
     }
 
     /// <summary>
-    /// Adds a column to an existing table.
+    ///     Adds a column to an existing table.
     /// </summary>
     /// <param name="args">Database operation arguments</param>
     /// <param name="table">The table to add the column to</param>
@@ -126,10 +135,11 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
     /// <param name="dataType">The SQL data type for the column</param>
     /// <param name="allowNulls">Whether the column allows NULL values</param>
     /// <remarks>
-    /// SQLite's ALTER TABLE ADD COLUMN syntax doesn't support quoted identifiers.
-    /// We use runtime names directly without any quoting.
+    ///     SQLite's ALTER TABLE ADD COLUMN syntax doesn't support quoted identifiers.
+    ///     We use runtime names directly without any quoting.
     /// </remarks>
-    public override void AddColumn(DatabaseOperationArgs args, DiscoveredTable table, string name, string dataType, bool allowNulls)
+    public override void AddColumn(DatabaseOperationArgs args, DiscoveredTable table, string name, string dataType,
+        bool allowNulls)
     {
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Column name cannot be empty", nameof(name));
@@ -149,27 +159,26 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
         args.ExecuteNonQuery(cmd);
     }
 
-    public override int ExecuteInsertReturningIdentity(DiscoveredTable discoveredTable, DbCommand cmd, IManagedTransaction? transaction = null)
+    public override int ExecuteInsertReturningIdentity(DiscoveredTable discoveredTable, DbCommand cmd,
+        IManagedTransaction? transaction = null)
     {
         cmd.Transaction = transaction?.Transaction;
         cmd.ExecuteNonQuery();
 
         // Get the last inserted rowid
-        using var identityCmd = discoveredTable.Database.Server.GetCommand("SELECT last_insert_rowid()", cmd.Connection!);
+        using var identityCmd =
+            discoveredTable.Database.Server.GetCommand("SELECT last_insert_rowid()", cmd.Connection!);
         identityCmd.Transaction = transaction?.Transaction;
         return Convert.ToInt32(identityCmd.ExecuteScalar(), CultureInfo.InvariantCulture);
     }
 
-    public override IEnumerable<DiscoveredParameter> DiscoverTableValuedFunctionParameters(DbConnection connection, DiscoveredTableValuedFunction discoveredTableValuedFunction, DbTransaction? transaction)
-    {
+    public override IEnumerable<DiscoveredParameter> DiscoverTableValuedFunctionParameters(DbConnection connection,
+        DiscoveredTableValuedFunction discoveredTableValuedFunction, DbTransaction? transaction) =>
         // SQLite doesn't support table-valued functions
-        return Enumerable.Empty<DiscoveredParameter>();
-    }
+        Enumerable.Empty<DiscoveredParameter>();
 
-    public override IBulkCopy BeginBulkInsert(DiscoveredTable discoveredTable, IManagedConnection connection, CultureInfo culture)
-    {
-        return new SqliteBulkCopy(discoveredTable, connection, culture);
-    }
+    public override IBulkCopy BeginBulkInsert(DiscoveredTable discoveredTable, IManagedConnection connection,
+        CultureInfo culture) => new SqliteBulkCopy(discoveredTable, connection, culture);
 
     public override void TruncateTable(DiscoveredTable discoveredTable)
     {
@@ -189,7 +198,8 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
 
         // Create temp table with distinct values
         using var cmd1 = discoveredTable.Database.Server.GetCommand(
-            $"CREATE TABLE {syntax.EnsureWrapped(tempTableName)} AS SELECT DISTINCT * FROM {discoveredTable.GetFullyQualifiedName()}", con);
+            $"CREATE TABLE {syntax.EnsureWrapped(tempTableName)} AS SELECT DISTINCT * FROM {discoveredTable.GetFullyQualifiedName()}",
+            con);
         args.ExecuteNonQuery(cmd1);
 
         // Drop original table
@@ -199,14 +209,17 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
 
         // Rename temp table to original name
         using var cmd3 = discoveredTable.Database.Server.GetCommand(
-            $"ALTER TABLE {syntax.EnsureWrapped(tempTableName)} RENAME TO {syntax.EnsureWrapped(discoveredTable.GetRuntimeName())}", con);
+            $"ALTER TABLE {syntax.EnsureWrapped(tempTableName)} RENAME TO {syntax.EnsureWrapped(discoveredTable.GetRuntimeName())}",
+            con);
         args.ExecuteNonQuery(cmd3);
     }
 
     public override bool IsEmpty(DatabaseOperationArgs args, DiscoveredTable discoveredTable)
     {
         using var connection = args.GetManagedConnection(discoveredTable);
-        using var cmd = discoveredTable.Database.Server.GetCommand($"SELECT COUNT(*) FROM {discoveredTable.GetFullyQualifiedName()} LIMIT 1", connection);
+        using var cmd =
+            discoveredTable.Database.Server.GetCommand(
+                $"SELECT COUNT(*) FROM {discoveredTable.GetFullyQualifiedName()} LIMIT 1", connection);
         return Convert.ToInt32(args.ExecuteScalar(cmd), CultureInfo.InvariantCulture) == 0;
     }
 
@@ -215,7 +228,8 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
         if (discoveredTable.TableType == TableType.View)
             throw new NotSupportedException($"Rename is not supported for TableType {discoveredTable.TableType}");
 
-        using var cmd = discoveredTable.Database.Server.Helper.GetCommand(GetRenameTableSql(discoveredTable, newName), connection.Connection, connection.Transaction);
+        using var cmd = discoveredTable.Database.Server.Helper.GetCommand(GetRenameTableSql(discoveredTable, newName),
+            connection.Connection, connection.Transaction);
         cmd.ExecuteNonQuery();
     }
 
@@ -225,7 +239,8 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
         return $"ALTER TABLE {discoveredTable.GetFullyQualifiedName()} RENAME TO {syntax.EnsureWrapped(newName)}";
     }
 
-    public override void CreateIndex(DatabaseOperationArgs args, DiscoveredTable table, string indexName, DiscoveredColumn[] columns, bool unique = false)
+    public override void CreateIndex(DatabaseOperationArgs args, DiscoveredTable table, string indexName,
+        DiscoveredColumn[] columns, bool unique = false)
     {
         var syntax = table.GetQuerySyntaxHelper();
         var columnNames = string.Join(", ", columns.Select(c => syntax.EnsureWrapped(c.GetRuntimeName())));
@@ -233,7 +248,8 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
 
         using var con = args.GetManagedConnection(table);
         using var cmd = table.Database.Server.GetCommand(
-            $"CREATE {uniqueKeyword}INDEX {syntax.EnsureWrapped(indexName)} ON {table.GetFullyQualifiedName()} ({columnNames})", con);
+            $"CREATE {uniqueKeyword}INDEX {syntax.EnsureWrapped(indexName)} ON {table.GetFullyQualifiedName()} ({columnNames})",
+            con);
 
         try
         {
@@ -241,7 +257,7 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
         }
         catch (SqliteException ex)
         {
-            throw new FAnsi.Exceptions.AlterFailedException($"Failed to create index {indexName}", ex);
+            throw new AlterFailedException($"Failed to create index {indexName}", ex);
         }
     }
 
@@ -257,46 +273,50 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
         }
         catch (SqliteException ex)
         {
-            throw new FAnsi.Exceptions.AlterFailedException($"Failed to drop index {indexName}", ex);
+            throw new AlterFailedException($"Failed to drop index {indexName}", ex);
         }
     }
 
     /// <summary>
-    /// Creates a primary key constraint on existing table columns.
+    ///     Creates a primary key constraint on existing table columns.
     /// </summary>
     /// <param name="args">Database operation arguments</param>
     /// <param name="table">The table to add primary key to</param>
     /// <param name="discoverColumns">The columns to include in the primary key</param>
     /// <exception cref="FAnsi.Exceptions.AlterFailedException">
-    /// SQLite does not support adding primary keys to existing tables. Table recreation would be required.
+    ///     SQLite does not support adding primary keys to existing tables. Table recreation would be required.
     /// </exception>
     /// <remarks>
-    /// Primary keys must be defined when creating the table in SQLite. To add a primary key to
-    /// an existing table, you must recreate the table with the constraint.
+    ///     Primary keys must be defined when creating the table in SQLite. To add a primary key to
+    ///     an existing table, you must recreate the table with the constraint.
     /// </remarks>
-    public override void CreatePrimaryKey(DatabaseOperationArgs args, DiscoveredTable table, DiscoveredColumn[] discoverColumns)
+    public override void CreatePrimaryKey(DatabaseOperationArgs args, DiscoveredTable table,
+        DiscoveredColumn[] discoverColumns)
     {
         // SQLite doesn't support adding primary keys to existing tables
-        var notSupportedException = new NotSupportedException("SQLite does not support adding primary keys to existing tables. Table recreation would be required.");
-        throw new FAnsi.Exceptions.AlterFailedException($"Failed to create primary key on table {table.GetFullyQualifiedName()}. SQLite does not support adding primary keys to existing tables.", notSupportedException);
+        var notSupportedException = new NotSupportedException(
+            "SQLite does not support adding primary keys to existing tables. Table recreation would be required.");
+        throw new AlterFailedException(
+            $"Failed to create primary key on table {table.GetFullyQualifiedName()}. SQLite does not support adding primary keys to existing tables.",
+            notSupportedException);
     }
 
     /// <summary>
-    /// Discovers all foreign key relationships for a table.
+    ///     Discovers all foreign key relationships for a table.
     /// </summary>
     /// <param name="discoveredTable">The table to discover relationships for</param>
     /// <param name="connection">The database connection</param>
     /// <param name="transaction">Optional transaction</param>
     /// <returns>An enumerable of discovered relationships</returns>
     /// <remarks>
-    /// In SQLite, foreign keys are stored on the child table (the table with the FK constraint).
-    /// To find all relationships involving a table, we need to:
-    /// 1. Check if this table has FKs pointing to other tables (we are the child)
-    /// 2. Search all other tables to see if they have FKs pointing to us (we are the parent)
-    ///
-    /// This differs from SQL Server where we can query system views to find all relationships.
+    ///     In SQLite, foreign keys are stored on the child table (the table with the FK constraint).
+    ///     To find all relationships involving a table, we need to:
+    ///     1. Check if this table has FKs pointing to other tables (we are the child)
+    ///     2. Search all other tables to see if they have FKs pointing to us (we are the parent)
+    ///     This differs from SQL Server where we can query system views to find all relationships.
     /// </remarks>
-    public override IEnumerable<DiscoveredRelationship> DiscoverRelationships(DiscoveredTable discoveredTable, DbConnection connection, IManagedTransaction? transaction = null)
+    public override IEnumerable<DiscoveredRelationship> DiscoverRelationships(DiscoveredTable discoveredTable,
+        DbConnection connection, IManagedTransaction? transaction = null)
     {
         var syntax = discoveredTable.GetQuerySyntaxHelper();
         var relationships = new Dictionary<string, DiscoveredRelationship>();
@@ -305,14 +325,11 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
         // Get all plain table names from sqlite_master
         var allTables = new List<string>();
         using (var cmd = discoveredTable.Database.Server.Helper.GetCommand(
-            "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'", connection))
+                   "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'", connection))
         {
             cmd.Transaction = transaction?.Transaction;
             using var r = cmd.ExecuteReader();
-            while (r.Read())
-            {
-                allTables.Add((string)r["name"]);
-            }
+            while (r.Read()) allTables.Add((string)r["name"]);
         }
 
         // Check each table to see if it has foreign keys referencing our table
@@ -354,12 +371,11 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
 
                 // Try to extract the constraint name from the table's SQL definition
                 // SQLite's PRAGMA foreign_key_list doesn't include the constraint name
-                var foreignKeyName = ExtractForeignKeyName(connection, otherTableName, primaryKeyTableName, foreignKeyColumn, transaction);
+                var foreignKeyName = ExtractForeignKeyName(connection, otherTableName, primaryKeyTableName,
+                    foreignKeyColumn, transaction);
                 if (string.IsNullOrEmpty(foreignKeyName))
-                {
                     // Fall back to a generated name if we can't find the constraint name
                     foreignKeyName = $"FK_{otherTableName}_{primaryKeyTableName}";
-                }
 
                 if (!relationships.TryGetValue(foreignKeyName, out var relationship))
                 {
@@ -383,7 +399,7 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
     }
 
     /// <summary>
-    /// Extracts the foreign key constraint name from a table's SQL definition.
+    ///     Extracts the foreign key constraint name from a table's SQL definition.
     /// </summary>
     /// <param name="connection">The database connection</param>
     /// <param name="tableName">The table containing the foreign key</param>
@@ -391,7 +407,8 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
     /// <param name="foreignKeyColumn">The foreign key column name</param>
     /// <param name="transaction">Optional transaction</param>
     /// <returns>The constraint name if found, otherwise null</returns>
-    private static string? ExtractForeignKeyName(DbConnection connection, string tableName, string referencedTableName, string foreignKeyColumn, IManagedTransaction? transaction)
+    private static string? ExtractForeignKeyName(DbConnection connection, string tableName, string referencedTableName,
+        string foreignKeyColumn, IManagedTransaction? transaction)
     {
         // Get the CREATE TABLE statement for this table
         using var cmd = connection.CreateCommand();
@@ -408,13 +425,15 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
 
         // Look for CONSTRAINT name FOREIGN KEY pattern in the CREATE TABLE statement
         // Example: CONSTRAINT FK_T2_T1 FOREIGN KEY (c2) REFERENCES T1(c1)
-        var pattern = $@"CONSTRAINT\s+(\w+)\s+FOREIGN\s+KEY\s*\(\s*{foreignKeyColumn}\s*\)\s+REFERENCES\s+{referencedTableName}";
-        var match = System.Text.RegularExpressions.Regex.Match(sql, pattern, System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        var pattern =
+            $@"CONSTRAINT\s+(\w+)\s+FOREIGN\s+KEY\s*\(\s*{foreignKeyColumn}\s*\)\s+REFERENCES\s+{referencedTableName}";
+        var match = Regex.Match(sql, pattern, RegexOptions.IgnoreCase);
 
         return match.Success ? match.Groups[1].Value : null;
     }
 
-    public override void FillDataTableWithTopX(DatabaseOperationArgs args, DiscoveredTable table, int topX, DataTable dt)
+    public override void FillDataTableWithTopX(DatabaseOperationArgs args, DiscoveredTable table, int topX,
+        DataTable dt)
     {
         using var con = args.GetManagedConnection(table);
         using var cmd = table.Database.Server.GetCommand(GetTopXSqlForTable(table, topX), con);
@@ -437,36 +456,36 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
                 // SQLite stores DateTime as TEXT, but DataTable columns may be typed as DateTime
                 // If the column is DateTime and we get a string, try to parse it
                 if (i < dt.Columns.Count && dt.Columns[i].DataType == typeof(DateTime) && value is string strValue
-                    && DateTime.TryParse(strValue, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedDate))
-                {
+                    && DateTime.TryParse(strValue, CultureInfo.InvariantCulture, DateTimeStyles.None,
+                        out var parsedDate))
                     value = parsedDate;
-                }
 
                 row[i] = value;
             }
+
             dt.Rows.Add(row);
         }
     }
 
     /// <summary>
-    /// Checks if the table has a primary key using a database-specific SQL query (90-99% faster than discovering all columns).
+    ///     Checks if the table has a primary key using a database-specific SQL query (90-99% faster than discovering all
+    ///     columns).
     /// </summary>
     public override bool HasPrimaryKey(DiscoveredTable table, IManagedConnection connection)
     {
         // PRAGMA commands accept quoted identifiers
         var syntax = table.GetQuerySyntaxHelper();
         var tableName = syntax.EnsureWrapped(table.GetRuntimeName());
-        using var cmd = table.Database.Server.Helper.GetCommand($"PRAGMA table_info({tableName})", connection.Connection);
+        using var cmd =
+            table.Database.Server.Helper.GetCommand($"PRAGMA table_info({tableName})", connection.Connection);
         cmd.Transaction = connection.Transaction;
 
         using var reader = cmd.ExecuteReader();
         while (reader.Read())
-        {
             // Column 5 (pk) indicates if the column is part of the primary key
             // pk > 0 means it's part of the primary key
             if (reader.GetInt32(5) > 0)
                 return true;
-        }
 
         return false;
     }

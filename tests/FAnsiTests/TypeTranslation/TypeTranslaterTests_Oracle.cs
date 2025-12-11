@@ -1,4 +1,3 @@
-using System;
 using FAnsi;
 using NUnit.Framework;
 

@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-
 namespace FAnsi.Discovery.QuerySyntax.Aggregation;
 
 public abstract class AggregateHelper : IAggregateHelper
@@ -28,21 +24,25 @@ public abstract class AggregateHelper : IAggregateHelper
 
     private static CustomLine GetPivotOnlyNonPivotColumn(AggregateCustomLineCollection query)
     {
-        var nonPivotColumn = query.Lines.Where(static l => l.LocationToInsert == QueryComponent.QueryTimeColumn && l.Role == CustomLineRole.None).ToArray();
+        var nonPivotColumn = query.Lines.Where(static l =>
+            l.LocationToInsert == QueryComponent.QueryTimeColumn && l.Role == CustomLineRole.None).ToArray();
         if (nonPivotColumn.Length != 1)
-            throw new InvalidOperationException("Pivot is only valid when there are 3 SELECT columns, an aggregate (e.g. count(*)), a pivot and a final column");
+            throw new InvalidOperationException(
+                "Pivot is only valid when there are 3 SELECT columns, an aggregate (e.g. count(*)), a pivot and a final column");
 
         return nonPivotColumn[0];
     }
 
     protected abstract IQuerySyntaxHelper GetQuerySyntaxHelper();
 
-    protected virtual string BuildBasicAggregate(AggregateCustomLineCollection query) => string.Join(Environment.NewLine, query.Lines);
+    protected virtual string BuildBasicAggregate(AggregateCustomLineCollection query) =>
+        string.Join(Environment.NewLine, query.Lines);
 
     /// <summary>
-    /// Builds an SQL GROUP BY query in from the lines in <paramref name="query"/> where records are counted and put into
-    /// buckets according to the interval defined in <see cref="AggregateCustomLineCollection.Axis"/> based on the date SQL
-    /// (usually a column name) in <see cref="AggregateCustomLineCollection.AxisSelect"/>
+    ///     Builds an SQL GROUP BY query in from the lines in <paramref name="query" /> where records are counted and put into
+    ///     buckets according to the interval defined in <see cref="AggregateCustomLineCollection.Axis" /> based on the date
+    ///     SQL
+    ///     (usually a column name) in <see cref="AggregateCustomLineCollection.AxisSelect" />
     /// </summary>
     /// <param name="query"></param>
     /// <returns></returns>
@@ -54,9 +54,10 @@ public abstract class AggregateHelper : IAggregateHelper
 
 
     /// <summary>
-    /// Changes the axis column in the GROUP BY section of the query (e.g. "[MyDb]..[mytbl].[AdmissionDate],") and
-    /// the axis column in the SELECT section of the query (e.g. "[MyDb]..[mytbl].[AdmissionDate] as Admt,")  with
-    /// the appropriate axis increment (e.g. "YEAR([MyDb]..[mytbl].[AdmissionDate])," and "YEAR([MyDb]..[mytbl].[AdmissionDate]) as Admt,")
+    ///     Changes the axis column in the GROUP BY section of the query (e.g. "[MyDb]..[mytbl].[AdmissionDate],") and
+    ///     the axis column in the SELECT section of the query (e.g. "[MyDb]..[mytbl].[AdmissionDate] as Admt,")  with
+    ///     the appropriate axis increment (e.g. "YEAR([MyDb]..[mytbl].[AdmissionDate])," and
+    ///     "YEAR([MyDb]..[mytbl].[AdmissionDate]) as Admt,")
     /// </summary>
     /// <param name="query"></param>
     /// <param name="axisColumnAlias"></param>
@@ -73,7 +74,8 @@ public abstract class AggregateHelper : IAggregateHelper
             $"{GetDatePartOfColumn(query.Axis?.AxisIncrement ?? throw new InvalidOperationException("No axis in query"), axisColumnWithoutAlias)} AS {axisColumnAlias}{(axisColumnEndedWithComma ? "," : "")}";
 
         var groupByEndedWithComma = axisGroupBy!.Text.EndsWith(',');
-        axisGroupBy.Text = GetDatePartOfColumn(query.Axis!.AxisIncrement, axisColumnWithoutAlias) + (groupByEndedWithComma ? "," : "");
+        axisGroupBy.Text = GetDatePartOfColumn(query.Axis!.AxisIncrement, axisColumnWithoutAlias) +
+                           (groupByEndedWithComma ? "," : "");
     }
 
     public abstract string GetDatePartOfColumn(AxisIncrement increment, string columnSql);

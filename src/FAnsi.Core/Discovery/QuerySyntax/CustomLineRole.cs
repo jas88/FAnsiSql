@@ -6,5 +6,5 @@ public enum CustomLineRole
     Axis,
     Pivot,
     TopX,
-    CountFunction  //count(*) column or group by count(*) or sum(mycol) or anything that is symantically an SQL aggregate function
+    CountFunction //count(*) column or group by count(*) or sum(mycol) or anything that is symantically an SQL aggregate function
 }

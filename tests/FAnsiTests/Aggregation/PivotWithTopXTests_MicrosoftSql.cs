@@ -24,5 +24,4 @@ internal sealed class PivotWithTopXTests_MicrosoftSql : PivotWithTopXTestsBase
 
     [Test]
     public void Test_PivotWithTop1_SingleColumn() => Test_PivotWithTop1_SingleColumn(DbType);
-
 }

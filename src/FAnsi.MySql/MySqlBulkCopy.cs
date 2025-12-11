@@ -1,8 +1,5 @@
-using System;
-using System.Collections.Generic;
 using System.Data;
 using System.Globalization;
-using System.Linq;
 using System.Numerics;
 using System.Text;
 using FAnsi.Connections;
@@ -12,28 +9,45 @@ using MySqlConnector;
 namespace FAnsi.Implementations.MySql;
 
 /// <summary>
-/// High-performance bulk insert implementation for MySQL using MySqlConnector's native MySqlBulkCopy API.
-/// This provides performance similar to SQL Server's SqlBulkCopy by leveraging MySQL's optimized bulk loading protocol.
-/// Falls back to batched parameterized INSERT statements when LOAD DATA LOCAL INFILE is disabled.
+///     High-performance bulk insert implementation for MySQL using MySqlConnector's native MySqlBulkCopy API.
+///     This provides performance similar to SQL Server's SqlBulkCopy by leveraging MySQL's optimized bulk loading
+///     protocol.
+///     Falls back to batched parameterized INSERT statements when LOAD DATA LOCAL INFILE is disabled.
 /// </summary>
 public sealed class MySqlBulkCopy(DiscoveredTable targetTable, IManagedConnection connection, CultureInfo culture)
     : BulkCopy(targetTable, connection, culture), IDisposable
 {
-    public static int BulkInsertBatchTimeoutInSeconds { get; set; } = 0;
-
-    /// <summary>
-    /// Number of rows to insert per batch when using fallback mode (batched INSERT statements).
-    /// Default is 1000 rows per batch, which balances performance with MySQL's max_allowed_packet limit.
-    /// </summary>
-    public static int FallbackBatchSize { get; set; } = 1000;
-
-    private readonly MySqlConnector.MySqlBulkCopy _bulkCopy = new((MySqlConnection)connection.Connection, (MySqlTransaction?)connection.Transaction)
-    {
-        DestinationTableName = targetTable.GetFullyQualifiedName()
-    };
+    private readonly MySqlConnector.MySqlBulkCopy _bulkCopy =
+        new((MySqlConnection)connection.Connection, (MySqlTransaction?)connection.Transaction)
+        {
+            DestinationTableName = targetTable.GetFullyQualifiedName()
+        };
 
     private bool _disposed;
     private bool _localInfileDisabled;
+
+    private bool _strictModeSet;
+    public static int BulkInsertBatchTimeoutInSeconds { get; set; } = 0;
+
+    /// <summary>
+    ///     Number of rows to insert per batch when using fallback mode (batched INSERT statements).
+    ///     Default is 1000 rows per batch, which balances performance with MySQL's max_allowed_packet limit.
+    /// </summary>
+    public static int FallbackBatchSize { get; set; } = 1000;
+
+    /// <summary>
+    ///     Releases all resources used by the MySqlBulkCopy.
+    /// </summary>
+    public new void Dispose()
+    {
+        if (!_disposed)
+        {
+            base.Dispose();
+            _disposed = true;
+        }
+
+        GC.SuppressFinalize(this);
+    }
 
     public override int UploadImpl(DataTable dt)
     {
@@ -64,19 +78,17 @@ public sealed class MySqlBulkCopy(DiscoveredTable targetTable, IManagedConnectio
         // Clear and set up column mappings
         _bulkCopy.ColumnMappings.Clear();
         foreach (var (key, value) in mapping)
-            _bulkCopy.ColumnMappings.Add(new MySqlConnector.MySqlBulkCopyColumnMapping(
+            _bulkCopy.ColumnMappings.Add(new MySqlBulkCopyColumnMapping(
                 key.Ordinal,
                 value.GetRuntimeName(),
-                expression: null));
+                null));
 
         return BulkInsertWithBetterErrorMessages(_bulkCopy, dt);
     }
 
-    private bool _strictModeSet;
-
     /// <summary>
-    /// Ensures MySQL strict mode is enabled for the current session.
-    /// This makes MySQL throw exceptions for data violations instead of silently truncating.
+    ///     Ensures MySQL strict mode is enabled for the current session.
+    ///     This makes MySQL throw exceptions for data violations instead of silently truncating.
     /// </summary>
     private void EnsureStrictMode()
     {
@@ -84,7 +96,8 @@ public sealed class MySqlBulkCopy(DiscoveredTable targetTable, IManagedConnectio
             return;
 
         var conn = (MySqlConnection)Connection.Connection;
-        using var cmd = new MySqlCommand("SET SESSION sql_mode = 'STRICT_TRANS_TABLES,NO_ENGINE_SUBSTITUTION'", conn, (MySqlTransaction?)Connection.Transaction);
+        using var cmd = new MySqlCommand("SET SESSION sql_mode = 'STRICT_TRANS_TABLES,NO_ENGINE_SUBSTITUTION'", conn,
+            (MySqlTransaction?)Connection.Transaction);
         cmd.ExecuteNonQuery();
         _strictModeSet = true;
     }
@@ -118,7 +131,7 @@ public sealed class MySqlBulkCopy(DiscoveredTable targetTable, IManagedConnectio
     }
 
     /// <summary>
-    /// Checks if an exception is related to local_infile being disabled (client or server side).
+    ///     Checks if an exception is related to local_infile being disabled (client or server side).
     /// </summary>
     private static bool IsLocalInfileError(Exception ex)
     {
@@ -129,11 +142,11 @@ public sealed class MySqlBulkCopy(DiscoveredTable targetTable, IManagedConnectio
         return message.Contains("AllowLoadLocalInfile", StringComparison.OrdinalIgnoreCase) ||
                message.Contains("Loading local data is disabled", StringComparison.OrdinalIgnoreCase) ||
                message.Contains("local_infile", StringComparison.OrdinalIgnoreCase) ||
-               (ex is MySqlException { Number: 1148 or 3948 }); // 1148 = ER_NOT_ALLOWED_COMMAND, 3948 = new error code
+               ex is MySqlException { Number: 1148 or 3948 }; // 1148 = ER_NOT_ALLOWED_COMMAND, 3948 = new error code
     }
 
     /// <summary>
-    /// Fallback implementation using batched parameterized INSERT statements when LOAD DATA LOCAL INFILE is disabled.
+    ///     Fallback implementation using batched parameterized INSERT statements when LOAD DATA LOCAL INFILE is disabled.
     /// </summary>
     private int FallbackBatchedInsert(DataTable dt)
     {
@@ -180,6 +193,7 @@ public sealed class MySqlBulkCopy(DiscoveredTable targetTable, IManagedConnectio
                 cmd.Parameters.AddWithValue(paramName, dr[kvp.Key.Ordinal] ?? DBNull.Value);
                 parameterIndex++;
             }
+
             valueClauses.Append(')');
             batchRows++;
 
@@ -201,7 +215,7 @@ public sealed class MySqlBulkCopy(DiscoveredTable targetTable, IManagedConnectio
     }
 
     /// <summary>
-    /// Enhances MySQL error messages with more specific context about what failed.
+    ///     Enhances MySQL error messages with more specific context about what failed.
     /// </summary>
     private string EnhanceErrorMessage(MySqlException ex, DataTable dt)
     {
@@ -222,11 +236,11 @@ public sealed class MySqlBulkCopy(DiscoveredTable targetTable, IManagedConnectio
                     {
                         var maxLength = discoveredColumn.DataType?.GetLengthIfString();
                         if (maxLength.HasValue && maxLength.Value > 0 && stringValue.Length > maxLength.Value)
-                        {
-                            return $"Bulk insert failed on data row {rowIndex + 1}: source column '{dataColumn.ColumnName}' has value '{stringValue}' (length: {stringValue.Length}) which exceeds max length of {maxLength.Value} for destination column '{discoveredColumn.GetRuntimeName()}' of type '{discoveredColumn.DataType?.SQLType}'. Original MySQL error: {message}";
-                        }
+                            return
+                                $"Bulk insert failed on data row {rowIndex + 1}: source column '{dataColumn.ColumnName}' has value '{stringValue}' (length: {stringValue.Length}) which exceeds max length of {maxLength.Value} for destination column '{discoveredColumn.GetRuntimeName()}' of type '{discoveredColumn.DataType?.SQLType}'. Original MySQL error: {message}";
                     }
                 }
+
                 rowIndex++;
             }
         }
@@ -242,10 +256,10 @@ public sealed class MySqlBulkCopy(DiscoveredTable targetTable, IManagedConnectio
                 {
                     var value = dataRow[dataColumn];
                     if (value != null && value != DBNull.Value)
-                    {
-                        return $"Bulk insert failed on data row {rowIndex + 1}: source column '{dataColumn.ColumnName}' has value '{value}' which may be out of range for destination column '{discoveredColumn.GetRuntimeName()}' of type '{discoveredColumn.DataType?.SQLType}'. Original MySQL error: {message}";
-                    }
+                        return
+                            $"Bulk insert failed on data row {rowIndex + 1}: source column '{dataColumn.ColumnName}' has value '{value}' which may be out of range for destination column '{discoveredColumn.GetRuntimeName()}' of type '{discoveredColumn.DataType?.SQLType}'. Original MySQL error: {message}";
                 }
+
                 rowIndex++;
             }
         }
@@ -254,8 +268,8 @@ public sealed class MySqlBulkCopy(DiscoveredTable targetTable, IManagedConnectio
     }
 
     /// <summary>
-    /// Returns the valid integer range for MySQL-specific integer types.
-    /// Handles MySQL's MEDIUMINT, TINYINT (signed), and UNSIGNED variants including BIGINT UNSIGNED.
+    ///     Returns the valid integer range for MySQL-specific integer types.
+    ///     Handles MySQL's MEDIUMINT, TINYINT (signed), and UNSIGNED variants including BIGINT UNSIGNED.
     /// </summary>
     protected override (BigInteger min, BigInteger max) GetIntegerRange(string sqlType) =>
         sqlType switch
@@ -276,18 +290,5 @@ public sealed class MySqlBulkCopy(DiscoveredTable targetTable, IManagedConnectio
     private void ThrowIfDisposed()
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
-    }
-
-    /// <summary>
-    /// Releases all resources used by the MySqlBulkCopy.
-    /// </summary>
-    public new void Dispose()
-    {
-        if (!_disposed)
-        {
-            base.Dispose();
-            _disposed = true;
-        }
-        GC.SuppressFinalize(this);
     }
 }

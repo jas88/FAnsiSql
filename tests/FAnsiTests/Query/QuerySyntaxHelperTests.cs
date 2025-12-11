@@ -1,5 +1,3 @@
-using System;
-using System.Linq;
 using FAnsi;
 using FAnsi.Discovery;
 using FAnsi.Discovery.QuerySyntax;
@@ -37,7 +35,8 @@ internal sealed class QuerySyntaxHelperTests
     }
 
     /// <summary>
-    /// Tests that no matter how many times you call EnsureWrapped or GetRuntimeName you always end up with the format that matches the last method call
+    ///     Tests that no matter how many times you call EnsureWrapped or GetRuntimeName you always end up with the format that
+    ///     matches the last method call
     /// </summary>
     /// <param name="dbType"></param>
     /// <param name="runtime"></param>
@@ -88,7 +87,9 @@ internal sealed class QuerySyntaxHelperTests
         // "count(*)" is technically a valid unquoted identifier (though in practice you'd quote it)
         // Oracle uppercases unquoted identifiers, so we need case-insensitive comparison
         var expectedCount = t == DatabaseType.Oracle ? "COUNT(*)" : "count(*)";
-        var expectedMethod = t == DatabaseType.Oracle ? "GETMYCOOLTHING(\"MAGIC FUN TIMES\")" : "GetMyCoolThing(\"Magic Fun Times\")";
+        var expectedMethod = t == DatabaseType.Oracle
+            ? "GETMYCOOLTHING(\"MAGIC FUN TIMES\")"
+            : "GetMyCoolThing(\"Magic Fun Times\")";
 
         Assert.That(syntaxHelper.GetRuntimeName("count(*)"), Is.EqualTo(expectedCount));
         Assert.That(syntaxHelper.GetRuntimeName("dbo.GetMyCoolThing(\"Magic Fun Times\")"), Is.EqualTo(expectedMethod));
@@ -97,7 +98,8 @@ internal sealed class QuerySyntaxHelperTests
         {
             Assert.That(syntaxHelper.TryGetRuntimeName("count(*)", out var name1), Is.True);
             Assert.That(name1, Is.EqualTo(expectedCount));
-            Assert.That(syntaxHelper.TryGetRuntimeName("dbo.GetMyCoolThing(\"Magic Fun Times\")", out var name2), Is.True);
+            Assert.That(syntaxHelper.TryGetRuntimeName("dbo.GetMyCoolThing(\"Magic Fun Times\")", out var name2),
+                Is.True);
             Assert.That(name2, Is.EqualTo(expectedMethod));
         });
     }
@@ -117,9 +119,9 @@ internal sealed class QuerySyntaxHelperTests
     }
 
     /// <summary>
-    /// Tests that GetRuntimeName correctly handles dots INSIDE wrapped identifiers.
-    /// For example, `db`.`table`.`Column.Name` should return "Column.Name", not "Name".
-    /// See GitHub issue #75.
+    ///     Tests that GetRuntimeName correctly handles dots INSIDE wrapped identifiers.
+    ///     For example, `db`.`table`.`Column.Name` should return "Column.Name", not "Name".
+    ///     See GitHub issue #75.
     /// </summary>
     [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void SyntaxHelperTest_GetRuntimeName_DotsInsideWrappedIdentifiers(DatabaseType dbType)
@@ -166,13 +168,15 @@ internal sealed class QuerySyntaxHelperTests
     [TestCase("count(*) as Frank32", "count(*)", "Frank32")]
     [TestCase("CAST([dave] as int) as [number]", "CAST([dave] as int)", "number")]
     [TestCase("CAST([dave] as int)", "CAST([dave] as int)", null)]
-    public void SyntaxHelperTest_SplitLineIntoSelectSQLAndAlias(string line, string expectedSelectSql, string? expectedAlias)
+    public void SyntaxHelperTest_SplitLineIntoSelectSQLAndAlias(string line, string expectedSelectSql,
+        string? expectedAlias)
     {
         foreach (var syntaxHelper in new[] { DatabaseType.Oracle, DatabaseType.MySql, DatabaseType.MicrosoftSQLServer }
                      .Select(static t => ImplementationManager.GetImplementation(t).GetQuerySyntaxHelper()))
             Assert.Multiple(() =>
             {
-                Assert.That(syntaxHelper.SplitLineIntoSelectSQLAndAlias(line, out var selectSQL, out var alias), Is.EqualTo(expectedAlias != null));
+                Assert.That(syntaxHelper.SplitLineIntoSelectSQLAndAlias(line, out var selectSQL, out var alias),
+                    Is.EqualTo(expectedAlias != null));
                 Assert.That(selectSQL, Is.EqualTo(expectedSelectSql));
                 Assert.That(alias, Is.EqualTo(expectedAlias));
             });
@@ -223,10 +227,12 @@ internal sealed class QuerySyntaxHelperTests
         Assert.DoesNotThrow(() => syntaxHelper.ValidateDatabaseName("db.table"));
         Assert.DoesNotThrow(() => syntaxHelper.ValidateDatabaseName("db(lol)"));
 
-        Assert.Throws<RuntimeNameException>(() => syntaxHelper.ValidateDatabaseName(new string('A', syntaxHelper.MaximumDatabaseLength + 1)));
+        Assert.Throws<RuntimeNameException>(() =>
+            syntaxHelper.ValidateDatabaseName(new string('A', syntaxHelper.MaximumDatabaseLength + 1)));
 
         Assert.DoesNotThrow(() => syntaxHelper.ValidateDatabaseName("A"));
-        Assert.DoesNotThrow(() => syntaxHelper.ValidateDatabaseName(new string('A', syntaxHelper.MaximumDatabaseLength)));
+        Assert.DoesNotThrow(() =>
+            syntaxHelper.ValidateDatabaseName(new string('A', syntaxHelper.MaximumDatabaseLength)));
     }
 
     [Test]
@@ -236,7 +242,8 @@ internal sealed class QuerySyntaxHelperTests
         {
             //normal unicode is fine
             Assert.That(QuerySyntaxHelper.MakeHeaderNameSensible("你好"), Is.EqualTo("你好"));
-            Assert.That(QuerySyntaxHelper.MakeHeaderNameSensible("你好; drop database bob;"), Is.EqualTo("你好DropDatabaseBob"));
+            Assert.That(QuerySyntaxHelper.MakeHeaderNameSensible("你好; drop database bob;"),
+                Is.EqualTo("你好DropDatabaseBob"));
         });
     }
 
@@ -276,7 +283,8 @@ internal sealed class QuerySyntaxHelperTests
     {
         var syntaxHelper = ImplementationManager.GetImplementation(dbType).GetQuerySyntaxHelper();
 
-        foreach (var name in new[] { null, "", " ", "\t" }.Select(emptySchemaExpression => syntaxHelper.EnsureFullyQualified("mydb", emptySchemaExpression, "Troll", "MyCol")))
+        foreach (var name in new[] { null, "", " ", "\t" }.Select(emptySchemaExpression =>
+                     syntaxHelper.EnsureFullyQualified("mydb", emptySchemaExpression, "Troll", "MyCol")))
         {
             Assert.That(string.Equals("MyCol", syntaxHelper.GetRuntimeName(name), StringComparison.OrdinalIgnoreCase));
 

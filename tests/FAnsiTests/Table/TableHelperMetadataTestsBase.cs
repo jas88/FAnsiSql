@@ -1,6 +1,4 @@
-using System;
 using System.Data;
-using System.Linq;
 using FAnsi;
 using FAnsi.Discovery;
 using NUnit.Framework;
@@ -9,8 +7,8 @@ using TypeGuesser;
 namespace FAnsiTests.Table;
 
 /// <summary>
-/// Tests TableHelper metadata operations: HasPrimaryKey, DiscoverColumns, DiscoverRelationships.
-/// These tests target uncovered functionality in all TableHelper implementations.
+///     Tests TableHelper metadata operations: HasPrimaryKey, DiscoverColumns, DiscoverRelationships.
+///     These tests target uncovered functionality in all TableHelper implementations.
 /// </summary>
 internal abstract class TableHelperMetadataTestsBase : DatabaseTests
 {
@@ -27,7 +25,8 @@ internal abstract class TableHelperMetadataTestsBase : DatabaseTests
 
         try
         {
-            Assert.That(table.DiscoverColumns().Any(c => c.IsPrimaryKey), Is.False, "Table without primary key should return false");
+            Assert.That(table.DiscoverColumns().Any(c => c.IsPrimaryKey), Is.False,
+                "Table without primary key should return false");
         }
         finally
         {
@@ -46,7 +45,8 @@ internal abstract class TableHelperMetadataTestsBase : DatabaseTests
 
         try
         {
-            Assert.That(table.DiscoverColumns().Any(c => c.IsPrimaryKey), Is.True, "Table with primary key should return true");
+            Assert.That(table.DiscoverColumns().Any(c => c.IsPrimaryKey), Is.True,
+                "Table with primary key should return true");
         }
         finally
         {
@@ -66,7 +66,8 @@ internal abstract class TableHelperMetadataTestsBase : DatabaseTests
 
         try
         {
-            Assert.That(table.DiscoverColumns().Any(c => c.IsPrimaryKey), Is.True, "Table with composite primary key should return true");
+            Assert.That(table.DiscoverColumns().Any(c => c.IsPrimaryKey), Is.True,
+                "Table with composite primary key should return true");
         }
         finally
         {
@@ -88,12 +89,14 @@ internal abstract class TableHelperMetadataTestsBase : DatabaseTests
 
         try
         {
-            Assert.That(table.DiscoverColumns().Any(c => c.IsPrimaryKey), Is.False, "Initially should have no primary key");
+            Assert.That(table.DiscoverColumns().Any(c => c.IsPrimaryKey), Is.False,
+                "Initially should have no primary key");
 
             var idColumn = table.DiscoverColumn("Id");
-            table.CreatePrimaryKey([idColumn]);
+            table.CreatePrimaryKey(idColumn);
 
-            Assert.That(table.DiscoverColumns().Any(c => c.IsPrimaryKey), Is.True, "After adding primary key, should return true");
+            Assert.That(table.DiscoverColumns().Any(c => c.IsPrimaryKey), Is.True,
+                "After adding primary key, should return true");
         }
         finally
         {
@@ -122,9 +125,15 @@ internal abstract class TableHelperMetadataTestsBase : DatabaseTests
             Assert.Multiple(() =>
             {
                 Assert.That(columns, Has.Length.EqualTo(3));
-                Assert.That(columns.Any(c => c.GetRuntimeName()?.Equals("Id", StringComparison.OrdinalIgnoreCase) == true), Is.True);
-                Assert.That(columns.Any(c => c.GetRuntimeName()?.Equals("Name", StringComparison.OrdinalIgnoreCase) == true), Is.True);
-                Assert.That(columns.Any(c => c.GetRuntimeName()?.Equals("Age", StringComparison.OrdinalIgnoreCase) == true), Is.True);
+                Assert.That(
+                    columns.Any(c => c.GetRuntimeName()?.Equals("Id", StringComparison.OrdinalIgnoreCase) == true),
+                    Is.True);
+                Assert.That(
+                    columns.Any(c => c.GetRuntimeName()?.Equals("Name", StringComparison.OrdinalIgnoreCase) == true),
+                    Is.True);
+                Assert.That(
+                    columns.Any(c => c.GetRuntimeName()?.Equals("Age", StringComparison.OrdinalIgnoreCase) == true),
+                    Is.True);
             });
         }
         finally
@@ -145,7 +154,8 @@ internal abstract class TableHelperMetadataTestsBase : DatabaseTests
         try
         {
             var columns = table.DiscoverColumns();
-            var idColumn = columns.FirstOrDefault(c => c.GetRuntimeName()?.Equals("Id", StringComparison.OrdinalIgnoreCase) == true);
+            var idColumn = columns.FirstOrDefault(c =>
+                c.GetRuntimeName()?.Equals("Id", StringComparison.OrdinalIgnoreCase) == true);
 
             Assert.Multiple(() =>
             {
@@ -175,7 +185,8 @@ internal abstract class TableHelperMetadataTestsBase : DatabaseTests
         try
         {
             var columns = table.DiscoverColumns();
-            var idColumn = columns.FirstOrDefault(c => c.GetRuntimeName()?.Equals("Id", StringComparison.OrdinalIgnoreCase) == true);
+            var idColumn = columns.FirstOrDefault(c =>
+                c.GetRuntimeName()?.Equals("Id", StringComparison.OrdinalIgnoreCase) == true);
 
             Assert.Multiple(() =>
             {
@@ -201,8 +212,10 @@ internal abstract class TableHelperMetadataTestsBase : DatabaseTests
         try
         {
             var columns = table.DiscoverColumns();
-            var notNullCol = columns.FirstOrDefault(c => c.GetRuntimeName()?.Equals("NotNull", StringComparison.OrdinalIgnoreCase) == true);
-            var nullableCol = columns.FirstOrDefault(c => c.GetRuntimeName()?.Equals("Nullable", StringComparison.OrdinalIgnoreCase) == true);
+            var notNullCol = columns.FirstOrDefault(c =>
+                c.GetRuntimeName()?.Equals("NotNull", StringComparison.OrdinalIgnoreCase) == true);
+            var nullableCol = columns.FirstOrDefault(c =>
+                c.GetRuntimeName()?.Equals("Nullable", StringComparison.OrdinalIgnoreCase) == true);
 
             Assert.Multiple(() =>
             {
@@ -226,7 +239,8 @@ internal abstract class TableHelperMetadataTestsBase : DatabaseTests
             new DatabaseColumnRequest("IntCol", new DatabaseTypeRequest(typeof(int))),
             new DatabaseColumnRequest("StringCol", new DatabaseTypeRequest(typeof(string), 50)),
             new DatabaseColumnRequest("DateCol", new DatabaseTypeRequest(typeof(DateTime))),
-            new DatabaseColumnRequest("DecimalCol", new DatabaseTypeRequest(typeof(decimal), null, new DecimalSize(10, 2)))
+            new DatabaseColumnRequest("DecimalCol",
+                new DatabaseTypeRequest(typeof(decimal), null, new DecimalSize(10, 2)))
         ]);
 
         try
@@ -235,10 +249,14 @@ internal abstract class TableHelperMetadataTestsBase : DatabaseTests
 
             Assert.That(columns, Has.Length.EqualTo(4));
 
-            var intCol = columns.FirstOrDefault(c => c.GetRuntimeName()?.Equals("IntCol", StringComparison.OrdinalIgnoreCase) == true);
-            var stringCol = columns.FirstOrDefault(c => c.GetRuntimeName()?.Equals("StringCol", StringComparison.OrdinalIgnoreCase) == true);
-            var dateCol = columns.FirstOrDefault(c => c.GetRuntimeName()?.Equals("DateCol", StringComparison.OrdinalIgnoreCase) == true);
-            var decimalCol = columns.FirstOrDefault(c => c.GetRuntimeName()?.Equals("DecimalCol", StringComparison.OrdinalIgnoreCase) == true);
+            var intCol = columns.FirstOrDefault(c =>
+                c.GetRuntimeName()?.Equals("IntCol", StringComparison.OrdinalIgnoreCase) == true);
+            var stringCol = columns.FirstOrDefault(c =>
+                c.GetRuntimeName()?.Equals("StringCol", StringComparison.OrdinalIgnoreCase) == true);
+            var dateCol = columns.FirstOrDefault(c =>
+                c.GetRuntimeName()?.Equals("DateCol", StringComparison.OrdinalIgnoreCase) == true);
+            var decimalCol = columns.FirstOrDefault(c =>
+                c.GetRuntimeName()?.Equals("DecimalCol", StringComparison.OrdinalIgnoreCase) == true);
 
             Assert.Multiple(() =>
             {
@@ -290,7 +308,8 @@ internal abstract class TableHelperMetadataTestsBase : DatabaseTests
     protected void DiscoverRelationships_WithForeignKey_ReturnsRelationship(DatabaseType type)
     {
         if (type == DatabaseType.Sqlite)
-            Assert.Ignore("SQLite does not support ALTER TABLE ADD CONSTRAINT for foreign keys - they must be defined at table creation");
+            Assert.Ignore(
+                "SQLite does not support ALTER TABLE ADD CONSTRAINT for foreign keys - they must be defined at table creation");
 
         var db = GetTestDatabase(type);
 
@@ -317,8 +336,10 @@ internal abstract class TableHelperMetadataTestsBase : DatabaseTests
             Assert.Multiple(() =>
             {
                 Assert.That(relationships, Has.Length.EqualTo(1));
-                Assert.That(relationships[0].PrimaryKeyTable.GetRuntimeName(), Is.EqualTo(parentTable.GetRuntimeName()).IgnoreCase);
-                Assert.That(relationships[0].ForeignKeyTable.GetRuntimeName(), Is.EqualTo(childTable.GetRuntimeName()).IgnoreCase);
+                Assert.That(relationships[0].PrimaryKeyTable.GetRuntimeName(),
+                    Is.EqualTo(parentTable.GetRuntimeName()).IgnoreCase);
+                Assert.That(relationships[0].ForeignKeyTable.GetRuntimeName(),
+                    Is.EqualTo(childTable.GetRuntimeName()).IgnoreCase);
             });
         }
         finally
@@ -369,8 +390,8 @@ internal abstract class TableHelperMetadataTestsBase : DatabaseTests
 
         try
         {
-            var sqlWithPk = table.ScriptTableCreation(dropPrimaryKeys: false, dropNullability: false, convertIdentityToInt: false);
-            var sqlWithoutPk = table.ScriptTableCreation(dropPrimaryKeys: true, dropNullability: false, convertIdentityToInt: false);
+            var sqlWithPk = table.ScriptTableCreation(false, false, false);
+            var sqlWithoutPk = table.ScriptTableCreation(true, false, false);
 
             Assert.Multiple(() =>
             {
@@ -426,8 +447,8 @@ internal abstract class TableHelperMetadataTestsBase : DatabaseTests
 
         try
         {
-            table.Insert(new System.Collections.Generic.Dictionary<string, object> { { "Id", 1 }, { "Value", "A" } });
-            table.Insert(new System.Collections.Generic.Dictionary<string, object> { { "Id", 2 }, { "Value", "B" } });
+            table.Insert(new Dictionary<string, object> { { "Id", 1 }, { "Value", "A" } });
+            table.Insert(new Dictionary<string, object> { { "Id", 2 }, { "Value", "B" } });
 
             Assert.That(table.GetRowCount(), Is.EqualTo(2));
 

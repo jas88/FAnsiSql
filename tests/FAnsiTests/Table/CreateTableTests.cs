@@ -1,9 +1,5 @@
-using System;
-using System.Collections.Generic;
 using System.Data;
 using System.Globalization;
-using System.IO;
-using System.Linq;
 using System.Reflection;
 using FAnsi;
 using FAnsi.Discovery;
@@ -22,7 +18,7 @@ internal sealed class CreateTableTests : DatabaseTests
         var db = GetTestDatabase(type);
         var table = db.CreateTable("People",
         [
-            new DatabaseColumnRequest("Name", new DatabaseTypeRequest(typeof (string), 10))
+            new DatabaseColumnRequest("Name", new DatabaseTypeRequest(typeof(string), 10))
         ]);
 
         Assert.That(table.Exists());
@@ -46,34 +42,42 @@ internal sealed class CreateTableTests : DatabaseTests
 
         database.CreateTable(tbl.GetRuntimeName(),
         [
-            new DatabaseColumnRequest("name", new DatabaseTypeRequest(typeof(string),10), false){IsPrimaryKey=true},
-            new DatabaseColumnRequest("foreignName", new DatabaseTypeRequest(typeof(string),7)){IsPrimaryKey=true},
-            new DatabaseColumnRequest("address", new DatabaseTypeRequest(typeof (string), 500)),
-            new DatabaseColumnRequest("dob", new DatabaseTypeRequest(typeof (DateTime)),false),
+            new DatabaseColumnRequest("name", new DatabaseTypeRequest(typeof(string), 10), false)
+                { IsPrimaryKey = true },
+            new DatabaseColumnRequest("foreignName", new DatabaseTypeRequest(typeof(string), 7))
+                { IsPrimaryKey = true },
+            new DatabaseColumnRequest("address", new DatabaseTypeRequest(typeof(string), 500)),
+            new DatabaseColumnRequest("dob", new DatabaseTypeRequest(typeof(DateTime)), false),
             new DatabaseColumnRequest("score",
-                new DatabaseTypeRequest(typeof (decimal), null, new DecimalSize(5, 3))) //<- e.g. 12345.123
+                new DatabaseTypeRequest(typeof(decimal), null, new DecimalSize(5, 3))) //<- e.g. 12345.123
         ]);
 
         Assert.That(tbl.Exists());
 
-        var colsDictionary = tbl.DiscoverColumns().ToDictionary(static k => k.GetRuntimeName() ?? throw new InvalidDataException(), static v => v, StringComparer.InvariantCultureIgnoreCase);
+        var colsDictionary = tbl.DiscoverColumns()
+            .ToDictionary(static k => k.GetRuntimeName() ?? throw new InvalidDataException(), static v => v,
+                StringComparer.InvariantCultureIgnoreCase);
 
         var name = colsDictionary["name"];
         Assert.Multiple(() =>
         {
             Assert.That(name.DataType?.GetLengthIfString(), Is.EqualTo(10));
             Assert.That(name.AllowNulls, Is.EqualTo(false));
-            Assert.That(syntaxHelper.TypeTranslater.GetCSharpTypeForSQLDBType(name.DataType?.SQLType), Is.EqualTo(typeof(string)));
+            Assert.That(syntaxHelper.TypeTranslater.GetCSharpTypeForSQLDBType(name.DataType?.SQLType),
+                Is.EqualTo(typeof(string)));
             Assert.That(name.IsPrimaryKey);
         });
 
-        var normalisedName = syntaxHelper.GetRuntimeName("foreignName"); //some database engines don't like capital letters?
+        var normalisedName =
+            syntaxHelper.GetRuntimeName("foreignName"); //some database engines don't like capital letters?
         var foreignName = colsDictionary[normalisedName];
         Assert.Multiple(() =>
         {
-            Assert.That(foreignName.AllowNulls, Is.EqualTo(false));//because it is part of the primary key we ignored the users request about nullability
+            Assert.That(foreignName.AllowNulls,
+                Is.EqualTo(false)); //because it is part of the primary key we ignored the users request about nullability
             Assert.That(foreignName.DataType?.GetLengthIfString(), Is.EqualTo(7));
-            Assert.That(syntaxHelper.TypeTranslater.GetCSharpTypeForSQLDBType(foreignName.DataType?.SQLType), Is.EqualTo(typeof(string)));
+            Assert.That(syntaxHelper.TypeTranslater.GetCSharpTypeForSQLDBType(foreignName.DataType?.SQLType),
+                Is.EqualTo(typeof(string)));
             Assert.That(foreignName.IsPrimaryKey);
         });
 
@@ -82,7 +86,8 @@ internal sealed class CreateTableTests : DatabaseTests
         {
             Assert.That(address.DataType?.GetLengthIfString(), Is.EqualTo(500));
             Assert.That(address.AllowNulls, Is.EqualTo(true));
-            Assert.That(syntaxHelper.TypeTranslater.GetCSharpTypeForSQLDBType(address.DataType?.SQLType), Is.EqualTo(typeof(string)));
+            Assert.That(syntaxHelper.TypeTranslater.GetCSharpTypeForSQLDBType(address.DataType?.SQLType),
+                Is.EqualTo(typeof(string)));
             Assert.That(address.IsPrimaryKey, Is.False);
         });
 
@@ -93,13 +98,16 @@ internal sealed class CreateTableTests : DatabaseTests
             if (type == DatabaseType.Sqlite)
             {
                 Assert.That(dob.DataType?.GetLengthIfString(), Is.EqualTo(int.MaxValue));
-                Assert.That(syntaxHelper.TypeTranslater.GetCSharpTypeForSQLDBType(dob.DataType?.SQLType), Is.EqualTo(typeof(string)));
+                Assert.That(syntaxHelper.TypeTranslater.GetCSharpTypeForSQLDBType(dob.DataType?.SQLType),
+                    Is.EqualTo(typeof(string)));
             }
             else
             {
                 Assert.That(dob.DataType?.GetLengthIfString(), Is.EqualTo(-1));
-                Assert.That(syntaxHelper.TypeTranslater.GetCSharpTypeForSQLDBType(dob.DataType?.SQLType), Is.EqualTo(typeof(DateTime)));
+                Assert.That(syntaxHelper.TypeTranslater.GetCSharpTypeForSQLDBType(dob.DataType?.SQLType),
+                    Is.EqualTo(typeof(DateTime)));
             }
+
             Assert.That(dob.AllowNulls, Is.EqualTo(false));
             Assert.That(dob.IsPrimaryKey, Is.False);
         });
@@ -111,7 +119,8 @@ internal sealed class CreateTableTests : DatabaseTests
             Assert.That(score.DataType?.GetDecimalSize()?.NumbersBeforeDecimalPlace, Is.EqualTo(5));
             Assert.That(score.DataType?.GetDecimalSize()?.NumbersAfterDecimalPlace, Is.EqualTo(3));
 
-            Assert.That(syntaxHelper.TypeTranslater.GetCSharpTypeForSQLDBType(score.DataType?.SQLType), Is.EqualTo(typeof(decimal)));
+            Assert.That(syntaxHelper.TypeTranslater.GetCSharpTypeForSQLDBType(score.DataType?.SQLType),
+                Is.EqualTo(typeof(decimal)));
         });
 
         tbl.Drop();
@@ -139,7 +148,7 @@ internal sealed class CreateTableTests : DatabaseTests
         var db = GetTestDatabase(type);
         var table = db.CreateTable("People",
         [
-            new DatabaseColumnRequest("Name", new DatabaseTypeRequest(typeof (string), 5))
+            new DatabaseColumnRequest("Name", new DatabaseTypeRequest(typeof(string), 5))
         ]);
 
         Assert.That(table.Exists());
@@ -197,7 +206,7 @@ internal sealed class CreateTableTests : DatabaseTests
         var table = database.CreateTable(
             "PkTable",
             [
-                new DatabaseColumnRequest("Name",new DatabaseTypeRequest(typeof(string),10))
+                new DatabaseColumnRequest("Name", new DatabaseTypeRequest(typeof(string), 10))
                 {
                     IsPrimaryKey = true
                 }
@@ -215,7 +224,7 @@ internal sealed class CreateTableTests : DatabaseTests
 
         var tbl = database.CreateTable("MyTable",
         [
-            new DatabaseColumnRequest("Name", new DatabaseTypeRequest(typeof(string),100))
+            new DatabaseColumnRequest("Name", new DatabaseTypeRequest(typeof(string), 100))
             {
                 AllowNulls = false,
                 Collation = collation
@@ -292,9 +301,8 @@ internal sealed class CreateTableTests : DatabaseTests
 
         var tbl = db.CreateTable("RaceTable",
         [
-            new DatabaseColumnRequest("A", "int"){IsPrimaryKey = true},
+            new DatabaseColumnRequest("A", "int") { IsPrimaryKey = true },
             new DatabaseColumnRequest("B", "int")
-
         ]);
 
         Assert.That(tbl.GetDataTable().Columns, Has.Count.EqualTo(2));
@@ -311,14 +319,13 @@ internal sealed class CreateTableTests : DatabaseTests
     {
         var db = GetTestDatabase(DatabaseType.Oracle);
         var table = db.CreateTable("MyTable",
-            [
-                new DatabaseColumnRequest("MyCol", new DatabaseTypeRequest(typeof(bool)))
-            ]);
+        [
+            new DatabaseColumnRequest("MyCol", new DatabaseTypeRequest(typeof(bool)))
+        ]);
 
         var col = table.DiscoverColumn("MyCol");
         Assert.That(col.DataType?.SQLType, Is.EqualTo("decimal(1,0)"));
     }
-
 
 
     //[TestCase(DatabaseType.MySql, "didn’t")]
@@ -343,8 +350,10 @@ internal sealed class CreateTableTests : DatabaseTests
         table.Drop();
 
         //column created should know it is unicode
-        var typeRequest = col.Table.GetQuerySyntaxHelper().TypeTranslater.GetDataTypeRequestForSQLDBType(col.DataType?.SQLType ?? throw new InvalidOperationException());
-        Assert.That(typeRequest.Unicode, "Expected column DatabaseTypeRequest generated from column SQLType to be Unicode");
+        var typeRequest = col.Table.GetQuerySyntaxHelper().TypeTranslater
+            .GetDataTypeRequestForSQLDBType(col.DataType?.SQLType ?? throw new InvalidOperationException());
+        Assert.That(typeRequest.Unicode,
+            "Expected column DatabaseTypeRequest generated from column SQLType to be Unicode");
 
         //Column created should use unicode when creating a new datatype computer from the col
         var comp = col.GetGuesser();
@@ -386,7 +395,9 @@ internal sealed class CreateTableTests : DatabaseTests
         dt2.Rows.Add(23);
 
         using (var bulk = table.BeginBulkInsert(CultureInfo.InvariantCulture))
+        {
             bulk.Upload(dt2);
+        }
 
         Assert.That(table.GetRowCount(), Is.EqualTo(4));
     }
@@ -438,7 +449,7 @@ internal sealed class CreateTableTests : DatabaseTests
     }
 
     /// <summary>
-    /// Just to check that clone on <see cref="DataTable"/> properly clones <see cref="DataColumn.ExtendedProperties"/>
+    ///     Just to check that clone on <see cref="DataTable" /> properly clones <see cref="DataColumn.ExtendedProperties" />
     /// </summary>
     [Test]
     public void Test_DataTableClone_ExtendedProperties()
@@ -473,7 +484,7 @@ internal sealed class CreateTableTests : DatabaseTests
     }
 
     /// <summary>
-    /// Tests how CreateTable interacts with <see cref="DataColumn"/> of type Object
+    ///     Tests how CreateTable interacts with <see cref="DataColumn" /> of type Object
     /// </summary>
     [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void CreateTable_ObjectColumns_StringContent(DatabaseType dbType)
@@ -488,12 +499,12 @@ internal sealed class CreateTableTests : DatabaseTests
         var ex = Assert.Throws<NotSupportedException>(() => db.CreateTable("T1", dt));
 
         Assert.That(ex?.Message, Does.Contain("System.Object"));
-
     }
 
     /// <summary>
-    /// Tests how we can customize how "T" and "F" etc are interpreted (either as boolean true/false or as string). This test
-    /// uses the static defaults in <see cref="GuessSettingsFactory.Defaults"/>.
+    ///     Tests how we can customize how "T" and "F" etc are interpreted (either as boolean true/false or as string). This
+    ///     test
+    ///     uses the static defaults in <see cref="GuessSettingsFactory.Defaults" />.
     /// </summary>
     public void CreateTable_GuessSettings_StaticDefaults_TF(DatabaseType dbType, bool treatAsBoolean)
     {
@@ -516,8 +527,10 @@ internal sealed class CreateTableTests : DatabaseTests
 
             Assert.Multiple(() =>
             {
-                Assert.That(col.DataType?.GetCSharpDataType(), Is.EqualTo(treatAsBoolean ? typeof(bool) : typeof(string)));
-                Assert.That(col.DataType?.GetLengthIfString(), Is.EqualTo(treatAsBoolean ? -1 : 1), "Expected string length to be 1 for 'T'");
+                Assert.That(col.DataType?.GetCSharpDataType(),
+                    Is.EqualTo(treatAsBoolean ? typeof(bool) : typeof(string)));
+                Assert.That(col.DataType?.GetLengthIfString(), Is.EqualTo(treatAsBoolean ? -1 : 1),
+                    "Expected string length to be 1 for 'T'");
             });
         }
         finally
@@ -535,17 +548,16 @@ internal sealed class CreateTableTests : DatabaseTests
         var tbl = db.CreateTable("ScriptsRun",
         [
             new DatabaseColumnRequest("cint", new DatabaseTypeRequest(typeof(int)))
-                {IsAutoIncrement = true, IsPrimaryKey = true},
+                { IsAutoIncrement = true, IsPrimaryKey = true },
             new DatabaseColumnRequest("clong", new DatabaseTypeRequest(typeof(long))),
             new DatabaseColumnRequest("cshort", new DatabaseTypeRequest(typeof(short))),
             new DatabaseColumnRequest("script_name", new DatabaseTypeRequest(typeof(string), 255)),
             new DatabaseColumnRequest("text_of_script", new DatabaseTypeRequest(typeof(string), int.MaxValue)),
-            new DatabaseColumnRequest("text_hash", new DatabaseTypeRequest(typeof(string), 512) {Unicode = true}),
+            new DatabaseColumnRequest("text_hash", new DatabaseTypeRequest(typeof(string), 512) { Unicode = true }),
             new DatabaseColumnRequest("one_time_script", new DatabaseTypeRequest(typeof(bool))),
             new DatabaseColumnRequest("entry_date", new DatabaseTypeRequest(typeof(DateTime))),
             new DatabaseColumnRequest("modified_date", new DatabaseTypeRequest(typeof(DateTime))),
             new DatabaseColumnRequest("entered_by", new DatabaseTypeRequest(typeof(string), 50))
-
         ]);
 
         Assert.Multiple(() =>
@@ -572,8 +584,9 @@ internal sealed class CreateTableTests : DatabaseTests
     }
 
     /// <summary>
-    /// Tests how we can customize how "T" and "F" etc are interpreted (either as boolean true/false or as string). This test
-    /// uses the <see cref="CreateTableArgs.GuessSettings"/> injection.
+    ///     Tests how we can customize how "T" and "F" etc are interpreted (either as boolean true/false or as string). This
+    ///     test
+    ///     uses the <see cref="CreateTableArgs.GuessSettings" /> injection.
     /// </summary>
     public void CreateTable_GuessSettings_InArgs_TF(DatabaseType dbType, bool treatAsBoolean)
     {
@@ -587,8 +600,10 @@ internal sealed class CreateTableTests : DatabaseTests
         var args = new CreateTableArgs(db, "Hb", null, dt, false);
         Assert.Multiple(() =>
         {
-            Assert.That(GuessSettingsFactory.Defaults.CharCanBeBoolean, Is.EqualTo(args.GuessSettings.CharCanBeBoolean), "Default should match the static default");
-            Assert.That(!ReferenceEquals(args.GuessSettings, GuessSettingsFactory.Defaults), "Args should not be the same instance! otherwise we would unintentionally edit the defaults!");
+            Assert.That(GuessSettingsFactory.Defaults.CharCanBeBoolean, Is.EqualTo(args.GuessSettings.CharCanBeBoolean),
+                "Default should match the static default");
+            Assert.That(!ReferenceEquals(args.GuessSettings, GuessSettingsFactory.Defaults),
+                "Args should not be the same instance! otherwise we would unintentionally edit the defaults!");
         });
 
         //change the args settings
@@ -600,7 +615,8 @@ internal sealed class CreateTableTests : DatabaseTests
         Assert.Multiple(() =>
         {
             Assert.That(col.DataType?.GetCSharpDataType(), Is.EqualTo(treatAsBoolean ? typeof(bool) : typeof(string)));
-            Assert.That(col.DataType?.GetLengthIfString(), Is.EqualTo(treatAsBoolean ? -1 : 1), "Expected string length to be 1 for 'T'");
+            Assert.That(col.DataType?.GetLengthIfString(), Is.EqualTo(treatAsBoolean ? -1 : 1),
+                "Expected string length to be 1 for 'T'");
         });
     }
 
@@ -616,8 +632,10 @@ internal sealed class CreateTableTests : DatabaseTests
         var args = new CreateTableArgs(db, "Hb", null, dt, false);
         Assert.Multiple(() =>
         {
-            Assert.That(GuessSettingsFactory.Defaults.ExplicitDateFormats, Is.EqualTo(args.GuessSettings.ExplicitDateFormats), "Default should match the static default");
-            Assert.That(!ReferenceEquals(args.GuessSettings, GuessSettingsFactory.Defaults), "Args should not be the same instance! otherwise we would unintentionally edit the defaults!");
+            Assert.That(GuessSettingsFactory.Defaults.ExplicitDateFormats,
+                Is.EqualTo(args.GuessSettings.ExplicitDateFormats), "Default should match the static default");
+            Assert.That(!ReferenceEquals(args.GuessSettings, GuessSettingsFactory.Defaults),
+                "Args should not be the same instance! otherwise we would unintentionally edit the defaults!");
         });
 
         //change the args settings to treat this date format
@@ -628,30 +646,27 @@ internal sealed class CreateTableTests : DatabaseTests
 
         // SQLite stores DateTime as TEXT (string type)
         if (dbType == DatabaseType.Sqlite)
-        {
             Assert.That(col.DataType?.GetCSharpDataType(), Is.EqualTo(typeof(string)));
-        }
         else
-        {
-            Assert.That(col.DataType?.GetCSharpDataType(), Is.EqualTo(useCustomDate ? typeof(DateTime) : typeof(string)));
-        }
+            Assert.That(col.DataType?.GetCSharpDataType(),
+                Is.EqualTo(useCustomDate ? typeof(DateTime) : typeof(string)));
 
         var dtDown = tbl.GetDataTable();
 
         // SQLite stores dates as strings, doesn't convert them
         if (dbType == DatabaseType.Sqlite)
-        {
             Assert.That(dtDown.Rows[0][0], Is.EqualTo("013020"));
-        }
         else
-        {
             Assert.That(dtDown.Rows[0][0], Is.EqualTo(useCustomDate ? new DateTime(2020, 01, 30) : "013020"));
-        }
     }
+
     [Test]
     public void GuessSettings_CopyProperties()
     {
-        var props = typeof(GuessSettings).GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.SetProperty).Select(static p => p.Name).ToArray();
-        Assert.That(props, Has.Length.EqualTo(2), "There are new settable Properties in GuessSettings, we should copy them across in DiscoveredDatabaseHelper.CreateTable");
+        var props = typeof(GuessSettings)
+            .GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.SetProperty)
+            .Select(static p => p.Name).ToArray();
+        Assert.That(props, Has.Length.EqualTo(2),
+            "There are new settable Properties in GuessSettings, we should copy them across in DiscoveredDatabaseHelper.CreateTable");
     }
 }

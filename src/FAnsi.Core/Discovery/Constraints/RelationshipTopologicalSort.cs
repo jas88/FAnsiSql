@@ -1,30 +1,24 @@
-using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Linq;
 using FAnsi.Exceptions;
 
 namespace FAnsi.Discovery.Constraints;
 
 /// <summary>
-/// Helps resolve a dependency order between a collection of tables with interlinking foreign key constraints.  Implements Khan's algorithm.
+///     Helps resolve a dependency order between a collection of tables with interlinking foreign key constraints.
+///     Implements Khan's algorithm.
 /// </summary>
 public sealed class RelationshipTopologicalSort
 {
-    /// <summary>
-    /// The dependency order from least dependent (isolated tables and parent tables) to most (child tables then grandchild tables).
-    /// </summary>
-    public IReadOnlyList<DiscoveredTable> Order => new ReadOnlyCollection<DiscoveredTable>(_sortedList);
-
     private readonly List<DiscoveredTable> _sortedList;
 
     /// <summary>
-    /// <para>Connects to the database and discovers relationships between <paramref name="tables"/> then generates a sort order of dependency in which
-    /// all primary key tables should appear before thier respective foreign key tables.</para>
-    ///
-    /// <para>Calling this method will result in database queries being executed (to discover keys)</para>
-    ///
-    ///  <para>Sort order is based on Khan's algorithm (https://en.wikipedia.org/wiki/Topological_sorting)</para>
+    ///     <para>
+    ///         Connects to the database and discovers relationships between <paramref name="tables" /> then generates a sort
+    ///         order of dependency in which
+    ///         all primary key tables should appear before thier respective foreign key tables.
+    ///     </para>
+    ///     <para>Calling this method will result in database queries being executed (to discover keys)</para>
+    ///     <para>Sort order is based on Khan's algorithm (https://en.wikipedia.org/wiki/Topological_sorting)</para>
     /// </summary>
     /// <param name="tables"></param>
     /// <exception cref="Exceptions.CircularDependencyException"></exception>
@@ -42,7 +36,13 @@ public sealed class RelationshipTopologicalSort
     }
 
     /// <summary>
-    /// Topological Sorting (Kahn's algorithm)
+    ///     The dependency order from least dependent (isolated tables and parent tables) to most (child tables then grandchild
+    ///     tables).
+    /// </summary>
+    public IReadOnlyList<DiscoveredTable> Order => new ReadOnlyCollection<DiscoveredTable>(_sortedList);
+
+    /// <summary>
+    ///     Topological Sorting (Kahn's algorithm)
     /// </summary>
     /// <remarks>https://en.wikipedia.org/wiki/Topological_sorting</remarks>
     /// <typeparam name="T"></typeparam>
@@ -60,7 +60,6 @@ public sealed class RelationshipTopologicalSort
         // while S is non-empty do
         while (s.Count != 0)
         {
-
             //  remove a node n from S
             var n = s.First();
             s.Remove(n);

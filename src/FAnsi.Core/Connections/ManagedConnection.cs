@@ -5,21 +5,9 @@ using FAnsi.Discovery;
 
 namespace FAnsi.Connections;
 
-/// <inheritdoc/>
+/// <inheritdoc />
 public sealed class ManagedConnection : IManagedConnection
 {
-    /// <inheritdoc/>
-    public DbConnection Connection { get; }
-
-    /// <inheritdoc/>
-    public DbTransaction? Transaction { get; private set; }
-
-    /// <inheritdoc/>
-    public IManagedTransaction? ManagedTransaction { get; private set; }
-
-    /// <inheritdoc/>
-    public bool CloseOnDispose { get; set; }
-
     private readonly DiscoveredServer _discoveredServer;
 
     internal ManagedConnection(DiscoveredServer discoveredServer, IManagedTransaction? managedTransaction)
@@ -41,6 +29,18 @@ public sealed class ManagedConnection : IManagedConnection
         Connection.Open();
     }
 
+    /// <inheritdoc />
+    public DbConnection Connection { get; }
+
+    /// <inheritdoc />
+    public DbTransaction? Transaction { get; private set; }
+
+    /// <inheritdoc />
+    public IManagedTransaction? ManagedTransaction { get; private set; }
+
+    /// <inheritdoc />
+    public bool CloseOnDispose { get; set; }
+
     public ManagedConnection Clone()
     {
         var clone = (ManagedConnection)MemberwiseClone();
@@ -52,9 +52,9 @@ public sealed class ManagedConnection : IManagedConnection
     }
 
     /// <summary>
-    /// Closes and disposes the DbConnection if explicitly requested (CloseOnDispose=true).
-    /// For pooled connections, warns if disposing with an uncommitted transaction and relies on
-    /// pool validation to reject dirty connections on next retrieval (fixes #30).
+    ///     Closes and disposes the DbConnection if explicitly requested (CloseOnDispose=true).
+    ///     For pooled connections, warns if disposing with an uncommitted transaction and relies on
+    ///     pool validation to reject dirty connections on next retrieval (fixes #30).
     /// </summary>
     public void Dispose()
     {
@@ -69,10 +69,8 @@ public sealed class ManagedConnection : IManagedConnection
         if (ManagedTransaction == null &&
             Connection.State == ConnectionState.Open &&
             _discoveredServer.Helper.HasDanglingTransaction(Connection))
-        {
             Debug.WriteLine($"Warning: Disposing pooled connection with uncommitted transaction. " +
-                          $"This may indicate a bug where a transaction was not properly committed or rolled back. " +
-                          $"Connection: {Connection.GetType().Name}");
-        }
+                            $"This may indicate a bug where a transaction was not properly committed or rolled back. " +
+                            $"Connection: {Connection.GetType().Name}");
     }
 }

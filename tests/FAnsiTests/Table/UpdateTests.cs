@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using System.Data;
 using FAnsi;
 using FAnsi.Discovery;
@@ -60,14 +58,22 @@ internal sealed class UpdateTests : DatabaseTests
         con.Open();
 
         using (var cmd = db.Server.GetCommand(sql, con))
+        {
             Assert.That(cmd.ExecuteNonQuery(), Is.EqualTo(1));
+        }
 
         //Frank should have got a new high score of 900
-        using (var cmd = db.Server.GetCommand($"SELECT {highScore} from {tbl1.GetFullyQualifiedName()} WHERE {name} = 'Frank'", con))
+        using (var cmd = db.Server.GetCommand(
+                   $"SELECT {highScore} from {tbl1.GetFullyQualifiedName()} WHERE {name} = 'Frank'", con))
+        {
             Assert.That(cmd.ExecuteScalar(), Is.EqualTo(900));
+        }
 
         //Dave should have his old score of 100
-        using (var cmd = db.Server.GetCommand($"SELECT {highScore} from {tbl1.GetFullyQualifiedName()} WHERE {name} = 'Dave'", con))
+        using (var cmd = db.Server.GetCommand(
+                   $"SELECT {highScore} from {tbl1.GetFullyQualifiedName()} WHERE {name} = 'Dave'", con))
+        {
             Assert.That(cmd.ExecuteScalar(), Is.EqualTo(100));
+        }
     }
 }

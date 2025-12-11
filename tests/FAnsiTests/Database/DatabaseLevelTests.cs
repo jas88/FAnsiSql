@@ -1,14 +1,9 @@
-using System;
 using System.Collections;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using FAnsi;
 using FAnsi.Discovery;
 using FAnsi.Implementation;
 using NUnit.Framework;
 using NUnit.Framework.Constraints;
-using Oracle.ManagedDataAccess.Client;
 using TypeGuesser;
 
 namespace FAnsiTests.Database;
@@ -72,7 +67,9 @@ internal sealed class DatabaseLevelTests : DatabaseTests
         Assert.That(
             () => db.Server.Helper.ListDatabasesAsync(db.Server.Builder, new CancellationToken(true))
                 .ToBlockingEnumerable().ToList(), exceptionType);
-        var databases = db.Server.Helper.ListDatabasesAsync(db.Server.Builder, CancellationToken.None).ToBlockingEnumerable().ToList();
-        Assert.That(databases, Has.Member(db.GetRuntimeName()).Using((IEqualityComparer)StringComparer.OrdinalIgnoreCase));
+        var databases = db.Server.Helper.ListDatabasesAsync(db.Server.Builder, CancellationToken.None)
+            .ToBlockingEnumerable().ToList();
+        Assert.That(databases,
+            Has.Member(db.GetRuntimeName()).Using((IEqualityComparer)StringComparer.OrdinalIgnoreCase));
     }
 }

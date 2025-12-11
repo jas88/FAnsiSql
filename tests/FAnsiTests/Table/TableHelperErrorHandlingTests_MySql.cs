@@ -11,7 +11,8 @@ internal sealed class TableHelperErrorHandlingTests_MySql : TableHelperErrorHand
     public void Drop_NonExistentTable_ThrowsException() => Drop_NonExistentTable_ThrowsException(DbType);
 
     [Test]
-    public void AddColumn_DuplicateColumnName_ThrowsException() => AddColumn_DuplicateColumnName_ThrowsException(DbType);
+    public void AddColumn_DuplicateColumnName_ThrowsException() =>
+        AddColumn_DuplicateColumnName_ThrowsException(DbType);
 
     [Test]
     public void AddColumn_InvalidDataType_ThrowsException() => AddColumn_InvalidDataType_ThrowsException(DbType);
@@ -23,7 +24,8 @@ internal sealed class TableHelperErrorHandlingTests_MySql : TableHelperErrorHand
     public void Truncate_NonExistentTable_ThrowsException() => Truncate_NonExistentTable_ThrowsException(DbType);
 
     [Test]
-    public void CreateIndex_DuplicateIndexName_ThrowsException() => CreateIndex_DuplicateIndexName_ThrowsException(DbType);
+    public void CreateIndex_DuplicateIndexName_ThrowsException() =>
+        CreateIndex_DuplicateIndexName_ThrowsException(DbType);
 
     [Test]
     public void DropIndex_NonExistentIndex_ThrowsException() => DropIndex_NonExistentIndex_ThrowsException(DbType);
@@ -41,7 +43,8 @@ internal sealed class TableHelperErrorHandlingTests_MySql : TableHelperErrorHand
     public void AddColumn_EmptyColumnName_ThrowsException() => AddColumn_EmptyColumnName_ThrowsException(DbType);
 
     [Test]
-    public void Insert_WithAutoIncrement_Concurrent_NoCollisions() => Insert_WithAutoIncrement_Concurrent_NoCollisions(DbType);
+    public void Insert_WithAutoIncrement_Concurrent_NoCollisions() =>
+        Insert_WithAutoIncrement_Concurrent_NoCollisions(DbType);
 
     [Test]
     public void Insert_NullIntoNotNullColumn_ThrowsException() => Insert_NullIntoNotNullColumn_ThrowsException(DbType);
@@ -60,5 +63,4 @@ internal sealed class TableHelperErrorHandlingTests_MySql : TableHelperErrorHand
 
     [Test]
     public void Insert_SpecialCharactersInString_Success() => Insert_SpecialCharactersInString_Success(DbType);
-
 }

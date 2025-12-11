@@ -1,37 +1,21 @@
-using System;
 using System.Data;
-using System.Data.Common;
 using FAnsi.Discovery;
 
 namespace FAnsi.Connections;
 
 /// <summary>
-/// Represents a server-level pooled connection that can switch between databases.
-/// Used internally by ManagedConnectionPool for SQL Server and MySQL.
+///     Represents a server-level pooled connection that can switch between databases.
+///     Used internally by ManagedConnectionPool for SQL Server and MySQL.
 /// </summary>
 internal sealed class ServerPooledConnection : IDisposable
 {
     /// <summary>
-    /// The wrapped managed connection
-    /// </summary>
-    public IManagedConnection ManagedConnection { get; }
-
-    /// <summary>
-    /// The current database context, or null if unknown/not applicable
-    /// </summary>
-    public string? CurrentDatabase { get; private set; }
-
-    /// <summary>
-    /// The database type for this connection
-    /// </summary>
-    public DatabaseType DatabaseType { get; }
-
-    /// <summary>
-    /// The server helper for executing database-specific operations
+    ///     The server helper for executing database-specific operations
     /// </summary>
     private readonly IDiscoveredServerHelper _serverHelper;
 
-    public ServerPooledConnection(IManagedConnection managedConnection, DatabaseType databaseType, IDiscoveredServerHelper serverHelper, string? initialDatabase = null)
+    public ServerPooledConnection(IManagedConnection managedConnection, DatabaseType databaseType,
+        IDiscoveredServerHelper serverHelper, string? initialDatabase = null)
     {
         ManagedConnection = managedConnection ?? throw new ArgumentNullException(nameof(managedConnection));
         DatabaseType = databaseType;
@@ -40,8 +24,28 @@ internal sealed class ServerPooledConnection : IDisposable
     }
 
     /// <summary>
-    /// Switches the connection to the specified database if not already there.
-    /// Only supported for SQL Server and MySQL.
+    ///     The wrapped managed connection
+    /// </summary>
+    public IManagedConnection ManagedConnection { get; }
+
+    /// <summary>
+    ///     The current database context, or null if unknown/not applicable
+    /// </summary>
+    public string? CurrentDatabase { get; private set; }
+
+    /// <summary>
+    ///     The database type for this connection
+    /// </summary>
+    public DatabaseType DatabaseType { get; }
+
+    public void Dispose()
+    {
+        ManagedConnection?.Connection?.Dispose();
+    }
+
+    /// <summary>
+    ///     Switches the connection to the specified database if not already there.
+    ///     Only supported for SQL Server and MySQL.
     /// </summary>
     /// <param name="targetDatabase">The database to switch to</param>
     public void SwitchDatabase(string targetDatabase)
@@ -63,6 +67,7 @@ internal sealed class ServerPooledConnection : IDisposable
                     cmd.CommandText = $"USE {syntax.EnsureWrapped(targetDatabase)}";
                     cmd.ExecuteNonQuery();
                 }
+
                 CurrentDatabase = targetDatabase;
                 break;
 
@@ -83,18 +88,11 @@ internal sealed class ServerPooledConnection : IDisposable
     }
 
     /// <summary>
-    /// Validates that the connection is still alive and safe to reuse
+    ///     Validates that the connection is still alive and safe to reuse
     /// </summary>
-    public bool IsValid()
-    {
-        return ManagedConnection.Connection.State == ConnectionState.Open &&
-               ManagedConnection.Transaction == null &&
-               _serverHelper.IsConnectionAlive(ManagedConnection.Connection) &&
-               !_serverHelper.HasDanglingTransaction(ManagedConnection.Connection);
-    }
-
-    public void Dispose()
-    {
-        ManagedConnection?.Connection?.Dispose();
-    }
+    public bool IsValid() =>
+        ManagedConnection.Connection.State == ConnectionState.Open &&
+        ManagedConnection.Transaction == null &&
+        _serverHelper.IsConnectionAlive(ManagedConnection.Connection) &&
+        !_serverHelper.HasDanglingTransaction(ManagedConnection.Connection);
 }
