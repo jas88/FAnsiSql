@@ -21,8 +21,6 @@
 		<DatabaseType>PostgreSql</DatabaseType>
 		<ConnectionString>User ID=postgres;Password=pgpass4291;Host=127.0.0.1;Port=5432;Database=postgres</ConnectionString>
 	</TestDatabase>
-	<TestDatabase>
-		<DatabaseType>Sqlite</DatabaseType>
-		<ConnectionString>Data Source=/tmp/fansitests.db</ConnectionString>
-	</TestDatabase>
+	<!-- SQLite removed: FAnsi's database abstraction doesn't support SQLite's file-based model.
+	     SQLite tests run locally but skip in CI. See AggregationTests.GetTestTable() for details. -->
 </TestDatabases>
