@@ -103,20 +103,20 @@ jobs:
           --no-build \
           --coverage --coverage-output-format cobertura --coverage-output coverage/coverage.cobertura.xml
 
-    - name: Debug coverage files
+    - name: Collect coverage files
       run: |
-        echo "=== Coverage files found ==="
-        find coverage -name "*.xml" -exec ls -lh {} \;
-        echo ""
-        echo "=== Coverage file content preview ==="
-        head -50 coverage/coverage.cobertura.xml || true
+        # MTP outputs coverage to TestResults directory, collect it
+        mkdir -p coverage
+        find . -path "*/TestResults/coverage/*.cobertura.xml" -exec cp {} coverage/ \;
+        echo "=== Coverage files collected ==="
+        ls -la coverage/ || echo "No coverage files found"
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v5
       env:
         CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
       with:
-        files: ./coverage/coverage.cobertura.xml
+        directory: ./coverage
         flags: unittests
         name: codecov-umbrella
         fail_ci_if_error: false
