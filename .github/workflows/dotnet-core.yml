@@ -99,31 +99,24 @@ jobs:
 
     - name: Test
       run: |
-        dotnet test FAnsi.sln -c Release \
-          --logger "console;verbosity=minimal" \
-          --nologo \
+        dotnet test --solution FAnsi.sln -c Release \
           --no-build \
-          --collect:"XPlat Code Coverage" \
-          --results-directory coverage \
-          --settings coverage.runsettings
+          --coverage --coverage-output-format cobertura --coverage-output coverage/coverage.cobertura.xml
 
     - name: Debug coverage files
       run: |
         echo "=== Coverage files found ==="
-        find coverage -name "coverage.info" -exec ls -lh {} \;
+        find coverage -name "*.xml" -exec ls -lh {} \;
         echo ""
-        echo "=== Sample file paths from first coverage file ==="
-        find coverage -name "coverage.info" | head -1 | xargs grep "^SF:" | head -20
-        echo ""
-        echo "=== Total lines in first coverage file ==="
-        find coverage -name "coverage.info" | head -1 | xargs wc -l
+        echo "=== Coverage file content preview ==="
+        head -50 coverage/coverage.cobertura.xml || true
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v5
       env:
         CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
       with:
-        files: ./coverage/**/coverage.info
+        files: ./coverage/coverage.cobertura.xml
         flags: unittests
         name: codecov-umbrella
         fail_ci_if_error: false
