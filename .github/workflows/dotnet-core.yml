@@ -101,11 +101,11 @@ jobs:
       run: |
         dotnet test --solution FAnsi.sln -c Release \
           --no-build \
-          --coverage --coverage-output-format cobertura --coverage-output coverage/coverage.cobertura.xml
+          --coverage --coverage-output-format cobertura
 
     - name: Collect coverage files
       run: |
-        # MTP outputs coverage to TestResults directory, collect it
+        # MTP outputs coverage to TestResults/coverage/ under test project directories
         mkdir -p coverage
         find . -path "*/TestResults/coverage/*.cobertura.xml" -exec cp {} coverage/ \;
         echo "=== Coverage files collected ==="
