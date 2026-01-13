@@ -106,9 +106,7 @@ public abstract class DatabaseTests
     protected DiscoveredServer GetTestServer(DatabaseType type)
     {
         if (!TestConnectionStrings.TryGetValue(type, out var connString))
-            // SQLite has known FAnsi database abstraction limitations, allow it to skip in CI
-            AssertRequirement($"No connection string configured for {type}",
-                allowSkipInCi: type == DatabaseType.Sqlite);
+            AssertRequirement($"No connection string configured for {type}");
 
         return new DiscoveredServer(connString, type);
     }
@@ -116,7 +114,19 @@ public abstract class DatabaseTests
     protected DiscoveredDatabase GetTestDatabase(DatabaseType type, bool cleanDatabase = true)
     {
         var server = GetTestServer(type);
-        var db = server.ExpectDatabase(_testScratchDatabase);
+
+        // For SQLite, the "database" is the file path from the connection string.
+        // Calling ExpectDatabase("FAnsiTests") would corrupt the Data Source.
+        // Instead, use the database from the connection string directly.
+        var db = type == DatabaseType.Sqlite
+            ? server.GetCurrentDatabase()
+            : server.ExpectDatabase(_testScratchDatabase);
+
+        if (db == null)
+        {
+            AssertRequirement($"No database specified in connection string for {type}");
+            return null!; // Won't reach here due to Assert
+        }
 
         if (!db.Exists())
         {
@@ -124,7 +134,7 @@ public abstract class DatabaseTests
                 db.Create();
             else
                 AssertRequirement(
-                    $"Database {_testScratchDatabase} does not exist and AllowDatabaseCreation is false in {TestFilename}");
+                    $"Database {db.GetRuntimeName()} does not exist and AllowDatabaseCreation is false in {TestFilename}");
         }
         else
         {
@@ -155,13 +165,11 @@ public abstract class DatabaseTests
 
     /// <summary>
     ///     Asserts a test requirement is not met. In CI, this fails the test. On dev workstations, marks test as inconclusive.
-    ///     SQLite is always allowed to be inconclusive due to known FAnsi database abstraction limitations.
     /// </summary>
     /// <param name="message">The assertion message</param>
-    /// <param name="allowSkipInCi">If true, allows the test to be inconclusive even in CI</param>
-    protected static void AssertRequirement(string message, bool allowSkipInCi = false)
+    protected static void AssertRequirement(string message)
     {
-        if (Environment.GetEnvironmentVariable("GITHUB_ACTIONS") == "true" && !allowSkipInCi)
+        if (Environment.GetEnvironmentVariable("GITHUB_ACTIONS") == "true")
             Assert.Fail(message);
         else
             Assert.Inconclusive(message);
