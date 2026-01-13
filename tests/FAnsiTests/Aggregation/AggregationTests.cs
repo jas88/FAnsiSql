@@ -188,7 +188,9 @@ internal abstract class AggregationTests : DatabaseTests
         var dic = easy ? _easyTables : _hardTables;
 
         if (!dic.ContainsKey(type))
-            AssertRequirement($"No connection string found for Test database type {type}");
+            // SQLite has known FAnsi database abstraction limitations, allow it to skip in CI
+            AssertRequirement($"No connection string found for Test database type {type}",
+                allowSkipInCi: type == DatabaseType.Sqlite);
 
         return dic[type];
     }
