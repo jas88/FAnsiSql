@@ -23,6 +23,6 @@
 	</TestDatabase>
 	<TestDatabase>
 		<DatabaseType>Sqlite</DatabaseType>
-		<ConnectionString>Data Source=:memory:</ConnectionString>
+		<ConnectionString>Data Source=/tmp/fansitests.db</ConnectionString>
 	</TestDatabase>
 </TestDatabases>

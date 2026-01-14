@@ -17,3 +17,4 @@
 | Npgsql | [GitHub](https://github.com/npgsql/npgsql) | [PostgreSQL](https://github.com/npgsql/npgsql/blob/dev/LICENSE)| Enables interaction with Postgres databases  | |
 | System.Linq.Async | [GitHub](https://github.com/dotnet/reactive) | [MIT](https://opensource.org/licenses/MIT) | Adds async support to LINQ | |
 | DotNet.ReproducibleBuilds | [GitHub](https://github.com/dotnet/reproducible-builds) | [MIT](https://opensource.org/licenses/MIT) | Ensures deterministic builds | |
+| Microsoft.Extensions.DependencyModel | [GitHub](https://github.com/dotnet/runtime) | [MIT](https://opensource.org/licenses/MIT) | Used by test framework for runtime dependency resolution | Official MS project |

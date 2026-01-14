@@ -52,4 +52,7 @@
   <PropertyGroup Condition="'$(_MaxSupportedMajor)' == '12' and '$(_MinSupportedMajor)' == '12'">
     <SupportedNonEolTargetFrameworks>net12.0</SupportedNonEolTargetFrameworks>
   </PropertyGroup>
+
+  <!-- Import shared targets -->
+  <Import Project="build-standards/Directory.Build.targets.shared" />
 </Project>

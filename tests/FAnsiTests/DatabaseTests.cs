@@ -114,7 +114,19 @@ public abstract class DatabaseTests
     protected DiscoveredDatabase GetTestDatabase(DatabaseType type, bool cleanDatabase = true)
     {
         var server = GetTestServer(type);
-        var db = server.ExpectDatabase(_testScratchDatabase);
+
+        // For SQLite, the "database" is the file path from the connection string.
+        // Calling ExpectDatabase("FAnsiTests") would corrupt the Data Source.
+        // Instead, use the database from the connection string directly.
+        var db = type == DatabaseType.Sqlite
+            ? server.GetCurrentDatabase()
+            : server.ExpectDatabase(_testScratchDatabase);
+
+        if (db == null)
+        {
+            AssertRequirement($"No database specified in connection string for {type}");
+            return null!; // Won't reach here due to Assert
+        }
 
         if (!db.Exists())
         {
@@ -122,7 +134,7 @@ public abstract class DatabaseTests
                 db.Create();
             else
                 AssertRequirement(
-                    $"Database {_testScratchDatabase} does not exist and AllowDatabaseCreation is false in {TestFilename}");
+                    $"Database {db.GetRuntimeName()} does not exist and AllowDatabaseCreation is false in {TestFilename}");
         }
         else
         {

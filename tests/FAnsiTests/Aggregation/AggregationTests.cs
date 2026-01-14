@@ -188,13 +188,7 @@ internal abstract class AggregationTests : DatabaseTests
         var dic = easy ? _easyTables : _hardTables;
 
         if (!dic.ContainsKey(type))
-        {
-            // In CI, all databases must be configured and tests must not skip
-            if (Environment.GetEnvironmentVariable("GITHUB_ACTIONS") == "true")
-                Assert.Fail($"No test table for {type} - all databases are required in CI");
-
-            Assert.Inconclusive($"No connection string found for Test database type {type}");
-        }
+            AssertRequirement($"No connection string found for Test database type {type}");
 
         return dic[type];
     }
