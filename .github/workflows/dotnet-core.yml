@@ -105,9 +105,9 @@ jobs:
 
     - name: Collect coverage files
       run: |
-        # MTP outputs coverage to TestResults/coverage/ under test project directories
+        # MTP outputs coverage to bin/<config>/<tfm>/TestResults/<guid>.cobertura.xml
         mkdir -p coverage
-        find . -path "*/TestResults/coverage/*.cobertura.xml" -exec cp {} coverage/ \;
+        find . -path "*/TestResults/*.cobertura.xml" -exec cp {} coverage/ \;
         echo "=== Coverage files collected ==="
         ls -la coverage/ || echo "No coverage files found"
 
