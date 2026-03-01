@@ -9,6 +9,7 @@ env:
   MSSQL_PID: "developer"
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
   DOTNET_CLI_TELEMETRY_OPTOUT: 1
+  CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
 jobs:
   build:
@@ -112,6 +113,7 @@ jobs:
         ls -la coverage/ || echo "No coverage files found"
 
     - name: Upload coverage to Codecov
+      if: env.CODECOV_TOKEN != ''
       uses: codecov/codecov-action@v5
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
@@ -266,7 +268,7 @@ jobs:
       if: contains(github.ref,'refs/tags/')
       run: dotnet nuget push FAnsi*.nupkg -s https://api.nuget.org/v3/index.json -k ${{ secrets.NUGET_API_KEY }} --skip-duplicate
     - name: Store created nupkg files
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@v7
       with:
         path: '*.nupkg'
         retention-days: 1
