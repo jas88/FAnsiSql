@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changes
+
+- Bump MSSQL client to 7.0.0 which moves Azure AD/Entra support to a separate package; anyone needing that should now add `Microsoft.Data.SqlClient.Extensions.Azure` as an explicit dependency.
+
 ## [3.6.3] - 2025-12-10
 
 ### Fixed
