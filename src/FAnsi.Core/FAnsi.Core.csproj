@@ -63,6 +63,7 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="DotNet.ReproducibleBuilds" />
     <Folder Include="Aggregation\" />
     <Folder Include="Update\" />
   </ItemGroup>
