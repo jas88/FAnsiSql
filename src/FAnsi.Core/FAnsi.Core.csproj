@@ -64,6 +64,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="DotNet.ReproducibleBuilds" />
+    <PackageReference Include="MinVer" />
     <Folder Include="Aggregation\" />
     <Folder Include="Update\" />
   </ItemGroup>
