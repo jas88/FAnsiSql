@@ -40,7 +40,7 @@ jobs:
         sudo add-apt-repository "deb [arch=amd64] https://packages.microsoft.com/ubuntu/22.04/mssql-server-2022 jammy main"
 
     - name: Cache and install database packages
-      uses: awalsh128/cache-apt-pkgs-action@v1.6.0
+      uses: awalsh128/cache-apt-pkgs-action@v1.6.1
       with:
         packages: libeatmydata1 apt-transport-https curl postgresql postgresql-contrib mssql-tools mssql-server
         version: 1.0
