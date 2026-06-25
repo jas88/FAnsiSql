@@ -29,6 +29,12 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Data.Sqlite" />
+    <!-- Override Microsoft.Data.Sqlite's transitive SQLitePCLRaw 2.1.11 (CVE-2025-6965,
+         GHSA-2m69-gcr7-jv3q: SQLite < 3.50.2). The 3.0.x bundle uses SourceGear.sqlite3
+         3.50.4 and no longer ships the vulnerable lib.e_sqlite3 package. Remove once
+         Microsoft.Data.Sqlite 11.0 (.NET 11, Nov 2026) is adopted. -->
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" />
+    <PackageReference Include="SQLitePCLRaw.core" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\README.md" Pack="true" PackagePath="\" />
