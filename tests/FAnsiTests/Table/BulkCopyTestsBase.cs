@@ -28,7 +28,7 @@ internal abstract class BulkCopyTestsBase : DatabaseTests
     ///     - SQL Server: InvalidOperationException or FileLoadException
     ///     Note: SQLite doesn't enforce some constraints (e.g., string length, integer overflow) so may not throw.
     /// </summary>
-    private static void AssertThrowsException(DatabaseType type, TestDelegate code, string? messageContains = null,
+    private static void AssertThrowsException(DatabaseType type, Action code, string? messageContains = null,
         bool sqliteMayNotThrow = false)
     {
         if (type == DatabaseType.Sqlite && sqliteMayNotThrow)
