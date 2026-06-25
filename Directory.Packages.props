@@ -18,7 +18,7 @@
     <PackageVersion Include="System.Composition" Version="7.0.0" />
 
     <!-- Database Providers -->
-    <PackageVersion Include="Microsoft.Data.SqlClient" Version="7.0.1" />
+    <PackageVersion Include="Microsoft.Data.SqlClient" Version="7.0.2" />
     <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.9" />
     <!-- Pin SQLitePCLRaw to 3.0.x to fix GHSA-2m69-gcr7-jv3q / CVE-2025-6965 (SQLite < 3.50.2).
          3.0.x drops the vulnerable SQLitePCLRaw.lib.e_sqlite3 in favour of SourceGear.sqlite3 3.50.4.
