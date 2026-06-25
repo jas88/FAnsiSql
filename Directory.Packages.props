@@ -25,7 +25,7 @@
          Microsoft.Data.Sqlite 11.0 (with .NET 11, Nov 2026) will adopt this natively; remove then. -->
     <PackageVersion Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.3" />
     <PackageVersion Include="SQLitePCLRaw.core" Version="3.0.3" />
-    <PackageVersion Include="MySqlConnector" Version="2.6.0" />
+    <PackageVersion Include="MySqlConnector" Version="2.6.1" />
     <PackageVersion Include="Npgsql" Version="10.0.3" />
     <PackageVersion Include="Oracle.ManagedDataAccess.Core" Version="23.26.200" />
 
