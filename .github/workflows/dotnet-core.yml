@@ -65,7 +65,7 @@ jobs:
         cache-dependency-path: Directory.Packages.props
 
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@v4
+      uses: github/codeql-action/init@v4.37.3
       with:
         languages: csharp
         queries: +security-and-quality
@@ -123,7 +123,7 @@ jobs:
         fail_ci_if_error: true
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v4
+      uses: github/codeql-action/analyze@v4.37.3
       with:
         category: "/language:csharp"
         upload: False
@@ -140,12 +140,12 @@ jobs:
         output: sarif-results/csharp.sarif
 
     - name: Upload SARIF
-      uses: github/codeql-action/upload-sarif@v4
+      uses: github/codeql-action/upload-sarif@v4.37.3
       with:
         sarif_file: sarif-results/csharp.sarif
 
     - name: Upload ReSharper SARIF
-      uses: github/codeql-action/upload-sarif@v4
+      uses: github/codeql-action/upload-sarif@v4.37.3
       with:
         sarif_file: resharper-report.sarif
         category: resharper
