@@ -29,6 +29,7 @@
     <None Include="Discovery\TypeTranslation\TypeTranslation.cd" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="MinVer" />
     <PackageReference Include="System.Linq.Async" />
     <PackageReference Include="TypeGuesser" />
   </ItemGroup>
