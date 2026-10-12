@@ -752,7 +752,7 @@ internal sealed class BulkInsertTest : DatabaseTests
         using var bulk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture);
         bulk.Timeout = 30;
 
-        var ex = Assert.Catch(() => bulk.Upload(dt), "Expected upload to fail because value on row 2 is too long");
+        var ex = Assert.Catch<Exception>(() => bulk.Upload(dt), "Expected upload to fail because value on row 2 is too long");
 
         // All databases now use consistent pre-validation error messages
         Assert.That(ex?.Message, Does.Contain("Bulk insert failed on data row 4"));
@@ -830,7 +830,7 @@ internal sealed class BulkInsertTest : DatabaseTests
         using var bulk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture);
         bulk.Timeout = 30;
 
-        var ex = Assert.Catch(() => bulk.Upload(dt), "Expected upload to fail because value on row 2 is too long");
+        var ex = Assert.Catch<Exception>(() => bulk.Upload(dt), "Expected upload to fail because value on row 2 is too long");
 
         // All databases now use consistent pre-validation error messages
         // DecimalSize(2,1) = 2 digits before decimal + 1 after = SQL decimal(3,1), max 99.9

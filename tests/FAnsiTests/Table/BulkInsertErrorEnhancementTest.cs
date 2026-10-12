@@ -60,7 +60,7 @@ internal sealed class BulkInsertErrorEnhancementTest : DatabaseTests
         using var bulk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture);
         bulk.Timeout = 30;
 
-        var ex = Assert.Catch(() => bulk.Upload(dt),
+        var ex = Assert.Catch<Exception>(() => bulk.Upload(dt),
             "Expected upload to fail because 'TOOLONG' exceeds AColumn's 5 character limit");
 
         Assert.That(ex, Is.Not.Null);
@@ -130,7 +130,7 @@ internal sealed class BulkInsertErrorEnhancementTest : DatabaseTests
         using var bulk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture);
         bulk.Timeout = 30;
 
-        var ex = Assert.Catch(() => bulk.Upload(dt),
+        var ex = Assert.Catch<Exception>(() => bulk.Upload(dt),
             "Expected upload to fail due to Banana column length violation");
 
         Assert.That(ex, Is.Not.Null);
@@ -176,7 +176,7 @@ internal sealed class BulkInsertErrorEnhancementTest : DatabaseTests
         using var bulk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture);
         bulk.Timeout = 30;
 
-        var ex = Assert.Catch(() => bulk.Upload(dt),
+        var ex = Assert.Catch<Exception>(() => bulk.Upload(dt),
             "Expected upload to fail due to length violation");
 
         Assert.That(ex, Is.Not.Null);

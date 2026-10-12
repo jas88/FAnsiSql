@@ -208,3 +208,8 @@ dotnet_diagnostic.CA1805.severity = none
 
 # CA1822: Static method candidates
 dotnet_diagnostic.CA1822.severity = none
+
+# Test assertion lambdas (Assert.Throws/Catch/That) run synchronously while captured
+# 'using' variables are still alive, so this inspection only produces false positives here.
+[tests/**.cs]
+resharper_access_to_disposed_closure_highlighting = none
