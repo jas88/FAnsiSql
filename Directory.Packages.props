@@ -31,7 +31,7 @@
 
     <!-- Utilities -->
     <PackageVersion Include="System.Linq.Async" Version="7.0.1" />
-    <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="9.0.21" />
+    <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="10.0.13" />
     <PackageVersion Include="TypeGuesser" Version="2.0.4" />
 
     <!-- Testing -->
