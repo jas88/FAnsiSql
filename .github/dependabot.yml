@@ -13,6 +13,10 @@ updates:
   target-branch: main
   reviewers:
   - jas88
+  ignore:
+  # 11.x only supports net10+; FAnsi still targets net8/net9
+  - dependency-name: "System.Security.Cryptography.Pkcs"
+    update-types: ["version-update:semver-major"]
 - package-ecosystem: "dotnet-sdk"
   directory: "/"
   schedule:
