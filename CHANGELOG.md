@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Bump Microsoft.Data.SqlClient from 6.1.3 to 7.1.1. SqlClient 7 moves Azure AD/Entra authentication support to a separate package; anyone needing that should now add `Microsoft.Data.SqlClient.Extensions.Azure` as an explicit dependency.
 - Bump database drivers: MySqlConnector 2.5.0 → 2.6.2, Npgsql 10.0.0 → 10.0.3, Oracle.ManagedDataAccess.Core 23.26.0 → 23.26.400, Microsoft.Data.Sqlite 10.0.1 → 10.0.15
+- FAnsiSql.MicrosoftSql and FAnsiSql.Oracle now reference `System.Security.Cryptography.Pkcs` 10.0.14 directly, raising the version previously pulled in transitively by the database drivers (10.x keeps net8.0/net9.0 support; 11.x requires net10.0)
 - Packages are now published to NuGet via Trusted Publishing (OIDC) instead of a long-lived API key
 
 ### Security
