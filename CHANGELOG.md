@@ -7,9 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changes
+## [3.7.0] - 2026-11-11
 
-- Bump MSSQL client to 7.0.0 which moves Azure AD/Entra support to a separate package; anyone needing that should now add `Microsoft.Data.SqlClient.Extensions.Azure` as an explicit dependency.
+### Changed
+- Bump Microsoft.Data.SqlClient from 6.1.3 to 7.1.1. SqlClient 7 moves Azure AD/Entra authentication support to a separate package; anyone needing that should now add `Microsoft.Data.SqlClient.Extensions.Azure` as an explicit dependency.
+- Bump database drivers: MySqlConnector 2.5.0 → 2.6.2, Npgsql 10.0.0 → 10.0.3, Oracle.ManagedDataAccess.Core 23.26.0 → 23.26.400, Microsoft.Data.Sqlite 10.0.1 → 10.0.15
+- Packages are now published to NuGet via Trusted Publishing (OIDC) instead of a long-lived API key
+
+### Security
+- Move SQLitePCLRaw to 3.0.x, removing the vulnerable bundled `e_sqlite3` library (CVE-2025-6965 / GHSA-2m69-gcr7-jv3q)
 
 ## [3.6.3] - 2025-12-10
 
@@ -776,7 +782,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed Drop table to work correctly with Views
 - Exists now works correctly for Views (previously it would return true if there was no view but a table with the same name)
 
-[Unreleased]: https://github.com/jas88/FAnsiSql/compare/v3.6.3...main
+[Unreleased]: https://github.com/jas88/FAnsiSql/compare/v3.7.0...main
+[3.7.0]: https://github.com/jas88/FAnsiSql/compare/v3.6.3...v3.7.0
 [3.6.3]: https://github.com/jas88/FAnsiSql/compare/v3.6.2...v3.6.3
 [3.6.2]: https://github.com/jas88/FAnsiSql/compare/v3.6.1...v3.6.2
 [3.6.1]: https://github.com/jas88/FAnsiSql/compare/v3.6.0...v3.6.1
