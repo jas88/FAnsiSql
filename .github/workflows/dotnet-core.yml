@@ -13,6 +13,8 @@ env:
 jobs:
   build:
     runs-on: ubuntu-22.04
+    outputs:
+      coverage-stored: ${{ steps.coverage-stored.outputs.stored }}
     permissions:
       actions: read
       contents: write
@@ -119,6 +121,10 @@ jobs:
         name: coverage
         path: coverage/*.cobertura.xml
         retention-days: 1
+    - name: Mark coverage as stored
+      id: coverage-stored
+      if: github.actor != 'dependabot[bot]'
+      run: echo "stored=true" >> "$GITHUB_OUTPUT"
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v4.39.3
@@ -285,7 +291,9 @@ jobs:
   # publishing policy also trusts OIDC tokens from this workflow.
   coverage:
     needs: build
-    if: github.actor != 'dependabot[bot]'
+    # Run once the coverage artifact exists, even if a later build step (CodeQL,
+    # AOT check, pack) fails
+    if: ${{ !cancelled() && needs.build.outputs.coverage-stored == 'true' }}
     runs-on: ubuntu-22.04
     permissions:
       contents: read
