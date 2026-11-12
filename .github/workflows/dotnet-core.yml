@@ -17,7 +17,6 @@ jobs:
       actions: read
       contents: write
       security-events: write
-      id-token: write  # required for Codecov OIDC upload
     services:
       oracle:
         image: ghcr.io/gvenzl/oracle-xe:21-slim
@@ -112,16 +111,14 @@ jobs:
         echo "=== Coverage files collected ==="
         ls -la coverage/ || echo "No coverage files found"
 
-    - name: Upload coverage to Codecov
+    - name: Store coverage files
       # Dependabot runs previously skipped upload (no secrets); keep that behaviour
       if: github.actor != 'dependabot[bot]'
-      uses: codecov/codecov-action@v7
+      uses: actions/upload-artifact@v7
       with:
-        use_oidc: true
-        files: ./coverage/*.cobertura.xml
-        flags: unittests
-        name: codecov-umbrella
-        fail_ci_if_error: true
+        name: coverage
+        path: coverage/*.cobertura.xml
+        retention-days: 1
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v4.39.3
@@ -282,6 +279,34 @@ jobs:
         file: '*.nupkg'
         file_glob: true
         overwrite: true
+
+  # Codecov upload runs in its own job so that only this job (not build/test code,
+  # package restore or other actions) can mint OIDC tokens. The NuGet trusted
+  # publishing policy also trusts OIDC tokens from this workflow.
+  coverage:
+    needs: build
+    if: github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      id-token: write  # required for Codecov OIDC upload
+    steps:
+    - uses: actions/checkout@v7
+      with:
+        persist-credentials: false
+    - name: Download coverage files
+      uses: actions/download-artifact@v8
+      with:
+        name: coverage
+        path: coverage
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v7
+      with:
+        use_oidc: true
+        files: ./coverage/*.cobertura.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: true
 
   publish:
     needs: build
