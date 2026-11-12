@@ -121,6 +121,8 @@ jobs:
         name: coverage
         path: coverage/*.cobertura.xml
         retention-days: 1
+        # Fail rather than silently skip, so coverage-stored is only set when an artifact exists
+        if-no-files-found: error
     - name: Mark coverage as stored
       id: coverage-stored
       if: github.actor != 'dependabot[bot]'
