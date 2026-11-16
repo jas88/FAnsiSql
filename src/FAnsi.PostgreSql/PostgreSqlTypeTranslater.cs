@@ -1,4 +1,5 @@
 using System.Collections.Frozen;
+using System.Data;
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -75,6 +76,22 @@ public sealed partial class PostgreSqlTypeTranslater : TypeTranslater
             ? npgsqlType
             : throw new TypeNotMappedException(string.Format(CultureInfo.InvariantCulture, TypeNotMappedExceptionFormat,
                 t.Name, GetType().Name));
+
+    /// <inheritdoc />
+    /// <remarks>
+    ///     Npgsql sends <see cref="DbType.DateTime" /> as 'timestamp with time zone' and only accepts UTC values for it.  The
+    ///     'timestamp' (without time zone) columns that FAnsi creates for dates need <see cref="DbType.DateTime2" />.
+    /// </remarks>
+    public override DbType GetDbTypeForSQLDBType(string sqlType)
+    {
+        var dbType = base.GetDbTypeForSQLDBType(sqlType);
+
+        return dbType == DbType.DateTime && !IsTimestampWithTimeZone(sqlType) ? DbType.DateTime2 : dbType;
+    }
+
+    private static bool IsTimestampWithTimeZone(string sqlType) =>
+        sqlType.Contains("with time zone", StringComparison.OrdinalIgnoreCase) ||
+        sqlType.Contains("timestamptz", StringComparison.OrdinalIgnoreCase);
 
     protected override bool IsByteArray(string sqlType) =>
         sqlType?.StartsWith("bytea", StringComparison.OrdinalIgnoreCase) ?? false;

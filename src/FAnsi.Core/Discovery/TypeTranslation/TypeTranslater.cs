@@ -178,7 +178,7 @@ public abstract partial class TypeTranslater : ITypeTranslater
     public bool IsSupportedSQLDBType(string sqlType) => TryGetCSharpTypeForSQLDBType(sqlType) != null;
 
     /// <inheritdoc />
-    public DbType GetDbTypeForSQLDBType(string sqlType)
+    public virtual DbType GetDbTypeForSQLDBType(string sqlType)
     {
         if (IsBit(sqlType))
             return DbType.Boolean;

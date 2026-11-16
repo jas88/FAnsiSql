@@ -291,7 +291,8 @@ public abstract partial class QuerySyntaxHelper(
             var factory = _factories.GetOrAdd(culture, static c => new TypeDeciderFactory(c));
 
             var tt = TypeTranslater;
-            p.DbType = tt.GetDbTypeForSQLDBType(discoveredColumn.DataType!.SQLType);
+            var dbType = tt.GetDbTypeForSQLDBType(discoveredColumn.DataType!.SQLType);
+            p.DbType = dbType;
             var cSharpType = tt.GetCSharpTypeForSQLDBType(discoveredColumn.DataType.SQLType);
 
             if (IsBasicallyNull(value))
@@ -305,13 +306,17 @@ public abstract partial class QuerySyntaxHelper(
                 var decider = factory.Create(cSharpType);
                 var o = decider.Parse(strVal);
 
-                if (o is DateTime d) o = FormatDateTimeForDbParameter(d);
+                if (o is DateTime d) o = FormatDateTimeForDbParameter(d, dbType);
 
                 //Not all DBMS support DBParameter.Value = new TimeSpan(...);
                 if (o is TimeSpan t) o = FormatTimespanForDbParameter(t);
 
 
                 p.Value = o;
+            }
+            else if (value is DateTime dateTime)
+            {
+                p.Value = FormatDateTimeForDbParameter(dateTime, dbType);
             }
             else
             {
@@ -559,6 +564,25 @@ public abstract partial class QuerySyntaxHelper(
     /// <param name="dateTime"></param>
     /// <returns></returns>
     protected virtual object FormatDateTimeForDbParameter(DateTime dateTime) => dateTime;
+
+    /// <summary>
+    ///     <para>
+    ///         Return the appropriate value such that it can be put into the DbParameter.Value field of a parameter of the
+    ///         given <paramref name="dbType" /> and be succesfully inserted into a column in the database designed to
+    ///         represent datetime fields.
+    ///     </para>
+    ///     <para>
+    ///         Default behaviour is <see cref="FormatDateTimeForDbParameter(DateTime)" />, override this instead when the
+    ///         alterations a DBMS requires depend on the data type of the column.
+    ///     </para>
+    /// </summary>
+    /// <param name="dateTime"></param>
+    /// <param name="dbType">
+    ///     The type <see cref="ITypeTranslater.GetDbTypeForSQLDBType" /> gave for the column the value is destined for
+    /// </param>
+    /// <returns></returns>
+    protected virtual object FormatDateTimeForDbParameter(DateTime dateTime, DbType dbType) =>
+        FormatDateTimeForDbParameter(dateTime);
 
     /// <summary>
     ///     Return the appropriate value such that it can be put into a DbParameter.Value field and be succesfully inserted

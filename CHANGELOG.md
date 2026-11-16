@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **PostgreSQL: DateTime values could not be inserted into `timestamp` columns**
+  - `QuerySyntaxHelper.GetParameter` gave every date column `DbType.DateTime`, which Npgsql sends as `timestamp with time zone`
+    and only accepts for UTC values. `DiscoveredTable.Insert` of any other `DateTime` into the `timestamp` columns FAnsi creates
+    failed with "Cannot write DateTime with Kind=Unspecified to PostgreSQL type 'timestamp with time zone'", and a UTC value
+    was converted to the time zone of the server
+  - `timestamp` columns now get `DbType.DateTime2` and store the value exactly as given whatever its `DateTimeKind`, as the
+    other DBMS do. `timestamp with time zone` columns still get `DbType.DateTime` and are always sent a UTC value
+  - `TypeTranslater.GetDbTypeForSQLDBType` is now virtual. The mapping is unchanged for SQL Server, MySQL, Oracle and SQLite
+
 ## [3.7.0] - 2026-11-11
 
 ### Changed
