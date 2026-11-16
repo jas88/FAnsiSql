@@ -33,6 +33,7 @@ public sealed partial class MySqlTableHelper : DiscoveredTableHelper
             SELECT * FROM information_schema.`COLUMNS`
             WHERE table_schema = @db
               AND table_name = @tbl
+            ORDER BY ORDINAL_POSITION
             """, connection.Connection, connection.Transaction);
 
         var p = new MySqlParameter("@db", MySqlDbType.String)

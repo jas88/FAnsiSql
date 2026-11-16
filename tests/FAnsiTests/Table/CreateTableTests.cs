@@ -716,4 +716,37 @@ internal sealed class CreateTableTests : DatabaseTests
             tbl.Drop();
         }
     }
+
+    /// <summary>
+    ///     Columns are listed in the order they appear in the table whatever order the DBMS happens to return its metadata
+    ///     in (MySQL 8 can return information_schema.COLUMNS in order of column name).
+    /// </summary>
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    public void DiscoverColumns_ReturnsColumnsInTableOrder(DatabaseType type)
+    {
+        string[] names =
+        [
+            "RelativeFileArchiveURI", "SeriesInstanceUID", "StudyDate", "StudyInstanceUID", "StudyDescription",
+            "EchoTime", "RepetitionTime", "PatientAge"
+        ];
+
+        var db = GetTestDatabase(type);
+        var tbl = db.CreateTable("ColumnOrder",
+            [.. names.Select(static n => new DatabaseColumnRequest(n, new DatabaseTypeRequest(typeof(string), 10)))]);
+
+        try
+        {
+            Assert.That(tbl.DiscoverColumns().Select(static c => c.GetRuntimeName()), Is.EqualTo(names).IgnoreCase);
+
+            //a new column goes on the end even when its name sorts first
+            tbl.AddColumn("Aardvark", new DatabaseTypeRequest(typeof(int)), true, 30);
+
+            Assert.That(tbl.DiscoverColumns().Select(static c => c.GetRuntimeName()),
+                Is.EqualTo(names.Append("Aardvark")).IgnoreCase);
+        }
+        finally
+        {
+            tbl.Drop();
+        }
+    }
 }

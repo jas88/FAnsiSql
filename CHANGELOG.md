@@ -28,6 +28,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     table in a utf8mb4 database could have no more than 4 of them
   - These columns are now created as `text`, which holds at least as much and does not count towards that limit. Columns
     requested with a width are unchanged
+- **MySQL: `DiscoverColumns` could return columns in the wrong order**
+  - The query on `information_schema.COLUMNS` had no `ORDER BY` and MySQL 8 can return its rows in order of column name. It
+    is now ordered by `ORDINAL_POSITION`
 
 ## [3.7.0] - 2026-11-11
 
