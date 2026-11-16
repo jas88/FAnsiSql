@@ -37,6 +37,7 @@ public sealed class OracleTableHelper : DiscoveredTableHelper
                                                   SELECT *
                                                   FROM   all_tab_cols
                                                   WHERE  table_name = :table_name AND owner =:owner AND HIDDEN_COLUMN <> 'YES'
+                                                  ORDER BY COLUMN_ID
 
                                                   """, connection.Connection))
         {
