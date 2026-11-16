@@ -53,6 +53,26 @@ public sealed partial class PostgreSqlTypeTranslater : TypeTranslater
             [typeof(Guid)] = NpgsqlDbType.Uuid
         }.ToFrozenDictionary();
 
+    /// <summary>
+    ///     The column data types (as named by information_schema) that take values of more than one C# type, with the
+    ///     type Npgsql writes them as
+    /// </summary>
+    private static readonly FrozenDictionary<string, NpgsqlDbType> SqlTypeMappings =
+        new Dictionary<string, NpgsqlDbType>
+        {
+            ["smallint"] = NpgsqlDbType.Smallint,
+            ["integer"] = NpgsqlDbType.Integer,
+            ["bigint"] = NpgsqlDbType.Bigint,
+            ["numeric"] = NpgsqlDbType.Numeric,
+            ["real"] = NpgsqlDbType.Real,
+            ["double precision"] = NpgsqlDbType.Double,
+            ["character"] = NpgsqlDbType.Char,
+            ["character varying"] = NpgsqlDbType.Varchar,
+            ["text"] = NpgsqlDbType.Text,
+            ["timestamp without time zone"] = NpgsqlDbType.Timestamp,
+            ["timestamp with time zone"] = NpgsqlDbType.TimestampTz
+        }.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
+
     private PostgreSqlTypeTranslater() : base(DateRegexImpl(), 8000, 4000)
     {
         TimeRegex = TimeRegexImpl(); //space is important
@@ -76,6 +96,20 @@ public sealed partial class PostgreSqlTypeTranslater : TypeTranslater
             ? npgsqlType
             : throw new TypeNotMappedException(string.Format(CultureInfo.InvariantCulture, TypeNotMappedExceptionFormat,
                 t.Name, GetType().Name));
+
+    /// <summary>
+    ///     Returns the type Npgsql must write values as for them to be accepted by a column of the given
+    ///     <paramref name="sqlType" /> (as named by information_schema e.g. "character varying(10)") or null if it is a
+    ///     type that only takes values of the one C# type.
+    /// </summary>
+    internal NpgsqlDbType? GetNpgsqlDbTypeForSQLDBType(string sqlType)
+    {
+        //strip any length / precision e.g. "numeric(10,2)"
+        var bracket = sqlType.IndexOf('(', StringComparison.Ordinal);
+        var typeName = bracket == -1 ? sqlType : sqlType[..bracket];
+
+        return SqlTypeMappings.TryGetValue(typeName.Trim(), out var npgsqlType) ? npgsqlType : null;
+    }
 
     /// <inheritdoc />
     /// <remarks>

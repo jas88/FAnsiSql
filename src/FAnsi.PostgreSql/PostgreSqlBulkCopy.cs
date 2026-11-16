@@ -4,6 +4,7 @@ using System.Text;
 using FAnsi.Connections;
 using FAnsi.Discovery;
 using Npgsql;
+using NpgsqlTypes;
 
 namespace FAnsi.Implementations.PostgreSql;
 
@@ -38,7 +39,13 @@ public sealed class PostgreSqlBulkCopy(
         var tt = PostgreSqlTypeTranslater.Instance;
 
         var dataColumns = matchedColumns.Keys.ToArray();
-        var types = matchedColumns.Keys.Select(v => tt.GetNpgsqlDbTypeForCSharpType(v.DataType)).ToArray();
+
+        // The server does not convert values sent in the binary format, each one has to be written as the type of the
+        // column it is going into whatever the type of the DataColumn it came from.  The type of the DataColumn is
+        // only used for the column types that take values of just the one C# type.
+        var types = matchedColumns.Select(kvp =>
+            (kvp.Value.DataType == null ? null : tt.GetNpgsqlDbTypeForSQLDBType(kvp.Value.DataType.SQLType)) ??
+            tt.GetNpgsqlDbTypeForCSharpType(kvp.Key.DataType)).ToArray();
 
         using (var import = con.BeginBinaryImport(sb.ToString()))
         {
@@ -52,7 +59,7 @@ public sealed class PostgreSqlBulkCopy(
                     if (r[dc] == DBNull.Value)
                         import.WriteNull();
                     else
-                        import.Write(r[dc], types[index]);
+                        import.Write(ConvertToColumnType(r[dc], types[index]), types[index]);
                 }
             }
 
@@ -61,6 +68,37 @@ public sealed class PostgreSqlBulkCopy(
 
         return dt.Rows.Count;
     }
+
+    /// <summary>
+    ///     Converts <paramref name="value" /> where Npgsql would not itself write it as the <paramref name="columnType" />
+    ///     (it converts between the integer and numeric types but no others).
+    /// </summary>
+    private static object ConvertToColumnType(object value, NpgsqlDbType columnType) =>
+        columnType switch
+        {
+            NpgsqlDbType.Char or NpgsqlDbType.Varchar or NpgsqlDbType.Text => value switch
+            {
+                //the text the server itself produces when it casts these types to a string
+                DateTime dateTime => dateTime.ToString("yyyy-MM-dd HH:mm:ss.FFFFFF", CultureInfo.InvariantCulture),
+                DateOnly date => date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                TimeOnly time => time.ToString("HH:mm:ss.FFFFFF", CultureInfo.InvariantCulture),
+                bool boolean => boolean ? "true" : "false",
+                IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture),
+                _ => value
+            },
+            NpgsqlDbType.Double when value is not (double or float) =>
+                Convert.ToDouble(value, CultureInfo.InvariantCulture),
+            NpgsqlDbType.Real when value is not (double or float) =>
+                Convert.ToSingle(value, CultureInfo.InvariantCulture),
+            //a timestamp has no time zone, it stores the value exactly as it was given but Npgsql will not write a UTC one
+            NpgsqlDbType.Timestamp when value is DateTime { Kind: DateTimeKind.Utc } dateTime =>
+                DateTime.SpecifyKind(dateTime, DateTimeKind.Unspecified),
+            NpgsqlDbType.Timestamp when value is DateOnly date => date.ToDateTime(TimeOnly.MinValue),
+            //while for a timestamp with time zone it will only write a UTC one
+            NpgsqlDbType.TimestampTz when value is DateTime dateTime =>
+                DateTime.SpecifyKind(dateTime, DateTimeKind.Utc),
+            _ => value
+        };
 
     private void ThrowIfDisposed() =>
         ObjectDisposedException.ThrowIf(_disposed, this);
