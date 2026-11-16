@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.8.0] - 2026-11-16
+
 ### Fixed
 - **PostgreSQL: DateTime values could not be inserted into `timestamp` columns**
   - `QuerySyntaxHelper.GetParameter` gave every date column `DbType.DateTime`, which Npgsql sends as `timestamp with time zone`
@@ -32,6 +34,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - The query on `information_schema.COLUMNS` had no `ORDER BY` and MySQL 8 can return its rows in order of column name. It
     is now ordered by `ORDINAL_POSITION`
   - Column discovery for PostgreSQL, SQL Server and Oracle is now explicitly ordered as well
+
+### Changed
+- Bump MySqlConnector from 2.6.2 to 3.0.0, a new major version of the MySQL driver which applications referencing FAnsiSql.MySql receive transitively. Code that uses MySqlConnector's own API directly should be checked against its 3.0 release notes
+- Bump Microsoft.Data.SqlClient 7.1.1 → 7.1.2 and System.Security.Cryptography.Pkcs 10.0.14 → 10.0.15
 
 ## [3.7.0] - 2026-11-11
 
@@ -809,7 +815,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed Drop table to work correctly with Views
 - Exists now works correctly for Views (previously it would return true if there was no view but a table with the same name)
 
-[Unreleased]: https://github.com/jas88/FAnsiSql/compare/v3.7.0...main
+[Unreleased]: https://github.com/jas88/FAnsiSql/compare/v3.8.0...main
+[3.8.0]: https://github.com/jas88/FAnsiSql/compare/v3.7.0...v3.8.0
 [3.7.0]: https://github.com/jas88/FAnsiSql/compare/v3.6.3...v3.7.0
 [3.6.3]: https://github.com/jas88/FAnsiSql/compare/v3.6.2...v3.6.3
 [3.6.2]: https://github.com/jas88/FAnsiSql/compare/v3.6.1...v3.6.2
