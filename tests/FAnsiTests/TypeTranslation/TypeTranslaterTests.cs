@@ -46,6 +46,23 @@ public abstract class TypeTranslaterTests : DatabaseTests
         Assert.That(_translaters[type].GetSQLDBTypeForCSharpType(cSharpType), Is.EqualTo(expectedType));
     }
 
+    protected void Test_CSharpToDbType_StringWidthNotSupplied(DatabaseType type, string expectedType)
+    {
+        Assert.Multiple(() =>
+        {
+            //Does a request for a string of no particular length give the expected data type?
+            Assert.That(_translaters[type].GetSQLDBTypeForCSharpType(new DatabaseTypeRequest(typeof(string))),
+                Is.EqualTo(expectedType));
+            Assert.That(
+                _translaters[type].GetSQLDBTypeForCSharpType(new DatabaseTypeRequest(typeof(string)) { Unicode = true }),
+                Does.EndWith(expectedType));
+
+            //And is that data type a generous one?
+            Assert.That(_translaters[type].GetLengthIfString(expectedType), Is.GreaterThanOrEqualTo(4000));
+            Assert.That(_translaters[type].GetCSharpTypeForSQLDBType(expectedType), Is.EqualTo(typeof(string)));
+        });
+    }
+
     protected void Test_CSharpToDbType_StringMax(DatabaseType type, string expectedType)
     {
         var cSharpType = new DatabaseTypeRequest(typeof(string), 10000000);

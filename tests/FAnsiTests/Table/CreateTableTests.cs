@@ -669,4 +669,51 @@ internal sealed class CreateTableTests : DatabaseTests
         Assert.That(props, Has.Length.EqualTo(2),
             "There are new settable Properties in GuessSettings, we should copy them across in DiscoveredDatabaseHelper.CreateTable");
     }
+
+    /// <summary>
+    ///     A string column of unknown width must not stop a table being created however many of them there are.  MySQL
+    ///     counts the declared width of every varchar column towards a 65,535 byte limit on the size of a row.
+    /// </summary>
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    public void CreateTable_EmptyDataTable_ManyStringColumns(DatabaseType type)
+    {
+        var db = GetTestDatabase(type);
+
+        using var dt = new DataTable();
+        for (var i = 0; i < 20; i++)
+            dt.Columns.Add($"Col{i}");
+
+        AssertHoldsLongStrings(db.CreateTable("ManyStringColumns", dt));
+    }
+
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypesWithBoolFlags))]
+    public void CreateTable_ManyStringColumnsOfUnspecifiedWidth(DatabaseType type, bool unicode)
+    {
+        var db = GetTestDatabase(type);
+
+        var columns = Enumerable.Range(0, 20).Select(i =>
+            new DatabaseColumnRequest($"Col{i}", new DatabaseTypeRequest(typeof(string)) { Unicode = unicode }));
+
+        AssertHoldsLongStrings(db.CreateTable("ManyStringColumns", [.. columns]));
+    }
+
+    private static void AssertHoldsLongStrings(DiscoveredTable tbl)
+    {
+        try
+        {
+            var columns = tbl.DiscoverColumns();
+            Assert.That(columns, Has.Length.EqualTo(20));
+
+            //no width was asked for so every column must take a string of a reasonable length
+            var value = new string('x', 1000);
+            tbl.Insert(columns.ToDictionary(static c => c, object (_) => value));
+
+            using var result = tbl.GetDataTable();
+            Assert.That(result.Rows[0].ItemArray, Is.All.EqualTo(value));
+        }
+        finally
+        {
+            tbl.Drop();
+        }
+    }
 }

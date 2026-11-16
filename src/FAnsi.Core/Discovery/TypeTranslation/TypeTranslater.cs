@@ -308,7 +308,7 @@ public abstract partial class TypeTranslater : ITypeTranslater
     protected string GetStringDataType(int? maxExpectedStringWidth)
     {
         if (maxExpectedStringWidth == null)
-            return GetStringDataTypeImpl(_stringWidthWhenNotSupplied);
+            return GetStringDataTypeWhenWidthNotSupplied();
 
         if (maxExpectedStringWidth > _maxStringWidthBeforeMax)
             return GetStringDataTypeWithUnlimitedWidth();
@@ -319,13 +319,21 @@ public abstract partial class TypeTranslater : ITypeTranslater
     protected virtual string GetStringDataTypeImpl(int maxExpectedStringWidth) =>
         $"character varying({maxExpectedStringWidth})";
 
+    /// <summary>
+    ///     The data type to declare string fields as when the API user has neglected to supply a length.  Default is the
+    ///     ordinary string type at <see cref="_stringWidthWhenNotSupplied" /> characters, override this for a DBMS where
+    ///     declaring many columns that wide is a problem.
+    /// </summary>
+    protected virtual string GetStringDataTypeWhenWidthNotSupplied() =>
+        GetStringDataTypeImpl(_stringWidthWhenNotSupplied);
+
     public abstract string GetStringDataTypeWithUnlimitedWidth();
 
 
     private string GetUnicodeStringDataType(int? maxExpectedStringWidth)
     {
         if (maxExpectedStringWidth == null)
-            return GetUnicodeStringDataTypeImpl(_stringWidthWhenNotSupplied);
+            return GetUnicodeStringDataTypeWhenWidthNotSupplied();
 
         if (maxExpectedStringWidth > _maxStringWidthBeforeMax)
             return GetUnicodeStringDataTypeWithUnlimitedWidth();
@@ -335,6 +343,12 @@ public abstract partial class TypeTranslater : ITypeTranslater
 
     protected virtual string GetUnicodeStringDataTypeImpl(int maxExpectedStringWidth) =>
         $"character varying({maxExpectedStringWidth})";
+
+    /// <summary>
+    ///     Unicode equivalent of <see cref="GetStringDataTypeWhenWidthNotSupplied" />
+    /// </summary>
+    protected virtual string GetUnicodeStringDataTypeWhenWidthNotSupplied() =>
+        GetUnicodeStringDataTypeImpl(_stringWidthWhenNotSupplied);
 
     public abstract string GetUnicodeStringDataTypeWithUnlimitedWidth();
 

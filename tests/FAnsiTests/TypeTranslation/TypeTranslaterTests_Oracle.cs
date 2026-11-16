@@ -11,6 +11,10 @@ internal sealed class TypeTranslaterTests_Oracle : TypeTranslaterTests
     public void Test_CSharpToDbType_String10() => Test_CSharpToDbType_String10(DbType, "varchar2(10)");
 
     [Test]
+    public void Test_CSharpToDbType_StringWidthNotSupplied() =>
+        Test_CSharpToDbType_StringWidthNotSupplied(DbType, "varchar2(4000)");
+
+    [Test]
     public void Test_CSharpToDbType_StringMax() => Test_CSharpToDbType_StringMax(DbType, "CLOB");
 
     [TestCase("CLOB", false)]

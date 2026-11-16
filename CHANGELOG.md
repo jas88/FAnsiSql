@@ -22,6 +22,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     encoding "UTF8": 0x00", an `int` written to a `bigint` column with "insufficient data left in message"
   - Values are now written as the type of the destination column and converted first where Npgsql does not do so itself
     (anything going into a string column, numbers going into `real` and `double precision` columns)
+- **MySQL: "Row size too large" creating a table with several string columns of unspecified width**
+  - A string column requested without a width, such as every string column of an empty `DataTable`, was created as
+    `varchar(4000)`. MySQL counts the declared width of every varchar column towards a limit of 65,535 bytes per row, so a
+    table in a utf8mb4 database could have no more than 4 of them
+  - These columns are now created as `text`, which holds at least as much and does not count towards that limit. Columns
+    requested with a width are unchanged
 
 ## [3.7.0] - 2026-11-11
 
