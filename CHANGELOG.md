@@ -32,8 +32,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - A string column requested without a width, such as every string column of an empty `DataTable`, was created as
     `varchar(4000)`. MySQL counts the declared width of every varchar column towards a limit of 65,535 bytes per row, so a
     table in a utf8mb4 database could have no more than 4 of them
-  - These columns are now created as `text`, which holds at least as much and does not count towards that limit. Columns
-    requested with a width are unchanged
+  - These columns are now created as `text`, which holds at least as much and counts for at most 12 bytes of that limit
+    whatever it holds. Columns requested with a width are unchanged
 - **MySQL: `DiscoverColumns` could return columns in the wrong order**
   - The query on `information_schema.COLUMNS` had no `ORDER BY` and MySQL 8 can return its rows in order of column name. It
     is now ordered by `ORDINAL_POSITION`

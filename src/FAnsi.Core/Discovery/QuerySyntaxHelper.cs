@@ -555,7 +555,7 @@ public abstract partial class QuerySyntaxHelper(
 
     /// <summary>
     ///     <para>
-    ///         Return the appropriate value such that it can be put into a DbParameter.Value field and be succesfully inserted
+    ///         Return the appropriate value such that it can be put into a DbParameter.Value field and be successfully inserted
     ///         into a
     ///         column in the database designed to represent datetime fields (without date).
     ///     </para>
@@ -568,7 +568,7 @@ public abstract partial class QuerySyntaxHelper(
     /// <summary>
     ///     <para>
     ///         Return the appropriate value such that it can be put into the DbParameter.Value field of a parameter of the
-    ///         given <paramref name="dbType" /> and be succesfully inserted into a column in the database designed to
+    ///         given <paramref name="dbType" /> and be successfully inserted into a column in the database designed to
     ///         represent datetime fields.
     ///     </para>
     ///     <para>
@@ -585,7 +585,7 @@ public abstract partial class QuerySyntaxHelper(
         FormatDateTimeForDbParameter(dateTime);
 
     /// <summary>
-    ///     Return the appropriate value such that it can be put into a DbParameter.Value field and be succesfully inserted
+    ///     Return the appropriate value such that it can be put into a DbParameter.Value field and be successfully inserted
     ///     into a
     ///     column in the database designed to represent time fields (without date).
     /// </summary>
