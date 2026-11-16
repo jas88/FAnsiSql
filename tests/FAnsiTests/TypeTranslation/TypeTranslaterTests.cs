@@ -46,7 +46,8 @@ public abstract class TypeTranslaterTests : DatabaseTests
         Assert.That(_translaters[type].GetSQLDBTypeForCSharpType(cSharpType), Is.EqualTo(expectedType));
     }
 
-    protected void Test_CSharpToDbType_StringWidthNotSupplied(DatabaseType type, string expectedType)
+    protected void Test_CSharpToDbType_StringWidthNotSupplied(DatabaseType type, string expectedType,
+        string expectedUnicodeType)
     {
         Assert.Multiple(() =>
         {
@@ -55,13 +56,20 @@ public abstract class TypeTranslaterTests : DatabaseTests
                 Is.EqualTo(expectedType));
             Assert.That(
                 _translaters[type].GetSQLDBTypeForCSharpType(new DatabaseTypeRequest(typeof(string)) { Unicode = true }),
-                Does.EndWith(expectedType));
+                Is.EqualTo(expectedUnicodeType));
 
-            //And is that data type a generous one?
+            //And are those data types generous ones?
             Assert.That(_translaters[type].GetLengthIfString(expectedType), Is.GreaterThanOrEqualTo(4000));
+            Assert.That(_translaters[type].GetLengthIfString(expectedUnicodeType), Is.GreaterThanOrEqualTo(2000));
             Assert.That(_translaters[type].GetCSharpTypeForSQLDBType(expectedType), Is.EqualTo(typeof(string)));
+            Assert.That(_translaters[type].GetCSharpTypeForSQLDBType(expectedUnicodeType), Is.EqualTo(typeof(string)));
         });
     }
+
+    protected void Test_CSharpToDbType_UnicodeString(DatabaseType type, int width, string expectedType) =>
+        Assert.That(
+            _translaters[type].GetSQLDBTypeForCSharpType(new DatabaseTypeRequest(typeof(string), width)
+            { Unicode = true }), Is.EqualTo(expectedType));
 
     protected void Test_CSharpToDbType_StringMax(DatabaseType type, string expectedType)
     {

@@ -34,6 +34,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - The query on `information_schema.COLUMNS` had no `ORDER BY` and MySQL 8 can return its rows in order of column name. It
     is now ordered by `ORDINAL_POSITION`
   - Column discovery for PostgreSQL, SQL Server and Oracle is now explicitly ordered as well
+- **Oracle: Unicode string columns wider than 2000 characters could not be created**
+  - A Unicode string requested without a width was declared as `nvarchar2(4000)` and one of 2001 to 4000 characters as an
+    `nvarchar2` of that width. Oracle rejects both with ORA-00910 because an nvarchar2 holds 4000 bytes, 2000 characters of
+    the default national character set
+  - A Unicode string without a width is now `nvarchar2(2000)` and one of more than 2000 characters `NCLOB`
 
 ### Changed
 - Bump MySqlConnector from 2.6.2 to 3.0.0, a new major version of the MySQL driver which applications referencing FAnsiSql.MySql receive transitively. Code that uses MySqlConnector's own API directly should be checked against its 3.0 release notes
