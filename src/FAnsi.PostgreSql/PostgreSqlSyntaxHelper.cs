@@ -40,9 +40,8 @@ public sealed class PostgreSqlSyntaxHelper : QuerySyntaxHelper
         // See : https://www.npgsql.org/doc/types/datetime.html
         dbType switch
         {
-            // a timestamp has no time zone so it stores the value exactly as it was given, as the other DBMS do
-            DbType.DateTime2 => DateTime.SpecifyKind(dateTime, DateTimeKind.Unspecified),
-            DbType.DateTime => dateTime.ToUniversalTime(),
+            DbType.DateTime2 => PostgreSqlTypeTranslater.ToTimestamp(dateTime, false),
+            DbType.DateTime => PostgreSqlTypeTranslater.ToTimestamp(dateTime, true),
             _ => dateTime
         };
 

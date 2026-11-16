@@ -70,8 +70,9 @@ public sealed class PostgreSqlBulkCopy(
     }
 
     /// <summary>
-    ///     Converts <paramref name="value" /> where Npgsql would not itself write it as the <paramref name="columnType" />
-    ///     (it converts between the integer and numeric types but no others).
+    ///     Converts <paramref name="value" /> where Npgsql would not itself write it as the <paramref name="columnType" />.
+    ///     Npgsql writes any number to the integer and numeric types and a float or double to real and double precision,
+    ///     the conversions here are the ones it leaves out.
     /// </summary>
     private static object ConvertToColumnType(object value, NpgsqlDbType columnType) =>
         columnType switch
@@ -90,13 +91,15 @@ public sealed class PostgreSqlBulkCopy(
                 Convert.ToDouble(value, CultureInfo.InvariantCulture),
             NpgsqlDbType.Real when value is not (double or float) =>
                 Convert.ToSingle(value, CultureInfo.InvariantCulture),
-            //a timestamp has no time zone, it stores the value exactly as it was given but Npgsql will not write a UTC one
-            NpgsqlDbType.Timestamp when value is DateTime { Kind: DateTimeKind.Utc } dateTime =>
-                DateTime.SpecifyKind(dateTime, DateTimeKind.Unspecified),
-            NpgsqlDbType.Timestamp when value is DateOnly date => date.ToDateTime(TimeOnly.MinValue),
-            //while for a timestamp with time zone it will only write a UTC one
-            NpgsqlDbType.TimestampTz when value is DateTime dateTime =>
-                DateTime.SpecifyKind(dateTime, DateTimeKind.Utc),
+            NpgsqlDbType.Timestamp or NpgsqlDbType.TimestampTz => value switch
+            {
+                DateTime dateTime => PostgreSqlTypeTranslater.ToTimestamp(dateTime,
+                    columnType == NpgsqlDbType.TimestampTz),
+                //a date is midnight at the start of that day
+                DateOnly date => PostgreSqlTypeTranslater.ToTimestamp(date.ToDateTime(TimeOnly.MinValue),
+                    columnType == NpgsqlDbType.TimestampTz),
+                _ => value
+            },
             _ => value
         };
 

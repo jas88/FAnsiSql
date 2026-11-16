@@ -123,6 +123,34 @@ public sealed partial class PostgreSqlTypeTranslater : TypeTranslater
         return dbType == DbType.DateTime && !IsTimestampWithTimeZone(sqlType) ? DbType.DateTime2 : dbType;
     }
 
+    /// <summary>
+    ///     Returns <paramref name="dateTime" /> as Npgsql must be given it for a 'timestamp' column, or for a 'timestamp
+    ///     with time zone' column when <paramref name="withTimeZone" /> is true.  What is stored for each
+    ///     <see cref="DateTimeKind" /> is decided here and nowhere else, so that it does not depend on how the value is
+    ///     inserted:
+    ///     <list type="bullet">
+    ///         <item>
+    ///             A 'timestamp' has no time zone.  It stores the date and time exactly as given whatever the Kind, as the
+    ///             other DBMS do (Npgsql will not write a Utc value to one, so the Kind is removed).
+    ///         </item>
+    ///         <item>
+    ///             A 'timestamp with time zone' stores an instant and Npgsql will only write it a Utc value.  A Local
+    ///             value is converted to UTC.  An Unspecified value is taken to be UTC already: that does not depend on
+    ///             the time zone of the machine and it is what a value read from such a column is once it has been put
+    ///             in a DataTable, so data read from one table is stored unchanged in another.
+    ///         </item>
+    ///     </list>
+    /// </summary>
+    internal static DateTime ToTimestamp(DateTime dateTime, bool withTimeZone)
+    {
+        if (!withTimeZone)
+            return DateTime.SpecifyKind(dateTime, DateTimeKind.Unspecified);
+
+        return dateTime.Kind == DateTimeKind.Local
+            ? dateTime.ToUniversalTime()
+            : DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);
+    }
+
     private static bool IsTimestampWithTimeZone(string sqlType) =>
         sqlType.Contains("with time zone", StringComparison.OrdinalIgnoreCase) ||
         sqlType.Contains("timestamptz", StringComparison.OrdinalIgnoreCase);

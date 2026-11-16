@@ -16,7 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     failed with "Cannot write DateTime with Kind=Unspecified to PostgreSQL type 'timestamp with time zone'", and a UTC value
     was converted to the time zone of the server
   - `timestamp` columns now get `DbType.DateTime2` and store the value exactly as given whatever its `DateTimeKind`, as the
-    other DBMS do. `timestamp with time zone` columns still get `DbType.DateTime` and are always sent a UTC value
+    other DBMS do. `timestamp with time zone` columns still get `DbType.DateTime` and are always sent a UTC value: a `Local`
+    value is converted and an `Unspecified` one is taken to be UTC already (3.7.0 took an `Unspecified` value parsed from a
+    string to be in the time zone of the client and rejected any other)
   - `TypeTranslater.GetDbTypeForSQLDBType` is now virtual. The mapping is unchanged for SQL Server, MySQL, Oracle and SQLite
 - **PostgreSQL: bulk insert failed when a column and the DataColumn loaded into it had different types**
   - `PostgreSqlBulkCopy` chose the binary COPY type of each value from the type of the `DataColumn`, but the server does not
@@ -24,6 +26,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     encoding "UTF8": 0x00", an `int` written to a `bigint` column with "insufficient data left in message"
   - Values are now written as the type of the destination column and converted first where Npgsql does not do so itself
     (anything going into a string column, numbers going into `real` and `double precision` columns)
+  - A `DateTime` is stored by the same rule as when it is inserted as a parameter. Bulk insert of a `Local` value into a
+    `timestamp with time zone` column used to store its local time as if it were UTC
 - **MySQL: "Row size too large" creating a table with several string columns of unspecified width**
   - A string column requested without a width, such as every string column of an empty `DataTable`, was created as
     `varchar(4000)`. MySQL counts the declared width of every varchar column towards a limit of 65,535 bytes per row, so a

@@ -197,7 +197,10 @@ internal sealed class BulkCopyTests_PostgreSql : BulkCopyTestsBase
         new object[] { 5.5m, "text", "5.5" },
         new object[] { new DateTime(2001, 2, 3, 4, 5, 6), "varchar(100)", "2001-02-03 04:05:06" },
         new object[] { new DateTime(2001, 2, 3, 4, 5, 6, 789), "text", "2001-02-03 04:05:06.789" },
+        new object[] { 5.5f, "double precision", 5.5d },
+        new object[] { 5.5d, "real", 5.5f },
         new object[] { new DateOnly(2001, 2, 3), "timestamp", new DateTime(2001, 2, 3) },
+        new object[] { new DateOnly(2001, 2, 3), "timestamp with time zone", new DateTime(2001, 2, 3) },
         new object[] { true, "varchar(10)", "true" }
     ];
 
@@ -244,6 +247,7 @@ internal sealed class BulkCopyTests_PostgreSql : BulkCopyTestsBase
             short => new DataColumn("Value", typeof(short)),
             int => new DataColumn("Value", typeof(int)),
             long => new DataColumn("Value", typeof(long)),
+            float => new DataColumn("Value", typeof(float)),
             double => new DataColumn("Value", typeof(double)),
             decimal => new DataColumn("Value", typeof(decimal)),
             DateTime => new DataColumn("Value", typeof(DateTime)),
@@ -295,46 +299,84 @@ internal sealed class BulkCopyTests_PostgreSql : BulkCopyTestsBase
         }
     }
 
-    [Test]
-    public void Upload_UtcDateTimeIntoTimestampColumn_KeepsWallClockTime() =>
-        Assert.That(
-            UploadDate("timestamp", DataSetDateTime.Utc, new DateTime(2001, 2, 3, 4, 5, 6, DateTimeKind.Utc),
-                "\"MyDate\""),
-            Is.EqualTo("2001-02-03 04:05:06"));
-
-    [Test]
-    public void Upload_DateTimeIntoTimestampWithTimeZoneColumn_IsTreatedAsUtc() =>
-        Assert.That(
-            UploadDate("timestamp with time zone", DataSetDateTime.UnspecifiedLocal, new DateTime(2001, 2, 3, 4, 5, 6),
-                "\"MyDate\" AT TIME ZONE 'UTC'"),
-            Is.EqualTo("2001-02-03 04:05:06"));
-
     /// <summary>
-    ///     Uploads <paramref name="value" /> to a column of <paramref name="destinationType" /> and returns what the server
-    ///     stored, formatted by the server so that the result does not depend on any client side conversion.
+    ///     What is stored for a DateTime depends on the type of the column and on nothing else, in particular not on whether
+    ///     it was inserted as a parameter or by bulk copy, nor on the time zones of the client and server:
+    ///     <list type="bullet">
+    ///         <item>a 'timestamp' has no time zone, it stores the date and time exactly as given whatever the Kind</item>
+    ///         <item>
+    ///             a 'timestamp with time zone' stores an instant, a Local value is converted to UTC and an Unspecified one
+    ///             is taken to be UTC already
+    ///         </item>
+    ///     </list>
     /// </summary>
-    private string? UploadDate(string destinationType, DataSetDateTime dateTimeMode, DateTime value,
-        string selectExpression)
+    [TestCase("timestamp", DateTimeKind.Unspecified)]
+    [TestCase("timestamp", DateTimeKind.Local)]
+    [TestCase("timestamp", DateTimeKind.Utc)]
+    [TestCase("timestamp with time zone", DateTimeKind.Unspecified)]
+    [TestCase("timestamp with time zone", DateTimeKind.Local)]
+    [TestCase("timestamp with time zone", DateTimeKind.Utc)]
+    public void DateTime_InsertAndBulkCopyStoreTheSameValue(string columnType, DateTimeKind kind)
     {
+        var value = new DateTime(2001, 2, 3, 4, 5, 6, kind);
+        var withTimeZone = columnType.EndsWith("with time zone", StringComparison.Ordinal);
+        var expected = (withTimeZone && kind == DateTimeKind.Local ? value.ToUniversalTime() : value)
+            .ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
+
         var db = GetTestDatabase(DbType);
-        var tbl = db.CreateTable("BulkDates", [new DatabaseColumnRequest("MyDate", destinationType)]);
+        var tbl = db.CreateTable("DateKinds",
+        [
+            new DatabaseColumnRequest("How", new DatabaseTypeRequest(typeof(string), 10)),
+            new DatabaseColumnRequest("MyDate", columnType)
+        ]);
 
         try
         {
+            tbl.Insert(new Dictionary<string, object>
+            {
+                { "How", "insert" },
+                { "MyDate", value }
+            });
+
             using var dt = new DataTable();
-            dt.Columns.Add(new DataColumn("MyDate", typeof(DateTime)) { DateTimeMode = dateTimeMode });
-            dt.Rows.Add(value);
+            dt.Columns.Add("How", typeof(string));
+            //by default a DataTable makes every DateTime it is given Unspecified, these modes keep the Kind
+            dt.Columns.Add(new DataColumn("MyDate", typeof(DateTime))
+            {
+                DateTimeMode = kind switch
+                {
+                    DateTimeKind.Local => DataSetDateTime.Local,
+                    DateTimeKind.Utc => DataSetDateTime.Utc,
+                    _ => DataSetDateTime.Unspecified
+                }
+            });
+            dt.Rows.Add("bulk", value);
 
             using (var bulk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture))
             {
                 Assert.That(bulk.Upload(dt), Is.EqualTo(1));
             }
 
-            using var con = db.Server.GetConnection();
-            con.Open();
-            using var cmd = db.Server.GetCommand(
-                $"SELECT to_char({selectExpression}, 'YYYY-MM-DD HH24:MI:SS') FROM {tbl.GetFullyQualifiedName()}", con);
-            return cmd.ExecuteScalar() as string;
+            //the server formats what it stored so that the result does not depend on any client side conversion
+            var stored = new Dictionary<string, string>();
+            var storedDate = withTimeZone ? "\"MyDate\" AT TIME ZONE 'UTC'" : "\"MyDate\"";
+
+            using (var con = db.Server.GetConnection())
+            {
+                con.Open();
+                using var cmd = db.Server.GetCommand(
+                    $"SELECT \"How\", to_char({storedDate}, 'YYYY-MM-DD HH24:MI:SS') FROM {tbl.GetFullyQualifiedName()}",
+                    con);
+                using var r = cmd.ExecuteReader();
+                while (r.Read())
+                    stored.Add(r.GetString(0), r.GetString(1));
+            }
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(stored["insert"], Is.EqualTo(expected));
+                Assert.That(stored["bulk"], Is.EqualTo(expected));
+            });
         }
         finally
         {

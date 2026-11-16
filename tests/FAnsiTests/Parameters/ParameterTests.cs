@@ -105,20 +105,37 @@ internal sealed class ParameterTests : DatabaseTests
         });
     }
 
+    /// <summary>
+    ///     A 'timestamp with time zone' stores an instant.  A Local value is converted to UTC, an Unspecified one is taken
+    ///     to be UTC already, which is how values read from such a column come back out of a DataTable.
+    /// </summary>
     [TestCase(DateTimeKind.Unspecified)]
     [TestCase(DateTimeKind.Local)]
     [TestCase(DateTimeKind.Utc)]
     public void GetParameter_PostgreSqlTimestampWithTimeZone_IsUtc(DateTimeKind kind)
     {
         var value = new DateTime(2001, 1, 2, 3, 4, 5, kind);
+        var expected = kind == DateTimeKind.Local ? value.ToUniversalTime() : new DateTime(2001, 1, 2, 3, 4, 5);
 
         var p = GetPostgreSqlParameter("timestamp with time zone", value);
 
         Assert.Multiple(() =>
         {
             Assert.That(p.NpgsqlDbType, Is.EqualTo(NpgsqlDbType.TimestampTz));
-            Assert.That(p.Value, Is.EqualTo(value.ToUniversalTime()));
+            Assert.That(p.Value, Is.EqualTo(expected));
             //Npgsql refuses to write anything except a UTC DateTime to 'timestamp with time zone'
+            Assert.That(((DateTime)p.Value!).Kind, Is.EqualTo(DateTimeKind.Utc));
+        });
+    }
+
+    [Test]
+    public void GetParameter_PostgreSqlTimestampWithTimeZone_StringValueIsTakenAsUtc()
+    {
+        var p = GetPostgreSqlParameter("timestamp with time zone", "2001-01-02 03:04:05");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(p.Value, Is.EqualTo(new DateTime(2001, 1, 2, 3, 4, 5)));
             Assert.That(((DateTime)p.Value!).Kind, Is.EqualTo(DateTimeKind.Utc));
         });
     }
