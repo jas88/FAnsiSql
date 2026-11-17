@@ -65,4 +65,22 @@ internal sealed class EqualityTests_ServerAndDatabase
         Assert.That(s2, Is.Not.EqualTo(s1));
         Assert.That(s2.ExpectDatabase("MyDb"), Is.Not.EqualTo(s1.ExpectDatabase("MyDb")));
     }
+
+    [Test]
+    public void EqualityTest_DiscoveredServer_ComparedWithNullItselfOrAnotherType()
+    {
+        var server = new DiscoveredServer("Server=fish fish fish", DatabaseType.MicrosoftSQLServer);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(server.Equals(server), Is.True);
+
+            // Neither the server's connection string nor a database on the server is the server
+            Assert.That(server.Equals(server.Builder.ConnectionString), Is.False);
+            Assert.That(server.Equals(server.ExpectDatabase("MyDb")), Is.False);
+
+            // Last, because the compiler takes comparing with null as a sign that server might be null
+            Assert.That(server.Equals(null), Is.False);
+        });
+    }
 }
