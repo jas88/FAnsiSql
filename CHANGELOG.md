@@ -46,6 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - A Unicode string without a width is now `nvarchar2(2000)` and one of more than 2000 characters `NCLOB`
 
 ### Changed
+- `QuerySyntaxHelper.GetParameter` throws an `ArgumentException` naming the column when the column has no `DataType`, instead of a `NullReferenceException`
 - Bump MySqlConnector from 2.6.2 to 3.0.0, a new major version of the MySQL driver which applications referencing FAnsiSql.MySql receive transitively. Code that uses MySqlConnector's own API directly should be checked against its 3.0 release notes
 - Bump Microsoft.Data.SqlClient 7.1.1 → 7.1.2 and System.Security.Cryptography.Pkcs 10.0.14 → 10.0.15
 
