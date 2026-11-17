@@ -251,10 +251,7 @@ public sealed class DiscoveredServer : IMightNotExist
                 // Wait returns false instead of throwing when its own timeout runs out before the token is
                 // cancelled. The connection has not opened then, so cancel the attempt, which is still running
                 if (!openTask.Wait(timeoutInMillis, tokenSource.Token))
-                {
-                    tokenSource.Cancel();
-                    throw ConnectionTimedOut(timeoutInMillis, new OperationCanceledException(tokenSource.Token));
-                }
+                    throw ConnectionTimedOut(timeoutInMillis, CancelAttempt(tokenSource));
             }
             catch (OperationCanceledException e)
             {
@@ -281,6 +278,23 @@ public sealed class DiscoveredServer : IMightNotExist
     private TimeoutException ConnectionTimedOut(int timeoutInMillis, Exception innerException) =>
         new(string.Format(CultureInfo.InvariantCulture, CouldNotConnectTimeoutFormat, Name, timeoutInMillis),
             innerException);
+
+    /// <summary>
+    ///     Cancels the connection attempt that <paramref name="tokenSource" /> controls. Returns the exception to report as
+    ///     the cause of the timeout: the cancellation or, if a callback registered on the token threw, its failure
+    /// </summary>
+    private static Exception CancelAttempt(CancellationTokenSource tokenSource)
+    {
+        try
+        {
+            tokenSource.Cancel();
+            return new OperationCanceledException(tokenSource.Token);
+        }
+        catch (AggregateException e)
+        {
+            return e;
+        }
+    }
 
     /// <summary>
     ///     <para>
