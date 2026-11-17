@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+
+<!-- Used by the mariadb job in CI, which runs the MySql tests against MariaDB. SQLite needs no server and is here for
+     the tests that move data between it and MySql -->
+<TestDatabases>
+	<Settings>
+		<AllowDatabaseCreation>True</AllowDatabaseCreation>
+		<TestScratchDatabase>FAnsiTests</TestScratchDatabase>
+	</Settings>
+	<TestDatabase>
+		<DatabaseType>MySql</DatabaseType>
+		<ConnectionString>server=127.0.0.1;Uid=root;Pwd=root;AllowPublicKeyRetrieval=True;ConvertZeroDateTime=true</ConnectionString>
+	</TestDatabase>
+	<TestDatabase>
+		<DatabaseType>Sqlite</DatabaseType>
+		<ConnectionString>Data Source=/tmp/fansitests.db</ConnectionString>
+	</TestDatabase>
+</TestDatabases>

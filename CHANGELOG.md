@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **MariaDB support in FAnsiSql.MySql**
+  - `DatabaseType.MySql` now works with MariaDB as well as MySQL, with the same connection strings and API. It has been
+    tested against MariaDB 12.3, the newest LTS release, and 13.0
+  - CI runs the MySQL tests against MariaDB 12.3 as well as MySQL 8
+
 ### Fixed
 - **SQLite: `SupportsEmbeddedParameters` returned true**
   - SQLite SQL has no `DECLARE` or `SET` statement, so a parameter cannot be declared and given a value in SQL. Code that

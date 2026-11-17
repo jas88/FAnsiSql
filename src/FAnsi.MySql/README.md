@@ -1,5 +1,8 @@
 # MySql FAnsi Implementation
 
+Works with MySQL 8.0 or later and with MariaDB, both through `DatabaseType.MySql`. CI tests it against MySQL 8
+and MariaDB 12.3 (LTS).
+
 # Feature Completeness
 
 - Server

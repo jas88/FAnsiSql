@@ -324,3 +324,45 @@ jobs:
         user: jas88
     - name: NuGet push
       run: dotnet nuget push "FAnsi*.nupkg" -s https://api.nuget.org/v3/index.json -k ${{ steps.nuget-login.outputs.NUGET_API_KEY }} --skip-duplicate
+
+  # The build job tests the MySql implementation against the runner's MySQL 8; this runs those tests again against
+  # MariaDB. Only MariaDB and SQLite are configured here, so the filter leaves out tests that need any other DBMS
+  mariadb:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+    services:
+      mariadb:
+        image: mariadb:12.3  # newest LTS release, supported until June 2029
+        env:
+          MARIADB_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+
+    steps:
+    - uses: actions/checkout@v7
+      with:
+        submodules: recursive
+
+    - name: Replace test configuration for MariaDB
+      run: mv tests/FAnsiTests/TestDatabases{-mariadb,}.xml
+
+    - name: Setup .NET Core
+      uses: actions/setup-dotnet@v6
+      with:
+        global-json-file: global.json
+        cache: true
+        cache-dependency-path: Directory.Packages.props
+
+    - name: Build
+      run: dotnet build tests/FAnsiTests/FAnsiTests.csproj -c Release --nologo
+
+    - name: Test MySql implementation against MariaDB
+      run: |
+        dotnet test --project tests/FAnsiTests/FAnsiTests.csproj -c Release --no-build \
+          --filter "(FullyQualifiedName~MySql|Name~MySql)&Name!~MicrosoftSQLServer&Name!~Oracle&Name!~PostgreSql"
