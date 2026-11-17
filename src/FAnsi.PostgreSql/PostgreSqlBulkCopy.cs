@@ -44,7 +44,7 @@ public sealed class PostgreSqlBulkCopy(
         // column it is going into whatever the type of the DataColumn it came from.  The type of the DataColumn is
         // only used for the column types that take values of just the one C# type.
         var types = matchedColumns.Select(kvp =>
-            (kvp.Value.DataType == null ? null : tt.GetNpgsqlDbTypeForSQLDBType(kvp.Value.DataType.SQLType)) ??
+            (kvp.Value.DataType == null ? null : tt.GetNpgsqlDbTypeForSqlType(kvp.Value.DataType.SQLType)) ??
             tt.GetNpgsqlDbTypeForCSharpType(kvp.Key.DataType)).ToArray();
 
         using (var import = con.BeginBinaryImport(sb.ToString()))
@@ -91,13 +91,18 @@ public sealed class PostgreSqlBulkCopy(
                 Convert.ToDouble(value, CultureInfo.InvariantCulture),
             NpgsqlDbType.Real when value is not (double or float) =>
                 Convert.ToSingle(value, CultureInfo.InvariantCulture),
-            NpgsqlDbType.Timestamp or NpgsqlDbType.TimestampTz => value switch
+            NpgsqlDbType.Timestamp => value switch
             {
-                DateTime dateTime => PostgreSqlTypeTranslater.ToTimestamp(dateTime,
-                    withTimeZone: columnType == NpgsqlDbType.TimestampTz),
+                DateTime dateTime => PostgreSqlTypeTranslater.ToTimestamp(dateTime),
                 //a date is midnight at the start of that day
-                DateOnly date => PostgreSqlTypeTranslater.ToTimestamp(date.ToDateTime(TimeOnly.MinValue),
-                    withTimeZone: columnType == NpgsqlDbType.TimestampTz),
+                DateOnly date => PostgreSqlTypeTranslater.ToTimestamp(date.ToDateTime(TimeOnly.MinValue)),
+                _ => value
+            },
+            NpgsqlDbType.TimestampTz => value switch
+            {
+                DateTime dateTime => PostgreSqlTypeTranslater.ToTimestampTz(dateTime),
+                //a date is midnight at the start of that day
+                DateOnly date => PostgreSqlTypeTranslater.ToTimestampTz(date.ToDateTime(TimeOnly.MinValue)),
                 _ => value
             },
             _ => value

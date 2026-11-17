@@ -88,7 +88,8 @@ internal sealed class ParameterTests : DatabaseTests
             Assert.That(p.NpgsqlDbType, Is.EqualTo(NpgsqlDbType.Timestamp));
             Assert.That(p.Value, Is.EqualTo(new DateTime(2001, 1, 2, 3, 4, 5)));
             //Npgsql refuses to write a UTC DateTime to 'timestamp without time zone'
-            Assert.That(((DateTime)p.Value!).Kind, Is.Not.EqualTo(DateTimeKind.Utc));
+            Assert.That(p.Value,
+                Is.TypeOf<DateTime>().With.Property(nameof(DateTime.Kind)).Not.EqualTo(DateTimeKind.Utc));
         });
     }
 
@@ -101,7 +102,8 @@ internal sealed class ParameterTests : DatabaseTests
         {
             Assert.That(p.NpgsqlDbType, Is.EqualTo(NpgsqlDbType.Timestamp));
             Assert.That(p.Value, Is.EqualTo(new DateTime(2001, 1, 2, 3, 4, 5)));
-            Assert.That(((DateTime)p.Value!).Kind, Is.Not.EqualTo(DateTimeKind.Utc));
+            Assert.That(p.Value,
+                Is.TypeOf<DateTime>().With.Property(nameof(DateTime.Kind)).Not.EqualTo(DateTimeKind.Utc));
         });
     }
 
@@ -124,7 +126,7 @@ internal sealed class ParameterTests : DatabaseTests
             Assert.That(p.NpgsqlDbType, Is.EqualTo(NpgsqlDbType.TimestampTz));
             Assert.That(p.Value, Is.EqualTo(expected));
             //Npgsql refuses to write anything except a UTC DateTime to 'timestamp with time zone'
-            Assert.That(((DateTime)p.Value!).Kind, Is.EqualTo(DateTimeKind.Utc));
+            Assert.That(p.Value, Is.TypeOf<DateTime>().With.Property(nameof(DateTime.Kind)).EqualTo(DateTimeKind.Utc));
         });
     }
 
@@ -136,7 +138,7 @@ internal sealed class ParameterTests : DatabaseTests
         Assert.Multiple(() =>
         {
             Assert.That(p.Value, Is.EqualTo(new DateTime(2001, 1, 2, 3, 4, 5)));
-            Assert.That(((DateTime)p.Value!).Kind, Is.EqualTo(DateTimeKind.Utc));
+            Assert.That(p.Value, Is.TypeOf<DateTime>().With.Property(nameof(DateTime.Kind)).EqualTo(DateTimeKind.Utc));
         });
     }
 

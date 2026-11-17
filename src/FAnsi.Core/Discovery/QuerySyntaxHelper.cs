@@ -284,6 +284,10 @@ public abstract partial class QuerySyntaxHelper(
     public DbParameter GetParameter(DbParameter p, DiscoveredColumn discoveredColumn, object value,
         CultureInfo? culture)
     {
+        var dataType = discoveredColumn.DataType ?? throw new ArgumentException(
+            $"Could not GetParameter for column '{discoveredColumn.GetFullyQualifiedName()}' as it has no DataType",
+            nameof(discoveredColumn));
+
         try
         {
             culture ??= CultureInfo.InvariantCulture;
@@ -291,9 +295,9 @@ public abstract partial class QuerySyntaxHelper(
             var factory = _factories.GetOrAdd(culture, static c => new TypeDeciderFactory(c));
 
             var tt = TypeTranslater;
-            var dbType = tt.GetDbTypeForSQLDBType(discoveredColumn.DataType!.SQLType);
+            var dbType = tt.GetDbTypeForSQLDBType(dataType.SQLType);
             p.DbType = dbType;
-            var cSharpType = tt.GetCSharpTypeForSQLDBType(discoveredColumn.DataType.SQLType);
+            var cSharpType = tt.GetCSharpTypeForSQLDBType(dataType.SQLType);
 
             if (IsBasicallyNull(value))
             {

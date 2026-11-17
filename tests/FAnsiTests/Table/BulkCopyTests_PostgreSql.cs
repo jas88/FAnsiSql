@@ -282,7 +282,7 @@ internal sealed class BulkCopyTests_PostgreSql : BulkCopyTestsBase
         try
         {
             using var read = from.GetDataTable();
-            Assert.That(read.Columns["dateColumn"]!.DataType, Is.EqualTo(typeof(DateTime)));
+            Assert.That(read.Columns["dateColumn"]?.DataType, Is.EqualTo(typeof(DateTime)));
 
             using (var bulk = to.BeginBulkInsert(CultureInfo.InvariantCulture))
             {
