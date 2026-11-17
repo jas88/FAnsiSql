@@ -36,9 +36,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     Tables created through such a connection would have gone into the deleted file
   - `DropDatabase` and `CreateDatabase` now close the idle pooled connections, and `CreateDatabase` creates the file
     with a connection that does not come from the pool
-  - `Exists` looked for, and `CreateDatabase` created, the file named by the runtime name of the database, which loses
-    everything up to the last dot of a name like `fansitests.db`. They now use the Data Source of the database's
-    connection string, the file its connections open
+  - `DiscoveredDatabase.GetRuntimeName` took the dot in a file name for a qualifier and returned `db` for a database
+    called `fansitests.db`, so `Exists` looked for, and `Create` created, a file called `db` in the working directory.
+    The runtime name of a SQLite database is now the path of its file, and `Exists` and `CreateDatabase` use the Data
+    Source of the database's connection string
+  - `IQuerySyntaxHelper` has a new member, `GetDatabaseRuntimeName`, which gives the name that
+    `DiscoveredDatabase.GetRuntimeName` returns. It is `GetRuntimeName` for every DBMS but SQLite, for which it is the
+    path of the database file unchanged. It has a default implementation, so other implementations of
+    `IQuerySyntaxHelper` are unaffected
 - **Decimal values on .NET 11**
   - .NET 11 converts a `double` to a `decimal` exactly, so 9.99 becomes 9.990000000000000213162820728, where earlier
     versions of .NET rounded to 15 significant digits

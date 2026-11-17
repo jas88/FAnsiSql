@@ -111,6 +111,15 @@ public sealed class SqliteQuerySyntaxHelper : QuerySyntaxHelper
     /// </remarks>
     public override string? GetRuntimeName(string? s) => base.GetRuntimeName(s);
 
+    /// <summary>
+    ///     Returns <paramref name="database" /> unchanged.  A SQLite database is a file and its name is the path of the
+    ///     file (the Data Source of the connection string), not a SQL identifier.  <see cref="GetRuntimeName" /> would
+    ///     take the dot in "fansitests.db" to be a qualifier and return "db".
+    /// </summary>
+    /// <param name="database">The path of the database file</param>
+    /// <returns><paramref name="database" /></returns>
+    public override string GetDatabaseRuntimeName(string database) => database;
+
     /// <inheritdoc />
     public override string EnsureWrappedImpl(string databaseOrTableName) =>
         $"\"{GetRuntimeNameWithEscapedQuotes(databaseOrTableName)}\"";

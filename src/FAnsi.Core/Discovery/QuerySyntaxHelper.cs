@@ -124,6 +124,9 @@ public abstract partial class QuerySyntaxHelper(
         return lastWord;
     }
 
+    /// <inheritdoc />
+    public virtual string GetDatabaseRuntimeName(string database) => GetRuntimeName(database);
+
     public virtual bool TryGetRuntimeName(string s, out string? name)
     {
         try

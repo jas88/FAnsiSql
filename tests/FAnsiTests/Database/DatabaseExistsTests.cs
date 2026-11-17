@@ -112,4 +112,43 @@ internal sealed class DatabaseExistsTests : DatabaseTests
                 Directory.Delete(directory, true);
         }
     }
+
+    /// <summary>
+    ///     The name of a SQLite database is the path of its file, and the dot in a name like "fansitests.db" is part of the
+    ///     file name.  GetRuntimeName returned "db" for such a database, so Exists looked for a file called "db", and Create
+    ///     created one, in the working directory.
+    /// </summary>
+    [Test]
+    public void Create_Sqlite_FileNameWithDot_CreatesThatFile()
+    {
+        var server = GetTestServer(DatabaseType.Sqlite);
+        var directory = Path.Combine(Path.GetTempPath(), $"FAnsiTests_{Guid.NewGuid():N}");
+        var file = Path.Combine(directory, "NotYetCreated", "MyDatabase.db");
+
+        try
+        {
+            var db = server.ExpectDatabase(file);
+            Assert.Multiple(() =>
+            {
+                Assert.That(db.GetRuntimeName(), Is.EqualTo(file));
+                Assert.That(db.Exists(), Is.False);
+            });
+
+            db.Create();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(File.Exists(file), "Expected Create to create the file, and the directory it is in");
+                Assert.That(db.Exists());
+            });
+
+            db.Drop();
+            Assert.That(File.Exists(file), Is.False);
+        }
+        finally
+        {
+            if (Directory.Exists(directory))
+                Directory.Delete(directory, true);
+        }
+    }
 }

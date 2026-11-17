@@ -50,10 +50,11 @@ public sealed class DiscoveredDatabase : IHasRuntimeName, IMightNotExist
     public IDiscoveredDatabaseHelper Helper { get; }
 
     /// <summary>
-    ///     Returns the name of the database without any qualifiers
+    ///     Returns the name of the database without any qualifiers (see
+    ///     <see cref="IQuerySyntaxHelper.GetDatabaseRuntimeName" />)
     /// </summary>
     /// <returns></returns>
-    public string GetRuntimeName() => _querySyntaxHelper.GetRuntimeName(_database);
+    public string GetRuntimeName() => _querySyntaxHelper.GetDatabaseRuntimeName(_database);
 
     /// <summary>
     ///     Efficiently checks if the database exists using a direct SQL query instead of listing all databases.
