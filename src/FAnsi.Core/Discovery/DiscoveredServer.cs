@@ -248,22 +248,22 @@ public sealed class DiscoveredServer : IMightNotExist
             var openTask = con.OpenAsync(tokenSource.Token);
             try
             {
-                openTask.Wait(timeoutInMillis, tokenSource.Token);
+                // Wait returns false instead of throwing when its own timeout runs out before the token is
+                // cancelled. The connection has not opened then, so cancel the attempt, which is still running
+                if (!openTask.Wait(timeoutInMillis, tokenSource.Token))
+                {
+                    tokenSource.Cancel();
+                    throw ConnectionTimedOut(timeoutInMillis, new OperationCanceledException(tokenSource.Token));
+                }
             }
             catch (OperationCanceledException e)
             {
-                throw new TimeoutException(
-                    string.Format(CultureInfo.InvariantCulture,
-                        CouldNotConnectTimeoutFormat,
-                        Name, timeoutInMillis), e);
+                throw ConnectionTimedOut(timeoutInMillis, e);
             }
             catch (AggregateException e)
             {
                 if (openTask.IsCanceled)
-                    throw new TimeoutException(
-                        string.Format(CultureInfo.InvariantCulture,
-                            CouldNotConnectTimeoutFormat,
-                            Name, timeoutInMillis), e);
+                    throw ConnectionTimedOut(timeoutInMillis, e);
 
                 throw;
             }
@@ -277,6 +277,10 @@ public sealed class DiscoveredServer : IMightNotExist
 
         con.Close();
     }
+
+    private TimeoutException ConnectionTimedOut(int timeoutInMillis, Exception innerException) =>
+        new(string.Format(CultureInfo.InvariantCulture, CouldNotConnectTimeoutFormat, Name, timeoutInMillis),
+            innerException);
 
     /// <summary>
     ///     <para>
