@@ -14,6 +14,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     `near "SET": syntax error`
   - `SupportsEmbeddedParameters` now returns false and `GetParameterDeclaration` throws `NotSupportedException`, as they
     do for Oracle and PostgreSQL. Parameter values have to be passed as `DbParameter`s
+- **The Guesser of a string column was never Unicode and had no width**
+  - TypeGuesser 2 keeps only the C# type of the `DatabaseTypeRequest` a `Guesser` is constructed with, so the `Guesser`
+    from `DiscoveredColumn.GetGuesser()` for an `nvarchar(10)` column, and the one `CreateTable(out typeDictionary, ...)`
+    returns for an explicitly requested Unicode string column, guessed a non-Unicode string of no width until it saw a
+    value. A type computed from it for wider data was `varchar` rather than `nvarchar` (`varchar2` rather than
+    `nvarchar2` on Oracle), and an `nvarchar(max)` column was guessed as `varchar(4000)`
+  - These Guessers are now first shown a string as wide as the column (8001 characters for wider columns, which still
+    guesses the unlimited string type on SQL Server, MySQL, Oracle and PostgreSQL), containing a non-ASCII character
+    when the column is Unicode. Guessers of non-string columns are unchanged: TypeGuesser 2 also drops the decimal size
+    of the request
 
 ## [3.8.0] - 2026-11-16
 

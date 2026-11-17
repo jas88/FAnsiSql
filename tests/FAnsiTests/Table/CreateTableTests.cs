@@ -377,6 +377,39 @@ internal sealed class CreateTableTests : DatabaseTests
         Assert.That(comp.Guess.Unicode);
     }
 
+    /// <summary>
+    ///     The <see cref="TypeGuesser.Guesser" /> that CreateTable returns for an explicitly requested string column starts
+    ///     out guessing that request, Unicode included
+    /// </summary>
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    public void CreateTable_ExplicitStringColumns_GuessersStartAsRequested(DatabaseType type)
+    {
+        var db = GetTestDatabase(type);
+
+        using var dt = new DataTable();
+        dt.Columns.Add("UnicodeCol");
+        dt.Columns.Add("AsciiCol");
+        dt.Rows.Add("a", "b");
+
+        db.CreateTable(out var typeDictionary, "ExplicitGuessers", dt,
+        [
+            new DatabaseColumnRequest("UnicodeCol", new DatabaseTypeRequest(typeof(string), 10) { Unicode = true }),
+            new DatabaseColumnRequest("AsciiCol", new DatabaseTypeRequest(typeof(string), 10))
+        ]);
+
+        Assert.That(typeDictionary, Is.Not.Null);
+        var unicode = typeDictionary!["UnicodeCol"].Guess;
+        var ascii = typeDictionary["AsciiCol"].Guess;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(unicode.Unicode, Is.True);
+            Assert.That(unicode.Width, Is.EqualTo(10));
+            Assert.That(ascii.Unicode, Is.False);
+            Assert.That(ascii.Width, Is.EqualTo(10));
+        });
+    }
+
     [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void Test_CreateTable_UnicodeNames(DatabaseType dbType)
     {
