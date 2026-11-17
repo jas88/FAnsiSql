@@ -57,7 +57,7 @@ internal sealed class ServerLevelUnitTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(ex!.Message, Does.Contain($"'{server.Name}'"));
+            Assert.That(ex.Message, Does.Contain($"'{server.Name}'"));
             Assert.That(ex.Message, Does.EndWith("after timeout of 0 milliseconds"));
             Assert.That(ex.InnerException, Is.InstanceOf<OperationCanceledException>());
         });
@@ -76,7 +76,7 @@ internal sealed class ServerLevelUnitTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(ex!.Message, Does.Contain("'never-opens'"));
+            Assert.That(ex.Message, Does.Contain("'never-opens'"));
             Assert.That(ex.Message, Does.EndWith("after timeout of 0 milliseconds"));
             Assert.That(ex.InnerException, Is.InstanceOf<OperationCanceledException>());
         });
@@ -85,9 +85,9 @@ internal sealed class ServerLevelUnitTests
     [Test]
     public void TestConnection_ConnectionFails_ThrowsAggregateExceptionFromDriver()
     {
-        var ex = Assert.Throws<AggregateException>(() => UnopenableSqliteServer().TestConnection());
+        var ex = Assert.Throws<AggregateException>(static () => UnopenableSqliteServer().TestConnection());
 
-        Assert.That(ex!.InnerException, Is.InstanceOf<DbException>());
+        Assert.That(ex.InnerException, Is.InstanceOf<DbException>());
     }
 
     [Test]

@@ -71,16 +71,20 @@ internal sealed class EqualityTests_ServerAndDatabase
     {
         var server = new DiscoveredServer("Server=fish fish fish", DatabaseType.MicrosoftSQLServer);
 
+        // Equals(object) can be passed anything, so each value is passed to it as an object
+        object? nothing = null;
+        object sameServer = server;
+        object connectionString = server.Builder.ConnectionString;
+        object database = server.ExpectDatabase("MyDb");
+
         Assert.Multiple(() =>
         {
-            Assert.That(server.Equals(server), Is.True);
+            Assert.That(server.Equals(nothing), Is.False);
+            Assert.That(server.Equals(sameServer), Is.True);
 
             // Neither the server's connection string nor a database on the server is the server
-            Assert.That(server.Equals(server.Builder.ConnectionString), Is.False);
-            Assert.That(server.Equals(server.ExpectDatabase("MyDb")), Is.False);
-
-            // Last, because the compiler takes comparing with null as a sign that server might be null
-            Assert.That(server.Equals(null), Is.False);
+            Assert.That(server.Equals(connectionString), Is.False);
+            Assert.That(server.Equals(database), Is.False);
         });
     }
 }
