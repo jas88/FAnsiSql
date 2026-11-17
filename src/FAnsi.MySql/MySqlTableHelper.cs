@@ -14,8 +14,7 @@ public sealed partial class MySqlTableHelper : DiscoveredTableHelper
 {
     public static readonly MySqlTableHelper Instance = new();
 
-    private static readonly Regex IntParentheses = IntParenthesesRe();
-    private static readonly Regex SmallintParentheses = SmallintParenthesesRe();
+    private static readonly Regex IntegerDisplayWidth = IntegerDisplayWidthRe();
     private static readonly Regex BitParentheses = BitParenthesesRe();
 
     private MySqlTableHelper()
@@ -91,18 +90,23 @@ public sealed partial class MySqlTableHelper : DiscoveredTableHelper
     }
 
 
+    /// <summary>
+    ///     Removes the display width from an integer type, e.g. int(11) or bigint(20) unsigned.  The width does not limit
+    ///     the values a column holds (see https://stackoverflow.com/a/5634147/4824531).  MySQL 8.0.19 and later report it
+    ///     only on tinyint(1) and ZEROFILL columns, but MariaDB reports it on every integer column, so without this the
+    ///     same column would have a different SQLType on each.  tinyint(1) is left alone because both report a boolean
+    ///     column that way.
+    /// </summary>
     private static string TrimIntDisplayValues(string? type)
     {
         if (string.IsNullOrWhiteSpace(type))
             return "";
 
-        //See comments of int(5) means display 5 digits only it doesn't prevent storing larger numbers: https://stackoverflow.com/a/5634147/4824531
+        if (type.StartsWith("tinyint(1)", StringComparison.OrdinalIgnoreCase))
+            return type;
 
-        if (IntParentheses.IsMatch(type))
-            return IntParentheses.Replace(type, "int");
-
-        if (SmallintParentheses.IsMatch(type))
-            return SmallintParentheses.Replace(type, "smallint");
+        if (IntegerDisplayWidth.IsMatch(type))
+            return IntegerDisplayWidth.Replace(type, "$1");
 
         if (BitParentheses.IsMatch(type))
             return BitParentheses.Replace(type, "bit");
@@ -455,12 +459,9 @@ public sealed partial class MySqlTableHelper : DiscoveredTableHelper
         throw new NotImplementedException();
     }
 
-    [GeneratedRegex(@"^int\(\d+\)", RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]
-    private static partial Regex IntParenthesesRe();
-
-    [GeneratedRegex(@"^smallint\(\d+\)",
+    [GeneratedRegex(@"^(tinyint|smallint|mediumint|int|bigint)\(\d+\)",
         RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]
-    private static partial Regex SmallintParenthesesRe();
+    private static partial Regex IntegerDisplayWidthRe();
 
     [GeneratedRegex(@"^bit\(\d+\)", RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]
     private static partial Regex BitParenthesesRe();

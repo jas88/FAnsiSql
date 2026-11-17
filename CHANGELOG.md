@@ -105,6 +105,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     TypeGuesser 2.1.0, and custom deciders must rename their overrides. TypeGuesser's CHANGELOG lists its other changes
   - FAnsiSql 3.8.x reads those fields, so it throws `MissingFieldException` when used with TypeGuesser 2.1.0: upgrade
     FAnsiSql and TypeGuesser together
+- **MySQL: integer column types are discovered without a display width on MariaDB too**
+  - MariaDB reports a display width on every integer column, such as `bigint(20)`, but MySQL 8.0.19 and later only on
+    `tinyint(1)` and `ZEROFILL` columns. FAnsi removed it from `int` and `smallint` only, so the `SQLType` of a
+    `tinyint`, `mediumint` or `bigint` column was `bigint(20)` on MariaDB but `bigint` on MySQL
+  - The width is now removed from every integer type except `tinyint(1)`, which is how both report a boolean column.
+    On MySQL this changes only `ZEROFILL` columns of those three types, whose width was already removed for `int`
 
 ### Removed
 - **Reflection-based provider loading in the `DiscoveredServer` static constructor, which never loaded anything**

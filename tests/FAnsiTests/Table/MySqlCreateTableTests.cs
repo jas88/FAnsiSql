@@ -88,4 +88,36 @@ internal sealed class MySqlCreateTableTests : DatabaseTests
             Assert.That(result.Rows[0]["Formatted"], Is.EqualTo(when));
         });
     }
+
+    /// <summary>
+    ///     MariaDB reports a display width on every integer column, e.g. bigint(20), where MySQL 8.0.19 and later report
+    ///     none except on tinyint(1).  Columns must be discovered with the same type on both.
+    /// </summary>
+    [Test]
+    public void DiscoverColumns_IntegerTypes_HaveNoDisplayWidth()
+    {
+        var db = GetTestDatabase(DbType);
+
+        var tbl = db.CreateTable("IntegerTypes",
+        [
+            new DatabaseColumnRequest("MyByte", new DatabaseTypeRequest(typeof(byte))),
+            new DatabaseColumnRequest("MyShort", new DatabaseTypeRequest(typeof(short))),
+            new DatabaseColumnRequest("MyInt", new DatabaseTypeRequest(typeof(int))),
+            new DatabaseColumnRequest("MyLong", new DatabaseTypeRequest(typeof(long))),
+            new DatabaseColumnRequest("MyBool", new DatabaseTypeRequest(typeof(bool))),
+            new DatabaseColumnRequest("MyMediumInt", "mediumint"),
+            new DatabaseColumnRequest("MyUnsignedLong", "bigint unsigned")
+        ]);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(tbl.DiscoverColumn("MyByte").DataType?.SQLType, Is.EqualTo("tinyint"));
+            Assert.That(tbl.DiscoverColumn("MyShort").DataType?.SQLType, Is.EqualTo("smallint"));
+            Assert.That(tbl.DiscoverColumn("MyInt").DataType?.SQLType, Is.EqualTo("int"));
+            Assert.That(tbl.DiscoverColumn("MyLong").DataType?.SQLType, Is.EqualTo("bigint"));
+            Assert.That(tbl.DiscoverColumn("MyBool").DataType?.SQLType, Is.EqualTo("tinyint(1)"));
+            Assert.That(tbl.DiscoverColumn("MyMediumInt").DataType?.SQLType, Is.EqualTo("mediumint"));
+            Assert.That(tbl.DiscoverColumn("MyUnsignedLong").DataType?.SQLType, Is.EqualTo("bigint unsigned"));
+        });
+    }
 }
