@@ -45,7 +45,8 @@
 - Aggregation 
   - [X] Basic GROUP BY
   - [X] Calendar/Axis Table GROUP BY
-  - [ ] Dynamic Pivot GROUP BY
+  - [X] Dynamic Pivot GROUP BY
   
 
 ##Issues
+A query cannot choose its own columns, so the SQL for a dynamic pivot is a `DO` block (PL/pgSQL) that opens a cursor called `fansi_pivot`, followed by `FETCH ALL FROM fansi_pivot` and `CLOSE fansi_pivot`.  Run it all on one connection, e.g. as a single command.

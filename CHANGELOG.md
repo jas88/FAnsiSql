@@ -31,6 +31,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     offset of the time zone of the session, as `Insert` does
   - An `interval` was taken to be an `int` because its name starts with "int". It is now a `TimeSpan` that can be a day or
     more, or negative, and both `Insert` and bulk insert write it as an `interval`
+- **PostgreSQL: aggregates with a pivot column did not pivot**
+  - The SQL built for a pivot had no column for each pivot value and ignored any TOP X. Without a calendar axis it was
+    rejected: the query being pivoted was not grouped (`must appear in the GROUP BY clause`) and WHERE and HAVING lines
+    were put in the wrong place (`syntax error at or near "WHERE"`). With an axis it returned a row for each pair of date
+    and pivot value
+  - A pivot now comes out as it does on SQL Server and MySQL: one column for each value of the pivot column that is
+    neither null nor empty, in order of the aggregate, largest first, or of the TOP X ORDER BY, and only the first X
+    values when there is a TOP X. Each column holds the aggregate for its value, 0 where there is none. The columns of
+    the query being pivoted are found by position, so it does not matter whether its lines alias or quote them
+  - A query cannot choose its own columns, so the SQL for a pivot is now a `DO` block that opens a cursor, `fansi_pivot`,
+    followed by `FETCH ALL FROM fansi_pivot` and `CLOSE fansi_pivot`
 - **Decimal values on .NET 11**
   - .NET 11 converts a `double` to a `decimal` exactly, so 9.99 becomes 9.990000000000000213162820728, where earlier
     versions of .NET rounded to 15 significant digits
