@@ -1,7 +1,6 @@
 using System.Data;
 using FAnsi;
 using FAnsi.Discovery.TypeTranslation;
-using FAnsi.Implementation;
 using FAnsi.Implementations.MicrosoftSQL;
 using FAnsi.Implementations.MySql;
 using FAnsi.Implementations.Oracle;
@@ -21,9 +20,19 @@ internal sealed class TypeTranslaterUnitTests
     /// <param name="dbType"></param>
     /// <param name="sqlDbType"></param>
     /// <param name="expectedOutcome"></param>
+    [TestCase(DatabaseType.MicrosoftSQLServer, "varchar2(10)", true)]
+    [TestCase(DatabaseType.MicrosoftSQLServer, "monkeychar7", true)]
+    [TestCase(DatabaseType.MySql, "varchar2(10)", true)]
+    [TestCase(DatabaseType.MySql, "monkeychar7", true)]
+    [TestCase(DatabaseType.Oracle, "varchar2(10)", true)]
+    [TestCase(DatabaseType.Oracle, "monkeychar7", true)]
+    [TestCase(DatabaseType.PostgreSql, "varchar2(10)", true)]
+    [TestCase(DatabaseType.PostgreSql, "monkeychar7", true)]
+    [TestCase(DatabaseType.Sqlite, "varchar2(10)", true)]
+    [TestCase(DatabaseType.Sqlite, "monkeychar7", true)]
     public void Test_IsSupportedType(DatabaseType dbType, string sqlDbType, bool expectedOutcome)
     {
-        var tt = ImplementationManager.GetImplementation(dbType).GetQuerySyntaxHelper().TypeTranslater;
+        var tt = GetTypeTranslater(dbType);
         Assert.That(tt.IsSupportedSQLDBType(sqlDbType), Is.EqualTo(expectedOutcome),
             $"Unexpected result for IsSupportedSQLDBType with {dbType}.  Input was '{sqlDbType}' expected {expectedOutcome}");
     }
