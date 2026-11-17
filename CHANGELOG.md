@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     thread pool was busy, `TestConnection` returned normally without having connected, and `Exists()` returned true for
     a server that had not responded
   - It now throws a `TimeoutException` then too, and cancels the attempt that is still running
+- The `TimeoutException` message from `DiscoveredServer.TestConnection` no longer ends with a stray parenthesis
 
 ### Removed
 - **Reflection-based provider loading in the `DiscoveredServer` static constructor, which never loaded anything**
