@@ -51,8 +51,9 @@ The programs do not connect to any database, so no database servers are needed.
 ## Test Coverage
 
 Each test verifies:
-1. **Implementation Loading** - `ImplementationManager.Load<T>()`
-2. **Server Object Creation** - `DiscoveredServer` instantiation
+1. **Implementation Loading** - `{TypeName}.EnsureLoaded()`, after which the implementation's module initializer
+   has registered it (see below)
+2. **Server Object Creation** - `DiscoveredServer` instantiation, which fails if the implementation is not registered
 3. **Connection String Builder** - Platform-specific builders
 4. **Discovery Objects** - Database/Table/Column object creation
 5. **DataTable Operations** - Bulk copy simulation

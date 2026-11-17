@@ -2,7 +2,6 @@ using System;
 using System.Data;
 using FAnsi;
 using FAnsi.Discovery;
-using FAnsi.Implementation;
 using FAnsi.Implementations.PostgreSql;
 using Npgsql;
 
@@ -12,9 +11,7 @@ Console.WriteLine();
 try
 {
     Console.WriteLine("Test 1: Loading PostgreSQL implementation...");
-#pragma warning disable CS0618 // Type or member is obsolete
-    ImplementationManager.Load<PostgreSqlImplementation>();
-#pragma warning restore CS0618 // Type or member is obsolete
+    PostgreSqlImplementation.EnsureLoaded();
     Console.WriteLine("✅ Implementation loaded");
     Console.WriteLine();
 
