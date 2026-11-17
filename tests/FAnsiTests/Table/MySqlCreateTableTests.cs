@@ -1,0 +1,91 @@
+using System.Data;
+using System.Globalization;
+using FAnsi;
+using FAnsi.Discovery;
+using NUnit.Framework;
+using TypeGuesser;
+
+namespace FAnsiTests.Table;
+
+/// <summary>
+///     Table creation tests that only concern <see cref="DatabaseType.MySql" />, which covers both MySQL and MariaDB
+/// </summary>
+internal sealed class MySqlCreateTableTests : DatabaseTests
+{
+    private const DatabaseType DbType = DatabaseType.MySql;
+
+    /// <summary>
+    ///     Only character types take a CHARACTER SET.  MySQL and MariaDB both reject one on any other type as a syntax
+    ///     error, so the Unicode flag of a request for another type must be ignored.
+    /// </summary>
+    [Test]
+    public void CreateTable_UnicodeRequestForTypeWithoutCharacterSet_IsIgnored()
+    {
+        var db = GetTestDatabase(DbType);
+
+        var tbl = db.CreateTable("UnicodeRequests",
+        [
+            new DatabaseColumnRequest("MyDate", new DatabaseTypeRequest(typeof(DateTime)) { Unicode = true }),
+            new DatabaseColumnRequest("MyTime", new DatabaseTypeRequest(typeof(TimeSpan)) { Unicode = true }),
+            new DatabaseColumnRequest("MyInt", new DatabaseTypeRequest(typeof(int)) { Unicode = true }),
+            new DatabaseColumnRequest("MyDecimal",
+                new DatabaseTypeRequest(typeof(decimal), null, new DecimalSize(3, 2)) { Unicode = true }),
+            new DatabaseColumnRequest("MyBool", new DatabaseTypeRequest(typeof(bool)) { Unicode = true }),
+            new DatabaseColumnRequest("MyBytes", new DatabaseTypeRequest(typeof(byte[])) { Unicode = true }),
+            new DatabaseColumnRequest("MyString", new DatabaseTypeRequest(typeof(string), 10) { Unicode = true })
+        ]);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(tbl.DiscoverColumn("MyDate").DataType?.SQLType, Is.EqualTo("datetime"));
+            Assert.That(tbl.DiscoverColumn("MyTime").DataType?.SQLType, Is.EqualTo("time"));
+            Assert.That(tbl.DiscoverColumn("MyInt").DataType?.SQLType, Is.EqualTo("int"));
+            Assert.That(tbl.DiscoverColumn("MyDecimal").DataType?.SQLType, Is.EqualTo("decimal(5,2)"));
+            Assert.That(tbl.DiscoverColumn("MyBool").DataType?.SQLType, Is.EqualTo("tinyint(1)"));
+            Assert.That(tbl.DiscoverColumn("MyBytes").DataType?.SQLType, Is.EqualTo("longblob"));
+
+            // The string column still gets the utf8mb4 character set
+            Assert.That(tbl.DiscoverColumn("MyString").DataType?.SQLType, Is.EqualTo("varchar(10)"));
+            Assert.That(tbl.DiscoverColumn("MyString").Collation, Is.EqualTo("utf8mb4_bin"));
+        });
+    }
+
+    /// <summary>
+    ///     TypeGuesser flags a column Unicode when the text of any of its values has a non-ASCII character, even when it
+    ///     guesses a date.  In en-US .NET puts U+202F before AM/PM when ICU is version 72 or later (as on macOS and
+    ///     Windows 11), so a table of dates created there got <c>datetime CHARACTER SET utf8mb4</c> and failed with a
+    ///     syntax error.  CI's Linux runners use the invariant culture and ICU 70, where en-US dates are ASCII, so the
+    ///     ko-KR case, whose AM/PM designators are Korean whatever the ICU version, is the one that fails there.
+    /// </summary>
+    [Test]
+    [SetCulture("en-US")]
+    public void CreateTable_DatesInCultureWithNonAsciiDates_EnUs() => CreateTableOfDates();
+
+    /// <inheritdoc cref="CreateTable_DatesInCultureWithNonAsciiDates_EnUs" />
+    [Test]
+    [SetCulture("ko-KR")]
+    public void CreateTable_DatesInCultureWithNonAsciiDates_KoKr() => CreateTableOfDates();
+
+    private void CreateTableOfDates()
+    {
+        var db = GetTestDatabase(DbType);
+        var when = new DateTime(2024, 1, 1, 13, 30, 0);
+
+        using var dt = new DataTable();
+        dt.Columns.Add("Typed", typeof(DateTime));
+        dt.Columns.Add("Formatted");
+        dt.Rows.Add(when, when.ToString(CultureInfo.CurrentCulture));
+
+        var tbl = db.CreateTable("CultureDates", dt);
+
+        using var result = tbl.GetDataTable();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(tbl.DiscoverColumn("Typed").DataType?.SQLType, Is.EqualTo("datetime"));
+            Assert.That(tbl.DiscoverColumn("Formatted").DataType?.SQLType, Is.EqualTo("datetime"));
+            Assert.That(result.Rows[0]["Typed"], Is.EqualTo(when));
+            Assert.That(result.Rows[0]["Formatted"], Is.EqualTo(when));
+        });
+    }
+}

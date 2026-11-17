@@ -84,6 +84,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - The limit is now set to 50000 on both: each assignment is in an executable comment that only its own server runs,
     `/*!80000 ... */` for MySQL and `/*M!100200 ... */` for MariaDB. MySQL sets the same variables to the same values as
     before
+- **MySQL: tables with date columns could not be created in some cultures ("You have an error in your SQL syntax")**
+  - A column whose type request was flagged Unicode was declared `CHARACTER SET utf8mb4 COLLATE utf8mb4_bin` whatever
+    its type, and MySQL and MariaDB both reject a character set on a type that is not a character type. TypeGuesser
+    flags a column Unicode if the text of any value has a non-ASCII character, as `DateTime` values have in cultures
+    such as ko-KR, or en-US with ICU 72 or later (U+202F before AM/PM, as on macOS and Windows 11), so `CreateTable`
+    from a `DataTable` with a `DateTime` column failed there. Linux CI was not affected because it uses the invariant
+    culture
+  - The character set and its collation are now declared only on character types (char, varchar, the text types, enum
+    and set)
 
 ### Changed
 - **Target frameworks are now net10.0 and net11.0**
