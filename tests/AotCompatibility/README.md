@@ -62,8 +62,8 @@ Each test verifies:
 
 Each implementation registers itself from a module initializer when its assembly loads, under Native AOT as
 under JIT. Nothing registers an implementation that your code never refers to, so call
-`{TypeName}.EnsureLoaded()` (for example `MySqlImplementation.EnsureLoaded()`) or
-`ImplementationManager.Load<T>()` before creating a `DiscoveredServer` for that DBMS.
+`{TypeName}.EnsureLoaded()` (for example `MySqlImplementation.EnsureLoaded()`) before creating a
+`DiscoveredServer` for that DBMS.
 
 ## Warnings
 
