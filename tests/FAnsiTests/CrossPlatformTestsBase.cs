@@ -1116,47 +1116,6 @@ public abstract class CrossPlatformTestsBase : DatabaseTests
         }
     }
 
-    protected void UnsupportedEntityNames(string horribleDatabaseName, string horribleTableName, string columnName)
-    {
-        var database = GetTestDatabase(DatabaseType);
-
-        Assert.Multiple(() =>
-        {
-            //ExpectDatabase with illegal name
-            Assert.That(
-                Assert.Throws<RuntimeNameException>(() => database.Server.ExpectDatabase(horribleDatabaseName))
-                    ?.Message, Does.Match("Database .* contained unsupported .* characters"));
-
-            //ExpectTable with illegal name
-            Assert.That(
-                Assert.Throws<RuntimeNameException>(() => database.ExpectTable(horribleTableName))
-                    ?.Message, Does.Match("Table .* contained unsupported .* characters"));
-
-            //CreateTable with illegal name
-            Assert.That(
-                Assert.Throws<RuntimeNameException>(() => database.CreateTable(horribleTableName,
-                    [
-                        new DatabaseColumnRequest("a", new DatabaseTypeRequest(typeof(string), 10))
-                    ]))
-                    ?.Message, Does.Match("Table .* contained unsupported .* characters"));
-
-            //CreateTable with (column) illegal name
-            Assert.That(
-                Assert.Throws<RuntimeNameException>(() => database.CreateTable("f",
-                    [
-                        new DatabaseColumnRequest(columnName, new DatabaseTypeRequest(typeof(string), 10))
-                    ]))
-                    ?.Message, Does.Match("Column .* contained unsupported .* characters"));
-        });
-
-        AssertCanCreateDatabases();
-
-        //CreateDatabase with illegal name
-        Assert.That(
-            Assert.Throws<RuntimeNameException>(() => database.Server.CreateDatabase(horribleDatabaseName))
-                ?.Message, Does.Match("Database .* contained unsupported .* characters"));
-    }
-
     protected void HorribleColumnNames(string horribleDatabaseName, string horribleTableName, string columnName)
     {
         AssertCanCreateDatabases();
