@@ -1,4 +1,6 @@
 using System.Globalization;
+using System.Security.Cryptography;
+using System.Text;
 using FAnsi.Discovery.QuerySyntax;
 using FAnsi.Discovery.QuerySyntax.Aggregation;
 
@@ -6,11 +8,6 @@ namespace FAnsi.Implementations.PostgreSql.Aggregation;
 
 public sealed class PostgreSqlAggregateHelper : AggregateHelper
 {
-    /// <summary>
-    ///     The cursor through which a dynamic pivot returns its rows, see <see cref="BuildPivot" />
-    /// </summary>
-    private const string PivotCursor = "fansi_pivot";
-
     public static readonly PostgreSqlAggregateHelper Instance = new();
 
     private PostgreSqlAggregateHelper()
@@ -132,19 +129,21 @@ public sealed class PostgreSqlAggregateHelper : AggregateHelper
     ///     <para>
     ///         PostgreSQL has no PIVOT and a query cannot choose its own columns, so a pivot is built by a DO block.  It runs
     ///         <paramref name="pivotValuesSql" />, adds a column for each value it lists to the query
-    ///         <paramref name="selectSql" /> ... <paramref name="fromSql" /> and opens <see cref="PivotCursor" /> on that
-    ///         query.  The statements after the block FETCH the rows from the cursor and CLOSE it.
+    ///         <paramref name="selectSql" /> ... <paramref name="fromSql" /> and opens a cursor on that query (see
+    ///         <see cref="GetPivotCursorName" />).  The statements after the block FETCH the rows from the cursor and CLOSE it.
     ///     </para>
     ///     <para>
     ///         Each column sums the aggregate over the rows of the dataset that have its value, compared as the pivot column's
     ///         own type, and is 0 where there are none (as ISNULL(...,0) gives on SQL Server).  The cursor is declared WITH HOLD
-    ///         so that it outlives the transaction of the DO statement when each statement is committed on its own, and any
-    ///         cursor of that name an earlier pivot left open in the session is closed first.
+    ///         so that it outlives the transaction of the DO statement when each statement is committed on its own.  If an
+    ///         earlier run of the same query stopped before its CLOSE and left the cursor open in the session, the block
+    ///         closes it first.
     ///     </para>
     /// </summary>
     private static string BuildPivot(AggregateCustomLineCollection query, string pivotValuesSql, string selectSql,
         string fromSql)
     {
+        var cursor = GetPivotCursorName(pivotValuesSql, selectSql, fromSql);
         var sqlQuote = GetDollarQuote("fansi_sql", pivotValuesSql + selectSql + fromSql);
 
         var block = $"""
@@ -159,11 +158,11 @@ public sealed class PostgreSqlAggregateHelper : AggregateHelper
                              fansi_pivot_columns := fansi_pivot_columns || format(', COALESCE(SUM(CASE WHEN fansi_pivot_dataset.fansi_value = %L THEN fansi_pivot_dataset.fansi_aggregate END), 0) AS %I', fansi_pivot_value, fansi_pivot_value);
                          END LOOP;
 
-                         IF EXISTS (SELECT 1 FROM pg_catalog.pg_cursors WHERE name = '{PivotCursor}') THEN
-                             EXECUTE 'CLOSE {PivotCursor}';
+                         IF EXISTS (SELECT 1 FROM pg_catalog.pg_cursors WHERE name = '{cursor}') THEN
+                             EXECUTE 'CLOSE {cursor}';
                          END IF;
 
-                         EXECUTE 'DECLARE {PivotCursor} CURSOR WITH HOLD FOR ' || {sqlQuote}
+                         EXECUTE 'DECLARE {cursor} CURSOR WITH HOLD FOR ' || {sqlQuote}
                      {selectSql}
                      {sqlQuote} || fansi_pivot_columns || {sqlQuote}
                      {fromSql}
@@ -178,9 +177,26 @@ public sealed class PostgreSqlAggregateHelper : AggregateHelper
                 DO {blockQuote}
                 {block}
                 {blockQuote};
-                FETCH ALL FROM {PivotCursor};
-                CLOSE {PivotCursor};
+                FETCH ALL FROM {cursor};
+                CLOSE {cursor};
                 """;
+    }
+
+    /// <summary>
+    ///     Returns a name for the cursor of a pivot, made from a hash of its query.  Every query has its own, so pivots run
+    ///     on one connection never use or close each other's cursor, and the same query always gets the same name, so its
+    ///     SQL is the same each time it is built (which matters to callers that cache results by their SQL, as RDMP does).
+    /// </summary>
+    private static string GetPivotCursorName(string pivotValuesSql, string selectSql, string fromSql)
+    {
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(string.Join("\n", pivotValuesSql, selectSql, fromSql)));
+
+        // fansi_pivot_ and 16 lower case hex digits: an identifier that needs no quotes and is far from the 63 byte limit
+        var name = new StringBuilder("fansi_pivot_");
+        foreach (var b in hash.AsSpan(0, 8))
+            name.Append(b.ToString("x2", CultureInfo.InvariantCulture));
+
+        return name.ToString();
     }
 
     /// <summary>

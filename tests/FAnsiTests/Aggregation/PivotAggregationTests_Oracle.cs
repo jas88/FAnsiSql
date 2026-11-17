@@ -9,4 +9,7 @@ internal sealed class PivotAggregationTests_Oracle : PivotAggregationTestsBase
 
     [Test]
     public void Test_PivotOnlyCount() => Test_PivotOnlyCount(DbType);
+
+    [Test]
+    public void Test_Pivot_SameConnectionAfterFailedPivot() => Test_Pivot_SameConnectionAfterFailedPivot(DbType);
 }

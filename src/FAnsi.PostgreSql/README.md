@@ -49,4 +49,4 @@
   
 
 ##Issues
-A query cannot choose its own columns, so the SQL for a dynamic pivot is a `DO` block (PL/pgSQL) that opens a cursor called `fansi_pivot`, followed by `FETCH ALL FROM fansi_pivot` and `CLOSE fansi_pivot`.  Run it all on one connection, e.g. as a single command.
+A query cannot choose its own columns, so the SQL for a dynamic pivot is a `DO` block (PL/pgSQL) that opens a cursor, followed by `FETCH ALL` from the cursor and `CLOSE`.  The cursor is named after a hash of the query (`fansi_pivot_` and 16 hex digits).  Run it all on one connection, e.g. as a single command.

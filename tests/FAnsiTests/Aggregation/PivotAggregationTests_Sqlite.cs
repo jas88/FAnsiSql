@@ -11,4 +11,9 @@ internal sealed class PivotAggregationTests_Sqlite : PivotAggregationTestsBase
     [TestCase(DbType)]
     [SkipDatabase(DbType, SqliteCannotPivot)]
     public new void Test_PivotOnlyCount(DatabaseType type) => base.Test_PivotOnlyCount(type);
+
+    [TestCase(DbType)]
+    [SkipDatabase(DbType, SqliteCannotPivot)]
+    public new void Test_Pivot_SameConnectionAfterFailedPivot(DatabaseType type) =>
+        base.Test_Pivot_SameConnectionAfterFailedPivot(type);
 }

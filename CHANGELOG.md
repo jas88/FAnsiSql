@@ -40,8 +40,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     neither null nor empty, in order of the aggregate, largest first, or of the TOP X ORDER BY, and only the first X
     values when there is a TOP X. Each column holds the aggregate for its value, 0 where there is none. The columns of
     the query being pivoted are found by position, so it does not matter whether its lines alias or quote them
-  - A query cannot choose its own columns, so the SQL for a pivot is now a `DO` block that opens a cursor, `fansi_pivot`,
-    followed by `FETCH ALL FROM fansi_pivot` and `CLOSE fansi_pivot`
+  - A query cannot choose its own columns, so the SQL for a pivot is now a `DO` block that opens a cursor, followed by
+    `FETCH ALL` from the cursor and `CLOSE`. The cursor is named after a hash of the query (`fansi_pivot_` and 16 hex
+    digits), so pivots on one connection never share a cursor and the same query always gives the same SQL
 - **Oracle: aggregates with a pivot column did not pivot**
   - The SQL built for a pivot had no column for each pivot value and ignored any TOP X. Without a calendar axis the query
     being pivoted was not grouped (ORA-00937); with one it returned a row for each pair of date and pivot value
