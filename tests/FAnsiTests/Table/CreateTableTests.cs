@@ -5,6 +5,7 @@ using FAnsi;
 using FAnsi.Discovery;
 using FAnsi.Discovery.TableCreation;
 using FAnsi.Extensions;
+using FAnsiTests.TestGeneration;
 using NUnit.Framework;
 using TypeGuesser;
 
@@ -12,6 +13,9 @@ namespace FAnsiTests.Table;
 
 internal sealed class CreateTableTests : DatabaseTests
 {
+    private const string SqliteHasNoBooleanType =
+        "SQLite has no boolean type: FAnsi creates a bool column as INTEGER, which is then discovered as int, so 'T' and 'F' cannot be inserted into it";
+
     [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void CreateSimpleTable_Exists(DatabaseType type)
     {
@@ -217,7 +221,12 @@ internal sealed class CreateTableTests : DatabaseTests
         table.Drop();
     }
 
-    //[TestCase(DatabaseType.Oracle, "BINARY_CI")] //Requires 12.2+ oracle https://www.experts-exchange.com/questions/29102764/SQL-Statement-to-create-case-insensitive-columns-and-or-tables-in-Oracle.html
+    [TestCase(DatabaseType.MicrosoftSQLServer, "Latin1_General_CS_AS_KS_WS")]
+    [TestCase(DatabaseType.MySql, "latin1_german1_ci")]
+    [TestCase(DatabaseType.Oracle, "BINARY_CI")]
+    [TestCase(DatabaseType.PostgreSql, "de-DE-x-icu")]
+    [SkipDatabase(DatabaseType.Oracle,
+        "Oracle only accepts a column COLLATE clause when MAX_STRING_SIZE = EXTENDED, and FAnsi does not discover the collation of Oracle columns")]
     public void CreateTable_CollationTest(DatabaseType type, string collation)
     {
         var database = GetTestDatabase(type);
@@ -328,9 +337,17 @@ internal sealed class CreateTableTests : DatabaseTests
     }
 
 
-    //[TestCase(DatabaseType.MySql, "didn’t")]
-    //[TestCase(DatabaseType.MySql, "Æther")]
-    //[TestCase(DatabaseType.MySql,"乗")]
+    [TestCase(DatabaseType.MicrosoftSQLServer, "didn’t")] //<- it's a ’ not a '
+    [TestCase(DatabaseType.MicrosoftSQLServer, "Æther")]
+    [TestCase(DatabaseType.MicrosoftSQLServer, "乗")]
+    [TestCase(DatabaseType.MySql, "didn’t")]
+    [TestCase(DatabaseType.MySql, "Æther")]
+    [TestCase(DatabaseType.MySql, "乗")]
+    [TestCase(DatabaseType.Oracle, "didn’t")]
+    [TestCase(DatabaseType.Oracle, "Æther")]
+    [TestCase(DatabaseType.Oracle, "乗")]
+    [SkipDatabase(DatabaseType.MySql,
+        "FAnsi creates a utf8mb4 column but cannot discover that it is Unicode, its SQL type (varchar) does not say so")]
     public void Test_CreateTable_UnicodeStrings(DatabaseType type, string testString)
     {
         var db = GetTestDatabase(type);
@@ -402,7 +419,10 @@ internal sealed class CreateTableTests : DatabaseTests
         Assert.That(table.GetRowCount(), Is.EqualTo(4));
     }
 
-    //[TestCase(DatabaseType.Oracle)]\r\n // Oracle doesn't really support bits https://stackoverflow.com/questions/2426145/oracles-lack-of-a-bit-datatype-for-table-columns
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [SkipDatabase(DatabaseType.Oracle,
+        "Oracle doesn't really support bits https://stackoverflow.com/questions/2426145/oracles-lack-of-a-bit-datatype-for-table-columns")]
+    [SkipDatabase(DatabaseType.Sqlite, SqliteHasNoBooleanType)]
     public void Test_CreateTable_TF(DatabaseType dbType)
     {
         //T and F is normally True and False.  If you want to keep it as a string set DoNotRetype
@@ -506,6 +526,8 @@ internal sealed class CreateTableTests : DatabaseTests
     ///     test
     ///     uses the static defaults in <see cref="GuessSettingsFactory.Defaults" />.
     /// </summary>
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypesWithBoolFlags))]
+    [SkipDatabase(DatabaseType.Sqlite, SqliteHasNoBooleanType)]
     public void CreateTable_GuessSettings_StaticDefaults_TF(DatabaseType dbType, bool treatAsBoolean)
     {
         //T and F is normally True and False.  If you want to keep it as a string set DoNotRetype
@@ -588,6 +610,8 @@ internal sealed class CreateTableTests : DatabaseTests
     ///     test
     ///     uses the <see cref="CreateTableArgs.GuessSettings" /> injection.
     /// </summary>
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypesWithBoolFlags))]
+    [SkipDatabase(DatabaseType.Sqlite, SqliteHasNoBooleanType)]
     public void CreateTable_GuessSettings_InArgs_TF(DatabaseType dbType, bool treatAsBoolean)
     {
         //T and F is normally True and False.  If you want to keep it as a string set DoNotRetype
