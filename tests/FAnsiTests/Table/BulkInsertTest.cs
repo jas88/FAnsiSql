@@ -785,14 +785,7 @@ internal sealed class BulkInsertTest : DatabaseTests
         }
 
         var dtDown = tbl.GetDataTable();
-        var dateValue = dtDown.Rows[0]["MyDate"];
-
-        // SQLite returns dates as strings
-        if (type == DatabaseType.Sqlite && dateValue is string strDate)
-            Assert.That(DateTime.ParseExact(strDate, "yyyyMMdd", CultureInfo.InvariantCulture),
-                Is.EqualTo(new DateTime(2001, 12, 30)));
-        else
-            Assert.That(dateValue, Is.EqualTo(new DateTime(2001, 12, 30)));
+        Assert.That(dtDown.Rows[0]["MyDate"], Is.EqualTo(new DateTime(2001, 12, 30)));
     }
 
     [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]

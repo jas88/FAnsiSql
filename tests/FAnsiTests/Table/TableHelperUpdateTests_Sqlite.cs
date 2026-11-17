@@ -81,6 +81,9 @@ internal sealed class TableHelperUpdateTests_Sqlite : TableHelperUpdateTestsBase
     public void UpdateWithJoin_BooleanValues_UpdatesCorrectly() =>
         UpdateWithJoin_BooleanValues_UpdatesCorrectly(DbType);
 
+    // Not run: UpdateWithJoin_DateTimeValues_UpdatesCorrectly reads the dates with ExecuteScalar, which returns a SQLite
+    // date as the TEXT it is stored as
+
     [Test]
     public void UpdateWithJoin_InOperator_UpdatesCorrectly() => UpdateWithJoin_InOperator_UpdatesCorrectly(DbType);
 

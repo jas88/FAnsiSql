@@ -268,8 +268,7 @@ internal abstract class TableHelperMetadataTestsBase : DatabaseTests
                 Assert.That(stringCol.DataType?.GetLengthIfString(), Is.EqualTo(50));
 
                 Assert.That(dateCol, Is.Not.Null);
-                if (type != DatabaseType.Sqlite) // SQLite stores DateTime as TEXT
-                    Assert.That(dateCol!.DataType?.GetCSharpDataType(), Is.EqualTo(typeof(DateTime)));
+                Assert.That(dateCol!.DataType?.GetCSharpDataType(), Is.EqualTo(typeof(DateTime)));
 
                 Assert.That(decimalCol, Is.Not.Null);
                 Assert.That(decimalCol!.DataType?.GetCSharpDataType(), Is.EqualTo(typeof(decimal)));

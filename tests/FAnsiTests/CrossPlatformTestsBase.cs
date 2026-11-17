@@ -722,10 +722,6 @@ public abstract class CrossPlatformTestsBase : DatabaseTests
 
     protected void CreateDateColumnFromDataTable()
     {
-        // SQLite has date type affinity issues - returns string instead of DateTime
-        if (DatabaseType == DatabaseType.Sqlite)
-            Assert.Ignore("SQLite does not preserve DateTime type when creating from DataTable");
-
         var database = GetTestDatabase(DatabaseType);
 
         var dt = new DataTable();
@@ -770,9 +766,8 @@ public abstract class CrossPlatformTestsBase : DatabaseTests
                 Is.EqualTo(typeof(int)));
             Assert.That(syntaxHelper.TypeTranslater.GetCSharpTypeForSQLDBType(stringCol.DataType?.SQLType),
                 Is.EqualTo(typeof(string)));
-            // SQLite is dynamically typed and stores DateTime as TEXT (string)
             Assert.That(syntaxHelper.TypeTranslater.GetCSharpTypeForSQLDBType(dateCol.DataType?.SQLType),
-                Is.EqualTo(DatabaseType == DatabaseType.Sqlite ? typeof(string) : typeof(DateTime)));
+                Is.EqualTo(typeof(DateTime)));
             Assert.That(syntaxHelper.TypeTranslater.GetCSharpTypeForSQLDBType(decimalCol.DataType?.SQLType),
                 Is.EqualTo(typeof(decimal)));
             Assert.That(tbl.GetRowCount(), Is.EqualTo(0));

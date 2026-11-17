@@ -28,6 +28,11 @@ namespace FAnsi.Implementations.Sqlite;
 ///         </item>
 ///     </list>
 ///     <para>SQLite is very flexible - any data type can be stored in any column regardless of declared type.</para>
+///     <para>
+///         The declared type is what FAnsi discovers a column's type from, so booleans, dates and times are declared as
+///         BOOLEAN, DATETIME and TIME rather than as the INTEGER or TEXT they are stored as. A TEXT column always holds
+///         strings.
+///     </para>
 /// </remarks>
 public sealed partial class SqliteTypeTranslater : TypeTranslater
 {
@@ -95,8 +100,11 @@ public sealed partial class SqliteTypeTranslater : TypeTranslater
     /// <summary>
     ///     Gets the SQL type for boolean values.
     /// </summary>
-    /// <returns>"INTEGER" (SQLite stores booleans as 0/1)</returns>
-    protected override string GetBoolDataType() => "INTEGER"; // SQLite uses INTEGER for boolean (0/1)
+    /// <returns>
+    ///     "BOOLEAN". The values are stored as the integers 0 and 1, the declared type is what makes the column
+    ///     discoverable as a boolean rather than an integer
+    /// </returns>
+    protected override string GetBoolDataType() => "BOOLEAN";
 
     /// <summary>
     ///     Gets the SQL type for small integers.
@@ -119,15 +127,17 @@ public sealed partial class SqliteTypeTranslater : TypeTranslater
     /// <summary>
     ///     Gets the SQL type for time values.
     /// </summary>
-    /// <returns>"TEXT" (SQLite stores times as text strings)</returns>
-    protected override string GetTimeDataType() => "TEXT";
+    /// <returns>"TIME". The values are stored as text e.g. "13:11:00"</returns>
+    protected override string GetTimeDataType() => "TIME";
 
     /// <summary>
     ///     Gets the SQL type for date/datetime values.
     /// </summary>
-    /// <returns>"TEXT" (SQLite stores dates as text, though numeric and real are also supported)</returns>
+    /// <returns>"DATETIME". The values are stored as ISO 8601 text e.g. "2007-01-01 13:11:00"</returns>
     /// <remarks>
-    ///     SQLite doesn't have dedicated date/time types. Dates can be stored as:
+    ///     <para>
+    ///         SQLite doesn't have dedicated date/time types, its date functions work on dates stored as:
+    ///     </para>
     ///     <list type="bullet">
     ///         <item>
     ///             <description>TEXT as ISO8601 strings ("YYYY-MM-DD HH:MM:SS.SSS")</description>
@@ -139,8 +149,12 @@ public sealed partial class SqliteTypeTranslater : TypeTranslater
     ///             <description>INTEGER as Unix Time (seconds since 1970-01-01 00:00:00 UTC)</description>
     ///         </item>
     ///     </list>
+    ///     <para>
+    ///         FAnsi stores them as ISO 8601 text. The column is declared DATETIME (not TEXT) so that it can be told
+    ///         apart from a string column, a string column must keep a string such as "1/2/2003" exactly as given.
+    ///     </para>
     /// </remarks>
-    protected override string GetDateDateTimeDataType() => "TEXT"; // SQLite stores dates as text, numeric, or real
+    protected override string GetDateDateTimeDataType() => "DATETIME";
 
     /// <summary>
     ///     Gets the SQL type for byte array values.

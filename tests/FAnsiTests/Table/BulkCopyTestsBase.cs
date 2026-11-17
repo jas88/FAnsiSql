@@ -502,9 +502,6 @@ internal abstract class BulkCopyTestsBase : DatabaseTests
 
     protected void Upload_ReorderedColumns_MapsCorrectly(DatabaseType type)
     {
-        if (type == DatabaseType.Sqlite)
-            Assert.Ignore("SQLite stores DateTime as TEXT; type casting fails");
-
         var db = GetTestDatabase(type);
         var tbl = db.CreateTable("TestReorderedColumns",
         [
@@ -773,10 +770,6 @@ internal abstract class BulkCopyTestsBase : DatabaseTests
 
     protected void Upload_DateTimeValues_PreservedCorrectly(DatabaseType type)
     {
-        if (type == DatabaseType.Sqlite)
-            Assert.Ignore(
-                "SQLite stores DateTime as TEXT strings; ADO.NET returns string type. Fundamental SQLite limitation.");
-
         var db = GetTestDatabase(type);
         var tbl = db.CreateTable("TestDateTime",
         [
@@ -811,10 +804,6 @@ internal abstract class BulkCopyTestsBase : DatabaseTests
 
     protected void Upload_DateTimeStrings_ParsedCorrectly(DatabaseType type)
     {
-        if (type == DatabaseType.Sqlite)
-            Assert.Ignore(
-                "SQLite stores DateTime as TEXT strings; ADO.NET returns string type. Fundamental SQLite limitation.");
-
         var db = GetTestDatabase(type);
         var tbl = db.CreateTable("TestDateTimeStrings",
         [

@@ -14,6 +14,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     `near "SET": syntax error`
   - `SupportsEmbeddedParameters` now returns false and `GetParameterDeclaration` throws `NotSupportedException`, as they
     do for Oracle and PostgreSQL. Parameter values have to be passed as `DbParameter`s
+- **SQLite: bulk insert changed strings that looked like dates**
+  - Bulk insert parsed every string going into a `TEXT` column and stored any that parsed as a date as an ISO 8601 date
+    and time, so `"12:30"` became today's date at 12:30 and `"1/2/2003"` became `2003-01-02 00:00:00`. `TEXT` is what
+    FAnsi creates for Unicode strings and strings of unlimited width, and used to create for dates and times
+  - A string going into a string column is now stored exactly as given. A value is only converted when it is a date or
+    a time: a `DateTime`, `DateOnly` or `TimeOnly`, or a string going into a date or time column, which is parsed with
+    the culture of the bulk insert as it is for the other DBMS
+- **SQLite: boolean, date and time columns were discovered as integers and strings**
+  - FAnsi declared boolean columns `INTEGER` and date and time columns `TEXT`, so it could not tell the columns it had
+    created from integer and string columns. `GetDataTable` returned 1 or 0 for a boolean and the text of a date or
+    time, and `Insert` stored a date as the string it was given. `CreateTable` from a `DataTable` of 'T' and 'F'
+    strings failed with "Failed to parse value 'T'", because the column it guessed was a boolean was taken to be an
+    integer column
+  - These columns are now declared `BOOLEAN`, `DATETIME` and `TIME` and are discovered as `bool`, `DateTime` and
+    `TimeSpan`, as they are for the other DBMS. `GetDataTable` returns values of those types, and `Insert` and bulk
+    insert parse strings into them with the culture given
 - **Decimal values on .NET 11**
   - .NET 11 converts a `double` to a `decimal` exactly, so 9.99 becomes 9.990000000000000213162820728, where earlier
     versions of .NET rounded to 15 significant digits
@@ -88,6 +104,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     TypeGuesser 2.1.0, and custom deciders must rename their overrides. TypeGuesser's CHANGELOG lists its other changes
   - FAnsiSql 3.8.x reads those fields, so it throws `MissingFieldException` when used with TypeGuesser 2.1.0: upgrade
     FAnsiSql and TypeGuesser together
+- **SQLite boolean, date and time columns are declared `BOOLEAN`, `DATETIME` and `TIME`** instead of `INTEGER`, `TEXT`
+  and `TEXT` (see Fixed)
+  - SQLite still stores them as 1 and 0 and as ISO 8601 text (`2007-01-01 13:11:00`, `13:11:00`)
+  - Columns created by earlier versions keep their types and are still discovered as integers and strings, so a string
+    bulk inserted into one of their date columns is now stored as given; a `DateTime` is still stored as ISO 8601 text
 
 ### Removed
 - **Reflection-based provider loading in the `DiscoveredServer` static constructor, which never loaded anything**

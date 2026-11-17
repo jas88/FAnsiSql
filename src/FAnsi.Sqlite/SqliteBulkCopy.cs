@@ -166,7 +166,7 @@ public sealed class SqliteBulkCopy(DiscoveredTable targetTable, IManagedConnecti
                 valueClauses.Append(paramName);
 
                 // Create parameter and add directly to command
-                var value = ConvertValueForSQLite(dr[kvp.Key.Ordinal], kvp.Value.DataType?.SQLType);
+                var value = ConvertValueForSQLite(dr[kvp.Key.Ordinal]);
                 var parameter = new SqliteParameter(paramName, value);
 
                 // For DateTime values, explicitly set SqliteType to Text to ensure proper round-trip
@@ -249,7 +249,7 @@ public sealed class SqliteBulkCopy(DiscoveredTable targetTable, IManagedConnecti
                 {
                     var kvp = columnEntries[colIndex];
                     var paramName = $"@p{colIndex}";
-                    var value = ConvertValueForSQLite(dr[kvp.Key.Ordinal], kvp.Value.DataType?.SQLType);
+                    var value = ConvertValueForSQLite(dr[kvp.Key.Ordinal]);
                     var parameter = new SqliteParameter(paramName, value);
 
                     // For DateTime values, explicitly set SqliteType to Text to ensure proper round-trip
@@ -372,28 +372,20 @@ public sealed class SqliteBulkCopy(DiscoveredTable targetTable, IManagedConnecti
         return message.ToString();
     }
 
-    private static object ConvertValueForSQLite(object value, string? targetSqlType = null)
+    /// <summary>
+    ///     Converts a value from the <see cref="DataTable" /> into one that can be bound to a <see cref="SqliteParameter" />.
+    ///     The conversion depends only on the type of the value. A string is never reinterpreted: by the time it gets here,
+    ///     strings bound for a column of a hard type (e.g. DATETIME, BOOLEAN) have already been parsed by
+    ///     <see cref="BulkCopy.ConvertStringTypesToHardTypes" />, so any string left is bound for a string column and must
+    ///     be stored exactly as given.
+    /// </summary>
+    private static object ConvertValueForSQLite(object value)
     {
         if (value == null || value == DBNull.Value)
             return DBNull.Value;
 
-        // Handle string values that should be parsed as DateTime for datetime/timestamp columns
-        if (value is string stringValue && !string.IsNullOrWhiteSpace(stringValue) &&
-            !string.IsNullOrEmpty(targetSqlType))
-        {
-            var normalizedType = targetSqlType.ToUpperInvariant().Split('(')[0].Trim();
-            // SQLite uses TEXT for datetime columns
-            if (normalizedType is "TEXT" or "DATETIME" or "TIMESTAMP" or "DATE"
-                && DateTime.TryParse(stringValue, CultureInfo.InvariantCulture, DateTimeStyles.None,
-                    out var parsedDate))
-                // Return the DateTime value - Microsoft.Data.Sqlite will handle it correctly
-                return parsedDate;
-        }
-
-        // Microsoft.Data.Sqlite handles DateTime natively and will convert it appropriately
-        // for the column type. It stores as TEXT in ISO8601 format but preserves type information
-        // so it can be read back as DateTime.
-        // We do NOT convert DateTime to string manually - let the provider handle it.
+        // Microsoft.Data.Sqlite binds DateTime and TimeSpan natively, as ISO 8601 text (e.g. "2007-01-01 13:11:00"
+        // and "13:11:00"), which is how FAnsi stores DATETIME and TIME columns
         return value switch
         {
             // DateTime is handled natively by Microsoft.Data.Sqlite - don't convert to string

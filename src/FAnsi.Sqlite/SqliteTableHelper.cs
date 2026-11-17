@@ -432,59 +432,19 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
         return match.Success ? match.Groups[1].Value : null;
     }
 
+    /// <summary>
+    ///     Fills <paramref name="dt" /> with the first <paramref name="topX" /> rows of <paramref name="table" />,
+    ///     converting the values SQLite reads to the types of the columns of <paramref name="dt" /> (see
+    ///     <see cref="SqliteDataTableFiller" />)
+    /// </summary>
     public override void FillDataTableWithTopX(DatabaseOperationArgs args, DiscoveredTable table, int topX,
         DataTable dt)
     {
         using var con = args.GetManagedConnection(table);
         using var cmd = table.Database.Server.GetCommand(GetTopXSqlForTable(table, topX), con);
         using var reader = cmd.ExecuteReader();
-
-        // Manually populate DataTable to avoid reflection (AOT-compatible)
-        // Add columns if DataTable is empty
-        if (dt.Columns.Count == 0)
-            for (var i = 0; i < reader.FieldCount; i++)
-                dt.Columns.Add(reader.GetName(i), reader.GetFieldType(i));
-
-        // Add rows
-        while (reader.Read())
-        {
-            var row = dt.NewRow();
-            for (var i = 0; i < reader.FieldCount; i++)
-            {
-                var value = reader.GetValue(i);
-
-                // SQLite stores DateTime as TEXT, but DataTable columns may be typed as DateTime
-                // If the column is DateTime and we get a string, try to parse it
-                if (i < dt.Columns.Count && dt.Columns[i].DataType == typeof(DateTime) && value is string strValue
-                    && DateTime.TryParse(strValue, CultureInfo.InvariantCulture, DateTimeStyles.None,
-                        out var parsedDate))
-                    value = parsedDate;
-
-                // SQLite stores the values of decimal columns as REAL
-                if (i < dt.Columns.Count && dt.Columns[i].DataType == typeof(decimal) && value is double real &&
-                    double.IsFinite(real))
-                    value = RealToDecimal(real);
-
-                row[i] = value;
-            }
-
-            dt.Rows.Add(row);
-        }
+        SqliteDataTableFiller.Fill(reader, dt);
     }
-
-    /// <summary>
-    ///     Converts the REAL value of a decimal column to a decimal rounded to 15 significant digits, as
-    ///     Convert.ToDecimal(double) did before .NET 11, so that the REAL 9.99 is read as 9.99.
-    /// </summary>
-    /// <remarks>
-    ///     .NET 11 converts a double to decimal exactly, which reads the REAL 9.99 as 9.990000000000000213162820728: more
-    ///     decimal places than the column allows, and not equal to the value that was stored.
-    /// </remarks>
-    /// <param name="real">A finite REAL value</param>
-    /// <exception cref="OverflowException">The value is outside the range of decimal</exception>
-    private static decimal RealToDecimal(double real) =>
-        decimal.Parse(real.ToString("G15", CultureInfo.InvariantCulture), NumberStyles.Float,
-            CultureInfo.InvariantCulture);
 
     /// <summary>
     ///     Checks if the table has a primary key using a database-specific SQL query (90-99% faster than discovering all

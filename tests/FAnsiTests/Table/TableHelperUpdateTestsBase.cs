@@ -1342,7 +1342,7 @@ internal abstract class TableHelperUpdateTestsBase : DatabaseTests
     {
         if (dbType == DatabaseType.Sqlite)
             Assert.Ignore(
-                "SQLite stores DateTime as TEXT strings; ADO.NET returns string type. Fundamental SQLite limitation.");
+                "This test reads the dates with ExecuteScalar, and Microsoft.Data.Sqlite returns a SQLite date as the TEXT it is stored as. FAnsi only converts it to DateTime in GetDataTable");
 
         var db = GetTestDatabase(dbType);
 
