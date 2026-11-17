@@ -201,7 +201,22 @@ internal sealed class BulkCopyTests_PostgreSql : BulkCopyTestsBase
         new object[] { 5.5d, "real", 5.5f },
         new object[] { new DateOnly(2001, 2, 3), "timestamp", new DateTime(2001, 2, 3) },
         new object[] { new DateOnly(2001, 2, 3), "timestamp with time zone", new DateTime(2001, 2, 3) },
-        new object[] { true, "varchar(10)", "true" }
+        new object[] { true, "varchar(10)", "true" },
+        //a date has no time of day, the date is stored as given whatever the Kind
+        new object[] { new DateTime(2001, 2, 3, 4, 5, 6), "date", new DateTime(2001, 2, 3) },
+        new object[] { new DateTime(2001, 2, 3, 23, 5, 6, DateTimeKind.Utc), "date", new DateTime(2001, 2, 3) },
+        new object[] { new DateTime(2001, 2, 3, 23, 5, 6, DateTimeKind.Local), "date", new DateTime(2001, 2, 3) },
+        new object[] { new DateOnly(2001, 2, 3), "date", new DateTime(2001, 2, 3) },
+        new object[] { new TimeSpan(13, 11, 10), "time", new TimeSpan(13, 11, 10) },
+        new object[] { new TimeOnly(13, 11, 10), "time", new TimeSpan(13, 11, 10) },
+        new object[] { new TimeSpan(13, 11, 10), "time with time zone", new TimeSpan(13, 11, 10) },
+        new object[] { new TimeOnly(13, 11, 10), "time with time zone", new TimeSpan(13, 11, 10) },
+        //an interval is not limited to a day
+        new object[] { new TimeSpan(1, 2, 3, 4), "interval", new TimeSpan(1, 2, 3, 4) },
+        new object[] { new TimeSpan(-1, -2, -3, -4), "interval", new TimeSpan(-1, -2, -3, -4) },
+        new object[] { new TimeOnly(13, 11, 10), "interval", new TimeSpan(13, 11, 10) },
+        new object[] { new TimeSpan(13, 11, 10), "varchar(10)", "13:11:10" },
+        new object[] { new TimeOnly(13, 11, 10), "varchar(10)", "13:11:10" }
     ];
 
     [TestCaseSource(nameof(DifferentlyTypedColumnCases))]
@@ -250,9 +265,21 @@ internal sealed class BulkCopyTests_PostgreSql : BulkCopyTestsBase
             float => new DataColumn("Value", typeof(float)),
             double => new DataColumn("Value", typeof(double)),
             decimal => new DataColumn("Value", typeof(decimal)),
-            DateTime => new DataColumn("Value", typeof(DateTime)),
+            //by default a DataTable makes every DateTime it is given Unspecified, these modes keep the Kind
+            DateTime dateTime => new DataColumn("Value", typeof(DateTime))
+            {
+                DateTimeMode = dateTime.Kind switch
+                {
+                    DateTimeKind.Local => DataSetDateTime.Local,
+                    DateTimeKind.Utc => DataSetDateTime.Utc,
+                    _ => DataSetDateTime.Unspecified
+                }
+            },
             DateOnly => new DataColumn("Value", typeof(DateOnly)),
+            TimeSpan => new DataColumn("Value", typeof(TimeSpan)),
+            TimeOnly => new DataColumn("Value", typeof(TimeOnly)),
             bool => new DataColumn("Value", typeof(bool)),
+            string => new DataColumn("Value", typeof(string)),
             _ => throw new ArgumentOutOfRangeException(nameof(value))
         };
 
@@ -376,6 +403,85 @@ internal sealed class BulkCopyTests_PostgreSql : BulkCopyTestsBase
             {
                 Assert.That(stored["insert"], Is.EqualTo(expected));
                 Assert.That(stored["bulk"], Is.EqualTo(expected));
+            });
+        }
+        finally
+        {
+            tbl.Drop();
+        }
+    }
+
+    private static readonly object[] DateAndTimeCases =
+    [
+        new object[] { "date", new DateTime(2001, 2, 3, 4, 5, 6), "2001-02-03" },
+        new object[] { "date", new DateTime(2001, 2, 3, 23, 5, 6, DateTimeKind.Utc), "2001-02-03" },
+        new object[] { "date", new DateOnly(2001, 2, 3), "2001-02-03" },
+        new object[] { "date", "2001-02-03", "2001-02-03" },
+        new object[] { "time", new TimeSpan(13, 11, 10), "13:11:10" },
+        new object[] { "time", new TimeOnly(13, 11, 10), "13:11:10" },
+        new object[] { "time", "13:11:10", "13:11:10" },
+        new object[] { "time with time zone", new TimeSpan(13, 11, 10), "13:11:10" },
+        new object[] { "time with time zone", new TimeOnly(13, 11, 10), "13:11:10" },
+        new object[] { "time with time zone", "13:11:10", "13:11:10" },
+        new object[] { "interval", new TimeSpan(1, 2, 3, 4), "1 day 02:03:04" },
+        new object[] { "interval", new TimeOnly(13, 11, 10), "13:11:10" }
+    ];
+
+    /// <summary>
+    ///     What is stored for a date or a time depends on the type of the column and on nothing else, in particular not on
+    ///     whether it was inserted as a parameter or by bulk copy.  A 'time with time zone' is given the offset of the
+    ///     time zone of the session either way, as PostgreSQL gives a time written in the SQL.
+    /// </summary>
+    [TestCaseSource(nameof(DateAndTimeCases))]
+    public void DateAndTime_InsertAndBulkCopyStoreTheSameValue(string columnType, object value, string expected)
+    {
+        var withTimeZone = columnType.EndsWith("with time zone", StringComparison.Ordinal);
+
+        var db = GetTestDatabase(DbType);
+        var tbl = db.CreateTable("DateAndTimeKinds",
+        [
+            new DatabaseColumnRequest("How", new DatabaseTypeRequest(typeof(string), 10)),
+            new DatabaseColumnRequest("MyValue", columnType)
+        ]);
+
+        try
+        {
+            tbl.Insert(new Dictionary<string, object>
+            {
+                { "How", "insert" },
+                { "MyValue", value }
+            }, CultureInfo.InvariantCulture);
+
+            using var dt = new DataTable();
+            dt.Columns.Add("How", typeof(string));
+            var valueColumn = CreateValueColumn(value);
+            valueColumn.ColumnName = "MyValue";
+            dt.Columns.Add(valueColumn);
+            dt.Rows.Add("bulk", value);
+
+            using (var bulk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture))
+            {
+                Assert.That(bulk.Upload(dt), Is.EqualTo(1));
+            }
+
+            //the server formats what it stored so that the result does not depend on any client side conversion
+            var stored = new Dictionary<string, string>();
+
+            using (var con = db.Server.GetConnection())
+            {
+                con.Open();
+                using var cmd = db.Server.GetCommand(
+                    $"SELECT \"How\", \"MyValue\"::text FROM {tbl.GetFullyQualifiedName()}", con);
+                using var r = cmd.ExecuteReader();
+                while (r.Read())
+                    stored.Add(r.GetString(0), r.GetString(1));
+            }
+
+            Assert.Multiple(() =>
+            {
+                //a time with time zone ends with the offset, e.g. "13:11:10-06"
+                Assert.That(stored["insert"], withTimeZone ? Does.StartWith(expected) : Is.EqualTo(expected));
+                Assert.That(stored["bulk"], Is.EqualTo(stored["insert"]));
             });
         }
         finally

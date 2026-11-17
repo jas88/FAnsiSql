@@ -153,6 +153,90 @@ internal sealed class ParameterTests : DatabaseTests
     }
 
     /// <summary>
+    ///     A 'date' has no time of day and no time zone, it stores the date of the value exactly as given whatever the
+    ///     <see cref="DateTimeKind" />, as the other DBMS do
+    /// </summary>
+    [TestCase(DateTimeKind.Unspecified)]
+    [TestCase(DateTimeKind.Local)]
+    [TestCase(DateTimeKind.Utc)]
+    public void GetParameter_PostgreSqlDate_IsTheDateAsGiven(DateTimeKind kind)
+    {
+        var p = GetPostgreSqlParameter("date", new DateTime(2001, 1, 2, 23, 4, 5, kind));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(p.DbType, Is.EqualTo(DbType.Date));
+            Assert.That(p.NpgsqlDbType, Is.EqualTo(NpgsqlDbType.Date));
+            Assert.That(p.Value, Is.EqualTo(new DateOnly(2001, 1, 2)));
+        });
+    }
+
+    [TestCase("2001-01-02")]
+    [TestCase("2001-01-02 23:04:05")]
+    public void GetParameter_PostgreSqlDate_StringValue(string value)
+    {
+        var p = GetPostgreSqlParameter("date", value);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(p.NpgsqlDbType, Is.EqualTo(NpgsqlDbType.Date));
+            Assert.That(p.Value, Is.EqualTo(new DateOnly(2001, 1, 2)));
+        });
+    }
+
+    [Test]
+    public void GetParameter_PostgreSqlDate_DateOnlyValue()
+    {
+        var p = GetPostgreSqlParameter("date", new DateOnly(2001, 1, 2));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(p.NpgsqlDbType, Is.EqualTo(NpgsqlDbType.Date));
+            Assert.That(p.Value, Is.EqualTo(new DateOnly(2001, 1, 2)));
+        });
+    }
+
+    /// <summary>
+    ///     Npgsql writes both a <see cref="TimeSpan" /> and a <see cref="TimeOnly" /> to a 'time'.  A 'time with time zone'
+    ///     is sent a 'time' too, which PostgreSQL gives the offset of the time zone of the session, as it does a time
+    ///     written in the SQL.
+    /// </summary>
+    [TestCase("time without time zone")]
+    [TestCase("time with time zone")]
+    public void GetParameter_PostgreSqlTime(string sqlType)
+    {
+        var fromTimeSpan = GetPostgreSqlParameter(sqlType, new TimeSpan(13, 11, 10));
+        var fromTimeOnly = GetPostgreSqlParameter(sqlType, new TimeOnly(13, 11, 10));
+        var fromString = GetPostgreSqlParameter(sqlType, "13:11:10");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(fromTimeSpan.NpgsqlDbType, Is.EqualTo(NpgsqlDbType.Time));
+            Assert.That(fromTimeSpan.Value, Is.EqualTo(new TimeSpan(13, 11, 10)));
+            Assert.That(fromTimeOnly.NpgsqlDbType, Is.EqualTo(NpgsqlDbType.Time));
+            Assert.That(fromTimeOnly.Value, Is.EqualTo(new TimeOnly(13, 11, 10)));
+            Assert.That(fromString.NpgsqlDbType, Is.EqualTo(NpgsqlDbType.Time));
+            Assert.That(fromString.Value, Is.EqualTo(new TimeSpan(13, 11, 10)));
+        });
+    }
+
+    /// <summary>
+    ///     An 'interval' is not limited to a day, so it must not be sent as a 'time'.  <see cref="DbType.Object" /> lets
+    ///     Npgsql send a <see cref="TimeSpan" /> as the 'interval' it maps one to.
+    /// </summary>
+    [Test]
+    public void GetParameter_PostgreSqlInterval()
+    {
+        var p = GetPostgreSqlParameter("interval", new TimeSpan(1, 2, 3, 4));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(p.DbType, Is.EqualTo(DbType.Object));
+            Assert.That(p.Value, Is.EqualTo(new TimeSpan(1, 2, 3, 4)));
+        });
+    }
+
+    /// <summary>
     ///     Builds the parameter FAnsi would use to insert <paramref name="value" /> into a column of the given
     ///     <paramref name="sqlType" />, no database connection is required.
     /// </summary>
