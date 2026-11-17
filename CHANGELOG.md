@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **MariaDB support in FAnsiSql.MySql**
   - `DatabaseType.MySql` now works with MariaDB as well as MySQL, with the same connection strings and API. It has been
     tested against MariaDB 12.3, the newest LTS release, and 13.0
-  - CI runs the MySQL tests against MariaDB 12.3 as well as MySQL 8
+  - CI runs the MySQL tests against MariaDB 12.3 as well as MySQL 8, and packages are only pushed to NuGet if both pass
 
 ### Fixed
 - **SQLite: `SupportsEmbeddedParameters` returned true**
@@ -113,10 +113,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     FAnsiSql and TypeGuesser together
 - **MySQL: integer column types are discovered without a display width on MariaDB too**
   - MariaDB reports a display width on every integer column, such as `bigint(20)`, but MySQL 8.0.19 and later only on
-    `tinyint(1)` and `ZEROFILL` columns. FAnsi removed it from `int` and `smallint` only, so the `SQLType` of a
-    `tinyint`, `mediumint` or `bigint` column was `bigint(20)` on MariaDB but `bigint` on MySQL
-  - The width is now removed from every integer type except `tinyint(1)`, which is how both report a boolean column.
-    On MySQL this changes only `ZEROFILL` columns of those three types, whose width was already removed for `int`
+    `tinyint(1)` and `ZEROFILL` columns. FAnsi removed it from `int` and `smallint` only, so on MariaDB the `SQLType`
+    of a `tinyint`, `mediumint` or `bigint` column kept it (`tinyint(4)`, `mediumint(9)`, `bigint(20)`) where MySQL
+    gives `tinyint`, `mediumint` and `bigint`
+  - The width is now removed from every integer type except `tinyint(1)`, which is how both report a boolean column
+  - On MariaDB the type names of existing columns change with it, e.g. a column discovered as `bigint(20)` is now
+    discovered as `bigint`, so anything that stored the old names, such as an RDMP catalogue, sees a one-off change of
+    type. On MySQL only `ZEROFILL` columns of those three types change, as the width was already removed for `int`
 
 ### Removed
 - **Reflection-based provider loading in the `DiscoveredServer` static constructor, which never loaded anything**
