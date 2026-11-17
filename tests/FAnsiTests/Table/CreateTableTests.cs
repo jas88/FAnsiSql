@@ -560,9 +560,11 @@ internal sealed class CreateTableTests : DatabaseTests
     ///     uses the static defaults in <see cref="GuessSettingsFactory.Defaults" />.
     /// </summary>
     [TestCaseSource(typeof(All), nameof(All.DatabaseTypesWithBoolFlags))]
-    [SkipDatabase(DatabaseType.Sqlite, SqliteHasNoBooleanType)]
     public void CreateTable_GuessSettings_StaticDefaults_TF(DatabaseType dbType, bool treatAsBoolean)
     {
+        if (dbType == DatabaseType.Sqlite && treatAsBoolean)
+            Assert.Ignore(SqliteHasNoBooleanType);
+
         //T and F is normally True and False.  If you want to keep it as a string set DoNotRetype
         var db = GetTestDatabase(dbType);
         using var dt = new DataTable();
@@ -644,9 +646,11 @@ internal sealed class CreateTableTests : DatabaseTests
     ///     uses the <see cref="CreateTableArgs.GuessSettings" /> injection.
     /// </summary>
     [TestCaseSource(typeof(All), nameof(All.DatabaseTypesWithBoolFlags))]
-    [SkipDatabase(DatabaseType.Sqlite, SqliteHasNoBooleanType)]
     public void CreateTable_GuessSettings_InArgs_TF(DatabaseType dbType, bool treatAsBoolean)
     {
+        if (dbType == DatabaseType.Sqlite && treatAsBoolean)
+            Assert.Ignore(SqliteHasNoBooleanType);
+
         //T and F is normally True and False.  If you want to keep it as a string set DoNotRetype
         var db = GetTestDatabase(dbType);
         var dt = new DataTable();
