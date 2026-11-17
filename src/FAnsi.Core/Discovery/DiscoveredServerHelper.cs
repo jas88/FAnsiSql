@@ -52,27 +52,38 @@ public abstract partial class DiscoveredServerHelper(DatabaseType databaseType) 
     public static int CreateDatabaseTimeoutInSeconds { get; set; } = 30;
 
     /// <summary>
-    ///     Creates a new DbCommand for the specified database type.
+    ///     Creates a new <see cref="DbCommand" /> of the API type for the DBMS (e.g. <c>SqlCommand</c> for SQL Server) with
+    ///     <paramref name="s" /> as its CommandText
     /// </summary>
-    /// <include file='../../../CommonMethods.doc.xml' path='Methods/Method[@name="GetCommand"]' />
+    /// <param name="s">The SQL that the command will run</param>
+    /// <param name="con">The connection to create the command on, which must be of the same API type</param>
+    /// <param name="transaction">Optional - the transaction to run the command in</param>
+    /// <returns>The new command</returns>
     public abstract DbCommand GetCommand(string s, DbConnection con, DbTransaction? transaction = null);
 
     /// <summary>
-    ///     Creates a new DbDataAdapter for the specified database type.
+    ///     Creates a new <see cref="DbDataAdapter" /> of the API type for the DBMS (e.g. <c>SqlDataAdapter</c> for SQL
+    ///     Server) with <paramref name="cmd" /> as its select command
     /// </summary>
-    /// <include file='../../../CommonMethods.doc.xml' path='Methods/Method[@name="GetDataAdapter"]' />
+    /// <param name="cmd">The command that selects the data, which must be of the same API type (see <see cref="GetCommand" />)</param>
+    /// <returns>The new data adapter</returns>
     public abstract DbDataAdapter GetDataAdapter(DbCommand cmd);
 
     /// <summary>
-    ///     Creates a new DbCommandBuilder for the specified database type.
+    ///     Creates a new <see cref="DbCommandBuilder" /> of the API type for the DBMS (e.g. <c>SqlCommandBuilder</c> for SQL
+    ///     Server) for a data adapter with <paramref name="cmd" /> as its select command
     /// </summary>
-    /// <include file='../../../CommonMethods.doc.xml' path='Methods/Method[@name="GetCommandBuilder"]' />
+    /// <param name="cmd">The command that selects the data, which must be of the same API type (see <see cref="GetCommand" />)</param>
+    /// <returns>The new command builder</returns>
+    /// <exception cref="NotSupportedException">The DBMS has no command builder (SQLite)</exception>
     public abstract DbCommandBuilder GetCommandBuilder(DbCommand cmd);
 
     /// <summary>
-    ///     Creates a new DbParameter for the specified database type.
+    ///     Creates a new <see cref="DbParameter" /> of the API type for the DBMS (e.g. <c>SqlParameter</c> for SQL Server)
+    ///     with the given name and no value
     /// </summary>
-    /// <include file='../../../CommonMethods.doc.xml' path='Methods/Method[@name="GetParameter"]' />
+    /// <param name="parameterName">The name of the parameter</param>
+    /// <returns>The new parameter, which is not yet added to any command</returns>
     public abstract DbParameter GetParameter(string parameterName);
 
     public abstract DbConnection GetConnection(DbConnectionStringBuilder builder);

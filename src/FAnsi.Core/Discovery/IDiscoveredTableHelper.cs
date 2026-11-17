@@ -13,10 +13,13 @@ namespace FAnsi.Discovery;
 public interface IDiscoveredTableHelper
 {
     /// <summary>
-    ///     Returns SQL query to fetch the top X rows from the specified table.
+    ///     Returns the SQL to fetch the first <paramref name="topX" /> rows, with all their columns, from
+    ///     <paramref name="table" /> (e.g. <c>SELECT TOP 10 * FROM ...</c> for SQL Server). The SQL has no ORDER BY, so the
+    ///     DBMS decides which rows those are
     /// </summary>
-    /// <include file='../../../CommonMethods.doc.xml' path='Methods/Method[@name="GetTopXSql"]' />
-    /// <param name="table">The table to fetch records from</param>
+    /// <param name="table">The table to fetch rows from</param>
+    /// <param name="topX">The number of rows to fetch</param>
+    /// <returns>The SQL to execute</returns>
     string GetTopXSqlForTable(IHasFullyQualifiedNameToo table, int topX);
 
     IEnumerable<DiscoveredColumn> DiscoverColumns(DiscoveredTable discoveredTable, IManagedConnection connection,

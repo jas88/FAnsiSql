@@ -159,9 +159,13 @@ public sealed class DiscoveredServer : IMightNotExist
         transaction != null ? transaction.Connection : Helper.GetConnection(Builder);
 
     /// <summary>
-    ///     Creates a new DbCommand for the specified database type.
+    ///     Creates a new <see cref="DbCommand" /> of the API type for the <see cref="DatabaseType" /> of the server (e.g.
+    ///     <c>SqlCommand</c> for SQL Server) with <paramref name="sql" /> as its CommandText, on the connection of
+    ///     <paramref name="managedConnection" /> and in its transaction, if it has one
     /// </summary>
-    /// <include file='../../../CommonMethods.doc.xml' path='Methods/Method[@name="GetCommand"]' />
+    /// <param name="sql">The SQL that the command will run</param>
+    /// <param name="managedConnection">The connection to create the command on, and the transaction (if any) to run it in</param>
+    /// <returns>The new command</returns>
     public DbCommand GetCommand(string sql, IManagedConnection managedConnection)
     {
         var cmd = Helper.GetCommand(sql, managedConnection.Connection);

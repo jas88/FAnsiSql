@@ -200,9 +200,11 @@ public class DiscoveredTable : IHasFullyQualifiedNameToo, IMightNotExist, IHasQu
     }
 
     /// <summary>
-    ///     Returns SQL query to fetch the top X rows from this table.
+    ///     Returns the SQL to fetch the first <paramref name="topX" /> rows, with all their columns, from this table (e.g.
+    ///     <c>SELECT TOP 10 * FROM ...</c> for SQL Server). The SQL has no ORDER BY, so the DBMS decides which rows those are
     /// </summary>
-    /// <include file='../../../CommonMethods.doc.xml' path='Methods/Method[@name="GetTopXSql"]' />
+    /// <param name="topX">The number of rows to fetch</param>
+    /// <returns>The SQL to execute</returns>
     public string GetTopXSql(int topX) => Helper.GetTopXSqlForTable(this, topX);
 
 
