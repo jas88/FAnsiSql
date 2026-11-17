@@ -10,8 +10,16 @@
     <EnableAOTAnalyzer>true</EnableAOTAnalyzer>
     <EnableSingleFileAnalyzer>true</EnableSingleFileAnalyzer>
 
-    <!-- Treat warnings as errors for strict validation -->
-    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <!-- Treat warnings as errors for strict validation. This includes the trim and AOT warnings
+         from the native compiler (ILC), so FAnsiSql code that is not AOT-safe fails the publish -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+
+    <!-- Warnings in the SQL Server driver, which FAnsiSql cannot fix. IL2104/IL3053 are ILC's
+         one-per-assembly summary of the trim/AOT warnings inside a package assembly
+         (Microsoft.Data.SqlClient, Microsoft.Data.SqlClient.Internal.Logging,
+         System.Configuration.ConfigurationManager). Warnings in project references are never
+         summarised, so FAnsiSql's own are still reported with their own codes. -->
+    <NoWarn>$(NoWarn);IL2104;IL3053</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

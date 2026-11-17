@@ -8,6 +8,10 @@
     <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
     <EnableAOTAnalyzer>true</EnableAOTAnalyzer>
     <EnableSingleFileAnalyzer>true</EnableSingleFileAnalyzer>
+
+    <!-- Treat warnings as errors for strict validation. This includes the trim and AOT warnings
+         from the native compiler (ILC), so FAnsiSql code that is not AOT-safe fails the publish -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
 
   <ItemGroup>
