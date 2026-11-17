@@ -1,17 +1,24 @@
 using FAnsi;
+using NUnit.Framework.Interfaces;
+using NUnit.Framework.Internal.Commands;
 
 namespace FAnsiTests.TestGeneration;
 
 /// <summary>
-///     Marks a test method to skip specific database types during test generation.
-///     Use this instead of Assert.Inconclusive() to prevent tests from being generated at all.
+///     Marks a test method to skip specific database types.
+///     <para>
+///         On a protected method of a T4 template base class (see Server/ServerTests.tt) the template does not generate the
+///         test for these databases at all.  On a test method, a test case with one of these databases as an argument is
+///         reported as ignored, with <see cref="Reason" />, instead of being run.
+///     </para>
+///     Use this instead of Assert.Inconclusive() so that the reason a database is not tested is declared on the test.
 /// </summary>
 /// <example>
 ///     [SkipDatabase(DatabaseType.Sqlite, "SQLite doesn't support feature X")]
 ///     protected void TestFeatureX(DatabaseType type) { }
 /// </example>
 [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
-internal sealed class SkipDatabaseAttribute : Attribute
+internal sealed class SkipDatabaseAttribute : Attribute, IWrapSetUpTearDown
 {
     public SkipDatabaseAttribute(DatabaseType database, string? reason = null)
     {
@@ -34,4 +41,8 @@ internal sealed class SkipDatabaseAttribute : Attribute
 
     public DatabaseType[] ExcludedDatabases { get; }
     public string? Reason { get; }
+
+    /// <inheritdoc />
+    public TestCommand Wrap(TestCommand command) =>
+        new DatabaseTypeFilterCommand(command, type => ExcludedDatabases.Contains(type), Reason);
 }
