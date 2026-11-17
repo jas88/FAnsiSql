@@ -38,7 +38,8 @@ public sealed class PostgreSqlTableHelper : DiscoveredTableHelper
                                   SELECT *
                                                   FROM information_schema.columns
                                               WHERE table_schema = @schemaName
-                                              AND table_name   = @tableName;
+                                              AND table_name   = @tableName
+                                              ORDER BY ordinal_position;
                                   """;
 
         using var cmd =

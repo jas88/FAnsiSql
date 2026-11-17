@@ -1,3 +1,4 @@
+using System.Data;
 using FAnsi.Discovery;
 using FAnsi.Discovery.QuerySyntax;
 using FAnsi.Implementations.PostgreSql.Aggregation;
@@ -33,11 +34,16 @@ public sealed class PostgreSqlSyntaxHelper : QuerySyntaxHelper
 
     public override bool SupportsEmbeddedParameters() => false;
 
-    protected override object FormatDateTimeForDbParameter(DateTime dateTime) =>
-        // Starting with 4.0.0 npgsql crashes if it has to read a DateTime Unspecified Kind
-        // See : https://github.com/npgsql/efcore.pg/issues/2000
-        // Also it doesn't support DateTime.Kind.Local
-        dateTime.Kind == DateTimeKind.Unspecified ? dateTime.ToUniversalTime() : dateTime;
+    protected override object FormatDateTimeForDbParameter(DateTime dateTime, DbType dbType) =>
+        // Starting with 6.0.0 npgsql only writes a UTC DateTime to 'timestamp with time zone' and refuses to write one
+        // to 'timestamp without time zone'
+        // See : https://www.npgsql.org/doc/types/datetime.html
+        dbType switch
+        {
+            DbType.DateTime2 => PostgreSqlTypeTranslater.ToTimestamp(dateTime),
+            DbType.DateTime => PostgreSqlTypeTranslater.ToTimestampTz(dateTime),
+            _ => dateTime
+        };
 
     public override string EnsureWrappedImpl(string databaseOrTableName) =>
         $"\"{GetRuntimeNameWithDoubledDoubleQuotes(databaseOrTableName)}\"";

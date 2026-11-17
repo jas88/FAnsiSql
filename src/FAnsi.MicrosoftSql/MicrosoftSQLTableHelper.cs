@@ -36,7 +36,7 @@ public sealed partial class MicrosoftSQLTableHelper : DiscoveredTableHelper
             : ListPrimaryKeys(connection, discoveredTable).ToHashSet();
 
         using var cmd = discoveredTable.GetCommand(
-            $"use [{database}];\r\nSELECT  \r\nsys.columns.name AS COLUMN_NAME,\r\n sys.types.name AS TYPE_NAME,\r\n  sys.columns.collation_name AS COLLATION_NAME,\r\n   sys.columns.max_length as LENGTH,\r\n   sys.columns.scale as SCALE,\r\n    sys.columns.is_identity,\r\n    sys.columns.is_nullable,\r\n   sys.columns.precision as PRECISION,\r\nsys.columns.collation_name\r\nfrom sys.columns \r\njoin \r\nsys.types on sys.columns.user_type_id = sys.types.user_type_id\r\nwhere object_id = OBJECT_ID(@tableName)",
+            $"use [{database}];\r\nSELECT  \r\nsys.columns.name AS COLUMN_NAME,\r\n sys.types.name AS TYPE_NAME,\r\n  sys.columns.collation_name AS COLLATION_NAME,\r\n   sys.columns.max_length as LENGTH,\r\n   sys.columns.scale as SCALE,\r\n    sys.columns.is_identity,\r\n    sys.columns.is_nullable,\r\n   sys.columns.precision as PRECISION,\r\nsys.columns.collation_name\r\nfrom sys.columns \r\njoin \r\nsys.types on sys.columns.user_type_id = sys.types.user_type_id\r\nwhere object_id = OBJECT_ID(@tableName)\r\norder by sys.columns.column_id",
             connection.Connection, connection.Transaction);
         var p = cmd.CreateParameter();
         p.ParameterName = "@tableName";

@@ -7,6 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.8.0] - 2026-11-16
+
+### Fixed
+- **PostgreSQL: DateTime values could not be inserted into `timestamp` columns**
+  - `QuerySyntaxHelper.GetParameter` gave every date column `DbType.DateTime`, which Npgsql sends as `timestamp with time zone`
+    and only accepts for UTC values. `DiscoveredTable.Insert` of any other `DateTime` into the `timestamp` columns FAnsi creates
+    failed with "Cannot write DateTime with Kind=Unspecified to PostgreSQL type 'timestamp with time zone'", and a UTC value
+    was converted to the time zone of the server
+  - `timestamp` columns now get `DbType.DateTime2` and store the value exactly as given whatever its `DateTimeKind`, as the
+    other DBMS do. `timestamp with time zone` columns still get `DbType.DateTime` and are always sent a UTC value: a `Local`
+    value is converted and an `Unspecified` one is taken to be UTC already (3.7.0 took an `Unspecified` value parsed from a
+    string to be in the time zone of the client and rejected a `DateTime` of any Kind but `Utc`)
+  - `TypeTranslater.GetDbTypeForSQLDBType` is now virtual. The mapping is unchanged for SQL Server, MySQL, Oracle and SQLite
+- **PostgreSQL: bulk insert failed when a column and the DataColumn loaded into it had different types**
+  - `PostgreSqlBulkCopy` chose the binary COPY type of each value from the type of the `DataColumn`, but the server does not
+    convert values sent in that format. A `DateTime` written to a `varchar` column failed with "invalid byte sequence for
+    encoding "UTF8": 0x00", an `int` written to a `bigint` column with "insufficient data left in message"
+  - Values are now written as the type of the destination column and converted first where Npgsql does not do so itself
+    (anything going into a string column, numbers going into `real` and `double precision` columns)
+  - A `DateTime` is stored by the same rule as when it is inserted as a parameter. Bulk insert of a `Local` value into a
+    `timestamp with time zone` column used to store its local time as if it were UTC
+- **MySQL: "Row size too large" creating a table with several string columns of unspecified width**
+  - A string column requested without a width, such as every string column of an empty `DataTable`, was created as
+    `varchar(4000)`. MySQL counts the declared width of every varchar column towards a limit of 65,535 bytes per row, so a
+    table in a utf8mb4 database could have no more than 4 of them
+  - These columns are now created as `text`, which holds at least as much and counts for at most 12 bytes of that limit
+    whatever it holds. Columns requested with a width are unchanged
+- **MySQL: `DiscoverColumns` could return columns in the wrong order**
+  - The query on `information_schema.COLUMNS` had no `ORDER BY` and MySQL 8 can return its rows in order of column name. It
+    is now ordered by `ORDINAL_POSITION`
+  - Column discovery for PostgreSQL, SQL Server and Oracle is now explicitly ordered as well
+- **Oracle: Unicode string columns wider than 2000 characters could not be created**
+  - A Unicode string requested without a width was declared as `nvarchar2(4000)` and one of 2001 to 4000 characters as an
+    `nvarchar2` of that width. With Oracle's default `MAX_STRING_SIZE = STANDARD` both fail with ORA-00910, because an
+    nvarchar2 then holds 4000 bytes, which is 2000 characters of the default national character set (AL16UTF16).
+    Databases set to `MAX_STRING_SIZE = EXTENDED` allow wider nvarchar2 columns, so the new limit is conservative there
+  - A Unicode string without a width is now `nvarchar2(2000)` and one of more than 2000 characters `NCLOB`
+
+### Changed
+- `QuerySyntaxHelper.GetParameter` throws an `ArgumentException` naming the column when the column has no `DataType`, instead of a `NullReferenceException`
+- Bump MySqlConnector from 2.6.2 to 3.0.0, a new major version of the MySQL driver which applications referencing FAnsiSql.MySql receive transitively. Code that uses MySqlConnector's own API directly should be checked against its 3.0 release notes
+- Bump Microsoft.Data.SqlClient 7.1.1 → 7.1.2 and System.Security.Cryptography.Pkcs 10.0.14 → 10.0.15
+
 ## [3.7.0] - 2026-11-11
 
 ### Changed
@@ -783,7 +826,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed Drop table to work correctly with Views
 - Exists now works correctly for Views (previously it would return true if there was no view but a table with the same name)
 
-[Unreleased]: https://github.com/jas88/FAnsiSql/compare/v3.7.0...main
+[Unreleased]: https://github.com/jas88/FAnsiSql/compare/v3.8.0...main
+[3.8.0]: https://github.com/jas88/FAnsiSql/compare/v3.7.0...v3.8.0
 [3.7.0]: https://github.com/jas88/FAnsiSql/compare/v3.6.3...v3.7.0
 [3.6.3]: https://github.com/jas88/FAnsiSql/compare/v3.6.2...v3.6.3
 [3.6.2]: https://github.com/jas88/FAnsiSql/compare/v3.6.1...v3.6.2

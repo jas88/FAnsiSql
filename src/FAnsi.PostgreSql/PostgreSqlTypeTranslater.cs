@@ -1,4 +1,5 @@
 using System.Collections.Frozen;
+using System.Data;
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -52,6 +53,26 @@ public sealed partial class PostgreSqlTypeTranslater : TypeTranslater
             [typeof(Guid)] = NpgsqlDbType.Uuid
         }.ToFrozenDictionary();
 
+    /// <summary>
+    ///     The column data types (as named by information_schema) that take values of more than one C# type, with the
+    ///     type Npgsql writes them as
+    /// </summary>
+    private static readonly FrozenDictionary<string, NpgsqlDbType> SqlTypeMappings =
+        new Dictionary<string, NpgsqlDbType>
+        {
+            ["smallint"] = NpgsqlDbType.Smallint,
+            ["integer"] = NpgsqlDbType.Integer,
+            ["bigint"] = NpgsqlDbType.Bigint,
+            ["numeric"] = NpgsqlDbType.Numeric,
+            ["real"] = NpgsqlDbType.Real,
+            ["double precision"] = NpgsqlDbType.Double,
+            ["character"] = NpgsqlDbType.Char,
+            ["character varying"] = NpgsqlDbType.Varchar,
+            ["text"] = NpgsqlDbType.Text,
+            ["timestamp without time zone"] = NpgsqlDbType.Timestamp,
+            ["timestamp with time zone"] = NpgsqlDbType.TimestampTz
+        }.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
+
     private PostgreSqlTypeTranslater() : base(DateRegexImpl(), 8000, 4000)
     {
         TimeRegex = TimeRegexImpl(); //space is important
@@ -75,6 +96,65 @@ public sealed partial class PostgreSqlTypeTranslater : TypeTranslater
             ? npgsqlType
             : throw new TypeNotMappedException(string.Format(CultureInfo.InvariantCulture, TypeNotMappedExceptionFormat,
                 t.Name, GetType().Name));
+
+    /// <summary>
+    ///     Returns the type Npgsql must write values as for them to be accepted by a column of the given
+    ///     <paramref name="sqlType" /> (as named by information_schema e.g. "character varying(10)") or null if it is a
+    ///     type that only takes values of the one C# type.
+    /// </summary>
+    internal NpgsqlDbType? GetNpgsqlDbTypeForSqlType(string sqlType)
+    {
+        //strip any length / precision e.g. "numeric(10,2)"
+        var bracket = sqlType.IndexOf('(', StringComparison.Ordinal);
+        var typeName = bracket == -1 ? sqlType : sqlType[..bracket];
+
+        return SqlTypeMappings.TryGetValue(typeName.Trim(), out var npgsqlType) ? npgsqlType : null;
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    ///     Npgsql sends <see cref="DbType.DateTime" /> as 'timestamp with time zone' and only accepts UTC values for it.  The
+    ///     'timestamp' (without time zone) columns that FAnsi creates for dates need <see cref="DbType.DateTime2" />.
+    /// </remarks>
+    public override DbType GetDbTypeForSQLDBType(string sqlType)
+    {
+        var dbType = base.GetDbTypeForSQLDBType(sqlType);
+
+        return dbType == DbType.DateTime && !IsTimestampWithTimeZone(sqlType) ? DbType.DateTime2 : dbType;
+    }
+
+    /// <summary>
+    ///     Returns <paramref name="dateTime" /> as Npgsql must be given it for a 'timestamp without time zone' column
+    ///     (<see cref="NpgsqlDbType.Timestamp" />).  A 'timestamp' has no time zone.  It stores the date and time exactly
+    ///     as given whatever the <see cref="DateTimeKind" />, as the other DBMS do (Npgsql will not write a Utc value to
+    ///     one, so the Kind is removed).
+    /// </summary>
+    /// <remarks>
+    ///     What is stored for each <see cref="DateTimeKind" /> is decided here and in <see cref="ToTimestampTz" /> and
+    ///     nowhere else, so that it does not depend on how the value is inserted.
+    /// </remarks>
+    internal static DateTime ToTimestamp(DateTime dateTime) =>
+        DateTime.SpecifyKind(dateTime, DateTimeKind.Unspecified);
+
+    /// <summary>
+    ///     Returns <paramref name="dateTime" /> as Npgsql must be given it for a 'timestamp with time zone' column
+    ///     (<see cref="NpgsqlDbType.TimestampTz" />).  A 'timestamp with time zone' stores an instant and Npgsql will only
+    ///     write it a Utc value.  A Local value is converted to UTC.  An Unspecified value is taken to be UTC already: that
+    ///     does not depend on the time zone of the machine and it is what a value read from such a column is once it has
+    ///     been put in a DataTable, so data read from one table is stored unchanged in another.
+    /// </summary>
+    /// <remarks>
+    ///     What is stored for each <see cref="DateTimeKind" /> is decided here and in <see cref="ToTimestamp" /> and
+    ///     nowhere else, so that it does not depend on how the value is inserted.
+    /// </remarks>
+    internal static DateTime ToTimestampTz(DateTime dateTime) =>
+        dateTime.Kind == DateTimeKind.Local
+            ? dateTime.ToUniversalTime()
+            : DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);
+
+    private static bool IsTimestampWithTimeZone(string sqlType) =>
+        sqlType.Contains("with time zone", StringComparison.OrdinalIgnoreCase) ||
+        sqlType.Contains("timestamptz", StringComparison.OrdinalIgnoreCase);
 
     protected override bool IsByteArray(string sqlType) =>
         sqlType?.StartsWith("bytea", StringComparison.OrdinalIgnoreCase) ?? false;

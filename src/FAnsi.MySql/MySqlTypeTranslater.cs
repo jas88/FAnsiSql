@@ -55,6 +55,17 @@ public sealed partial class MySqlTypeTranslater : TypeTranslater
     protected override string GetUnicodeStringDataTypeImpl(int maxExpectedStringWidth) =>
         $"varchar({maxExpectedStringWidth})";
 
+    /// <summary>
+    ///     MySQL counts the declared width of every varchar column towards a limit of 65,535 bytes for the whole row, at
+    ///     up to 4 bytes a character (utf8mb4, the default character set since MySQL 8).  That leaves room in a table for
+    ///     only 4 columns of the width the other DBMS get when no length is supplied.  A text column holds 65,535 bytes,
+    ///     so anything that fitted the varchar still fits, and counts for no more than 12 bytes of the limit.
+    /// </summary>
+    protected override string GetStringDataTypeWhenWidthNotSupplied() => "text";
+
+    /// <inheritdoc cref="GetStringDataTypeWhenWidthNotSupplied" />
+    protected override string GetUnicodeStringDataTypeWhenWidthNotSupplied() => "text";
+
     protected override bool IsBool(string sqlType)
     {
         // Use span-based comparison for better performance

@@ -9,6 +9,12 @@ namespace FAnsi.Implementations.Oracle;
 public sealed partial class OracleTypeTranslater : TypeTranslater
 {
     public const int ExtraLengthPerNonAsciiCharacter = 3;
+
+    /// <summary>
+    ///     The most characters an nvarchar2 can be declared with.  Oracle limits one to 4000 bytes and a character takes 2
+    ///     bytes in AL16UTF16, the national character set of a database unless it was created with another.
+    /// </summary>
+    private const int MaxUnicodeStringWidth = 2000;
     public static readonly OracleTypeTranslater Instance = new();
     private static readonly Regex AlsoFloatingPointRegex = AlsoFloatingPointRegexImpl();
     private static readonly Regex AlsoByteArrayRegex = AlsoByteArrayRegexImpl();
@@ -27,7 +33,13 @@ public sealed partial class OracleTypeTranslater : TypeTranslater
         $"varchar2({maxExpectedStringWidth})";
 
     protected override string GetUnicodeStringDataTypeImpl(int maxExpectedStringWidth) =>
-        $"nvarchar2({maxExpectedStringWidth})";
+        maxExpectedStringWidth > MaxUnicodeStringWidth
+            ? GetUnicodeStringDataTypeWithUnlimitedWidth()
+            : $"nvarchar2({maxExpectedStringWidth})";
+
+    /// <inheritdoc />
+    protected override string GetUnicodeStringDataTypeWhenWidthNotSupplied() =>
+        GetUnicodeStringDataTypeImpl(MaxUnicodeStringWidth);
 
     public override string GetStringDataTypeWithUnlimitedWidth() => "CLOB";
 

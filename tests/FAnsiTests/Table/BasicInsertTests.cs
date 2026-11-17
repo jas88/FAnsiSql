@@ -1,3 +1,4 @@
+using System.Data;
 using FAnsi;
 using FAnsi.Discovery;
 using NUnit.Framework;
@@ -76,5 +77,50 @@ internal sealed class BasicInsertTests : DatabaseTests
         });
 
         Assert.That(result, Is.EqualTo(2));
+    }
+
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    public void Insert_DateTime_RoundTrips(DatabaseType type) =>
+        AssertInsertedDateRoundTrips(type, new DateTime(2001, 1, 2, 3, 4, 5));
+
+    /// <summary>
+    ///     A 'timestamp' column has no time zone so the value read back must be the value that was written regardless of the
+    ///     <see cref="DateTimeKind" /> and of the time zones of the client and server.
+    /// </summary>
+    [TestCase(DateTimeKind.Local)]
+    [TestCase(DateTimeKind.Utc)]
+    public void Insert_DateTime_PostgreSql_KindDoesNotChangeStoredValue(DateTimeKind kind) =>
+        AssertInsertedDateRoundTrips(DatabaseType.PostgreSql, new DateTime(2001, 1, 2, 3, 4, 5, kind));
+
+    [Test]
+    public void Insert_DateTimeString_PostgreSql_RoundTrips() =>
+        AssertInsertedDateRoundTrips(DatabaseType.PostgreSql, "2001-01-02 03:04:05");
+
+    private void AssertInsertedDateRoundTrips(DatabaseType type, object value)
+    {
+        var db = GetTestDatabase(type);
+        var tbl = db.CreateTable("InsertDateTable",
+        [
+            new DatabaseColumnRequest("MyDate", new DatabaseTypeRequest(typeof(DateTime)))
+        ]);
+
+        try
+        {
+            tbl.Insert(new Dictionary<string, object>
+            {
+                { "MyDate", value }
+            });
+
+            using var expected = new DataTable();
+            expected.Columns.Add("MyDate", typeof(DateTime));
+            expected.Rows.Add(new DateTime(2001, 1, 2, 3, 4, 5));
+
+            using var actual = tbl.GetDataTable();
+            AssertAreEqual(expected, actual);
+        }
+        finally
+        {
+            tbl.Drop();
+        }
     }
 }

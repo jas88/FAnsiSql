@@ -11,6 +11,19 @@ internal sealed class TypeTranslaterTests_Oracle : TypeTranslaterTests
     public void Test_CSharpToDbType_String10() => Test_CSharpToDbType_String10(DbType, "varchar2(10)");
 
     [Test]
+    public void Test_CSharpToDbType_StringWidthNotSupplied() =>
+        Test_CSharpToDbType_StringWidthNotSupplied(DbType, "varchar2(4000)", "nvarchar2(2000)");
+
+    /// <summary>
+    ///     An nvarchar2 holds 4000 bytes, which is 2000 characters of the AL16UTF16 national character set
+    /// </summary>
+    [TestCase(2000, "nvarchar2(2000)")]
+    [TestCase(2001, "NCLOB")]
+    [TestCase(4000, "NCLOB")]
+    public void Test_CSharpToDbType_UnicodeString(int width, string expectedType) =>
+        Test_CSharpToDbType_UnicodeString(DbType, width, expectedType);
+
+    [Test]
     public void Test_CSharpToDbType_StringMax() => Test_CSharpToDbType_StringMax(DbType, "CLOB");
 
     [TestCase("CLOB", false)]

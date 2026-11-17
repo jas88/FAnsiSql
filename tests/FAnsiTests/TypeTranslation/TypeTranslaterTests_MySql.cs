@@ -11,6 +11,10 @@ internal sealed class TypeTranslaterTests_MySql : TypeTranslaterTests
     public void Test_CSharpToDbType_String10() => Test_CSharpToDbType_String10(DbType, "varchar(10)");
 
     [Test]
+    public void Test_CSharpToDbType_StringWidthNotSupplied() =>
+        Test_CSharpToDbType_StringWidthNotSupplied(DbType, "text", "text");
+
+    [Test]
     public void Test_CSharpToDbType_StringMax() => Test_CSharpToDbType_StringMax(DbType, "longtext");
 
     [TestCase("longtext", false)]
