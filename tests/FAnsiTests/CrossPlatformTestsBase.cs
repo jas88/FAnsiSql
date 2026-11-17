@@ -1040,7 +1040,19 @@ public abstract class CrossPlatformTestsBase : DatabaseTests
         });
     }
 
-    protected void HorribleDatabaseAndTableNames(string horribleDatabaseName, string horribleTableName)
+    protected void HorribleDatabaseAndTableNames(string horribleDatabaseName, string horribleTableName) =>
+        HorribleDatabaseAndTableNames(horribleDatabaseName, horribleTableName, false);
+
+    /// <summary>
+    ///     <see cref="HorribleDatabaseAndTableNames(string,string)" /> followed by creating a primary key on the emptied
+    ///     table.  Separate because SQLite cannot add a primary key to a table that already exists.
+    /// </summary>
+    protected void HorribleDatabaseAndTableNames_CreatePrimaryKey(string horribleDatabaseName,
+        string horribleTableName) =>
+        HorribleDatabaseAndTableNames(horribleDatabaseName, horribleTableName, true);
+
+    private void HorribleDatabaseAndTableNames(string horribleDatabaseName, string horribleTableName,
+        bool createPrimaryKey)
     {
         AssertCanCreateDatabases();
 
@@ -1101,6 +1113,11 @@ public abstract class CrossPlatformTestsBase : DatabaseTests
             });
 
             tbl.Truncate();
+
+            Assert.That(tbl.GetRowCount(), Is.EqualTo(0));
+
+            if (!createPrimaryKey)
+                return;
 
             tbl.CreatePrimaryKey(tbl.DiscoverColumn("Field3"));
 

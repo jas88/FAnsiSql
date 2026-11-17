@@ -1,5 +1,7 @@
 using FAnsi;
+using FAnsi.Discovery;
 using NUnit.Framework;
+using TypeGuesser;
 
 namespace FAnsiTests.Database;
 
@@ -69,6 +71,45 @@ internal sealed class DatabaseExistsTests : DatabaseTests
             // Clean up
             if (db.Exists())
                 db.Drop();
+        }
+    }
+
+    /// <summary>
+    ///     A SQLite database is a file, and Microsoft.Data.Sqlite keeps closed connections open in a pool.  Dropping a
+    ///     database deleted its file but left the pooled connections to it, so creating a database of the same name again
+    ///     reopened one of those: no file was created and CreateDatabase failed with "didn't exist after the creation
+    ///     attempt".
+    /// </summary>
+    [Test]
+    public void CreateDatabase_Sqlite_SameNameAfterDrop_CreatesNewFile()
+    {
+        var server = GetTestServer(DatabaseType.Sqlite);
+        var directory = Path.Combine(Path.GetTempPath(), $"FAnsiTests_{Guid.NewGuid():N}");
+        var file = Path.Combine(directory, "Recreated");
+
+        try
+        {
+            var db = server.CreateDatabase(file);
+            db.CreateTable("MyTable", [new DatabaseColumnRequest("MyCol", new DatabaseTypeRequest(typeof(int)))]);
+            Assert.That(db.DiscoverTables(false), Has.Length.EqualTo(1));
+
+            db.Drop();
+            Assert.That(File.Exists(file), Is.False);
+
+            db = server.CreateDatabase(file);
+            Assert.Multiple(() =>
+            {
+                Assert.That(File.Exists(file));
+                Assert.That(db.Exists());
+                Assert.That(db.DiscoverTables(false), Is.Empty, "Expected a new, empty, database file");
+            });
+
+            db.Drop();
+        }
+        finally
+        {
+            if (Directory.Exists(directory))
+                Directory.Delete(directory, true);
         }
     }
 }

@@ -30,6 +30,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - These columns are now declared `BOOLEAN`, `DATETIME` and `TIME` and are discovered as `bool`, `DateTime` and
     `TimeSpan`, as they are for the other DBMS. `GetDataTable` returns values of those types, and `Insert` and bulk
     insert parse strings into them with the culture given
+- **SQLite: creating a database by name failed with "didn't exist after the creation attempt"**
+  - Microsoft.Data.Sqlite keeps closed connections open in a pool. Dropping a database deleted its file but not the
+    pooled connections to it, so creating a database of the same name again reopened one of them and created no file.
+    Tables created through such a connection would have gone into the deleted file
+  - `DropDatabase` and `CreateDatabase` now close the idle pooled connections, and `CreateDatabase` creates the file
+    with a connection that does not come from the pool
+  - `Exists` looked for, and `CreateDatabase` created, the file named by the runtime name of the database, which loses
+    everything up to the last dot of a name like `fansitests.db`. They now use the Data Source of the database's
+    connection string, the file its connections open
 - **Decimal values on .NET 11**
   - .NET 11 converts a `double` to a `decimal` exactly, so 9.99 becomes 9.990000000000000213162820728, where earlier
     versions of .NET rounded to 15 significant digits

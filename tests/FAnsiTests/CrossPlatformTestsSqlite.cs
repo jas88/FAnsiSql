@@ -81,9 +81,14 @@ internal sealed class CrossPlatformTestsSqlite : CrossPlatformTestsBase
     public new void TestFloatDataTypes() => base.TestFloatDataTypes();
 
     [TestCase("_-o-_", ":>0<:")]
-    [Ignore("A SQLite database is a file: creating one by name fails here (CreateDatabase finds it does not exist afterwards) and SQLite cannot add a primary key to an existing table")]
     public new void HorribleDatabaseAndTableNames(string horribleDatabaseName, string horribleTableName) =>
         base.HorribleDatabaseAndTableNames(horribleDatabaseName, horribleTableName);
+
+    [TestCase("_-o-_", ":>0<:")]
+    [Ignore("SQLite cannot add a primary key to a table that already exists, it has to be declared in CREATE TABLE")]
+    public new void HorribleDatabaseAndTableNames_CreatePrimaryKey(string horribleDatabaseName,
+        string horribleTableName) =>
+        base.HorribleDatabaseAndTableNames_CreatePrimaryKey(horribleDatabaseName, horribleTableName);
 
     [TestCase("_-o-_", ":>0<:", "-_")]
     [TestCase("Comment", "SSSS", "Space Out")]
