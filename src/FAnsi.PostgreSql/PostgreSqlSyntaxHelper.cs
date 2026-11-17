@@ -42,6 +42,7 @@ public sealed class PostgreSqlSyntaxHelper : QuerySyntaxHelper
         {
             DbType.DateTime2 => PostgreSqlTypeTranslater.ToTimestamp(dateTime),
             DbType.DateTime => PostgreSqlTypeTranslater.ToTimestampTz(dateTime),
+            DbType.Date => PostgreSqlTypeTranslater.ToDate(dateTime),
             _ => dateTime
         };
 
