@@ -24,6 +24,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     guesses the unlimited string type on SQL Server, MySQL, Oracle and PostgreSQL), containing a non-ASCII character
     when the column is Unicode. Guessers of non-string columns are unchanged: TypeGuesser 2 also drops the decimal size
     of the request
+- **Decimal values on .NET 11**
+  - .NET 11 converts a `double` to a `decimal` exactly, so 9.99 becomes 9.990000000000000213162820728, where earlier
+    versions of .NET rounded to 15 significant digits
+  - Bulk insert worked out the largest value of a `decimal(p,s)` column in doubles, so on .NET 11 it rejected the
+    largest values, such as 999.99 for `decimal(5,2)`. It now works it out in decimals
+  - SQLite: `GetDataTable()` rounds the REAL values of a decimal column to 15 significant digits again, so a value
+    stored as 9.99 is read as 9.99 on .NET 11, not as a value with more decimal places than the column allows
 
 ### Changed
 - **Target frameworks are now net10.0 and net11.0**

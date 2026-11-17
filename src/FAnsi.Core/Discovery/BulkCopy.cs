@@ -335,11 +335,8 @@ public abstract class BulkCopy : IBulkCopy
                     // C# decimal max is ~7.9e28, so we can only validate when digitsBeforeDecimal <= 28.
                     // For precision 29-38, skip validation (leave maxDecimalValue at 0).
                     // Any value that fits in C# decimal will fit in SQL decimal(29+).
-                    if (digitsBeforeDecimal <= 28)
-                    {
-                        var maxIntPart = (decimal)Math.Pow(10, digitsBeforeDecimal) - 1;
-                        maxDecimalValue = maxIntPart + (decimal)((Math.Pow(10, sz.Scale) - 1) / Math.Pow(10, sz.Scale));
-                    }
+                    if (digitsBeforeDecimal is >= 0 and <= 28)
+                        maxDecimalValue = GetMaxDecimalValue(digitsBeforeDecimal, sz.Scale);
                 }
             }
 
@@ -484,4 +481,24 @@ public abstract class BulkCopy : IBulkCopy
         type == typeof(int) || type == typeof(uint) ||
         type == typeof(long) || type == typeof(ulong) ||
         (Nullable.GetUnderlyingType(type) is { } underlying && IsIntegerType(underlying));
+
+    /// <summary>
+    ///     Returns the largest value of a decimal column with <paramref name="digitsBeforeDecimal" /> digits before the
+    ///     decimal point and <paramref name="scale" /> after it, 10^digitsBeforeDecimal - 10^-scale (999.99 for
+    ///     decimal(5,2)).
+    /// </summary>
+    /// <remarks>
+    ///     Computed in decimal arithmetic: .NET 11 converts a double to decimal exactly, so a computation in doubles gives
+    ///     999.98999999999999999111821580 for decimal(5,2) and rejects 999.99.
+    /// </remarks>
+    /// <param name="digitsBeforeDecimal">Digits before the decimal point, from 0 to 28</param>
+    /// <param name="scale">Digits after the decimal point; C# decimal holds at most 28</param>
+    private static decimal GetMaxDecimalValue(int digitsBeforeDecimal, int scale)
+    {
+        var limit = 1m;
+        for (var i = 0; i < digitsBeforeDecimal; i++)
+            limit *= 10;
+
+        return limit - new decimal(1, 0, 0, false, (byte)Math.Clamp(scale, 0, 28));
+    }
 }

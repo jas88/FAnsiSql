@@ -1002,9 +1002,10 @@ public abstract class CrossPlatformTestsBase : DatabaseTests
             .Select(r => Convert.ToDecimal(r[0], CultureInfo.InvariantCulture)).ToList();
         Assert.Multiple(() =>
         {
-            Assert.That(decimalValues2.Count(v => v == new decimal(100.0f)), Is.EqualTo(1));
-            Assert.That(decimalValues2.Count(v => v == new decimal(105.0f)), Is.EqualTo(1));
-            Assert.That(decimalValues2.Count(v => v == new decimal(2.1f)), Is.EqualTo(1));
+            // decimal literals: since .NET 11, new decimal(2.1f) is the exact value of the float, 2.099999904632568359375
+            Assert.That(decimalValues2.Count(v => v == 100m), Is.EqualTo(1));
+            Assert.That(decimalValues2.Count(v => v == 105m), Is.EqualTo(1));
+            Assert.That(decimalValues2.Count(v => v == 2.1m), Is.EqualTo(1));
         });
 
 

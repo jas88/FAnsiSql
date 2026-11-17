@@ -1481,8 +1481,10 @@ internal abstract class TableHelperUpdateTestsBase : DatabaseTests
                        $"SELECT {syntaxHelper.EnsureWrapped("Price")} FROM {tbl1.GetFullyQualifiedName()} WHERE {syntaxHelper.EnsureWrapped("Id")} = 1",
                        con))
             {
+                // Rounded to the scale of the column: SQLite returns a REAL, which .NET 11 converts to decimal
+                // exactly (12.990000000000000213162820728)
                 var result = Convert.ToDecimal(cmd.ExecuteScalar(), CultureInfo.InvariantCulture);
-                Assert.That(result, Is.EqualTo(12.99m));
+                Assert.That(Math.Round(result, 2), Is.EqualTo(12.99m));
             }
 
             using (var cmd = db.Server.GetCommand(
@@ -1490,7 +1492,7 @@ internal abstract class TableHelperUpdateTestsBase : DatabaseTests
                        con))
             {
                 var result = Convert.ToDecimal(cmd.ExecuteScalar(), CultureInfo.InvariantCulture);
-                Assert.That(result, Is.EqualTo(25.49m));
+                Assert.That(Math.Round(result, 2), Is.EqualTo(25.49m));
             }
         }
         finally
