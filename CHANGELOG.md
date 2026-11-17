@@ -42,6 +42,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     the query being pivoted are found by position, so it does not matter whether its lines alias or quote them
   - A query cannot choose its own columns, so the SQL for a pivot is now a `DO` block that opens a cursor, `fansi_pivot`,
     followed by `FETCH ALL FROM fansi_pivot` and `CLOSE fansi_pivot`
+- **Oracle: aggregates with a pivot column did not pivot**
+  - The SQL built for a pivot had no column for each pivot value and ignored any TOP X. Without a calendar axis the query
+    being pivoted was not grouped (ORA-00937); with one it returned a row for each pair of date and pivot value
+  - A pivot now comes out as it does on SQL Server, MySQL and PostgreSQL. It is an anonymous PL/SQL block that returns
+    its rows with `DBMS_SQL.RETURN_RESULT`, which needs Oracle 12c or later. Each column is named after `TO_CHAR` of its
+    value, so the names of date columns follow the session's `NLS_DATE_FORMAT`
 - **Decimal values on .NET 11**
   - .NET 11 converts a `double` to a `decimal` exactly, so 9.99 becomes 9.990000000000000213162820728, where earlier
     versions of .NET rounded to 15 significant digits
