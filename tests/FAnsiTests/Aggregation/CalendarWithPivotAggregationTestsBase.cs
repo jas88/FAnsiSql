@@ -15,22 +15,26 @@ internal abstract class CalendarWithPivotAggregationTestsBase : AggregationTests
         {
             var tbl = GetTestTable(type, easy);
             var svr = tbl.Database.Server;
+            var syntax = svr.GetQuerySyntaxHelper();
+
+            var eventDate = syntax.EnsureWrapped("EventDate");
+            var category = syntax.EnsureWrapped("Category");
 
             var lines = new List<CustomLine>
             {
                 new("SELECT", QueryComponent.SELECT),
                 new("count(*) as MyCount,", QueryComponent.QueryTimeColumn)
                     { Role = CustomLineRole.CountFunction },
-                new("EventDate,", QueryComponent.QueryTimeColumn)
+                new($"{eventDate},", QueryComponent.QueryTimeColumn)
                     { Role = CustomLineRole.Axis }, //tell it which the axis are
-                new("Category", QueryComponent.QueryTimeColumn)
+                new(category, QueryComponent.QueryTimeColumn)
                     { Role = CustomLineRole.Pivot }, //tell it which the pivot
                 new("FROM ", QueryComponent.FROM),
                 new(tbl.GetFullyQualifiedName(), QueryComponent.FROM),
                 new("GROUP BY", QueryComponent.GroupBy),
-                new("EventDate,", QueryComponent.GroupBy)
+                new($"{eventDate},", QueryComponent.GroupBy)
                     { Role = CustomLineRole.Axis }, //tell it which the axis are
-                new("Category", QueryComponent.GroupBy) { Role = CustomLineRole.Pivot }
+                new(category, QueryComponent.GroupBy) { Role = CustomLineRole.Pivot }
             };
 
             var axis = new QueryAxis
@@ -41,7 +45,7 @@ internal abstract class CalendarWithPivotAggregationTestsBase : AggregationTests
             };
 
 
-            sql = svr.GetQuerySyntaxHelper().AggregateHelper.BuildAggregate(lines, axis);
+            sql = syntax.AggregateHelper.BuildAggregate(lines, axis);
 
             using var con = svr.GetConnection();
             con.Open();

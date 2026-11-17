@@ -8,6 +8,12 @@ namespace FAnsiTests.Aggregation;
 
 internal abstract class AggregationTests : DatabaseTests
 {
+    /// <summary>
+    ///     Why the pivot tests are skipped on SQLite
+    /// </summary>
+    protected const string SqliteCannotPivot =
+        "SQLite has no dynamic SQL, so a pivot, which has a column for each value found in the data, cannot be written as a single query and SqliteAggregateHelper throws NotSupportedException";
+
     private readonly Dictionary<DatabaseType, DiscoveredTable> _easyTables = [];
     private readonly Dictionary<DatabaseType, DiscoveredTable> _hardTables = [];
 
