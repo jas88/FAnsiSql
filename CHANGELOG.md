@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+- **Reflection-based provider loading in the `DiscoveredServer` static constructor, which never loaded anything**
+  - It looked each provider up with `Type.GetType` by assembly-qualified name, suppressing the trimming warning (IL2057)
+    this raises. The names gave the package IDs (`FAnsiSql.MySql` and so on) rather than the assembly names
+    (`FAnsi.MySql`), so no provider was ever found or registered this way, with or without Native AOT
+  - Registration is unchanged: each provider registers itself when its assembly loads, so `{TypeName}.EnsureLoaded()` or
+    `ImplementationManager.Load<T>()` is still needed before use. The obsolete message of `ImplementationManager.Load<T>()`
+    no longer says that `DiscoveredServer` registers providers
+  - FAnsiSql's own code no longer suppresses any trimming or AOT warning
+
 ## [3.8.0] - 2026-11-16
 
 ### Fixed

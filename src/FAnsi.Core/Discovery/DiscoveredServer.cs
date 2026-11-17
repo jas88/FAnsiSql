@@ -1,5 +1,4 @@
 using System.Data.Common;
-using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text;
 using FAnsi.Connections;
@@ -26,15 +25,6 @@ public sealed class DiscoveredServer : IMightNotExist
     ///     The currently used database, if any
     /// </summary>
     private DiscoveredDatabase? _currentDatabase;
-
-    /// <summary>
-    ///     Static constructor that ensures all FAnsiSql provider implementations are loaded.
-    ///     This triggers ModuleInitializers in provider assemblies for automatic registration.
-    /// </summary>
-    static DiscoveredServer()
-    {
-        LoadFAnsiSqlImplementations();
-    }
 
     /// <summary>
     ///     <para>Creates a new server pointed at the <paramref name="builder" /> server. </para>
@@ -154,45 +144,6 @@ public sealed class DiscoveredServer : IMightNotExist
             return false;
         }
     }
-
-    /// <summary>
-    ///     Loads and registers all available FAnsiSql provider implementations.
-    /// </summary>
-    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2057",
-        Justification = "Type.GetType with assembly-qualified names is safe for known FAnsiSql provider types.")]
-    private static void LoadFAnsiSqlImplementations()
-    {
-        // Known FAnsiSql provider implementation types
-        var implementationTypes = new[]
-        {
-            "FAnsi.Implementations.MicrosoftSQL.MicrosoftSQLImplementation, FAnsiSql.MicrosoftSql",
-            "FAnsi.Implementations.MySql.MySqlImplementation, FAnsiSql.MySql",
-            "FAnsi.Implementations.Oracle.OracleImplementation, FAnsiSql.Oracle",
-            "FAnsi.Implementations.PostgreSql.PostgreSqlImplementation, FAnsiSql.PostgreSql",
-            "FAnsi.Implementations.Sqlite.SqliteImplementation, FAnsiSql.Sqlite"
-        };
-
-        foreach (var implementationType in implementationTypes)
-            try
-            {
-                // Try to load the type to ensure the assembly is available
-                var type = Type.GetType(implementationType);
-                if (type != null)
-                {
-                    // Create an instance of the implementation using reflection
-                    var instance = Activator.CreateInstance(type);
-                    if (instance is IImplementation impl)
-                        // Register the implementation directly (no ModuleInitializer needed)
-                        ImplementationManager.Register(impl);
-                }
-                // If type is null, the implementation assembly isn't available - just ignore it
-            }
-            catch
-            {
-                // Type loading or registration failed - implementation not available, skip it
-            }
-    }
-
 
     /// <summary>
     ///     Returns a new unopened connection to the server.  Use
