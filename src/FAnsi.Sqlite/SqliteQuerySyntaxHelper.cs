@@ -92,8 +92,11 @@ public sealed class SqliteQuerySyntaxHelper : QuerySyntaxHelper
     /// <summary>
     ///     Indicates whether SQLite supports embedded parameters in queries.
     /// </summary>
-    /// <returns>True (SQLite supports parameterized queries)</returns>
-    public override bool SupportsEmbeddedParameters() => true;
+    /// <returns>
+    ///     False. SQLite SQL has no variables that can be declared and set (there is no DECLARE or SET statement), so
+    ///     parameter values can only be supplied as <see cref="System.Data.Common.DbParameter" />s
+    /// </returns>
+    public override bool SupportsEmbeddedParameters() => false;
 
     /// <summary>
     ///     Gets the runtime name for SQLite identifiers.
@@ -153,18 +156,13 @@ public sealed class SqliteQuerySyntaxHelper : QuerySyntaxHelper
     public override TopXResponse HowDoWeAchieveTopX(int x) => new($"LIMIT {x}", QueryComponent.Postfix);
 
     /// <summary>
-    ///     Gets the SQL for declaring a parameter.
+    ///     Not supported: SQLite SQL cannot declare parameters (see <see cref="SupportsEmbeddedParameters" />).
     /// </summary>
     /// <param name="proposedNewParameterName">The parameter name</param>
     /// <param name="sqlType">The SQL type</param>
-    /// <returns>A comment (SQLite doesn't require parameter declarations)</returns>
-    /// <remarks>
-    ///     SQLite doesn't require explicit parameter declarations like SQL Server's DECLARE.
-    ///     Parameters are automatically typed based on usage.
-    /// </remarks>
+    /// <exception cref="NotSupportedException">Always thrown</exception>
     public override string GetParameterDeclaration(string proposedNewParameterName, string sqlType) =>
-        // SQLite doesn't require parameter declaration like SQL Server
-        $"/* {proposedNewParameterName} */";
+        throw new NotSupportedException();
 
     /// <summary>
     ///     Escapes special characters in a SQL string literal.

@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **SQLite: `SupportsEmbeddedParameters` returned true**
+  - SQLite SQL has no `DECLARE` or `SET` statement, so a parameter cannot be declared and given a value in SQL. Code that
+    trusted the flag, declaring parameters with `GetParameterDeclaration` and setting them with `SET`, failed with
+    `near "SET": syntax error`
+  - `SupportsEmbeddedParameters` now returns false and `GetParameterDeclaration` throws `NotSupportedException`, as they
+    do for Oracle and PostgreSQL. Parameter values have to be passed as `DbParameter`s
+
 ## [3.8.0] - 2026-11-16
 
 ### Fixed
