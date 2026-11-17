@@ -18,7 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `timestamp` columns now get `DbType.DateTime2` and store the value exactly as given whatever its `DateTimeKind`, as the
     other DBMS do. `timestamp with time zone` columns still get `DbType.DateTime` and are always sent a UTC value: a `Local`
     value is converted and an `Unspecified` one is taken to be UTC already (3.7.0 took an `Unspecified` value parsed from a
-    string to be in the time zone of the client and rejected any other)
+    string to be in the time zone of the client and rejected a `DateTime` of any Kind but `Utc`)
   - `TypeTranslater.GetDbTypeForSQLDBType` is now virtual. The mapping is unchanged for SQL Server, MySQL, Oracle and SQLite
 - **PostgreSQL: bulk insert failed when a column and the DataColumn loaded into it had different types**
   - `PostgreSqlBulkCopy` chose the binary COPY type of each value from the type of the `DataColumn`, but the server does not
