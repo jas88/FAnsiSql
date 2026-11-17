@@ -161,7 +161,7 @@ public sealed class DiscoveredServer : IMightNotExist
     /// <summary>
     ///     Creates a new DbCommand for the specified database type.
     /// </summary>
-    /// <include file='../../CommonMethods.doc.xml' path='Methods/Method[@name="GetCommand"]' />
+    /// <include file='../../../CommonMethods.doc.xml' path='Methods/Method[@name="GetCommand"]' />
     public DbCommand GetCommand(string sql, IManagedConnection managedConnection)
     {
         var cmd = Helper.GetCommand(sql, managedConnection.Connection);
