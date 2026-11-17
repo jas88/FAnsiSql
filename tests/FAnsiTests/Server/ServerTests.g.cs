@@ -19,6 +19,9 @@ internal sealed class ServerTests_MicrosoftSQLServer : ServerTestsBase
     public void Server_Exists() => Server_Exists(DbType);
 
     [Test]
+    public void Server_Constructors() => Server_Constructors(DbType);
+
+    [Test]
     public void Server_RespondsWithinTime() => Server_RespondsWithinTime(DbType);
 
     [Test]
@@ -37,6 +40,9 @@ internal sealed class ServerTests_MicrosoftSQLServer : ServerTestsBase
     [TestCase(true)]
     [TestCase(false)]
     public void ServerHelper_ChangeDatabase_AdHoc(bool useApiFirst) => ServerHelper_ChangeDatabase_AdHoc(DbType, useApiFirst);
+
+    [Test]
+    public void TestServer_GetVersion() => TestServer_GetVersion(DbType);
 
 }
 
@@ -48,6 +54,9 @@ internal sealed class ServerTests_MySql : ServerTestsBase
     public void Server_Exists() => Server_Exists(DbType);
 
     [Test]
+    public void Server_Constructors() => Server_Constructors(DbType);
+
+    [Test]
     public void Server_RespondsWithinTime() => Server_RespondsWithinTime(DbType);
 
     [Test]
@@ -66,6 +75,9 @@ internal sealed class ServerTests_MySql : ServerTestsBase
     [TestCase(true)]
     [TestCase(false)]
     public void ServerHelper_ChangeDatabase_AdHoc(bool useApiFirst) => ServerHelper_ChangeDatabase_AdHoc(DbType, useApiFirst);
+
+    [Test]
+    public void TestServer_GetVersion() => TestServer_GetVersion(DbType);
 
 }
 
@@ -77,6 +89,9 @@ internal sealed class ServerTests_Oracle : ServerTestsBase
     public void Server_Exists() => Server_Exists(DbType);
 
     [Test]
+    public void Server_Constructors() => Server_Constructors(DbType);
+
+    [Test]
     public void Server_RespondsWithinTime() => Server_RespondsWithinTime(DbType);
 
     [Test]
@@ -92,6 +107,9 @@ internal sealed class ServerTests_Oracle : ServerTestsBase
     [Test]
     public void ServerHelper_ChangeDatabase() => ServerHelper_ChangeDatabase(DbType);
 
+    [Test]
+    public void TestServer_GetVersion() => TestServer_GetVersion(DbType);
+
 }
 
 internal sealed class ServerTests_PostgreSql : ServerTestsBase
@@ -100,6 +118,9 @@ internal sealed class ServerTests_PostgreSql : ServerTestsBase
 
     [Test]
     public void Server_Exists() => Server_Exists(DbType);
+
+    [Test]
+    public void Server_Constructors() => Server_Constructors(DbType);
 
     [Test]
     public void Server_RespondsWithinTime() => Server_RespondsWithinTime(DbType);
@@ -121,6 +142,9 @@ internal sealed class ServerTests_PostgreSql : ServerTestsBase
     [TestCase(false)]
     public void ServerHelper_ChangeDatabase_AdHoc(bool useApiFirst) => ServerHelper_ChangeDatabase_AdHoc(DbType, useApiFirst);
 
+    [Test]
+    public void TestServer_GetVersion() => TestServer_GetVersion(DbType);
+
 }
 
 internal sealed class ServerTests_Sqlite : ServerTestsBase
@@ -131,9 +155,15 @@ internal sealed class ServerTests_Sqlite : ServerTestsBase
     public void Server_Exists() => Server_Exists(DbType);
 
     [Test]
+    public void Server_Constructors() => Server_Constructors(DbType);
+
+    [Test]
     public void Server_RespondsWithinTime() => Server_RespondsWithinTime(DbType);
 
     [Test]
     public void ServerHelper_GetCurrentDatabase_WhenNoneSpecified() => ServerHelper_GetCurrentDatabase_WhenNoneSpecified(DbType);
+
+    [Test]
+    public void TestServer_GetVersion() => TestServer_GetVersion(DbType);
 
 }
