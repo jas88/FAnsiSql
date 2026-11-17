@@ -4,6 +4,7 @@ using System.Text;
 using FAnsi;
 using FAnsi.Discovery;
 using FAnsi.Implementation;
+using FAnsiTests.TestGeneration;
 using Npgsql;
 using NpgsqlTypes;
 using NUnit.Framework;
@@ -13,6 +14,13 @@ namespace FAnsiTests.Parameters;
 
 internal sealed class ParameterTests : DatabaseTests
 {
+    /// <summary>
+    ///     Oracle, PostgreSQL and SQLite SQL has no variables to declare and set, so <c>GetParameterDeclaration</c> throws
+    ///     for them (see <see cref="Test_SupportsEmbeddedParameters_DeclarationOrThrow" />)
+    /// </summary>
+    private const string EmbeddedParametersOnly =
+        "Only SQL Server and MySQL SQL can declare and set parameters (SupportsEmbeddedParameters)";
+
     [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void Test_SupportsEmbeddedParameters_DeclarationOrThrow(DatabaseType type)
     {
@@ -26,7 +34,8 @@ internal sealed class ParameterTests : DatabaseTests
                 syntax.GetParameterDeclaration("@bob", new DatabaseTypeRequest(typeof(string), 10)));
     }
 
-    //[TestCase(DatabaseType.Oracle)]
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [OnlyDatabase(DatabaseType.MicrosoftSQLServer, DatabaseType.MySql, EmbeddedParametersOnly)]
     public void CreateParameter(DatabaseType type)
     {
         var syntax = ImplementationManager.GetImplementation(type).GetQuerySyntaxHelper();
@@ -36,7 +45,8 @@ internal sealed class ParameterTests : DatabaseTests
         Assert.That(declaration, Does.Contain("@bob"));
     }
 
-    //[TestCase(DatabaseType.Oracle)]
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
+    [OnlyDatabase(DatabaseType.MicrosoftSQLServer, DatabaseType.MySql, EmbeddedParametersOnly)]
     public void CreateParameter_AndUse(DatabaseType type)
     {
         var db = GetTestDatabase(type);
@@ -63,7 +73,7 @@ internal sealed class ParameterTests : DatabaseTests
 
         using var con = db.Server.GetConnection();
         con.Open();
-        var r = db.Server.GetCommand(sb.ToString(), con).ExecuteReader();
+        using var r = db.Server.GetCommand(sb.ToString(), con).ExecuteReader();
 
         Assert.That(r.Read());
         Assert.That(r.Read(), Is.False);
