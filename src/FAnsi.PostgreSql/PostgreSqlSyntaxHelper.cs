@@ -40,8 +40,8 @@ public sealed class PostgreSqlSyntaxHelper : QuerySyntaxHelper
         // See : https://www.npgsql.org/doc/types/datetime.html
         dbType switch
         {
-            DbType.DateTime2 => PostgreSqlTypeTranslater.ToTimestamp(dateTime, false),
-            DbType.DateTime => PostgreSqlTypeTranslater.ToTimestamp(dateTime, true),
+            DbType.DateTime2 => PostgreSqlTypeTranslater.ToTimestamp(dateTime, withTimeZone: false),
+            DbType.DateTime => PostgreSqlTypeTranslater.ToTimestamp(dateTime, withTimeZone: true),
             _ => dateTime
         };
 

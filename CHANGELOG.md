@@ -40,8 +40,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Column discovery for PostgreSQL, SQL Server and Oracle is now explicitly ordered as well
 - **Oracle: Unicode string columns wider than 2000 characters could not be created**
   - A Unicode string requested without a width was declared as `nvarchar2(4000)` and one of 2001 to 4000 characters as an
-    `nvarchar2` of that width. Oracle rejects both with ORA-00910 because an nvarchar2 holds 4000 bytes, 2000 characters of
-    the default national character set
+    `nvarchar2` of that width. With Oracle's default `MAX_STRING_SIZE = STANDARD` both fail with ORA-00910, because an
+    nvarchar2 then holds 4000 bytes, which is 2000 characters of the default national character set (AL16UTF16).
+    Databases set to `MAX_STRING_SIZE = EXTENDED` allow wider nvarchar2 columns, so the new limit is conservative there
   - A Unicode string without a width is now `nvarchar2(2000)` and one of more than 2000 characters `NCLOB`
 
 ### Changed

@@ -94,10 +94,10 @@ public sealed class PostgreSqlBulkCopy(
             NpgsqlDbType.Timestamp or NpgsqlDbType.TimestampTz => value switch
             {
                 DateTime dateTime => PostgreSqlTypeTranslater.ToTimestamp(dateTime,
-                    columnType == NpgsqlDbType.TimestampTz),
+                    withTimeZone: columnType == NpgsqlDbType.TimestampTz),
                 //a date is midnight at the start of that day
                 DateOnly date => PostgreSqlTypeTranslater.ToTimestamp(date.ToDateTime(TimeOnly.MinValue),
-                    columnType == NpgsqlDbType.TimestampTz),
+                    withTimeZone: columnType == NpgsqlDbType.TimestampTz),
                 _ => value
             },
             _ => value
