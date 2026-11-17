@@ -25,6 +25,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     when the column is Unicode. Guessers of non-string columns are unchanged: TypeGuesser 2 also drops the decimal size
     of the request
 
+### Changed
+- **Target frameworks are now net10.0 and net11.0**
+  - net8.0 and net9.0 are no longer built, because both reached end of life on 2026-11-10
+  - Applications targeting net8.0 or net9.0 cannot use this version and must stay on FAnsiSql 3.8.x
+
 ## [3.8.0] - 2026-11-16
 
 ### Fixed
