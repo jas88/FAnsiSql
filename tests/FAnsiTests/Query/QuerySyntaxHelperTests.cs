@@ -28,6 +28,35 @@ internal sealed class QuerySyntaxHelperTests
 
 
     //Oracle always uppers everything because... Oracle
+    [TestCase(DatabaseType.Oracle, "CHI", "\"TEST_ScratchArea\".public.\"Biochemistry\".\"chi\"")]
+    [TestCase(DatabaseType.PostgreSql, "chi", "\"TEST_ScratchArea\".public.\"Biochemistry\".\"chi\"")]
+    [TestCase(DatabaseType.Sqlite, "chi", "\"TEST_ScratchArea\".public.\"Biochemistry\".\"chi\"")]
+    [TestCase(DatabaseType.Oracle, "FRANK", "count(*) as Frank")]
+    [TestCase(DatabaseType.PostgreSql, "Frank", "count(*) as Frank")]
+    [TestCase(DatabaseType.Sqlite, "Frank", "count(*) as Frank")]
+    [TestCase(DatabaseType.Oracle, "FRANK", "count(cast(1 as int)) as Frank")]
+    [TestCase(DatabaseType.PostgreSql, "Frank", "count(cast(1 as int)) as Frank")]
+    [TestCase(DatabaseType.Sqlite, "Frank", "count(cast(1 as int)) as Frank")]
+    [TestCase(DatabaseType.Oracle, "FRANK", "count(cast(1 as int)) as \"Frank\"")]
+    [TestCase(DatabaseType.PostgreSql, "Frank", "count(cast(1 as int)) as \"Frank\"")]
+    [TestCase(DatabaseType.Sqlite, "Frank", "count(cast(1 as int)) as \"Frank\"")]
+    [TestCase(DatabaseType.MySql, "Frank", "count(cast(1 as int)) as `Frank`")]
+    [TestCase(DatabaseType.MicrosoftSQLServer, "Frank", "count(cast(1 as int)) as [Frank]")]
+    [TestCase(DatabaseType.Oracle, "FRANK", "[mydb].[mytbl].[mycol] as Frank")]
+    [TestCase(DatabaseType.PostgreSql, "Frank", "[mydb].[mytbl].[mycol] as Frank")]
+    [TestCase(DatabaseType.Sqlite, "Frank", "[mydb].[mytbl].[mycol] as Frank")]
+    [TestCase(DatabaseType.MicrosoftSQLServer, "Frank", "[mydb].[mytbl].[mycol] as Frank")]
+    [TestCase(DatabaseType.MySql, "Frank", "[mydb].[mytbl].[mycol] as Frank")]
+    [TestCase(DatabaseType.Oracle, "ZOMBIE", "dbo.GetMyCoolThing(\"Magic Fun Times\") as zombie")]
+    [TestCase(DatabaseType.MicrosoftSQLServer, "zombie", "dbo.GetMyCoolThing(\"Magic Fun Times\") as zombie")]
+    [TestCase(DatabaseType.MySql, "zombie", "dbo.GetMyCoolThing(\"Magic Fun Times\") as zombie")]
+    [TestCase(DatabaseType.PostgreSql, "zombie", "dbo.GetMyCoolThing(\"Magic Fun Times\") as zombie")]
+    [TestCase(DatabaseType.Sqlite, "zombie", "dbo.GetMyCoolThing(\"Magic Fun Times\") as zombie")]
+    [TestCase(DatabaseType.Oracle, "MYCOL", "\"mydb\".\"mytbl\".\"mycol\"")]
+    [TestCase(DatabaseType.MicrosoftSQLServer, "mycol", "[mydb].[mytbl].[mycol]")]
+    [TestCase(DatabaseType.MySql, "mycol", "`mydb`.`mytbl`.`mycol`")]
+    [TestCase(DatabaseType.PostgreSql, "mycol", "\"mydb\".\"mytbl\".\"mycol\"")]
+    [TestCase(DatabaseType.Sqlite, "mycol", "\"mydb\".\"mytbl\".\"mycol\"")]
     public void SyntaxHelperTest_GetRuntimeName(DatabaseType dbType, string expected, string forInput)
     {
         var syntaxHelper = ImplementationManager.GetImplementation(dbType).GetQuerySyntaxHelper();
@@ -41,6 +70,14 @@ internal sealed class QuerySyntaxHelperTests
     /// <param name="dbType"></param>
     /// <param name="runtime"></param>
     /// <param name="wrapped"></param>
+    [TestCase(DatabaseType.MySql, "Fra`nk", "`Fra``nk`")]
+    [TestCase(DatabaseType.MySql, "Fra``nk`", "`Fra````nk```")]
+    [TestCase(DatabaseType.MicrosoftSQLServer, "Fra]nk", "[Fra]]nk]")]
+    [TestCase(DatabaseType.MicrosoftSQLServer, "Fra]]nk]", "[Fra]]]]nk]]]")]
+    [TestCase(DatabaseType.PostgreSql, "Fra\"nk", "\"Fra\"\"nk\"")]
+    [TestCase(DatabaseType.Sqlite, "Fra\"nk", "\"Fra\"\"nk\"")]
+    [TestCase(DatabaseType.PostgreSql, "Fra\"\"nk\"", "\"Fra\"\"\"\"nk\"\"\"")]
+    [TestCase(DatabaseType.Sqlite, "Fra\"\"nk\"", "\"Fra\"\"\"\"nk\"\"\"")]
     public void SyntaxHelperTest_GetRuntimeName_MultipleCalls(DatabaseType dbType, string runtime, string wrapped)
     {
         // NOTE: Oracle does not support such shenanigans https://docs.oracle.com/cd/B19306_01/server.102/b14200/sql_elements008.htm

@@ -61,6 +61,9 @@ public sealed class ConnectionStringKeywordAccumulatorTests
         Assert.That(connectionStringBuilder.ConnectionString, Does.Contain("Pooling=False"));
     }
 
+    [TestCase(DatabaseType.MicrosoftSQLServer, "AttachDbFilename", @"c:\temp\db", "Initial File Name", @"x:\omg.mdf")]
+    [TestCase(DatabaseType.Oracle, "CONNECTION TIMEOUT", "10", "Connection Timeout", "20")]
+    [TestCase(DatabaseType.PostgreSql, "Database", "mydb", "DATABASE", "myotherdb")]
     public void TestKeywords_OverrideWithNovelButEquivalentKeyword_Ignored(DatabaseType databaseType, string key1,
         string value1, string equivalentKey, string value2)
     {
