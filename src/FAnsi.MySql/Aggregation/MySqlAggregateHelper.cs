@@ -8,14 +8,33 @@ public sealed class MySqlAggregateHelper : AggregateHelper
 {
     public static readonly MySqlAggregateHelper Instance = new();
 
+    /// <summary>
+    ///     The assignments for a <c>SET SESSION</c> statement that let the dateAxis CTE recurse 50000 times, enough for
+    ///     about 137 years of days.  Both servers stop at 1000 by default, but they name the limit differently and the
+    ///     SQL is built without a connection, so each assignment is in an executable comment that only one of them runs:
+    ///     <list type="bullet">
+    ///         <item>
+    ///             MySQL 8.0+ runs <c>/*!80000 ... */</c> (<c>cte_max_recursion_depth</c>, which fails the query at the
+    ///             limit) and treats <c>/*M! ... */</c> as an ordinary comment
+    ///         </item>
+    ///         <item>
+    ///             MariaDB 10.2+ runs <c>/*M!100200 ... */</c> (<c>max_recursive_iterations</c>, which stops the query at
+    ///             the limit with only a warning, returning a truncated axis) and ignores MySQL comments versioned 5.7 to
+    ///             9.x.  It rejects <c>cte_max_recursion_depth</c> as an unknown system variable
+    ///         </item>
+    ///     </list>
+    /// </summary>
+    private const string RecursionLimitAssignments =
+        "/*!80000 cte_max_recursion_depth = 50000 */ /*M!100200 max_recursive_iterations = 50000 */";
+
     private MySqlAggregateHelper()
     {
     }
 
     /// <summary>
-    ///     Generates a date axis CTE using MySQL 8.0+ recursive CTEs.
+    ///     Generates a date axis CTE using MySQL 8.0+ (or MariaDB 10.2+) recursive CTEs.
     ///     Much simpler and more efficient than the legacy cross-join approach.
-    ///     Sets recursion depth to 50000 to support large date ranges (up to ~137 years of daily data).
+    ///     The queries that use it raise the recursion limit with <see cref="RecursionLimitAssignments" />.
     /// </summary>
     private static string GetDateAxisTableDeclaration(IQueryAxis axis)
     {
@@ -81,7 +100,7 @@ public sealed class MySqlAggregateHelper : AggregateHelper
 
                                                               {0}
 
-                                                              SET SESSION cte_max_recursion_depth = 50000;
+                                                              SET SESSION {6};
 
                                                               {1}
                                                               SELECT
@@ -107,7 +126,8 @@ public sealed class MySqlAggregateHelper : AggregateHelper
             string.Join(Environment.NewLine,
                 query.Lines.Where(static c =>
                     c.LocationToInsert is >= QueryComponent.SELECT and <= QueryComponent.Having)),
-            axisColumnAlias
+            axisColumnAlias,
+            RecursionLimitAssignments
         ).Trim();
 
         return sql;
@@ -128,7 +148,7 @@ public sealed class MySqlAggregateHelper : AggregateHelper
 
         return string.Format(CultureInfo.InvariantCulture, """
 
-                                                           SET SESSION cte_max_recursion_depth = 50000, group_concat_max_len = 1000000;
+                                                           SET SESSION group_concat_max_len = 1000000, {7};
 
                                                            {0}
 
@@ -175,7 +195,8 @@ public sealed class MySqlAggregateHelper : AggregateHelper
             //the from/where/join clauses (stopping before GROUP BY since it's hardcoded in the template)
             string.Join(Environment.NewLine,
                 query.Lines.Where(static c => c.LocationToInsert is >= QueryComponent.FROM and < QueryComponent.GroupBy)
-                    .Select(x => query.SyntaxHelper.Escape(x.Text)))
+                    .Select(x => query.SyntaxHelper.Escape(x.Text))),
+            RecursionLimitAssignments
         );
     }
 

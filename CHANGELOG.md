@@ -76,6 +76,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     a server that had not responded
   - It now throws a `TimeoutException` then too, and cancels the attempt that is still running
 - The `TimeoutException` message from `DiscoveredServer.TestConnection` no longer ends with a stray parenthesis
+- **MySQL: calendar aggregates failed on MariaDB with "Unknown system variable 'cte_max_recursion_depth'"**
+  - The date axis is a recursive CTE, and the SQL raised its recursion limit with
+    `SET SESSION cte_max_recursion_depth`, a MySQL variable that MariaDB does not have. MariaDB names its limit
+    `max_recursive_iterations` and, when an axis reaches it (1000 rows by default), returns the rows so far with only
+    a warning instead of failing
+  - The limit is now set to 50000 on both: each assignment is in an executable comment that only its own server runs,
+    `/*!80000 ... */` for MySQL and `/*M!100200 ... */` for MariaDB. MySQL sets the same variables to the same values as
+    before
 
 ### Changed
 - **Target frameworks are now net10.0 and net11.0**
