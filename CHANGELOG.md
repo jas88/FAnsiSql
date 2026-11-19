@@ -38,8 +38,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     type of the column when it declares them, and from its `DecimalSize` otherwise
   - The decimal places of values for columns with 29 or more digits before the decimal point, which were not checked
     at all, are now checked as for other decimal columns
-  - Values from `float` and `double` columns are now checked against the limit as well, as doubles, so one too large
-    for a C# `decimal` (from about 7.9e28) cannot overflow, and NaN and infinity are rejected. Their decimal places are
+  - Values from `float` and `double` columns are now checked against 10^(p-s) as well, whatever the number of digits
+    before the decimal point, as a `float` or `double` can be too large even for `decimal(38,0)`. A value is compared
+    exactly, as the shortest decimal that reads back as it, so 1e29 is too large for `decimal(29,0)`, and one too large
+    for a C# `decimal` (from about 7.9e28) cannot overflow. NaN and infinity are rejected. Their decimal places are
     still rounded by the database. MySQL clamped a value over the limit, unless in strict mode, and stored NaN and
     infinity as 0
   - PostgreSQL: Npgsql writes a `float` or `double` to a `numeric` column as a `decimal`, so one too large for a

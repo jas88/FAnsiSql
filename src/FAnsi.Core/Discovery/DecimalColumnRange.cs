@@ -64,6 +64,64 @@ internal static partial class DecimalColumnRange
     }
 
     /// <summary>
+    ///     Returns whether <paramref name="value" />, ignoring its sign, is 10^(<paramref name="precision" /> -
+    ///     <paramref name="scale" />) or more, so too large for a decimal(precision,scale) column, however many digits
+    ///     the column has before the decimal point.
+    /// </summary>
+    /// <remarks>
+    ///     The number compared, exactly, is the shortest decimal that reads back as the double, which is how .NET
+    ///     formats it, how MySQL is sent it, and how FAnsi's PostgreSQL writer sends one too large for a decimal. So
+    ///     1e29 is 10^29, too large for decimal(29,0), although the double nearest 10^29 is just below it. When this
+    ///     number is below 10^(p-s), so is the exact value of the double.
+    /// </remarks>
+    public static bool IsTooLarge(double value, int precision, int scale) =>
+        IsTooLarge(Math.Abs(value), precision - scale, false);
+
+    /// <inheritdoc cref="IsTooLarge(double, int, int)" />
+    public static bool IsTooLarge(float value, int precision, int scale) =>
+        IsTooLarge(Math.Abs(value), precision - scale, true);
+
+    private static bool IsTooLarge(double magnitude, int digitsBeforePoint, bool isFloat)
+    {
+        if (magnitude == 0)
+            return false;
+
+        // Math.Pow is much closer to 10^digitsBeforePoint than a factor of 2, so away from it doubles decide
+        var approximateLimit = Math.Pow(10, digitsBeforePoint);
+        if (magnitude < approximateLimit / 2)
+            return false;
+        if (magnitude > approximateLimit * 2)
+            return true;
+
+        var text = isFloat
+            ? ((float)magnitude).ToString("R", CultureInfo.InvariantCulture)
+            : magnitude.ToString("R", CultureInfo.InvariantCulture);
+        return GetLeadingDigitPower(text) >= digitsBeforePoint;
+    }
+
+    /// <summary>
+    ///     Returns the power of ten of the first significant digit of a positive number as .NET formats a float or a
+    ///     double: 2 for 123.45, -3 for 0.00123, 23 for 1E+23 and -7 for 1.5E-07.
+    /// </summary>
+    private static int GetLeadingDigitPower(string number)
+    {
+        var e = number.IndexOf('E', StringComparison.Ordinal);
+        var digits = e < 0 ? number : number[..e];
+        var power = e < 0
+            ? 0
+            : int.Parse(number.AsSpan(e + 1), NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture);
+
+        var point = digits.IndexOf('.', StringComparison.Ordinal);
+        var whole = point < 0 ? digits : digits[..point];
+        if (whole != "0")
+            return power + whole.Length - 1;
+
+        // As in 0.00123, the first significant digit follows the zeros after the decimal point
+        var fraction = digits[(point + 1)..];
+        return power - (fraction.Length - fraction.TrimStart('0').Length) - 1;
+    }
+
+    /// <summary>
     ///     Returns the largest value of a decimal(<paramref name="precision" />,<paramref name="scale" />) column, as
     ///     text because a decimal cannot always hold it: 99.9 for decimal(3,1), 9999999999999999999999999999.9 for
     ///     decimal(29,1) and 0.00999 for numeric(3,5).

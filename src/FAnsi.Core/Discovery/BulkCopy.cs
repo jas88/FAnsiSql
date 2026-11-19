@@ -402,9 +402,11 @@ public abstract class BulkCopy : IBulkCopy
     }
 
     /// <summary>
-    ///     Checks a float or double going into a decimal column against the limit of the column. It is compared as a
-    ///     double because a decimal cannot hold one of 2^96 (about 7.9e28) or more, so with no limit such a value goes
-    ///     to the database. Its decimal places are not checked: the database rounds them.
+    ///     Checks a float or double going into a decimal column against 10^(p-s) exactly, without converting it to a
+    ///     decimal, which cannot hold one of 2^96 (about 7.9e28) or more. Unlike a decimal, a float or double can be
+    ///     too large even for a column with 29 or more digits before the decimal point (see
+    ///     <see cref="DecimalColumnRange.IsTooLarge(double, int, int)" />). Its decimal places are not checked: the
+    ///     database rounds them.
     /// </summary>
     private static void ValidateFloatingPoint(object value, in ColumnValidationRule rule, int rowIndex)
     {
@@ -414,8 +416,11 @@ public abstract class BulkCopy : IBulkCopy
                 "Value {0} in column '{1}' (row {2}) is not a number, so it cannot be inserted into decimal({3},{4}).",
                 value, rule.SourceName, rowIndex + 1, rule.DecimalPrecision, rule.DecimalScale));
 
-        // Infinity exceeds the largest value of every decimal column, even one that every decimal fits in
-        if (double.IsInfinity(number) || (rule.DecimalLimit is { } limit && Math.Abs(number) >= (double)limit))
+        // Infinity exceeds the largest value of every decimal column
+        var tooLarge = double.IsInfinity(number) || (value is float single
+            ? DecimalColumnRange.IsTooLarge(single, rule.DecimalPrecision, rule.DecimalScale)
+            : DecimalColumnRange.IsTooLarge(number, rule.DecimalPrecision, rule.DecimalScale));
+        if (tooLarge)
             throw ExceedsMaximum(value, rule, rowIndex);
     }
 

@@ -1,5 +1,6 @@
 using System.Data;
 using System.Globalization;
+using System.Numerics;
 using FAnsi;
 using FAnsi.Discovery;
 using NUnit.Framework;
@@ -105,56 +106,83 @@ internal sealed class BulkInsertDecimalLimitTests : DatabaseTests
     }
 
     /// <summary>
-    ///     A float or double is checked against the limit of a decimal column as a double, because 1e30 is too large
-    ///     for a decimal: converting it would throw OverflowException. SQL Server does not take float columns at all.
+    ///     A float or double at or over 10^(p-s) is rejected, however many digits the column has before the decimal
+    ///     point: 1e30 is too large for decimal(29,0) although every decimal fits in it. 1e29 is the double nearest
+    ///     10^29, and just below it, but is too large as its text is 1E+29. SQL Server does not take float columns at
+    ///     all.
     /// </summary>
-    [TestCase(DatabaseType.MicrosoftSQLServer, false)]
-    [TestCase(DatabaseType.MySql, false)]
-    [TestCase(DatabaseType.MySql, true)]
-    [TestCase(DatabaseType.Oracle, false)]
-    [TestCase(DatabaseType.Oracle, true)]
-    [TestCase(DatabaseType.PostgreSql, false)]
-    [TestCase(DatabaseType.PostgreSql, true)]
-    public void TestBulkInsert_FloatingPointTooLargeForDecimal_RejectsOverTheLimit(DatabaseType type, bool isFloat)
+    [TestCaseSource(nameof(AtOrOverTheLimit))]
+    public void TestBulkInsert_FloatingPointAtOrOverTheLimit_Rejected(DatabaseType type, bool isFloat, int precision,
+        double value)
     {
         var db = GetTestDatabase(type);
-        var tbl = db.CreateTable("MyBulkInsertTest", [new DatabaseColumnRequest("Score", "decimal(10,0)")]);
+        var tbl = db.CreateTable("MyBulkInsertTest", [new DatabaseColumnRequest("Score", $"decimal({precision},0)")]);
 
-        using var dt = CreateFloatingPointTable(isFloat, 1e30);
+        using var dt = CreateFloatingPointTable(isFloat, value);
+        var text = Convert.ToString(dt.Rows[0][0], CultureInfo.InvariantCulture);
 
         using var bulk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture);
         var ex = Assert.Throws<InvalidOperationException>(() => bulk.Upload(dt));
 
         Assert.That(ex?.Message, Is.EqualTo(
-            "Value 1E+30 in column 'Score' (row 1) exceeds the maximum allowed for decimal(10,0). Maximum value is " +
-            "9999999999."));
+            $"Value {text} in column 'Score' (row 1) exceeds the maximum allowed for decimal({precision},0). " +
+            $"Maximum value is {new string('9', precision)}."));
+    }
+
+    private static IEnumerable<TestCaseData> AtOrOverTheLimit()
+    {
+        foreach (var type in All.DatabaseTypesExceptSqlite)
+        {
+            bool[] floats = type == DatabaseType.MicrosoftSQLServer ? [false] : [false, true];
+            foreach (var isFloat in floats)
+            {
+                yield return new TestCaseData(type, isFloat, 10, 1e30);
+                yield return new TestCaseData(type, isFloat, 29, 1e30);
+                yield return new TestCaseData(type, isFloat, 29, 1e29);
+            }
+        }
     }
 
     /// <summary>
-    ///     decimal(38,0) has no limit, as every decimal fits in it, so a float or double too large for a decimal goes
-    ///     to the database. SqlBulkCopy converts a double to decimal itself, so it cannot write one this large.
+    ///     A float or double under 10^(p-s) goes to the database even when it is too large for a decimal, which
+    ///     converting it to would throw OverflowException: 1e30 into decimal(38,0), and the double and float just below
+    ///     10^29 into decimal(29,0). SqlBulkCopy converts a double to decimal itself, so it cannot write these to SQL
+    ///     Server.
     /// </summary>
-    [TestCase(DatabaseType.MySql, false)]
-    [TestCase(DatabaseType.MySql, true)]
-    [TestCase(DatabaseType.Oracle, false)]
-    [TestCase(DatabaseType.Oracle, true)]
-    [TestCase(DatabaseType.PostgreSql, false)]
-    [TestCase(DatabaseType.PostgreSql, true)]
-    public void TestBulkInsert_FloatingPointTooLargeForDecimal_InsertedWithNoLimit(DatabaseType type, bool isFloat)
+    [TestCaseSource(nameof(UnderTheLimit))]
+    public void TestBulkInsert_FloatingPointUnderTheLimit_Inserted(DatabaseType type, bool isFloat, int precision,
+        double value)
     {
         var db = GetTestDatabase(type);
-        var tbl = db.CreateTable("MyBulkInsertTest", [new DatabaseColumnRequest("Score", "decimal(38,0)")]);
+        var tbl = db.CreateTable("MyBulkInsertTest", [new DatabaseColumnRequest("Score", $"decimal({precision},0)")]);
 
-        using (var dt = CreateFloatingPointTable(isFloat, 1e30))
-        using (var bulk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture))
+        string text;
+        using (var dt = CreateFloatingPointTable(isFloat, value))
+        {
+            text = Convert.ToString(dt.Rows[0][0], CultureInfo.InvariantCulture) ?? "";
+
+            using var bulk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture);
             bulk.Upload(dt);
+        }
 
         Assert.That(tbl.GetRowCount(), Is.EqualTo(1));
 
-        // MySQL is sent 1E+30 as text, and PostgreSQL the whole number with that text. Oracle makes its own NUMBER of
-        // the double
+        // MySQL is sent the shortest text of the value, and PostgreSQL the whole number of that text, which is what
+        // the value is checked as. Oracle makes its own NUMBER of the double
         if (type != DatabaseType.Oracle)
-            Assert.That(CountRowsWhere(tbl, "Score", "= 1000000000000000000000000000000"), Is.EqualTo(1));
+            Assert.That(CountRowsWhere(tbl, "Score",
+                $"= {BigInteger.Parse(text, NumberStyles.Float, CultureInfo.InvariantCulture)}"), Is.EqualTo(1));
+    }
+
+    private static IEnumerable<TestCaseData> UnderTheLimit()
+    {
+        foreach (var type in new[] { DatabaseType.MySql, DatabaseType.Oracle, DatabaseType.PostgreSql })
+        {
+            yield return new TestCaseData(type, false, 38, 1e30);
+            yield return new TestCaseData(type, true, 38, 1e30);
+            yield return new TestCaseData(type, false, 29, Math.BitDecrement(1e29));
+            yield return new TestCaseData(type, true, 29, (double)MathF.BitDecrement(1e29f));
+        }
     }
 
     /// <summary>

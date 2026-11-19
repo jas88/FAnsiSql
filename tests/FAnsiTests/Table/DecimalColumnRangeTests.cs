@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Numerics;
 using FAnsi.Discovery;
 using NUnit.Framework;
 
@@ -90,5 +91,68 @@ internal sealed class DecimalColumnRangeTests
                     $"decimal({precision},{scale})");
             }
         }
+    }
+
+    /// <summary>
+    ///     A double is compared with 10^(p-s) for any number of digits before the decimal point. The value tested is
+    ///     <paramref name="near" /> moved by <paramref name="ulps" /> doubles, so that the doubles just below and at
+    ///     the limit are tested.
+    /// </summary>
+    [TestCase(1e30, 0, 29, 0, true)]
+    [TestCase(-1e30, 0, 29, 0, true)]
+    [TestCase(1e30, 0, 38, 0, false)]
+    [TestCase(1e29, 0, 29, 0, true)]
+    [TestCase(1e29, 1, 29, 0, true)]
+    [TestCase(1e29, -1, 29, 0, false)]
+    [TestCase(1e23, 0, 23, 0, true)]
+    [TestCase(1e23, -1, 23, 0, false)]
+    [TestCase(1e22, 0, 22, 0, true)] // 10^22 is a double
+    [TestCase(1e22, -1, 22, 0, false)]
+    [TestCase(1000.0, 0, 5, 2, true)]
+    [TestCase(1000.0, -1, 5, 2, false)]
+    [TestCase(0.01, 0, 3, 5, true)]
+    [TestCase(0.01, -1, 3, 5, false)]
+    [TestCase(double.MaxValue, 0, 400, 0, false)] // no double reaches 10^400
+    [TestCase(double.Epsilon, 0, 1, 400, true)] // every double but 0 reaches 10^-399
+    [TestCase(0.0, 0, 1, 400, false)]
+    public void IsTooLarge_Double(double near, int ulps, int precision, int scale, bool expected)
+    {
+        var value = near;
+        for (var i = 0; i < Math.Abs(ulps); i++)
+            value = ulps < 0 ? Math.BitDecrement(value) : Math.BitIncrement(value);
+
+        Assert.That(DecimalColumnRange.IsTooLarge(value, precision, scale), Is.EqualTo(expected),
+            value.ToString("R", CultureInfo.InvariantCulture));
+    }
+
+    [TestCase(1e30f, 0, 29, 0, true)]
+    [TestCase(1e30f, 0, 38, 0, false)]
+    [TestCase(1e29f, 0, 29, 0, true)]
+    [TestCase(1e29f, -1, 29, 0, false)]
+    [TestCase(1000f, 0, 5, 2, true)]
+    [TestCase(1000f, -1, 5, 2, false)]
+    public void IsTooLarge_Float(float near, int ulps, int precision, int scale, bool expected)
+    {
+        var value = near;
+        for (var i = 0; i < Math.Abs(ulps); i++)
+            value = ulps < 0 ? MathF.BitDecrement(value) : MathF.BitIncrement(value);
+
+        Assert.That(DecimalColumnRange.IsTooLarge(value, precision, scale), Is.EqualTo(expected),
+            value.ToString("R", CultureInfo.InvariantCulture));
+    }
+
+    /// <summary>
+    ///     The double nearest 10^29 is just below it, but its shortest text, 1E+29, is what MySQL is sent and FAnsi's
+    ///     PostgreSQL writer sends, so it is too large for decimal(29,0)
+    /// </summary>
+    [Test]
+    public void IsTooLarge_DoubleJustBelowThePowerOfTenItIsWrittenAs_IsTooLarge()
+    {
+        Assert.Multiple(static () =>
+        {
+            Assert.That(new BigInteger(1e29), Is.LessThan(BigInteger.Pow(10, 29)));
+            Assert.That(1e29.ToString("R", CultureInfo.InvariantCulture), Is.EqualTo("1E+29"));
+            Assert.That(DecimalColumnRange.IsTooLarge(1e29, 29, 0), Is.True);
+        });
     }
 }
