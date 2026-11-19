@@ -139,6 +139,27 @@ internal sealed class TypeTranslaterUnitTests
     }
 
     /// <summary>
+    ///     The <see cref="TypeGuesser.Guesser" /> for a decimal column starts out with the precision and scale of the column,
+    ///     so that a type computed from it for new data never shrinks the column
+    /// </summary>
+    [TestCase(DatabaseType.MicrosoftSQLServer, "decimal(10,5)")]
+    [TestCase(DatabaseType.MySql, "decimal(10,5)")]
+    [TestCase(DatabaseType.Oracle, "decimal(10,5)")]
+    [TestCase(DatabaseType.PostgreSql, "numeric(10,5)")]
+    [TestCase(DatabaseType.Sqlite, "decimal(10,5)")]
+    public void GetGuesser_DecimalColumn_KeepsDecimalSize(DatabaseType dbType, string sqlType)
+    {
+        var guess = GetColumn(dbType, sqlType).GetGuesser().Guess;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(guess.CSharpType, Is.EqualTo(typeof(decimal)));
+            Assert.That(guess.Size.Precision, Is.EqualTo(10));
+            Assert.That(guess.Size.Scale, Is.EqualTo(5));
+        });
+    }
+
+    /// <summary>
     ///     Creates a column of the given <paramref name="sqlType" />, no database connection is required.
     /// </summary>
     private static DiscoveredColumn GetColumn(DatabaseType dbType, string sqlType)

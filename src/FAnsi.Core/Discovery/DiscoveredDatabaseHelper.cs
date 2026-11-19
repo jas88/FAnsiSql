@@ -5,7 +5,6 @@ using System.Globalization;
 using System.Text;
 using FAnsi.Discovery.QuerySyntax;
 using FAnsi.Discovery.TableCreation;
-using FAnsi.Discovery.TypeTranslation;
 using FAnsi.Extensions;
 using FAnsi.Implementation;
 using FAnsi.Naming;
@@ -90,7 +89,6 @@ public abstract class DiscoveredDatabaseHelper : IDiscoveredDatabaseHelper
                         }
 
                     var guesser = GetGuesser(request);
-                    GuesserPriming.PrimeWith(guesser, request);
                     CopySettings(guesser, args);
                     typeDictionary.Add(overriding.ColumnName, guesser);
                 }

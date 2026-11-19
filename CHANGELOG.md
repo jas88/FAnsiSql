@@ -14,16 +14,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     `near "SET": syntax error`
   - `SupportsEmbeddedParameters` now returns false and `GetParameterDeclaration` throws `NotSupportedException`, as they
     do for Oracle and PostgreSQL. Parameter values have to be passed as `DbParameter`s
-- **The Guesser of a string column was never Unicode and had no width**
-  - TypeGuesser 2 keeps only the C# type of the `DatabaseTypeRequest` a `Guesser` is constructed with, so the `Guesser`
-    from `DiscoveredColumn.GetGuesser()` for an `nvarchar(10)` column, and the one `CreateTable(out typeDictionary, ...)`
-    returns for an explicitly requested Unicode string column, guessed a non-Unicode string of no width until it saw a
-    value. A type computed from it for wider data was `varchar` rather than `nvarchar` (`varchar2` rather than
-    `nvarchar2` on Oracle), and an `nvarchar(max)` column was guessed as `varchar(4000)`
-  - These Guessers are now first shown a string as wide as the column (8001 characters for wider columns, which still
-    guesses the unlimited string type on SQL Server, MySQL, Oracle and PostgreSQL), containing a non-ASCII character
-    when the column is Unicode. Guessers of non-string columns are unchanged: TypeGuesser 2 also drops the decimal size
-    of the request
 - **Decimal values on .NET 11**
   - .NET 11 converts a `double` to a `decimal` exactly, so 9.99 becomes 9.990000000000000213162820728, where earlier
     versions of .NET rounded to 15 significant digits
@@ -31,11 +21,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     largest values, such as 999.99 for `decimal(5,2)`. It now works it out in decimals
   - SQLite: `GetDataTable()` rounds the REAL values of a decimal column to 15 significant digits again, so a value
     stored as 9.99 is read as 9.99 on .NET 11, not as a value with more decimal places than the column allows
+- **The Guesser of a column did not start out guessing the column's type**
+  - TypeGuesser 2.0.x kept only the C# type of the `DatabaseTypeRequest` a `Guesser` is constructed with. Until it saw a
+    value, the `Guesser` from `DiscoveredColumn.GetGuesser()` for an `nvarchar(10)` column, and the one
+    `CreateTable(out typeDictionary, ...)` returns for an explicitly requested one, guessed a non-Unicode string of no
+    width. A type computed from it for wider data was `varchar` rather than `nvarchar` (`varchar2` rather than
+    `nvarchar2` on Oracle), and an `nvarchar(max)` column was guessed as `varchar(4000)`. The `Guesser` of a
+    `decimal(10,5)` column started from no precision or scale, so a type computed from it could be smaller than the
+    column
+  - Fixed by moving to TypeGuesser 2.1.0 (see Changed): a `Guesser` starts from the width, decimal size and Unicode flag
+    of its request, and values seen afterwards only widen the guess
 
 ### Changed
 - **Target frameworks are now net10.0 and net11.0**
   - net8.0 and net9.0 are no longer built, because both reached end of life on 2026-11-10
   - Applications targeting net8.0 or net9.0 cannot use this version and must stay on FAnsiSql 3.8.x
+- **Bump TypeGuesser from 2.0.4 to 2.1.0**, which fixes the Guesser of a column (see Fixed)
+  - TypeGuesser types are part of FAnsiSql's API. TypeGuesser 2.1.0 makes `DecimalSize.NumbersBeforeDecimalPlace`,
+    `DecimalSize.NumbersAfterDecimalPlace` and `TypeDeciderFactory.Dictionary` properties instead of fields, and renames
+    the protected `*Impl` members of `DecideTypesForStrings<T>` to `*Core`. Code using them must be rebuilt against
+    TypeGuesser 2.1.0, and custom deciders must rename their overrides. TypeGuesser's CHANGELOG lists its other changes
+  - FAnsiSql 3.8.x reads those fields, so it throws `MissingFieldException` when used with TypeGuesser 2.1.0: upgrade
+    FAnsiSql and TypeGuesser together
 
 ## [3.8.0] - 2026-11-16
 
