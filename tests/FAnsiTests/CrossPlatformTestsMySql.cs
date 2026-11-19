@@ -3,13 +3,14 @@ using NUnit.Framework;
 
 namespace FAnsiTests;
 
-internal sealed class CrossPlatformTests_Oracle : CrossPlatformTestsBase
+internal sealed class CrossPlatformTestsMySql : CrossPlatformTestsBase
 {
-    protected override DatabaseType DatabaseType => DatabaseType.Oracle;
+    protected override DatabaseType DatabaseType => DatabaseType.MySql;
 
     [Test]
     public new void TestTableCreation_NullTableName() => base.TestTableCreation_NullTableName();
 
+    [TestCase("1/1/2007 00:00:00")]
     [TestCase("01/01/2007 00:00:00")]
     [TestCase("2007-01-01 00:00:00")]
     public new void DateColumnTests_NoTime(object input) => base.DateColumnTests_NoTime(input);
@@ -30,6 +31,12 @@ internal sealed class CrossPlatformTests_Oracle : CrossPlatformTestsBase
     [TestCase("13:11:10")]
     [TestCase("13:11")]
     public new void DateColumnTests_TimeOnly_Afternoon(object input) => base.DateColumnTests_TimeOnly_Afternoon(input);
+
+    [TestCase("int", "-23.00")]
+    [TestCase("int", "-25")]
+    [TestCase("boolean", "0")]
+    public new void TypeConsensusBetweenGuesserAndDiscoveredTableTest(string datatType, string insertValue) =>
+        base.TypeConsensusBetweenGuesserAndDiscoveredTableTest(datatType, insertValue);
 
     [Test]
     public new void ForeignKeyCreationTest() => base.ForeignKeyCreationTest();
@@ -72,8 +79,11 @@ internal sealed class CrossPlatformTests_Oracle : CrossPlatformTestsBase
     [Test]
     public new void TestFloatDataTypes() => base.TestFloatDataTypes();
 
+    [TestCase("_-o-_", ":>0<:")]
+    public new void HorribleDatabaseAndTableNames(string horribleDatabaseName, string horribleTableName) =>
+        base.HorribleDatabaseAndTableNames(horribleDatabaseName, horribleTableName);
+
     [TestCase("_-o-_", ":>0<:", "-_")]
-    [TestCase("Comment", "Comment", "Comment")]  // reserved keyword in Oracle
     [TestCase("Comment", "SSSS", "Space Out")]
     public new void HorribleColumnNames(string horribleDatabaseName, string horribleTableName, string columnName) =>
         base.HorribleColumnNames(horribleDatabaseName, horribleTableName, columnName);

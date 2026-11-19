@@ -3,9 +3,9 @@ using NUnit.Framework;
 
 namespace FAnsiTests;
 
-internal sealed class ManagedConnectionTests_Oracle : ManagedConnectionTestsBase
+internal sealed class ManagedConnectionTestsSqlite : ManagedConnectionTestsBase
 {
-    protected override DatabaseType DatabaseType => DatabaseType.Oracle;
+    protected override DatabaseType DatabaseType => DatabaseType.Sqlite;
 
     [Test]
     public new void Test_GetConnection_NotOpenAtStart() => base.Test_GetConnection_NotOpenAtStart();

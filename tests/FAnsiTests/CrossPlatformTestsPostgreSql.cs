@@ -3,7 +3,7 @@ using NUnit.Framework;
 
 namespace FAnsiTests;
 
-internal sealed class CrossPlatformTests_PostgreSql : CrossPlatformTestsBase
+internal sealed class CrossPlatformTestsPostgreSql : CrossPlatformTestsBase
 {
     /// <summary>
     ///     Npgsql 10 reads a <c>time</c> column as <see cref="TimeOnly" /> but GetDataTable types the DataColumn as

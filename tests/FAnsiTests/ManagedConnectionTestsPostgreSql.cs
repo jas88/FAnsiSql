@@ -3,9 +3,9 @@ using NUnit.Framework;
 
 namespace FAnsiTests;
 
-internal sealed class ManagedConnectionTests_MicrosoftSql : ManagedConnectionTestsBase
+internal sealed class ManagedConnectionTestsPostgreSql : ManagedConnectionTestsBase
 {
-    protected override DatabaseType DatabaseType => DatabaseType.MicrosoftSQLServer;
+    protected override DatabaseType DatabaseType => DatabaseType.PostgreSql;
 
     [Test]
     public new void Test_GetConnection_NotOpenAtStart() => base.Test_GetConnection_NotOpenAtStart();
@@ -29,7 +29,4 @@ internal sealed class ManagedConnectionTests_MicrosoftSql : ManagedConnectionTes
 
     [Test]
     public new void Test_Clone_AutoOpenClose() => base.Test_Clone_AutoOpenClose();
-
-    [Test]
-    public new void Test_DanglingTransaction_IsDetectedAndRejected() => base.Test_DanglingTransaction_IsDetectedAndRejected();
 }
