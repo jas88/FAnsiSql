@@ -21,11 +21,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     largest values, such as 999.99 for `decimal(5,2)`. It now works it out in decimals
   - SQLite: `GetDataTable()` rounds the REAL values of a decimal column to 15 significant digits again, so a value
     stored as 9.99 is read as 9.99 on .NET 11, not as a value with more decimal places than the column allows
-  - Oracle: ODP.NET reads a `NUMBER(p,s)` column of fewer than 16 digits as a `float` or a `double`, `NUMBER(5,2)` as a
-    `float`, so on .NET 11 `GetDataTable()` read 9.99 as 9.9899997711181640625. These columns are now read as
-    decimals, which also makes them `decimal` columns rather than `float` or `double` ones when `GetDataTable()` is
-    called with `enforceTypesAndNullness: false`. `FLOAT(b)`, `BINARY_FLOAT` and `BINARY_DOUBLE` columns are read as
-    before
+  - Oracle: ODP.NET reads a `NUMBER` column as the first of `short`, `int`, `long`, `float`, `double` and `decimal`
+    that can hold its range, so a `NUMBER(p,s)` with a scale and a precision of 15 or less came back as a `float` or a
+    `double`, and on .NET 11 `GetDataTable()` read the 9.99 of a `NUMBER(5,2)` column as 9.9899997711181640625. These
+    columns are now read as decimals, which also makes them `decimal` columns rather than `float` or `double` ones
+    when `GetDataTable()` is called with `enforceTypesAndNullness: false`. `FLOAT(b)`, `BINARY_FLOAT` and
+    `BINARY_DOUBLE` columns are read as before
 - **Bulk insert allowed values too large for some decimal columns**
   - A value was checked against the largest value of its `decimal(p,s)` column, 10^(p-s) - 10^-s, which a C# `decimal`
     cannot hold when the column has 28 digits before the decimal point and more than 28 in all: for `decimal(29,1)` it
