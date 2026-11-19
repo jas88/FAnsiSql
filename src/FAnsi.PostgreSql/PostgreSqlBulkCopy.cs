@@ -1,5 +1,6 @@
 using System.Data;
 using System.Globalization;
+using System.Numerics;
 using System.Text;
 using FAnsi.Connections;
 using FAnsi.Discovery;
@@ -13,6 +14,11 @@ public sealed class PostgreSqlBulkCopy(
     IManagedConnection connection,
     CultureInfo culture) : BulkCopy(discoveredTable, connection, culture)
 {
+    /// <summary>
+    ///     2^96, the smallest double that a decimal cannot hold
+    /// </summary>
+    private const double DecimalOverflow = 79228162514264337593543950336d;
+
     private bool _disposed;
 
     public override int UploadImpl(DataTable dt)
@@ -71,8 +77,9 @@ public sealed class PostgreSqlBulkCopy(
 
     /// <summary>
     ///     Converts <paramref name="value" /> where Npgsql would not itself write it as the <paramref name="columnType" />.
-    ///     Npgsql writes any number to the integer and numeric types and a float or double to real and double precision,
-    ///     the conversions here are the ones it leaves out.
+    ///     Npgsql writes any number to the integer and numeric types, except a float or double too large for a decimal
+    ///     (see <see cref="ToNumeric" />), and a float or double to real and double precision, the conversions here are
+    ///     the ones it leaves out.
     /// </summary>
     private static object ConvertToColumnType(object value, NpgsqlDbType columnType) =>
         columnType switch
@@ -91,6 +98,7 @@ public sealed class PostgreSqlBulkCopy(
                 Convert.ToDouble(value, CultureInfo.InvariantCulture),
             NpgsqlDbType.Real when value is not (double or float) =>
                 Convert.ToSingle(value, CultureInfo.InvariantCulture),
+            NpgsqlDbType.Numeric when value is double or float => ToNumeric(value),
             NpgsqlDbType.Timestamp => value switch
             {
                 DateTime dateTime => PostgreSqlTypeTranslater.ToTimestamp(dateTime),
@@ -107,6 +115,31 @@ public sealed class PostgreSqlBulkCopy(
             },
             _ => value
         };
+
+    /// <summary>
+    ///     Returns a float or double for a numeric column in a form Npgsql can write. Npgsql writes a float or double
+    ///     to numeric through a decimal, which cannot hold one of 2^96 (about 7.9e28) or more: such a value, which is a
+    ///     whole number, is written as the <see cref="BigInteger" /> of its shortest text, so that 1e30 is 10^30.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">
+    ///     The value is NaN or infinite, which Npgsql cannot write to numeric
+    /// </exception>
+    private static object ToNumeric(object value)
+    {
+        var number = Convert.ToDouble(value, CultureInfo.InvariantCulture);
+        if (!double.IsFinite(number))
+            throw new InvalidOperationException(string.Format(CultureInfo.InvariantCulture,
+                "Value {0} cannot be bulk inserted into a numeric column: Npgsql writes numeric values from decimals",
+                value));
+
+        if (Math.Abs(number) < DecimalOverflow)
+            return value;
+
+        var text = value is float single
+            ? single.ToString("R", CultureInfo.InvariantCulture)
+            : number.ToString("R", CultureInfo.InvariantCulture);
+        return BigInteger.Parse(text, NumberStyles.Float, CultureInfo.InvariantCulture);
+    }
 
     private void ThrowIfDisposed() =>
         ObjectDisposedException.ThrowIf(_disposed, this);

@@ -81,4 +81,155 @@ internal sealed class BulkInsertDecimalLimitTests : DatabaseTests
             Does.Contain("Value 0.5 in column 'Score' (row 1) exceeds the maximum allowed for decimal(3,5)"));
         Assert.That(ex?.Message, Does.Contain("Maximum value is 0.00999."));
     }
+
+    /// <summary>
+    ///     The range of a decimal is symmetric, so the absolute value of decimal.MinValue is decimal.MaxValue
+    /// </summary>
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypesExceptSqlite))]
+    public void TestBulkInsert_DecimalMinAndMaxValue_InsertedWithNoLimit(DatabaseType type)
+    {
+        var db = GetTestDatabase(type);
+        var tbl = db.CreateTable("MyBulkInsertTest", [new DatabaseColumnRequest("Score", "decimal(38,0)")]);
+
+        using (var dt = new DataTable())
+        {
+            dt.Columns.Add("Score", typeof(decimal));
+            dt.Rows.Add(decimal.MinValue);
+            dt.Rows.Add(decimal.MaxValue);
+
+            using var bulk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture);
+            bulk.Upload(dt);
+        }
+
+        Assert.That(tbl.GetRowCount(), Is.EqualTo(2));
+    }
+
+    /// <summary>
+    ///     A float or double is checked against the limit of a decimal column as a double, because 1e30 is too large
+    ///     for a decimal: converting it would throw OverflowException. SQL Server does not take float columns at all.
+    /// </summary>
+    [TestCase(DatabaseType.MicrosoftSQLServer, false)]
+    [TestCase(DatabaseType.MySql, false)]
+    [TestCase(DatabaseType.MySql, true)]
+    [TestCase(DatabaseType.Oracle, false)]
+    [TestCase(DatabaseType.Oracle, true)]
+    [TestCase(DatabaseType.PostgreSql, false)]
+    [TestCase(DatabaseType.PostgreSql, true)]
+    public void TestBulkInsert_FloatingPointTooLargeForDecimal_RejectsOverTheLimit(DatabaseType type, bool isFloat)
+    {
+        var db = GetTestDatabase(type);
+        var tbl = db.CreateTable("MyBulkInsertTest", [new DatabaseColumnRequest("Score", "decimal(10,0)")]);
+
+        using var dt = CreateFloatingPointTable(isFloat, 1e30);
+
+        using var bulk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture);
+        var ex = Assert.Throws<InvalidOperationException>(() => bulk.Upload(dt));
+
+        Assert.That(ex?.Message, Is.EqualTo(
+            "Value 1E+30 in column 'Score' (row 1) exceeds the maximum allowed for decimal(10,0). Maximum value is " +
+            "9999999999."));
+    }
+
+    /// <summary>
+    ///     decimal(38,0) has no limit, as every decimal fits in it, so a float or double too large for a decimal goes
+    ///     to the database. SqlBulkCopy converts a double to decimal itself, so it cannot write one this large.
+    /// </summary>
+    [TestCase(DatabaseType.MySql, false)]
+    [TestCase(DatabaseType.MySql, true)]
+    [TestCase(DatabaseType.Oracle, false)]
+    [TestCase(DatabaseType.Oracle, true)]
+    [TestCase(DatabaseType.PostgreSql, false)]
+    [TestCase(DatabaseType.PostgreSql, true)]
+    public void TestBulkInsert_FloatingPointTooLargeForDecimal_InsertedWithNoLimit(DatabaseType type, bool isFloat)
+    {
+        var db = GetTestDatabase(type);
+        var tbl = db.CreateTable("MyBulkInsertTest", [new DatabaseColumnRequest("Score", "decimal(38,0)")]);
+
+        using (var dt = CreateFloatingPointTable(isFloat, 1e30))
+        using (var bulk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture))
+            bulk.Upload(dt);
+
+        Assert.That(tbl.GetRowCount(), Is.EqualTo(1));
+
+        // MySQL is sent 1E+30 as text, and PostgreSQL the whole number with that text. Oracle makes its own NUMBER of
+        // the double
+        if (type != DatabaseType.Oracle)
+            Assert.That(CountRowsWhere(tbl, "Score", "= 1000000000000000000000000000000"), Is.EqualTo(1));
+    }
+
+    /// <summary>
+    ///     NaN and infinity do not fit in any decimal column, even one with no limit
+    /// </summary>
+    [TestCaseSource(typeof(All), nameof(All.DatabaseTypesExceptSqlite))]
+    public void TestBulkInsert_DoubleNotFinite_Rejected(DatabaseType type)
+    {
+        var db = GetTestDatabase(type);
+        var tbl = db.CreateTable("MyBulkInsertTest", [new DatabaseColumnRequest("Score", "decimal(38,0)")]);
+        var maxValue = new string('9', 38);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(UploadAndCatch(tbl, double.NaN),
+                Is.EqualTo("Value NaN in column 'Score' (row 1) is not a number, so it cannot be inserted into " +
+                           "decimal(38,0)."));
+            Assert.That(UploadAndCatch(tbl, double.PositiveInfinity),
+                Is.EqualTo("Value Infinity in column 'Score' (row 1) exceeds the maximum allowed for decimal(38,0). " +
+                           $"Maximum value is {maxValue}."));
+            Assert.That(UploadAndCatch(tbl, double.NegativeInfinity),
+                Is.EqualTo("Value -Infinity in column 'Score' (row 1) exceeds the maximum allowed for decimal(38,0). " +
+                           $"Maximum value is {maxValue}."));
+        });
+    }
+
+    /// <summary>
+    ///     A PostgreSQL numeric column without a precision is not checked, and Npgsql cannot write NaN or infinity to
+    ///     it but would otherwise throw OverflowException
+    /// </summary>
+    [Test]
+    public void TestBulkInsert_PostgreSqlNumericWithoutPrecision_FloatingPoint()
+    {
+        var db = GetTestDatabase(DatabaseType.PostgreSql);
+        var tbl = db.CreateTable("MyBulkInsertTest", [new DatabaseColumnRequest("Score", "numeric")]);
+
+        using (var dt = CreateFloatingPointTable(false, 1e30))
+        using (var bulk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture))
+            bulk.Upload(dt);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(CountRowsWhere(tbl, "Score", "= 1000000000000000000000000000000"), Is.EqualTo(1));
+            Assert.That(UploadAndCatch(tbl, double.NaN),
+                Is.EqualTo("Value NaN cannot be bulk inserted into a numeric column: Npgsql writes numeric values " +
+                           "from decimals"));
+        });
+    }
+
+    private static DataTable CreateFloatingPointTable(bool isFloat, double value)
+    {
+        var dt = new DataTable();
+        dt.Columns.Add("Score", isFloat ? typeof(float) : typeof(double));
+        dt.Rows.Add(isFloat ? (object)(float)value : value);
+        return dt;
+    }
+
+    /// <summary>
+    ///     Uploads <paramref name="value" /> to <paramref name="tbl" /> and returns the message of the
+    ///     InvalidOperationException that this throws
+    /// </summary>
+    private static string UploadAndCatch(DiscoveredTable tbl, double value)
+    {
+        using var dt = CreateFloatingPointTable(false, value);
+        using var bulk = tbl.BeginBulkInsert(CultureInfo.InvariantCulture);
+        return Assert.Throws<InvalidOperationException>(() => bulk.Upload(dt))?.Message ?? "";
+    }
+
+    private static int CountRowsWhere(DiscoveredTable tbl, string column, string condition)
+    {
+        using var con = tbl.Database.Server.GetConnection();
+        con.Open();
+        var sql =
+            $"SELECT COUNT(*) FROM {tbl.GetFullyQualifiedName()} WHERE {tbl.DiscoverColumn(column).GetWrappedName()}";
+        using var cmd = tbl.Database.Server.GetCommand($"{sql} {condition}", con);
+        return Convert.ToInt32(cmd.ExecuteScalar(), CultureInfo.InvariantCulture);
+    }
 }

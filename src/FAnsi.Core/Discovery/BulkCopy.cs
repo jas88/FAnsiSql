@@ -270,6 +270,8 @@ public abstract class BulkCopy : IBulkCopy
             var isString = dataColumn.DataType == typeof(string);
             var isDecimal = validateDecimalPrecision &&
                             (dataColumn.DataType == typeof(decimal) || dataColumn.DataType == typeof(decimal?));
+            var isFloatingPoint = validateDecimalPrecision &&
+                                  (dataColumn.DataType == typeof(double) || dataColumn.DataType == typeof(float));
             var isInteger = IsIntegerType(dataColumn.DataType);
 
             var maxStringLength = 0;
@@ -284,7 +286,7 @@ public abstract class BulkCopy : IBulkCopy
                     maxStringLength = len.Value;
             }
 
-            if (isDecimal)
+            if (isDecimal || isFloatingPoint)
                 (decimalPrecision, decimalScale) = GetDecimalPrecisionAndScale(discoveredColumn);
 
             if (isInteger)
@@ -337,27 +339,16 @@ public abstract class BulkCopy : IBulkCopy
                 }
 
                 // Decimal validation, if the precision and scale of the column are known
-                if (rule.IsDecimal && !isNull && rule.DecimalPrecision > 0)
-                {
-                    // Checks the digits before the decimal point: the places after it are checked below
-                    var d = Math.Abs(Convert.ToDecimal(value, CultureInfo.InvariantCulture));
-                    if (rule.DecimalLimit is { } limit && d >= limit)
-                        throw new InvalidOperationException(string.Format(CultureInfo.InvariantCulture,
-                            "Value {0} in column '{1}' (row {2}) exceeds the maximum allowed for decimal({3},{4}). Maximum value is {5}.",
-                            value, rule.SourceName, rowIndex + 1, rule.DecimalPrecision, rule.DecimalScale,
-                            rule.MaxDecimalValueText));
-
-                    var vs = d.ToString(CultureInfo.InvariantCulture);
-                    if (vs.Contains('.', StringComparison.Ordinal))
+                if (!isNull && rule.DecimalPrecision > 0)
+                    switch (value)
                     {
-                        var places = vs.Split('.')[1].TrimEnd('0').Length;
-                        if (places > rule.DecimalScale)
-                            throw new InvalidOperationException(string.Format(CultureInfo.InvariantCulture,
-                                "Value {0} in column '{1}' (row {2}) has {3} decimal places, but column is defined as decimal({4},{5}) which allows only {5} decimal places.",
-                                value, rule.SourceName, rowIndex + 1, places, rule.DecimalPrecision,
-                                rule.DecimalScale));
+                        case decimal number:
+                            ValidateDecimal(number, rule, rowIndex);
+                            break;
+                        case double or float:
+                            ValidateFloatingPoint(value, rule, rowIndex);
+                            break;
                     }
-                }
 
                 // Integer range validation using BigInteger for full ulong support
                 if (rule.HasIntegerRange && !isNull)
@@ -389,6 +380,50 @@ public abstract class BulkCopy : IBulkCopy
             }
         }
     }
+
+    /// <summary>
+    ///     Checks a decimal against the limit of its column, then its decimal places against the scale of the column.
+    /// </summary>
+    private static void ValidateDecimal(decimal value, in ColumnValidationRule rule, int rowIndex)
+    {
+        var d = Math.Abs(value);
+        if (rule.DecimalLimit is { } limit && d >= limit)
+            throw ExceedsMaximum(value, rule, rowIndex);
+
+        var vs = d.ToString(CultureInfo.InvariantCulture);
+        if (!vs.Contains('.', StringComparison.Ordinal))
+            return;
+
+        var places = vs.Split('.')[1].TrimEnd('0').Length;
+        if (places > rule.DecimalScale)
+            throw new InvalidOperationException(string.Format(CultureInfo.InvariantCulture,
+                "Value {0} in column '{1}' (row {2}) has {3} decimal places, but column is defined as decimal({4},{5}) which allows only {5} decimal places.",
+                value, rule.SourceName, rowIndex + 1, places, rule.DecimalPrecision, rule.DecimalScale));
+    }
+
+    /// <summary>
+    ///     Checks a float or double going into a decimal column against the limit of the column. It is compared as a
+    ///     double because a decimal cannot hold one of 2^96 (about 7.9e28) or more, so with no limit such a value goes
+    ///     to the database. Its decimal places are not checked: the database rounds them.
+    /// </summary>
+    private static void ValidateFloatingPoint(object value, in ColumnValidationRule rule, int rowIndex)
+    {
+        var number = Convert.ToDouble(value, CultureInfo.InvariantCulture);
+        if (double.IsNaN(number))
+            throw new InvalidOperationException(string.Format(CultureInfo.InvariantCulture,
+                "Value {0} in column '{1}' (row {2}) is not a number, so it cannot be inserted into decimal({3},{4}).",
+                value, rule.SourceName, rowIndex + 1, rule.DecimalPrecision, rule.DecimalScale));
+
+        // Infinity exceeds the largest value of every decimal column, even one that every decimal fits in
+        if (double.IsInfinity(number) || (rule.DecimalLimit is { } limit && Math.Abs(number) >= (double)limit))
+            throw ExceedsMaximum(value, rule, rowIndex);
+    }
+
+    private static InvalidOperationException ExceedsMaximum(object value, in ColumnValidationRule rule, int rowIndex) =>
+        new(string.Format(CultureInfo.InvariantCulture,
+            "Value {0} in column '{1}' (row {2}) exceeds the maximum allowed for decimal({3},{4}). Maximum value is {5}.",
+            value, rule.SourceName, rowIndex + 1, rule.DecimalPrecision, rule.DecimalScale,
+            rule.MaxDecimalValueText));
 
     /// <summary>
     ///     Called before row-by-row validation begins. Override in subclasses to perform

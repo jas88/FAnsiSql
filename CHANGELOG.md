@@ -37,6 +37,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     type of the column when it declares them, and from its `DecimalSize` otherwise
   - The decimal places of values for columns with 29 or more digits before the decimal point, which were not checked
     at all, are now checked as for other decimal columns
+  - Values from `float` and `double` columns are now checked against the limit as well, as doubles, so one too large
+    for a C# `decimal` (from about 7.9e28) cannot overflow, and NaN and infinity are rejected. Their decimal places are
+    still rounded by the database. MySQL clamped a value over the limit, unless in strict mode, and stored NaN and
+    infinity as 0
+  - PostgreSQL: Npgsql writes a `float` or `double` to a `numeric` column as a `decimal`, so one too large for a
+    `decimal` failed with `OverflowException`, even for `numeric(38,0)`, which holds it. It is now written as the whole
+    number it is, so 1e30 is 10^30. NaN and infinity, which Npgsql cannot write to `numeric`, get a clear error
   - `ColumnValidationRule` has a new constructor without `maxDecimalValue`, and new `DecimalLimit` and
     `MaxDecimalValueText` members. The old constructor and `MaxDecimalValue` are obsolete, and `MaxDecimalValue` is 0
     in the rules that bulk insert makes

@@ -46,12 +46,13 @@ public readonly struct ColumnValidationRule(
     public readonly bool IsDecimal = isDecimal;
 
     /// <summary>
-    ///     The precision of the decimal column, or 0 if it is not known
+    ///     The precision of the decimal type of the column, which decimal, float and double values are checked against,
+    ///     or 0 if it is not known or the values are not checked
     /// </summary>
     public readonly int DecimalPrecision = decimalPrecision;
 
     /// <summary>
-    ///     The scale of the decimal column, which can be larger than its precision, as in numeric(3,5)
+    ///     The scale of the decimal type of the column, which can be larger than its precision, as in numeric(3,5)
     /// </summary>
     public readonly int DecimalScale = decimalScale;
 
@@ -65,11 +66,9 @@ public readonly struct ColumnValidationRule(
 
     /// <summary>
     ///     The smallest number too large for the column, 10^(<see cref="DecimalPrecision" /> -
-    ///     <see cref="DecimalScale" />), or null if the column is not decimal, its precision is not known or every
-    ///     decimal fits in it.
+    ///     <see cref="DecimalScale" />), or null if its precision is not known or every decimal fits in it.
     /// </summary>
-    public readonly decimal? DecimalLimit =
-        isDecimal ? DecimalColumnRange.GetLimit(decimalPrecision, decimalScale) : null;
+    public readonly decimal? DecimalLimit = DecimalColumnRange.GetLimit(decimalPrecision, decimalScale);
 
     public readonly bool HasIntegerRange = hasIntegerRange;
     public readonly BigInteger IntegerMin = integerMin;
@@ -77,10 +76,10 @@ public readonly struct ColumnValidationRule(
     public readonly bool RequiresNotNull = requiresNotNull;
 
     /// <summary>
-    ///     The largest value of the column as text, such as 99.9 for decimal(3,1), or null if the column is not decimal
-    ///     or its precision is not known.
+    ///     The largest value of the column as text, such as 99.9 for decimal(3,1), or null if its precision is not
+    ///     known.
     /// </summary>
-    public string? MaxDecimalValueText => IsDecimal && DecimalPrecision > 0
+    public string? MaxDecimalValueText => DecimalPrecision > 0
         ? DecimalColumnRange.FormatMaxValue(DecimalPrecision, DecimalScale)
         : null;
 }
