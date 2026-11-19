@@ -28,22 +28,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     when `GetDataTable()` is called with `enforceTypesAndNullness: false`. `FLOAT(b)`, `BINARY_FLOAT` and
     `BINARY_DOUBLE` columns are read as before
 - **Bulk insert allowed values too large for some decimal columns**
-  - A value was checked against the largest value of its `decimal(p,s)` column, 10^(p-s) - 10^-s, which a C# `decimal`
-    cannot hold when the column has 28 digits before the decimal point and more than 28 in all: for `decimal(29,1)` it
-    rounded to 10^28, so 10^28, which has 29 digits before the point, was allowed. A value is now rejected when it is
-    10^(p-s) or more, ignoring its sign, and the error message gives the largest value of the column as text
+  - Bulk insert on SQL Server, MySQL, Oracle and PostgreSQL checked a value against the largest value of its
+    `decimal(p,s)` column, 10^(p-s) - 10^-s, which a C# `decimal` cannot hold when the column has 28 digits before the
+    decimal point and more than 28 in all: for `decimal(29,1)` it rounded to 10^28, so 10^28, which has 29 digits
+    before the point, was allowed. A value is now rejected when it is 10^(p-s) or more, ignoring its sign, and the error
+    message gives the largest value of the column as text. SQLite does not check decimal values in bulk insert, as it
+    does not enforce the precision or scale of a column, so none of the checks here are made for it
   - The precision and scale came from the `DecimalSize` of the column, which has no digits before the decimal point
     when the scale is larger than the precision. So `numeric(3,5)` on PostgreSQL 15 or later and `NUMBER(3,5)` on
     Oracle, which hold up to 0.00999, allowed values up to 0.99999. The precision and scale are now taken from the SQL
     type of the column when it declares them, and from its `DecimalSize` otherwise
   - The decimal places of values for columns with 29 or more digits before the decimal point, which were not checked
     at all, are now checked as for other decimal columns
-  - Values from `float` and `double` columns are now checked against 10^(p-s) as well, whatever the number of digits
-    before the decimal point, as a `float` or `double` can be too large even for `decimal(38,0)`. A value is compared
-    exactly, as the shortest decimal that reads back as it, so 1e29 is too large for `decimal(29,0)`, and one too large
-    for a C# `decimal` (from about 7.9e28) cannot overflow. NaN and infinity are rejected. Their decimal places are
-    still rounded by the database. MySQL clamped a value over the limit, unless in strict mode, and stored NaN and
-    infinity as 0
+  - On SQL Server, MySQL, Oracle and PostgreSQL, values from `float` and `double` columns are now checked against
+    10^(p-s) as well, whatever the number of digits before the decimal point, as a `float` or `double` can be too large
+    even for `decimal(38,0)`. A value is compared exactly, as the shortest decimal that reads back as it, so 1e29 is
+    too large for `decimal(29,0)`, and one too large for a C# `decimal` (from about 7.9e28) cannot overflow. NaN and
+    infinity are rejected. Their decimal places are still rounded by the database. MySQL clamped a value over the
+    limit, unless in strict mode, and stored NaN and infinity as 0
   - PostgreSQL: Npgsql writes a `float` or `double` to a `numeric` column as a `decimal`, so one too large for a
     `decimal` failed with `OverflowException`, even for `numeric(38,0)`, which holds it. It is now written as the whole
     number it is, so 1e30 is 10^30. NaN and infinity, which Npgsql cannot write to `numeric`, get a clear error
