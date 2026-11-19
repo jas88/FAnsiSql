@@ -1003,9 +1003,9 @@ public abstract class CrossPlatformTestsBase : DatabaseTests
         Assert.Multiple(() =>
         {
             // decimal literals: since .NET 11, new decimal(2.1f) is the exact value of the float, 2.099999904632568359375
-            Assert.That(decimalValues2.Count(v => v == 100m), Is.EqualTo(1));
-            Assert.That(decimalValues2.Count(v => v == 105m), Is.EqualTo(1));
-            Assert.That(decimalValues2.Count(v => v == 2.1m), Is.EqualTo(1));
+            Assert.That(decimalValues2.Count(static v => v == 100m), Is.EqualTo(1));
+            Assert.That(decimalValues2.Count(static v => v == 105m), Is.EqualTo(1));
+            Assert.That(decimalValues2.Count(static v => v == 2.1m), Is.EqualTo(1));
         });
 
 
