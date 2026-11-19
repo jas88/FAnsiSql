@@ -4,6 +4,7 @@ using System.Text;
 using FAnsi.Connections;
 using FAnsi.Discovery;
 using Oracle.ManagedDataAccess.Client;
+using Oracle.ManagedDataAccess.Types;
 
 namespace FAnsi.Implementations.Oracle;
 
@@ -39,6 +40,7 @@ internal sealed class OracleBulkCopy(DiscoveredTable targetTable, IManagedConnec
         PreProcessAndValidate(dt, mapping);
 
         var dateColumns = new HashSet<DataColumn>();
+        var numberColumns = new HashSet<DataColumn>();
 
         var sql = string.Format(CultureInfo.InvariantCulture, FormatInsertSql,
             TargetTable.GetFullyQualifiedName(),
@@ -55,6 +57,7 @@ internal sealed class OracleBulkCopy(DiscoveredTable targetTable, IManagedConnec
         {
             var p = _server.AddParameterWithValueToCommand(parameterNames[dataColumn]!, cmd, DBNull.Value);
             p.DbType = tt.GetDbTypeForSQLDBType(discoveredColumn.DataType!.SQLType);
+            var isFloatingPoint = dataColumn.DataType == typeof(double) || dataColumn.DataType == typeof(float);
 
             switch (p.DbType)
             {
@@ -68,6 +71,10 @@ internal sealed class OracleBulkCopy(DiscoveredTable targetTable, IManagedConnec
                 case DbType.Object:
                     // DbType.Object is used for byte[] - Oracle needs OracleDbType.Blob for array binding
                     if (dataColumn.DataType == typeof(byte[])) ((OracleParameter)p).OracleDbType = OracleDbType.Blob;
+                    break;
+                // A float or double going into a NUMBER(p,s) column, see ToNumber
+                case DbType.Decimal when isFloatingPoint && discoveredColumn.DataType.GetDecimalSize() != null:
+                    numberColumns.Add(dataColumn);
                     break;
             }
         }
@@ -87,6 +94,8 @@ internal sealed class OracleBulkCopy(DiscoveredTable targetTable, IManagedConnec
                     val = val is string s
                         ? (DateTime?)DateTimeDecider.Parse(s)
                         : Convert.ToDateTime(dataRow[col], CultureInfo.InvariantCulture);
+                else if (numberColumns.Contains(col))
+                    val = ToNumber(val);
 
                 if (col.DataType == typeof(bool) && val is bool b)
                     values[col].Add(b ? 1 : 0);
@@ -103,6 +112,46 @@ internal sealed class OracleBulkCopy(DiscoveredTable targetTable, IManagedConnec
         //send query
         affectedRows += cmd.ExecuteNonQuery();
         return affectedRows;
+    }
+
+    /// <summary>
+    ///     Returns a float or double for a NUMBER(p,s) column as the NUMBER of the shortest text that reads back as it,
+    ///     which is what bulk insert checks the value as and what MySQL is sent. ODP.NET would convert it to a NUMBER
+    ///     of 15 significant digits, which rounds the double just below 10^29, 9.999999999999997E+28, up to 10^29, too
+    ///     large for NUMBER(29,0), and 0.12499999999999999 up to 0.125.
+    /// </summary>
+    /// <remarks>
+    ///     NaN, infinity and numbers outside the range of NUMBER are left for ODP.NET to convert as before. ODP.NET
+    ///     cannot parse a number with an exponent, so the NUMBER is made from the digits of the text and the place of
+    ///     its decimal point.
+    /// </remarks>
+    internal static object ToNumber(object value)
+    {
+        var number = Convert.ToDouble(value, CultureInfo.InvariantCulture);
+        var magnitude = Math.Abs(number);
+        if (!(magnitude >= 1e-129 && magnitude < 1e125))
+            return value;
+
+        var text = value is float single
+            ? single.ToString("R", CultureInfo.InvariantCulture)
+            : number.ToString("R", CultureInfo.InvariantCulture);
+
+        var e = text.IndexOf('E', StringComparison.Ordinal);
+        var exponent = e < 0
+            ? 0
+            : int.Parse(text.AsSpan(e + 1), NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture);
+        var digits = e < 0 ? text : text[..e];
+
+        var point = digits.IndexOf('.', StringComparison.Ordinal);
+        if (point >= 0)
+        {
+            exponent -= digits.Length - point - 1;
+            digits = digits.Remove(point, 1);
+        }
+
+        // At most 17 significant digits, which a long holds
+        var mantissa = long.Parse(digits, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture);
+        return OracleDecimal.Shift(new OracleDecimal(mantissa), exponent);
     }
 
     private void ThrowIfDisposed()

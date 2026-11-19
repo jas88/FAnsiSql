@@ -146,8 +146,9 @@ internal sealed class BulkInsertDecimalLimitTests : DatabaseTests
     /// <summary>
     ///     A float or double under 10^(p-s) goes to the database even when it is too large for a decimal, which
     ///     converting it to would throw OverflowException: 1e30 into decimal(38,0), and the double and float just below
-    ///     10^29 into decimal(29,0). SqlBulkCopy converts a double to decimal itself, so it cannot write these to SQL
-    ///     Server.
+    ///     10^29 into decimal(29,0). Each DBMS stores the number of its shortest text: ODP.NET would round the double
+    ///     just below 10^29 up to 10^29 itself, too large for NUMBER(29,0). SqlBulkCopy converts a double to decimal
+    ///     itself, so it cannot write these to SQL Server.
     /// </summary>
     [TestCaseSource(nameof(UnderTheLimit))]
     public void TestBulkInsert_FloatingPointUnderTheLimit_Inserted(DatabaseType type, bool isFloat, int precision,
@@ -167,11 +168,10 @@ internal sealed class BulkInsertDecimalLimitTests : DatabaseTests
 
         Assert.That(tbl.GetRowCount(), Is.EqualTo(1));
 
-        // MySQL is sent the shortest text of the value, and PostgreSQL the whole number of that text, which is what
-        // the value is checked as. Oracle makes its own NUMBER of the double
-        if (type != DatabaseType.Oracle)
-            Assert.That(CountRowsWhere(tbl, "Score",
-                $"= {BigInteger.Parse(text, NumberStyles.Float, CultureInfo.InvariantCulture)}"), Is.EqualTo(1));
+        // MySQL is sent the shortest text of the value, PostgreSQL the whole number of that text and Oracle its
+        // NUMBER, which is what the value is checked as
+        Assert.That(CountRowsWhere(tbl, "Score",
+            $"= {BigInteger.Parse(text, NumberStyles.Float, CultureInfo.InvariantCulture)}"), Is.EqualTo(1));
     }
 
     private static IEnumerable<TestCaseData> UnderTheLimit()
