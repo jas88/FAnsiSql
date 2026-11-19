@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <PackageId>FAnsiSql.MicrosoftSql</PackageId>
+    <RootNamespace>FAnsi.Implementations.MicrosoftSQL</RootNamespace>
     <title>FAnsiSql.MicrosoftSql</title>
     <authors>Health Informatics Centre - University of Dundee</authors>
     <owners>Health Informatics Centre - University of Dundee</owners>
