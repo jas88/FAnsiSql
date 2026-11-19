@@ -66,4 +66,7 @@
     <Folder Include="Aggregation\" />
     <Folder Include="Update\" />
   </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="FAnsiTests" />
+  </ItemGroup>
 </Project>

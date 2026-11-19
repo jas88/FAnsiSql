@@ -26,6 +26,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     decimals, which also makes them `decimal` columns rather than `float` or `double` ones when `GetDataTable()` is
     called with `enforceTypesAndNullness: false`. `FLOAT(b)`, `BINARY_FLOAT` and `BINARY_DOUBLE` columns are read as
     before
+- **Bulk insert allowed values too large for some decimal columns**
+  - A value was checked against the largest value of its `decimal(p,s)` column, 10^(p-s) - 10^-s, which a C# `decimal`
+    cannot hold when the column has 28 digits before the decimal point and more than 28 in all: for `decimal(29,1)` it
+    rounded to 10^28, so 10^28, which has 29 digits before the point, was allowed. A value is now rejected when it is
+    10^(p-s) or more, ignoring its sign, and the error message gives the largest value of the column as text
+  - The precision and scale came from the `DecimalSize` of the column, which has no digits before the decimal point
+    when the scale is larger than the precision. So `numeric(3,5)` on PostgreSQL 15 or later and `NUMBER(3,5)` on
+    Oracle, which hold up to 0.00999, allowed values up to 0.99999. The precision and scale are now taken from the SQL
+    type of the column when it declares them, and from its `DecimalSize` otherwise
+  - The decimal places of values for columns with 29 or more digits before the decimal point, which were not checked
+    at all, are now checked as for other decimal columns
+  - `ColumnValidationRule` has a new constructor without `maxDecimalValue`, and new `DecimalLimit` and
+    `MaxDecimalValueText` members. The old constructor and `MaxDecimalValue` are obsolete, and `MaxDecimalValue` is 0
+    in the rules that bulk insert makes
 - **The Guesser of a column did not start out guessing the column's type**
   - TypeGuesser 2.0.x kept only the C# type of the `DatabaseTypeRequest` a `Guesser` is constructed with. Until it saw a
     value, the `Guesser` from `DiscoveredColumn.GetGuesser()` for an `nvarchar(10)` column, and the one

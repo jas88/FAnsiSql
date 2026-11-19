@@ -9,41 +9,6 @@ using TypeGuesser.Deciders;
 
 namespace FAnsi.Discovery;
 
-/// <summary>
-///     Pre-computed validation rules for a column. Avoids repeated lookups during row iteration.
-///     Used by <see cref="BulkCopy.PreProcessAndValidate" /> for single-pass data validation.
-/// </summary>
-public readonly struct ColumnValidationRule(
-    DataColumn dataColumn,
-    DiscoveredColumn discoveredColumn,
-    int ordinal,
-    bool isString,
-    int maxStringLength,
-    bool isDecimal,
-    int decimalPrecision,
-    int decimalScale,
-    decimal maxDecimalValue,
-    bool hasIntegerRange,
-    BigInteger integerMin,
-    BigInteger integerMax,
-    bool requiresNotNull)
-{
-    public readonly int Ordinal = ordinal;
-    public readonly string SourceName = dataColumn.ColumnName;
-    public readonly string DestName = discoveredColumn.GetRuntimeName();
-    public readonly string? SqlType = discoveredColumn.DataType?.SQLType;
-    public readonly bool IsString = isString;
-    public readonly int MaxStringLength = maxStringLength;
-    public readonly bool IsDecimal = isDecimal;
-    public readonly int DecimalPrecision = decimalPrecision;
-    public readonly int DecimalScale = decimalScale;
-    public readonly decimal MaxDecimalValue = maxDecimalValue;
-    public readonly bool HasIntegerRange = hasIntegerRange;
-    public readonly BigInteger IntegerMin = integerMin;
-    public readonly BigInteger IntegerMax = integerMax;
-    public readonly bool RequiresNotNull = requiresNotNull;
-}
-
 /// <inheritdoc />
 public abstract class BulkCopy : IBulkCopy
 {
@@ -309,7 +274,6 @@ public abstract class BulkCopy : IBulkCopy
 
             var maxStringLength = 0;
             int decimalPrecision = 0, decimalScale = 0;
-            decimal maxDecimalValue = 0;
             BigInteger intMin = long.MinValue, intMax = long.MaxValue;
             var hasIntRange = false;
 
@@ -321,24 +285,7 @@ public abstract class BulkCopy : IBulkCopy
             }
 
             if (isDecimal)
-            {
-                var sz = discoveredColumn.DataType?.GetDecimalSize();
-                if (sz != null)
-                {
-                    // DecimalSize properties (from TypeGuesser):
-                    // - Precision = total digits (computed as NumbersBeforeDecimalPlace + NumbersAfterDecimalPlace)
-                    // - Scale = digits after decimal (alias for NumbersAfterDecimalPlace)
-                    // SQL precision notation: decimal(precision, scale) - Precision is already the SQL-style total
-                    decimalPrecision = sz.Precision; // Already SQL-style total precision
-                    decimalScale = sz.Scale;
-                    var digitsBeforeDecimal = sz.Precision - sz.Scale;
-                    // C# decimal max is ~7.9e28, so we can only validate when digitsBeforeDecimal <= 28.
-                    // For precision 29-38, skip validation (leave maxDecimalValue at 0).
-                    // Any value that fits in C# decimal will fit in SQL decimal(29+).
-                    if (digitsBeforeDecimal is >= 0 and <= 28)
-                        maxDecimalValue = GetMaxDecimalValue(digitsBeforeDecimal, sz.Scale);
-                }
-            }
+                (decimalPrecision, decimalScale) = GetDecimalPrecisionAndScale(discoveredColumn);
 
             if (isInteger)
             {
@@ -353,7 +300,7 @@ public abstract class BulkCopy : IBulkCopy
             rules[ruleIndex++] = new ColumnValidationRule(
                 dataColumn, discoveredColumn, dataColumn.Ordinal,
                 isString, maxStringLength,
-                isDecimal, decimalPrecision, decimalScale, maxDecimalValue,
+                isDecimal, decimalPrecision, decimalScale,
                 hasIntRange, intMin, intMax,
                 validateNotNull && !discoveredColumn.AllowNulls);
         }
@@ -389,15 +336,16 @@ public abstract class BulkCopy : IBulkCopy
                     }
                 }
 
-                // Decimal validation
-                if (rule.IsDecimal && !isNull && rule.MaxDecimalValue > 0)
+                // Decimal validation, if the precision and scale of the column are known
+                if (rule.IsDecimal && !isNull && rule.DecimalPrecision > 0)
                 {
+                    // Checks the digits before the decimal point: the places after it are checked below
                     var d = Math.Abs(Convert.ToDecimal(value, CultureInfo.InvariantCulture));
-                    if (d > rule.MaxDecimalValue)
+                    if (rule.DecimalLimit is { } limit && d >= limit)
                         throw new InvalidOperationException(string.Format(CultureInfo.InvariantCulture,
                             "Value {0} in column '{1}' (row {2}) exceeds the maximum allowed for decimal({3},{4}). Maximum value is {5}.",
                             value, rule.SourceName, rowIndex + 1, rule.DecimalPrecision, rule.DecimalScale,
-                            rule.MaxDecimalValue));
+                            rule.MaxDecimalValueText));
 
                     var vs = d.ToString(CultureInfo.InvariantCulture);
                     if (vs.Contains('.', StringComparison.Ordinal))
@@ -483,22 +431,21 @@ public abstract class BulkCopy : IBulkCopy
         (Nullable.GetUnderlyingType(type) is { } underlying && IsIntegerType(underlying));
 
     /// <summary>
-    ///     Returns the largest value of a decimal column with <paramref name="digitsBeforeDecimal" /> digits before the
-    ///     decimal point and <paramref name="scale" /> after it, 10^digitsBeforeDecimal - 10^-scale (999.99 for
-    ///     decimal(5,2)).
+    ///     Returns the precision and scale of a decimal column: those that its SQL type declares, or else those of its
+    ///     <see cref="DiscoveredDataType.GetDecimalSize" />, or (0, 0) if neither gives them.
     /// </summary>
     /// <remarks>
-    ///     Computed in decimal arithmetic: .NET 11 converts a double to decimal exactly, so a computation in doubles gives
-    ///     999.98999999999999999111821580 for decimal(5,2) and rejects 999.99.
+    ///     A <see cref="DecimalSize" /> cannot have a scale larger than its precision, as in numeric(3,5) on
+    ///     PostgreSQL 15 or later and NUMBER(3,5) on Oracle: it has no digits before the decimal point and 5 after it,
+    ///     which makes 0.99999 rather than 0.00999 the largest value. A negative scale is not taken from the SQL type,
+    ///     and gives no DecimalSize either.
     /// </remarks>
-    /// <param name="digitsBeforeDecimal">Digits before the decimal point, from 0 to 28</param>
-    /// <param name="scale">Digits after the decimal point; C# decimal holds at most 28</param>
-    private static decimal GetMaxDecimalValue(int digitsBeforeDecimal, int scale)
+    private static (int Precision, int Scale) GetDecimalPrecisionAndScale(DiscoveredColumn column)
     {
-        var limit = 1m;
-        for (var i = 0; i < digitsBeforeDecimal; i++)
-            limit *= 10;
+        if (DecimalColumnRange.TryGetPrecisionAndScale(column.DataType?.SQLType, out var precision, out var scale))
+            return (precision, scale);
 
-        return limit - new decimal(1, 0, 0, false, (byte)Math.Clamp(scale, 0, 28));
+        var size = column.DataType?.GetDecimalSize();
+        return size == null ? (0, 0) : (size.Precision, size.Scale);
     }
 }
