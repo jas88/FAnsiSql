@@ -397,9 +397,9 @@ internal sealed class CreateTableTests : DatabaseTests
             new DatabaseColumnRequest("AsciiCol", new DatabaseTypeRequest(typeof(string), 10))
         ]);
 
-        Assert.That(typeDictionary, Is.Not.Null);
-        var unicode = typeDictionary!["UnicodeCol"].Guess;
-        var ascii = typeDictionary["AsciiCol"].Guess;
+        var guessers = typeDictionary ?? throw new AssertionException("CreateTable gave no Guessers");
+        var unicode = guessers["UnicodeCol"].Guess;
+        var ascii = guessers["AsciiCol"].Guess;
 
         Assert.Multiple(() =>
         {
