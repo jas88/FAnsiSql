@@ -721,10 +721,7 @@ internal sealed class BulkInsertTest : DatabaseTests
     [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void TestBulkInsert_SchemaTooNarrow_StringError(DatabaseType type)
     {
-        // SQLite doesn't enforce string length constraints
-        if (type == DatabaseType.Sqlite)
-            Assert.Ignore("SQLite does not enforce string length constraints");
-
+        // SQLite does not enforce the width of a column, but bulk insert checks string widths before inserting anything
         var db = GetTestDatabase(type);
 
         var tbl = db.CreateTable("MyBulkInsertTest",
