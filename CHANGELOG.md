@@ -55,6 +55,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - It is now `datetime('now', 'localtime')`, the local date and time to the second of the machine the application runs
     on, as SQLite runs in the application. `GetSQLFunctionsDictionary` now gives the same for `getdate` and `now`, for
     which it gave `datetime('now')`, the time in UTC
+- **PostgreSQL: `time` columns could not be read and `date` columns could not be used at all**
+  - Since 3.6.1 (Npgsql 10), which reads a `time` as a `TimeOnly`, `GetDataTable` of any table with a `time` column failed
+    with "Unable to cast object of type 'System.TimeOnly' to type 'System.TimeSpan'"
+  - `date` had no C# type, so `GetDataTable`, `Insert`, bulk insert and `DataType.GetCSharpDataType()` of a `date` column
+    failed with "No CSharp type mapping exists for SQL type 'date'"
+  - A `date` is now a `DateTime` and a `time` a `TimeSpan`, the types SQL Server and MySQL give them. The `DbDataAdapter`
+    from `GetDataAdapter`, which `GetDataTable` reads with, converts the `DateOnly` and `TimeOnly` values Npgsql reads, so a
+    `DataTable` read from PostgreSQL has the same column types as one read from another DBMS
+  - `Insert` and bulk insert store the date of a `DateTime` as given whatever its `DateTimeKind`, as the other DBMS do. A
+    `DateOnly` can be inserted into a `date` and a `TimeSpan` or `TimeOnly` into a `time` either way
+  - `time` is recognised however it is written (`time`, `time(3)`, `timetz`), not only as information_schema names it
+- **PostgreSQL: `time with time zone` and `interval` columns**
+  - A `time with time zone` is read as the `TimeSpan` of its time of day, without the offset (Npgsql reads a
+    `DateTimeOffset`). Bulk insert into one failed with "insufficient data left in message", it now gives each time the
+    offset of the time zone of the session, as `Insert` does
+  - An `interval` was taken to be an `int` because its name starts with "int". It is now a `TimeSpan` that can be a day or
+    more, or negative, and both `Insert` and bulk insert write it as an `interval`
 - **Decimal values on .NET 11**
   - .NET 11 converts a `double` to a `decimal` exactly, so 9.99 becomes 9.990000000000000213162820728, where earlier
     versions of .NET rounded to 15 significant digits
@@ -134,6 +151,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - SQLite still stores them as 1 and 0 and as ISO 8601 text (`2007-01-01 13:11:00`, `13:11:00`)
   - Columns created by earlier versions keep their types and are still discovered as integers and strings, so a string
     bulk inserted into one of their date columns is now stored as given; a `DateTime` is still stored as ISO 8601 text
+- PostgreSQL: the `DbDataAdapter` that `GetDataAdapter` returns is no longer an `NpgsqlDataAdapter`, which is sealed. It
+  reads `date` columns as `DateTime` and `time` columns as `TimeSpan` instead of the `DateOnly` and `TimeOnly` Npgsql 10
+  reads. A `DbDataReader` from `ExecuteReader` still gives the values as Npgsql reads them
 
 ### Removed
 - **Reflection-based provider loading in the `DiscoveredServer` static constructor, which never loaded anything**

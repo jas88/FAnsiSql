@@ -8,6 +8,13 @@ using NpgsqlTypes;
 
 namespace FAnsi.Implementations.PostgreSql;
 
+/// <summary>
+///     Translates between C# types and PostgreSQL types.  A 'date' is a <see cref="DateTime" />, as are the 'timestamp'
+///     types, and a 'time', 'time with time zone' or 'interval' is a <see cref="TimeSpan" />.  These are the C# types the
+///     other DBMS give their dates and times, so code that works with more than one DBMS gets the same types from all of
+///     them (Npgsql itself reads a 'date' as a <see cref="DateOnly" /> and a 'time' as a <see cref="TimeOnly" />, see
+///     <see cref="PostgreSqlDataReader" />).
+/// </summary>
 public sealed partial class PostgreSqlTypeTranslater : TypeTranslater
 {
     public static readonly PostgreSqlTypeTranslater Instance = new();
@@ -70,12 +77,16 @@ public sealed partial class PostgreSqlTypeTranslater : TypeTranslater
             ["character varying"] = NpgsqlDbType.Varchar,
             ["text"] = NpgsqlDbType.Text,
             ["timestamp without time zone"] = NpgsqlDbType.Timestamp,
-            ["timestamp with time zone"] = NpgsqlDbType.TimestampTz
+            ["timestamp with time zone"] = NpgsqlDbType.TimestampTz,
+            ["date"] = NpgsqlDbType.Date,
+            ["time without time zone"] = NpgsqlDbType.Time,
+            ["time with time zone"] = NpgsqlDbType.TimeTz,
+            ["interval"] = NpgsqlDbType.Interval
         }.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
 
     private PostgreSqlTypeTranslater() : base(DateRegexImpl(), 8000, 4000)
     {
-        TimeRegex = TimeRegexImpl(); //space is important
+        TimeRegex = TimeRegexImpl();
     }
 
     public override string GetStringDataTypeWithUnlimitedWidth() => "text";
@@ -114,10 +125,19 @@ public sealed partial class PostgreSqlTypeTranslater : TypeTranslater
     /// <inheritdoc />
     /// <remarks>
     ///     Npgsql sends <see cref="DbType.DateTime" /> as 'timestamp with time zone' and only accepts UTC values for it.  The
-    ///     'timestamp' (without time zone) columns that FAnsi creates for dates need <see cref="DbType.DateTime2" />.
+    ///     'timestamp' (without time zone) columns that FAnsi creates for dates need <see cref="DbType.DateTime2" /> and a
+    ///     'date' needs <see cref="DbType.Date" />.  An 'interval' is not limited to a day as a 'time'
+    ///     (<see cref="DbType.Time" />) is, so it gets <see cref="DbType.Object" />, with which Npgsql sends a
+    ///     <see cref="TimeSpan" /> as the 'interval' it maps one to.
     /// </remarks>
     public override DbType GetDbTypeForSQLDBType(string sqlType)
     {
+        if (IsDateWithoutTime(sqlType))
+            return DbType.Date;
+
+        if (IsInterval(sqlType))
+            return DbType.Object;
+
         var dbType = base.GetDbTypeForSQLDBType(sqlType);
 
         return dbType == DbType.DateTime && !IsTimestampWithTimeZone(sqlType) ? DbType.DateTime2 : dbType;
@@ -130,11 +150,23 @@ public sealed partial class PostgreSqlTypeTranslater : TypeTranslater
     ///     one, so the Kind is removed).
     /// </summary>
     /// <remarks>
-    ///     What is stored for each <see cref="DateTimeKind" /> is decided here and in <see cref="ToTimestampTz" /> and
-    ///     nowhere else, so that it does not depend on how the value is inserted.
+    ///     What is stored for each <see cref="DateTimeKind" /> is decided here, in <see cref="ToTimestampTz" /> and in
+    ///     <see cref="ToDate" /> and nowhere else, so that it does not depend on how the value is inserted.
     /// </remarks>
     internal static DateTime ToTimestamp(DateTime dateTime) =>
         DateTime.SpecifyKind(dateTime, DateTimeKind.Unspecified);
+
+    /// <summary>
+    ///     Returns <paramref name="dateTime" /> as Npgsql is given it for a 'date' column (<see cref="NpgsqlDbType.Date" />).
+    ///     A 'date' has no time of day and no time zone.  It stores the date exactly as given whatever the
+    ///     <see cref="DateTimeKind" />, as the other DBMS do: the time of day is dropped and a Local or Utc value is not
+    ///     first converted to another time zone.
+    /// </summary>
+    /// <remarks>
+    ///     What is stored for each <see cref="DateTimeKind" /> is decided here, in <see cref="ToTimestamp" /> and in
+    ///     <see cref="ToTimestampTz" /> and nowhere else, so that it does not depend on how the value is inserted.
+    /// </remarks>
+    internal static DateOnly ToDate(DateTime dateTime) => DateOnly.FromDateTime(dateTime);
 
     /// <summary>
     ///     Returns <paramref name="dateTime" /> as Npgsql must be given it for a 'timestamp with time zone' column
@@ -144,8 +176,8 @@ public sealed partial class PostgreSqlTypeTranslater : TypeTranslater
     ///     been put in a DataTable, so data read from one table is stored unchanged in another.
     /// </summary>
     /// <remarks>
-    ///     What is stored for each <see cref="DateTimeKind" /> is decided here and in <see cref="ToTimestamp" /> and
-    ///     nowhere else, so that it does not depend on how the value is inserted.
+    ///     What is stored for each <see cref="DateTimeKind" /> is decided here, in <see cref="ToTimestamp" /> and in
+    ///     <see cref="ToDate" /> and nowhere else, so that it does not depend on how the value is inserted.
     /// </remarks>
     internal static DateTime ToTimestampTz(DateTime dateTime) =>
         dateTime.Kind == DateTimeKind.Local
@@ -156,12 +188,36 @@ public sealed partial class PostgreSqlTypeTranslater : TypeTranslater
         sqlType.Contains("with time zone", StringComparison.OrdinalIgnoreCase) ||
         sqlType.Contains("timestamptz", StringComparison.OrdinalIgnoreCase);
 
+    private static bool IsDateWithoutTime(string sqlType) => DateWithoutTimeRegexImpl().IsMatch(sqlType);
+
+    private static bool IsInterval(string sqlType) =>
+        sqlType.StartsWith("interval", StringComparison.OrdinalIgnoreCase);
+
+    /// <inheritdoc />
+    /// <remarks>An 'interval' is not an 'int', although its name starts like one</remarks>
+    protected override bool IsInt(string sqlType) => !IsInterval(sqlType) && base.IsInt(sqlType);
+
     protected override bool IsByteArray(string sqlType) =>
         sqlType?.StartsWith("bytea", StringComparison.OrdinalIgnoreCase) ?? false;
 
-    [GeneratedRegex("timestamp", RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]
+    /// <summary>
+    ///     A 'date' (but not a 'daterange') or any 'timestamp' e.g. 'timestamp(3) with time zone' or 'timestamptz'
+    /// </summary>
+    [GeneratedRegex(@"^date\b|timestamp",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]
     private static partial Regex DateRegexImpl();
 
-    [GeneratedRegex("^time ", RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]
+    /// <summary>
+    ///     A 'date' (but not a 'daterange')
+    /// </summary>
+    [GeneratedRegex(@"^date\b", RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]
+    private static partial Regex DateWithoutTimeRegexImpl();
+
+    /// <summary>
+    ///     Any 'time' (but not a 'timestamp') e.g. 'time', 'time(3)', 'time without time zone', 'time with time zone' or
+    ///     'timetz', or an 'interval'
+    /// </summary>
+    [GeneratedRegex("^(time(?!stamp)|interval)",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]
     private static partial Regex TimeRegexImpl();
 }

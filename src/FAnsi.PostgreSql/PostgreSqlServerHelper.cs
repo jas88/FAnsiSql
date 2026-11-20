@@ -84,7 +84,12 @@ public sealed class PostgreSqlServerHelper : DiscoveredServerHelper
         new NpgsqlCommand(s, (NpgsqlConnection)
             con, (NpgsqlTransaction?)transaction);
 
-    public override DbDataAdapter GetDataAdapter(DbCommand cmd) => new NpgsqlDataAdapter((NpgsqlCommand)cmd);
+    /// <inheritdoc />
+    /// <remarks>
+    ///     The adapter reads dates and times with the C# types the other DBMS give them, see
+    ///     <see cref="PostgreSqlDataReader" />
+    /// </remarks>
+    public override DbDataAdapter GetDataAdapter(DbCommand cmd) => new PostgreSqlDataAdapter((NpgsqlCommand)cmd);
 
     public override DbCommandBuilder GetCommandBuilder(DbCommand cmd) =>
         new NpgsqlCommandBuilder(new NpgsqlDataAdapter((NpgsqlCommand)cmd));

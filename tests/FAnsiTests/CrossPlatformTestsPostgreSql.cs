@@ -5,14 +5,6 @@ namespace FAnsiTests;
 
 internal sealed class CrossPlatformTestsPostgreSql : CrossPlatformTestsBase
 {
-    /// <summary>
-    ///     Npgsql 10 reads a <c>time</c> column as <see cref="TimeOnly" /> but GetDataTable types the DataColumn as
-    ///     <see cref="TimeSpan" />, so filling it fails with "Unable to cast object of type 'System.TimeOnly' to type
-    ///     'System.TimeSpan'"
-    /// </summary>
-    private const string TimeColumnsCannotBeRead =
-        "FAnsi bug: GetDataTable fails on a PostgreSQL time column, Npgsql 10 reads it as TimeOnly but the DataColumn is TimeSpan";
-
     protected override DatabaseType DatabaseType => DatabaseType.PostgreSql;
 
     [Test]
@@ -33,12 +25,10 @@ internal sealed class CrossPlatformTestsPostgreSql : CrossPlatformTestsBase
 
     [TestCase("00:00:00")]
     [TestCase("00:00")]
-    [Ignore(TimeColumnsCannotBeRead)]
     public new void DateColumnTests_TimeOnly_Midnight(object input) => base.DateColumnTests_TimeOnly_Midnight(input);
 
     [TestCase("13:11:10")]
     [TestCase("13:11")]
-    [Ignore(TimeColumnsCannotBeRead)]
     public new void DateColumnTests_TimeOnly_Afternoon(object input) => base.DateColumnTests_TimeOnly_Afternoon(input);
 
     [TestCase("int", "-23.00")]
