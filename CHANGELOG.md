@@ -88,6 +88,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     for the rest of the process
   - A DBMS now gets its entry when its first keyword is added, so implementations can be loaded one at a time, in any
     order
+- **Connection string keywords added from two threads at once could be mixed up**
+  - `ConnectionStringKeywordAccumulator.AddOrUpdateKeyword`, which `AddConnectionStringKeyword` calls, finds out whether
+    a keyword is an alias of one already added with a connection string builder that two calls at once both changed.
+    One call could then take its keyword for an alias of the one the other call was adding, so that keyword got the
+    value of the first, and the first keyword was lost
+  - Keywords are now added one at a time. `EnforceOptions`, which applies them to each connection string built, does
+    not wait for that: it applies the keywords as they were when it started
 - **Decimal values on .NET 11**
   - .NET 11 converts a `double` to a `decimal` exactly, so 9.99 becomes 9.990000000000000213162820728, where earlier
     versions of .NET rounded to 15 significant digits

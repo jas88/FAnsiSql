@@ -1,4 +1,5 @@
 using System.Data.Common;
+using System.Diagnostics.CodeAnalysis;
 using FAnsi;
 using FAnsi.Discovery;
 using FAnsi.Discovery.ConnectionStringDefaults;
@@ -14,6 +15,9 @@ namespace FAnsiTests.Server;
 
 public sealed class ConnectionStringKeywordAccumulatorTests
 {
+    /// <summary>How long a test waits for another thread before it gives up</summary>
+    private static readonly TimeSpan WaitLimit = TimeSpan.FromSeconds(30);
+
     private readonly Dictionary<DatabaseType, IDiscoveredServerHelper> _helpers = new()
     {
         { DatabaseType.MicrosoftSQLServer, MicrosoftSQLServerHelper.Instance },
@@ -151,5 +155,89 @@ public sealed class ConnectionStringKeywordAccumulatorTests
             Assert.That(ex?.Message, Does.Contain("FLIBBLE"),
                 "Exception message should contain the invalid keyword name");
         });
+    }
+
+    /// <summary>
+    ///     Adding a keyword checks whether it is an alias of one already added, with the one connection string builder of
+    ///     the accumulator, so a keyword added from another thread at the same time has to wait.  The test holds Alpha
+    ///     part way through that check, once it is in the builder, and adds Beta meanwhile.  When Beta did not wait, it
+    ///     cleared the builder and put itself there, so Alpha was taken for an alias of Beta: Beta got Alpha's value and
+    ///     Alpha was lost.
+    /// </summary>
+    [Test]
+    public void TestKeywords_AddedFromTwoThreadsAtOnce_BothKept()
+    {
+        var builder = new PausingConnectionStringBuilder("Alpha");
+        var acc = new ConnectionStringKeywordAccumulator(DatabaseType.MicrosoftSQLServer, builder);
+        var testThread = Thread.CurrentThread;
+
+        var first = Task.Run(() => acc.AddOrUpdateKeyword("Alpha", "1", ConnectionStringKeywordPriority.ApiRule));
+        try
+        {
+            Assert.That(builder.Paused.Task.Wait(WaitLimit), "Adding Alpha never reached the connection string builder");
+
+            // lets Alpha go on once this thread waits for it, as it should, to add Beta
+            var release = Task.Run(() =>
+            {
+                SpinWait.SpinUntil(
+                    () => builder.Release.Task.IsCompleted ||
+                          (testThread.ThreadState & ThreadState.WaitSleepJoin) != 0, WaitLimit);
+                builder.Release.TrySetResult();
+            });
+
+            acc.AddOrUpdateKeyword("Beta", "2", ConnectionStringKeywordPriority.ApiRule);
+            builder.Release.TrySetResult();
+            release.Wait();
+        }
+        finally
+        {
+            builder.Release.TrySetResult();
+            first.Wait();
+        }
+
+        Assert.That(GetEnforcedKeywords(acc), Is.EqualTo("Alpha=1;Beta=2"));
+    }
+
+    /// <summary>
+    ///     Returns the keywords that <paramref name="acc" /> enforces as keyword=value pairs in alphabetical order
+    /// </summary>
+    private static string GetEnforcedKeywords(ConnectionStringKeywordAccumulator acc)
+    {
+        var enforced = new DbConnectionStringBuilder();
+        acc.EnforceOptions(enforced);
+
+        return string.Join(';',
+            enforced.Keys.Cast<string>().Order(StringComparer.OrdinalIgnoreCase).Select(k => $"{k}={enforced[k]}"));
+    }
+
+    /// <summary>
+    ///     Holds the first thread that sets <paramref name="pauseOn" /> until <see cref="Release" /> is set, so that a
+    ///     test can do something else while a keyword is being added
+    /// </summary>
+    private sealed class PausingConnectionStringBuilder(string pauseOn) : DbConnectionStringBuilder
+    {
+        private int _pauses;
+
+        /// <summary>Set once a thread is held</summary>
+        public TaskCompletionSource Paused { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        /// <summary>Set to let the thread go on</summary>
+        public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        [AllowNull]
+        public override object this[string keyword]
+        {
+            get => base[keyword];
+            set
+            {
+                base[keyword] = value;
+
+                if (keyword != pauseOn || Interlocked.Increment(ref _pauses) != 1)
+                    return;
+
+                Paused.SetResult();
+                Release.Task.Wait(WaitLimit);
+            }
+        }
     }
 }
