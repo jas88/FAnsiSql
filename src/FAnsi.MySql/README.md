@@ -1,7 +1,8 @@
 # MySql FAnsi Implementation
 
-Works with MySQL 8.0 or later and with MariaDB, both through `DatabaseType.MySql`. CI tests it against MySQL 8
-and MariaDB 12.3 (LTS).
+Works with MySQL and MariaDB, both through `DatabaseType.MySql`. Calendar aggregates use recursive CTEs, so they need
+MySQL 8.0 or later, or MariaDB 10.2 or later. CI tests MySQL 8.0 and MariaDB 12.3 (LTS); older versions are not
+tested.
 
 # Feature Completeness
 
