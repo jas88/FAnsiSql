@@ -252,7 +252,7 @@ internal abstract class TableHelperMetadataTestsBase : DatabaseTests
             DiscoveredColumn Column(string name)
             {
                 return columns.FirstOrDefault(c =>
-                           c.GetRuntimeName()?.Equals(name, StringComparison.OrdinalIgnoreCase) == true) ??
+                           string.Equals(c.GetRuntimeName(), name, StringComparison.OrdinalIgnoreCase)) ??
                        throw new AssertionException($"Column {name} was not discovered");
             }
 
