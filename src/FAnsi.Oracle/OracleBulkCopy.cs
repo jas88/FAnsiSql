@@ -59,7 +59,7 @@ internal sealed class OracleBulkCopy(DiscoveredTable targetTable, IManagedConnec
             var dataType = discoveredColumn.DataType ??
                            throw new InvalidOperationException(
                                $"Column {discoveredColumn.GetFullyQualifiedName()} has no data type");
-            var p = _server.AddParameterWithValueToCommand(parameterNames[dataColumn]!, cmd, DBNull.Value);
+            var p = _server.AddParameterWithValueToCommand(parameterNames[dataColumn], cmd, DBNull.Value);
             p.DbType = tt.GetDbTypeForSQLDBType(dataType.SQLType);
             var isFloatingPoint = dataColumn.DataType == typeof(double) || dataColumn.DataType == typeof(float);
 
@@ -109,7 +109,7 @@ internal sealed class OracleBulkCopy(DiscoveredTable targetTable, IManagedConnec
 
         foreach (var col in mapping.Keys)
         {
-            var param = cmd.Parameters[parameterNames[col]!];
+            var param = cmd.Parameters[parameterNames[col]];
             param.Value = values[col].ToArray();
         }
 
