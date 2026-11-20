@@ -13,6 +13,10 @@ internal sealed class PivotAggregationTests_MicrosoftSql : PivotAggregationTests
     [Test]
     public void Test_Pivot_SameConnectionAfterFailedPivot() => Test_Pivot_SameConnectionAfterFailedPivot(DbType);
 
+    [TestCase(false)]
+    [TestCase(true)]
+    public void Test_Pivot_OnlyNullOrEmptyValues(bool withAxis) => Test_Pivot_OnlyNullOrEmptyValues(DbType, withAxis);
+
     /// <summary>
     ///     QUOTENAME quotes any name of up to 128 characters: a longer value is cut to 128 characters, and gets its
     ///     position as a suffix if an earlier column has that name

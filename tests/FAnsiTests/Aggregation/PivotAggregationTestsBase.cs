@@ -4,6 +4,7 @@ using System.Globalization;
 using FAnsi;
 using FAnsi.Discovery;
 using FAnsi.Discovery.QuerySyntax;
+using FAnsi.Discovery.QuerySyntax.Aggregation;
 using NUnit.Framework;
 using TypeGuesser;
 
@@ -210,6 +211,67 @@ internal abstract class PivotAggregationTestsBase : AggregationTests
     }
 
     /// <summary>
+    ///     A pivot whose values are all null or empty has no pivot columns: only the column of its rows, with a row for
+    ///     each value of that column, or with a calendar axis the joinDt column, with a row for each date of the axis
+    /// </summary>
+    /// <param name="type">The DBMS to pivot on</param>
+    /// <param name="withAxis">True to pivot on a calendar axis of the years 2001 to 2010, false for a row for each Grp</param>
+    protected void Test_Pivot_OnlyNullOrEmptyValues(DatabaseType type, bool withAxis)
+    {
+        using var dt = new DataTable();
+        dt.Columns.Add("Grp");
+        dt.Columns.Add("Val");
+        dt.Columns.Add("EventDate");
+        dt.Rows.Add("a", DBNull.Value, "2001-01-01");
+        dt.Rows.Add("a", "", "2002-01-01");
+        dt.Rows.Add("b", DBNull.Value, "2002-01-01");
+
+        var db = GetTestTable(type).Database;
+        DropIfExists(db, "PivotNoValues");
+        var tbl = db.CreateTable("PivotNoValues", dt,
+            [new DatabaseColumnRequest("Val", new DatabaseTypeRequest(typeof(string), 10))]);
+
+        try
+        {
+            var aggregateHelper = tbl.GetQuerySyntaxHelper().AggregateHelper;
+            var sql = withAxis
+                ? aggregateHelper.BuildAggregate(GetAxisPivotLines(tbl), new QueryAxis
+                {
+                    StartDate = "'2001-01-01'",
+                    EndDate = "'2010-01-01'",
+                    AxisIncrement = AxisIncrement.Year
+                })
+                : aggregateHelper.BuildAggregate(GetPivotLines(tbl, "count(*)", "Grp", "Grp", "Val", "Val"), null);
+
+            var svr = tbl.Database.Server;
+            using var con = svr.GetConnection();
+            con.Open();
+            using var pivot = Fill(svr, con, sql);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(pivot.Columns, Has.Count.EqualTo(1));
+                Assert.That(pivot.Columns[0].ColumnName, Is.EqualTo(withAxis ? "joinDt" : "Grp").IgnoreCase);
+                if (withAxis)
+                    Assert.That(
+                        pivot.Rows.Cast<DataRow>().Select(static r => Convert.ToInt32(r[0], CultureInfo.InvariantCulture)),
+                        Is.EqualTo(Enumerable.Range(2001, 10)));
+                else
+                    Assert.That(pivot.Rows.Cast<DataRow>().Select(static r => r[0]), Is.EqualTo(NoValuesGroups));
+            });
+        }
+        finally
+        {
+            tbl.Drop();
+        }
+    }
+
+    /// <summary>
+    ///     The values of Grp in the table of <see cref="Test_Pivot_OnlyNullOrEmptyValues" />
+    /// </summary>
+    private static readonly string[] NoValuesGroups = ["a", "b"];
+
+    /// <summary>
     ///     The pivot values of <see cref="Test_Pivot_ColumnNamesAreValidAndUnique" /> and the number of records of each, all
     ///     different so that the order of the columns does not depend on the collation: values made only of double quotes,
     ///     two that differ only by a double quote, one with the characters that quote names on SQL Server and MySQL and
@@ -255,6 +317,30 @@ internal abstract class PivotAggregationTestsBase : AggregationTests
             new CustomLine("GROUP BY", QueryComponent.GroupBy),
             new CustomLine($"{row},", QueryComponent.GroupBy),
             new CustomLine(pivot, QueryComponent.GroupBy) { Role = CustomLineRole.Pivot }
+        ];
+    }
+
+    /// <summary>
+    ///     The lines of a pivot of the number of records for each Val, in a row for each date of a calendar axis on
+    ///     EventDate
+    /// </summary>
+    private static List<CustomLine> GetAxisPivotLines(DiscoveredTable tbl)
+    {
+        var syntax = tbl.GetQuerySyntaxHelper();
+        var eventDate = syntax.EnsureWrapped("EventDate");
+        var val = syntax.EnsureWrapped("Val");
+
+        return
+        [
+            new CustomLine("SELECT", QueryComponent.SELECT),
+            new CustomLine("count(*) as MyCount,", QueryComponent.QueryTimeColumn)
+                { Role = CustomLineRole.CountFunction },
+            new CustomLine($"{eventDate},", QueryComponent.QueryTimeColumn) { Role = CustomLineRole.Axis },
+            new CustomLine(val, QueryComponent.QueryTimeColumn) { Role = CustomLineRole.Pivot },
+            new CustomLine($"FROM {tbl.GetFullyQualifiedName()}", QueryComponent.FROM),
+            new CustomLine("GROUP BY", QueryComponent.GroupBy),
+            new CustomLine($"{eventDate},", QueryComponent.GroupBy) { Role = CustomLineRole.Axis },
+            new CustomLine(val, QueryComponent.GroupBy) { Role = CustomLineRole.Pivot }
         ];
     }
 

@@ -13,6 +13,10 @@ internal sealed class PivotAggregationTests_MySql : PivotAggregationTestsBase
     [Test]
     public void Test_Pivot_SameConnectionAfterFailedPivot() => Test_Pivot_SameConnectionAfterFailedPivot(DbType);
 
+    [TestCase(false)]
+    [TestCase(true)]
+    public void Test_Pivot_OnlyNullOrEmptyValues(bool withAxis) => Test_Pivot_OnlyNullOrEmptyValues(DbType, withAxis);
+
     /// <summary>
     ///     A backtick in a name is doubled: a value longer than a MySQL column name is cut to 64 characters, and gets its
     ///     position as a suffix if an earlier column has that name

@@ -13,6 +13,10 @@ internal sealed class PivotAggregationTests_PostgreSql : PivotAggregationTestsBa
     [Test]
     public void Test_Pivot_SameConnectionAfterFailedPivot() => Test_Pivot_SameConnectionAfterFailedPivot(DbType);
 
+    [TestCase(false)]
+    [TestCase(true)]
+    public void Test_Pivot_OnlyNullOrEmptyValues(bool withAxis) => Test_Pivot_OnlyNullOrEmptyValues(DbType, withAxis);
+
     /// <summary>
     ///     A name can hold a double quote, but is cut to 63 bytes (max_identifier_length): a value cut to the name of an
     ///     earlier column gets its position as a suffix

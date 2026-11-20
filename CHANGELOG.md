@@ -83,6 +83,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     has no loop outside stored programs, so the second suffix (`_3_2`) is tried only once
   - In a pivot with a calendar axis, the columns of the derived table are named after their position, as MySQL compares
     column names there ignoring case, and get their names in the outer `SELECT`
+  - A pivot whose values were all null or empty failed in `PREPARE`, as `GROUP_CONCAT` of no rows is NULL. Like a pivot
+    on the other DBMS, it now has only its row column, with a row for each of its values, or with a calendar axis only
+    `joinDt`, with a row for each date. The row column is written as its SQL and its alias, so its line no longer has to
+    come before the pivot column's or have an alias
 - **Decimal values on .NET 11**
   - .NET 11 converts a `double` to a `decimal` exactly, so 9.99 becomes 9.990000000000000213162820728, where earlier
     versions of .NET rounded to 15 significant digits

@@ -13,6 +13,10 @@ internal sealed class PivotAggregationTests_Oracle : PivotAggregationTestsBase
     [Test]
     public void Test_Pivot_SameConnectionAfterFailedPivot() => Test_Pivot_SameConnectionAfterFailedPivot(DbType);
 
+    [TestCase(false)]
+    [TestCase(true)]
+    public void Test_Pivot_OnlyNullOrEmptyValues(bool withAxis) => Test_Pivot_OnlyNullOrEmptyValues(DbType, withAxis);
+
     /// <summary>
     ///     A name cannot hold a double quote: a value made only of them gets its position as its name, and one that
     ///     loses its double quote or is cut to 128 bytes gets its position as a suffix if an earlier column has its name

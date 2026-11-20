@@ -144,16 +144,13 @@ public sealed class MySqlAggregateHelper : AggregateHelper
                                                            CONCAT(
                                                            '{2}
                                                            SELECT
-                                                           {3} as joinDt,',@columnsSelectFromDataset,'
+                                                           {3} as joinDt',@columnsSelectFromDataset,'
                                                            FROM
                                                            dateAxis
                                                            LEFT JOIN
                                                            (
                                                                {4}
-                                                               {5} AS joinDt,
-                                                           '
-                                                               ,@columnsSelectCases,
-                                                           '
+                                                               {5} AS joinDt',@columnsSelectCases,'
                                                            {6}
                                                            group by
                                                            {5}
@@ -188,7 +185,11 @@ public sealed class MySqlAggregateHelper : AggregateHelper
     {
         var part1 = GetPivotPart1(query, false);
 
-        var joinAlias = nonPivotColumn.GetAliasFromText(query.SyntaxHelper);
+        // The row column without the comma that ends its line, as the pivot columns bring their own
+        var syntaxHelper = query.SyntaxHelper;
+        var rowSql = nonPivotColumn.GetTextWithoutAlias(syntaxHelper);
+        var rowAlias = syntaxHelper.EnsureWrapped(nonPivotColumn.GetAliasFromText(syntaxHelper) ??
+                                                  syntaxHelper.GetRuntimeName(rowSql));
 
         return string.Format(CultureInfo.InvariantCulture, """
 
@@ -217,13 +218,13 @@ public sealed class MySqlAggregateHelper : AggregateHelper
                                                            """,
             string.Join(Environment.NewLine, query.Lines.Where(static l => l.LocationToInsert < QueryComponent.SELECT)),
             part1,
-            nonPivotColumn,
+            syntaxHelper.Escape($"{rowSql} AS {rowAlias}"),
 
             //everything inclusive of FROM but stopping before GROUP BY
             query.SyntaxHelper.Escape(string.Join(Environment.NewLine,
                 query.Lines.Where(static c =>
                     c.LocationToInsert is >= QueryComponent.FROM and < QueryComponent.GroupBy))),
-            joinAlias,
+            syntaxHelper.Escape(rowAlias),
 
             //any HAVING SQL
             query.SyntaxHelper.Escape(string.Join(Environment.NewLine,
@@ -247,6 +248,12 @@ public sealed class MySqlAggregateHelper : AggregateHelper
     ///         its position among the pivot columns as a suffix (e.g. _3, then _3_2 should that be taken too).  MySQL has
     ///         no loop outside stored programs, so the second suffix is tried once: names can only repeat when values are
     ///         written like other columns' names and suffixes, which MySQL allows in a SELECT list.
+    ///     </para>
+    ///     <para>
+    ///         Each column list (@columnsSelectCases, @columnsSelectFromDataset) starts with the comma that separates it
+    ///         from the column before it, and is empty when no value gets a column, so that the pivot then has only its
+    ///         row (or axis) column, as on the other DBMS.  (GROUP_CONCAT of no rows is NULL, which would make the whole
+    ///         statement NULL.)
     ///     </para>
     /// </summary>
     /// <param name="query">The pivot</param>
@@ -341,15 +348,16 @@ public sealed class MySqlAggregateHelper : AggregateHelper
                                                                CASE WHEN EXISTS (SELECT 1 FROM pivotFirstNames e WHERE e.rn < f.rn AND CAST(e.name AS BINARY) = CAST(f.name AS BINARY)) THEN {10} ELSE name END AS name
                                                                FROM pivotFirstNames f
                                                            )
+                                                           /* Each list starts with a comma, and is '' rather than NULL (GROUP_CONCAT of no rows) if no value gets a column */
                                                            SELECT
-                                                             GROUP_CONCAT(
+                                                             COALESCE(CONCAT(', ', GROUP_CONCAT(
                                                                CONCAT(
                                                                  '{0}(CASE WHEN {1} = ', QUOTE(piv), ' COLLATE utf8mb4_bin THEN {2} ELSE NULL END) AS ', {11}
                                                                ) ORDER BY rn
-                                                             ),
-                                                             GROUP_CONCAT(
+                                                             )), ''),
+                                                             COALESCE(CONCAT(', ', GROUP_CONCAT(
                                                                CONCAT('dataset.fansi_pivot_', rn, ' AS `', REPLACE(CONVERT(name USING utf8mb4) COLLATE utf8mb4_bin, '`', '``'), '`') ORDER BY rn
-                                                             )
+                                                             )), '')
                                                            INTO @columnsSelectCases, @columnsSelectFromDataset
                                                            FROM pivotNames;
 
