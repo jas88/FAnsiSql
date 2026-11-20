@@ -118,6 +118,31 @@ internal sealed class PivotColumnNameSqlTests
     }
 
     /// <summary>
+    ///     MySQL doubles a backtick in a name, cuts it to 64 characters and gives a value left with no name, or with the
+    ///     name of an earlier column, a suffix.  GROUP_CONCAT, which builds the columns, would stop at 1024 bytes.
+    /// </summary>
+    [Test]
+    public void MySql_EachValueGetsAColumnWithAValidNameOfItsOwn()
+    {
+        var sql = BuildPivot(DatabaseType.MySql);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(sql, Does.Contain("SET SESSION group_concat_max_len = 1073741824;"));
+            Assert.That(sql, Does.Contain("CONCAT('`', REPLACE(CONVERT(name USING utf8mb4) COLLATE utf8mb4_bin, '`', '``'), '`')"));
+            Assert.That(sql,
+                Does.Contain(
+                    "RTRIM(LEFT(TRIM(REPLACE(CONVERT(CAST(piv AS CHAR) USING utf8mb3), CHAR(0 USING utf8mb3), '')), 64)) AS base"));
+            Assert.That(sql,
+                Does.Contain(
+                    "CASE WHEN base <> '' AND ROW_NUMBER() OVER (PARTITION BY CAST(base AS BINARY) ORDER BY rn) = 1 THEN 0 ELSE 1 END AS try"));
+            Assert.That(sql, Does.Contain("WHERE e.rn < f.rn AND CAST(e.name AS BINARY) = CAST(f.name AS BINARY)"));
+            Assert.That(sql, Does.Contain("IS NOT NULL AND CAST((`Val`) AS CHAR) <> ''"));
+            Assert.That(sql, Does.Not.Contain("AS `', piv"), "a value must not be put between backticks as it is");
+        });
+    }
+
+    /// <summary>
     ///     Every string literal of the Oracle block is closed, as a quote doubled to escape it comes in a pair
     /// </summary>
     [Test]
@@ -129,6 +154,7 @@ internal sealed class PivotColumnNameSqlTests
     ///     does) rely on
     /// </summary>
     [TestCase(DatabaseType.MicrosoftSQLServer)]
+    [TestCase(DatabaseType.MySql)]
     [TestCase(DatabaseType.Oracle)]
     [TestCase(DatabaseType.PostgreSql)]
     public void Pivot_IsTheSameEachTime(DatabaseType type)

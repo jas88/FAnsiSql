@@ -69,6 +69,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Each column is named after its value cut to 128 characters, keeping surrogate pairs together, and quoted with
     `QUOTENAME`. A value left with no name, or with the name of an earlier pivot column, gets its position among the pivot
     columns as a suffix (e.g. `_3`), as on Oracle and PostgreSQL
+- **MySQL: pivot values could break the SQL or be left out**
+  - A pivot put each value between backticks as the name of its column without doubling a backtick in it, so a value with
+    a backtick broke the SQL. A value with a character outside the Basic Multilingual Plane, such as an emoji, failed with
+    "Invalid utf8mb4 character string". Without a calendar axis `GROUP_CONCAT` stopped at 1024 bytes, which broke the SQL
+    or left out columns once there were many or long values. A null value took one of the TOP X places and an empty one
+    got a column with an empty name
+  - As on the other DBMS, values that are null or empty no longer get a column, and ties are broken on the value so that
+    the columns always come in the same order
+  - Each column is named after its value with any backtick doubled: without NUL characters, with characters outside the
+    Basic Multilingual Plane as `?`, trimmed of spaces at either end and cut to 64 characters. A value left with no name,
+    or with the name of an earlier pivot column, gets its position among the pivot columns as a suffix (e.g. `_3`). MySQL
+    has no loop outside stored programs, so the second suffix (`_3_2`) is tried only once
+  - In a pivot with a calendar axis, the columns of the derived table are named after their position, as MySQL compares
+    column names there ignoring case, and get their names in the outer `SELECT`
 - **Decimal values on .NET 11**
   - .NET 11 converts a `double` to a `decimal` exactly, so 9.99 becomes 9.990000000000000213162820728, where earlier
     versions of .NET rounded to 15 significant digits
