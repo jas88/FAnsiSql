@@ -166,7 +166,7 @@ public sealed class SqliteBulkCopy(DiscoveredTable targetTable, IManagedConnecti
                 valueClauses.Append(paramName);
 
                 // Create parameter and add directly to command
-                var value = ConvertValueForSQLite(dr[kvp.Key.Ordinal]);
+                var value = ConvertValueForSqlite(dr[kvp.Key.Ordinal]);
                 var parameter = new SqliteParameter(paramName, value);
 
                 // For DateTime values, explicitly set SqliteType to Text to ensure proper round-trip
@@ -249,7 +249,7 @@ public sealed class SqliteBulkCopy(DiscoveredTable targetTable, IManagedConnecti
                 {
                     var kvp = columnEntries[colIndex];
                     var paramName = $"@p{colIndex}";
-                    var value = ConvertValueForSQLite(dr[kvp.Key.Ordinal]);
+                    var value = ConvertValueForSqlite(dr[kvp.Key.Ordinal]);
                     var parameter = new SqliteParameter(paramName, value);
 
                     // For DateTime values, explicitly set SqliteType to Text to ensure proper round-trip
@@ -379,7 +379,7 @@ public sealed class SqliteBulkCopy(DiscoveredTable targetTable, IManagedConnecti
     ///     <see cref="BulkCopy.ConvertStringTypesToHardTypes" />, so any string left is bound for a string column and must
     ///     be stored exactly as given.
     /// </summary>
-    private static object ConvertValueForSQLite(object value)
+    private static object ConvertValueForSqlite(object value)
     {
         if (value == null || value == DBNull.Value)
             return DBNull.Value;
