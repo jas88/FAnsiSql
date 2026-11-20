@@ -64,7 +64,7 @@ public sealed class ImplementationManager
     /// </summary>
     /// <typeparam name="T"></typeparam>
     [Obsolete(
-        "Implementations now auto-register via static constructor in DiscoveredServer. To force assembly loading, call {TypeName}.EnsureLoaded() instead (e.g., MicrosoftSQLImplementation.EnsureLoaded()).")]
+        "Implementations register themselves when their assembly loads. To force assembly loading, call {TypeName}.EnsureLoaded() instead (e.g., MicrosoftSQLImplementation.EnsureLoaded()).")]
     public static void Load<T>() where T : IImplementation, new()
     {
         var loading = new T();

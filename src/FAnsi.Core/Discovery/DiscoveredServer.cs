@@ -1,5 +1,4 @@
 using System.Data.Common;
-using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text;
 using FAnsi.Connections;
@@ -26,15 +25,6 @@ public sealed class DiscoveredServer : IMightNotExist
     ///     The currently used database, if any
     /// </summary>
     private DiscoveredDatabase? _currentDatabase;
-
-    /// <summary>
-    ///     Static constructor that ensures all FAnsiSql provider implementations are loaded.
-    ///     This triggers ModuleInitializers in provider assemblies for automatic registration.
-    /// </summary>
-    static DiscoveredServer()
-    {
-        LoadFAnsiSqlImplementations();
-    }
 
     /// <summary>
     ///     <para>Creates a new server pointed at the <paramref name="builder" /> server. </para>
@@ -156,45 +146,6 @@ public sealed class DiscoveredServer : IMightNotExist
     }
 
     /// <summary>
-    ///     Loads and registers all available FAnsiSql provider implementations.
-    /// </summary>
-    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2057",
-        Justification = "Type.GetType with assembly-qualified names is safe for known FAnsiSql provider types.")]
-    private static void LoadFAnsiSqlImplementations()
-    {
-        // Known FAnsiSql provider implementation types
-        var implementationTypes = new[]
-        {
-            "FAnsi.Implementations.MicrosoftSQL.MicrosoftSQLImplementation, FAnsiSql.MicrosoftSql",
-            "FAnsi.Implementations.MySql.MySqlImplementation, FAnsiSql.MySql",
-            "FAnsi.Implementations.Oracle.OracleImplementation, FAnsiSql.Oracle",
-            "FAnsi.Implementations.PostgreSql.PostgreSqlImplementation, FAnsiSql.PostgreSql",
-            "FAnsi.Implementations.Sqlite.SqliteImplementation, FAnsiSql.Sqlite"
-        };
-
-        foreach (var implementationType in implementationTypes)
-            try
-            {
-                // Try to load the type to ensure the assembly is available
-                var type = Type.GetType(implementationType);
-                if (type != null)
-                {
-                    // Create an instance of the implementation using reflection
-                    var instance = Activator.CreateInstance(type);
-                    if (instance is IImplementation impl)
-                        // Register the implementation directly (no ModuleInitializer needed)
-                        ImplementationManager.Register(impl);
-                }
-                // If type is null, the implementation assembly isn't available - just ignore it
-            }
-            catch
-            {
-                // Type loading or registration failed - implementation not available, skip it
-            }
-    }
-
-
-    /// <summary>
     ///     Returns a new unopened connection to the server.  Use
     ///     <see cref="GetCommand(string,FAnsi.Connections.IManagedConnection)" /> to start sending
     ///     <see cref="DbCommand" /> without having to cast.
@@ -208,9 +159,13 @@ public sealed class DiscoveredServer : IMightNotExist
         transaction != null ? transaction.Connection : Helper.GetConnection(Builder);
 
     /// <summary>
-    ///     Creates a new DbCommand for the specified database type.
+    ///     Creates a new <see cref="DbCommand" /> of the API type for the <see cref="DatabaseType" /> of the server (e.g.
+    ///     <c>SqlCommand</c> for SQL Server) with <paramref name="sql" /> as its CommandText, on the connection of
+    ///     <paramref name="managedConnection" /> and in its transaction, if it has one
     /// </summary>
-    /// <include file='../../CommonMethods.doc.xml' path='Methods/Method[@name="GetCommand"]' />
+    /// <param name="sql">The SQL that the command will run</param>
+    /// <param name="managedConnection">The connection to create the command on, and the transaction (if any) to run it in</param>
+    /// <returns>The new command</returns>
     public DbCommand GetCommand(string sql, IManagedConnection managedConnection)
     {
         var cmd = Helper.GetCommand(sql, managedConnection.Connection);
@@ -297,22 +252,19 @@ public sealed class DiscoveredServer : IMightNotExist
             var openTask = con.OpenAsync(tokenSource.Token);
             try
             {
-                openTask.Wait(timeoutInMillis, tokenSource.Token);
+                // Wait returns false instead of throwing when its own timeout runs out before the token is
+                // cancelled. The connection has not opened then, so cancel the attempt, which is still running
+                if (!openTask.Wait(timeoutInMillis, tokenSource.Token))
+                    throw ConnectionTimedOut(timeoutInMillis, CancelAttempt(tokenSource));
             }
             catch (OperationCanceledException e)
             {
-                throw new TimeoutException(
-                    string.Format(CultureInfo.InvariantCulture,
-                        CouldNotConnectTimeoutFormat,
-                        Name, timeoutInMillis), e);
+                throw ConnectionTimedOut(timeoutInMillis, e);
             }
             catch (AggregateException e)
             {
                 if (openTask.IsCanceled)
-                    throw new TimeoutException(
-                        string.Format(CultureInfo.InvariantCulture,
-                            CouldNotConnectTimeoutFormat,
-                            Name, timeoutInMillis), e);
+                    throw ConnectionTimedOut(timeoutInMillis, e);
 
                 throw;
             }
@@ -325,6 +277,27 @@ public sealed class DiscoveredServer : IMightNotExist
         }
 
         con.Close();
+    }
+
+    private TimeoutException ConnectionTimedOut(int timeoutInMillis, Exception innerException) =>
+        new(string.Format(CultureInfo.InvariantCulture, CouldNotConnectTimeoutFormat, Name, timeoutInMillis),
+            innerException);
+
+    /// <summary>
+    ///     Cancels the connection attempt that <paramref name="tokenSource" /> controls. Returns the exception to report as
+    ///     the cause of the timeout: the cancellation or, if a callback registered on the token threw, its failure
+    /// </summary>
+    private static Exception CancelAttempt(CancellationTokenSource tokenSource)
+    {
+        try
+        {
+            tokenSource.Cancel();
+            return new OperationCanceledException(tokenSource.Token);
+        }
+        catch (AggregateException e)
+        {
+            return e;
+        }
     }
 
     /// <summary>

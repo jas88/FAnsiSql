@@ -3,7 +3,6 @@ using System.Data;
 using FAnsi;
 using FAnsi.Discovery;
 using FAnsi.Discovery.QuerySyntax;
-using FAnsi.Implementation;
 using FAnsi.Implementations.MicrosoftSQL;
 using FAnsi.Implementations.MySql;
 using FAnsi.Implementations.PostgreSql;
@@ -129,9 +128,7 @@ else
 static void TestSqlServer()
 {
     Console.WriteLine("[1/6] Loading SQL Server implementation...");
-#pragma warning disable CS0618 // Type or member is obsolete
-    ImplementationManager.Load<MicrosoftSQLImplementation>();
-#pragma warning restore CS0618 // Type or member is obsolete
+    MicrosoftSQLImplementation.EnsureLoaded();
     Console.WriteLine("      ✓ Implementation loaded");
 
     Console.WriteLine("[2/6] Creating DiscoveredServer from connection string...");
@@ -175,9 +172,7 @@ static void TestSqlServer()
 static void TestMySql()
 {
     Console.WriteLine("[1/6] Loading MySQL implementation...");
-#pragma warning disable CS0618 // Type or member is obsolete
-    ImplementationManager.Load<MySqlImplementation>();
-#pragma warning restore CS0618 // Type or member is obsolete
+    MySqlImplementation.EnsureLoaded();
     Console.WriteLine("      ✓ Implementation loaded");
 
     Console.WriteLine("[2/6] Creating DiscoveredServer from connection string...");
@@ -220,9 +215,7 @@ static void TestMySql()
 static void TestPostgreSql()
 {
     Console.WriteLine("[1/6] Loading PostgreSQL implementation...");
-#pragma warning disable CS0618 // Type or member is obsolete
-    ImplementationManager.Load<PostgreSqlImplementation>();
-#pragma warning restore CS0618 // Type or member is obsolete
+    PostgreSqlImplementation.EnsureLoaded();
     Console.WriteLine("      ✓ Implementation loaded");
 
     Console.WriteLine("[2/6] Creating DiscoveredServer from connection string...");
@@ -266,9 +259,7 @@ static void TestPostgreSql()
 static void TestOracle()
 {
     Console.WriteLine("[1/6] Loading Oracle implementation...");
-#pragma warning disable CS0618 // Type or member is obsolete
-    ImplementationManager.Load<OracleImplementation>();
-#pragma warning restore CS0618 // Type or member is obsolete
+    OracleImplementation.EnsureLoaded();
     Console.WriteLine("      ✓ Implementation loaded");
 
     Console.WriteLine("[2/6] Creating DiscoveredServer from connection string...");

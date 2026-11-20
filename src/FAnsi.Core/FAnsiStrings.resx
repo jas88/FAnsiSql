@@ -185,7 +185,7 @@
     <value>Failed to send resize SQL:{0}</value>
   </data>
   <data name="DiscoveredServer_TestConnection_Could_not_connect_to_server___0___after_timeout_of__1__milliseconds_" xml:space="preserve">
-    <value>Could not connect to server '{0}' after timeout of {1} milliseconds)</value>
+    <value>Could not connect to server '{0}' after timeout of {1} milliseconds</value>
   </data>
   <data name="DiscoveredServer_CreateDatabase_Helper___0___tried_to_create_database___1___but_the_database_didn_t_exist_after_the_creation_attempt" xml:space="preserve">
     <value>Helper '{0}' tried to create database '{1}' but the database didn't exist after the creation attempt</value>

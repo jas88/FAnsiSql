@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **`DiscoveredServer.TestConnection` could return as if it had connected when the connection attempt timed out**
+  - It cancels the attempt when the timeout runs out and also waits for the connection to open for that long, but
+    ignored the result of the wait. If the wait ran out before the cancellation took effect, for example because the
+    thread pool was busy, `TestConnection` returned normally without having connected, and `Exists()` returned true for
+    a server that had not responded
+  - It now throws a `TimeoutException` then too, and cancels the attempt that is still running
+- The `TimeoutException` message from `DiscoveredServer.TestConnection` no longer ends with a stray parenthesis
+
+### Removed
+- **Reflection-based provider loading in the `DiscoveredServer` static constructor, which never loaded anything**
+  - It looked each provider up with `Type.GetType` by assembly-qualified name, suppressing the trimming warning (IL2057)
+    this raises. The names gave the package IDs (`FAnsiSql.MySql` and so on) rather than the assembly names
+    (`FAnsi.MySql`), so no provider was ever found or registered this way, with or without Native AOT
+  - Registration is unchanged: each provider registers itself when its assembly loads, so `{TypeName}.EnsureLoaded()` or
+    `ImplementationManager.Load<T>()` is still needed before use. The obsolete message of `ImplementationManager.Load<T>()`
+    no longer says that `DiscoveredServer` registers providers
+  - FAnsiSql's own code no longer suppresses any trimming or AOT warning
+
 ## [3.8.0] - 2026-11-16
 
 ### Fixed

@@ -8,6 +8,19 @@
     <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
     <EnableAOTAnalyzer>true</EnableAOTAnalyzer>
     <EnableSingleFileAnalyzer>true</EnableSingleFileAnalyzer>
+
+    <!-- Treat warnings as errors for strict validation. This includes the trim and AOT warnings
+         from the native compiler (ILC), so FAnsiSql code that is not AOT-safe fails the publish -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+
+    <!-- Warnings in the Oracle driver, which FAnsiSql cannot fix:
+         - IL2104/IL3053: ILC's one-per-assembly summary of the trim/AOT warnings inside a package
+           assembly (Oracle.ManagedDataAccess). Warnings in project references are never
+           summarised, so FAnsiSql's own are still reported with their own codes.
+         - IL3000: Oracle.ManagedDataAccess reads Assembly.Location, which is empty in a native binary.
+           IL3000 is not summarised per assembly, so FAnsiSql code is checked for it by the
+           single-file analyzer when the libraries build. -->
+    <NoWarn>$(NoWarn);IL2104;IL3053;IL3000</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

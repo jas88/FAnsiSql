@@ -245,7 +245,7 @@ namespace FAnsi {
         }
 
         /// <summary>
-        ///   Looks up a localized string similar to Could not connect to server &apos;{0}&apos; after timeout of {1} milliseconds).
+        ///   Looks up a localized string similar to Could not connect to server &apos;{0}&apos; after timeout of {1} milliseconds.
         /// </summary>
         public static string DiscoveredServer_TestConnection_Could_not_connect_to_server___0___after_timeout_of__1__milliseconds_ {
             get {
