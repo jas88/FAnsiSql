@@ -30,8 +30,9 @@ namespace FAnsi.Implementations.Sqlite;
 ///     <para>SQLite is very flexible - any data type can be stored in any column regardless of declared type.</para>
 ///     <para>
 ///         The declared type is what FAnsi discovers a column's type from, so booleans, dates and times are declared as
-///         BOOLEAN, DATETIME and TIME rather than as the INTEGER or TEXT they are stored as. A TEXT column always holds
-///         strings.
+///         BOOLEAN, DATETIME and TIME rather than as the INTEGER or TEXT they are stored as. FAnsi declares TEXT only for
+///         strings, and reads a TEXT column as strings. That is FAnsi's convention, not something SQLite enforces: its
+///         type affinity turns a number stored in a TEXT column into text, but a BLOB stays a BLOB.
 ///     </para>
 /// </remarks>
 public sealed partial class SqliteTypeTranslater : TypeTranslater

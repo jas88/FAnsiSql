@@ -307,8 +307,8 @@ packages.lock.json
 
 # SQLite database files (OpenMemory and other temp databases)
 *.sqlite
-# Files only: where core.ignorecase is true (the default on macOS and Windows), *.sqlite also matches the
-# src/FAnsi.Sqlite directory, which hid every new file in it
+# Re-include directories, so that *.sqlite ignores only files: where core.ignorecase is true (the default on macOS
+# and Windows), *.sqlite also matches the src/FAnsi.Sqlite directory, which hid every new file in it
 !*.sqlite/
 *.sqlite-shm
 *.sqlite-wal
