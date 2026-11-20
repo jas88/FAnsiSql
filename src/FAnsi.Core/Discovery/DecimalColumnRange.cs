@@ -83,10 +83,9 @@ internal static partial class DecimalColumnRange
 
     private static bool IsTooLarge(double magnitude, int digitsBeforePoint, bool isFloat)
     {
-        if (magnitude == 0)
-            return false;
-
-        // Math.Pow is much closer to 10^digitsBeforePoint than a factor of 2, so away from it doubles decide
+        // Math.Pow is much closer to 10^digitsBeforePoint than a factor of 2, so away from it doubles decide. From
+        // 10^-324 down, which is too small for a double, Math.Pow gives 0, so every double but 0 is too large, and 0
+        // is compared by its text, which has no significant digit
         var approximateLimit = Math.Pow(10, digitsBeforePoint);
         if (magnitude < approximateLimit / 2)
             return false;
@@ -96,14 +95,15 @@ internal static partial class DecimalColumnRange
         var text = isFloat
             ? ((float)magnitude).ToString("R", CultureInfo.InvariantCulture)
             : magnitude.ToString("R", CultureInfo.InvariantCulture);
-        return GetLeadingDigitPower(text) >= digitsBeforePoint;
+        return GetLeadingDigitPower(text) is { } power && power >= digitsBeforePoint;
     }
 
     /// <summary>
     ///     Returns the power of ten of the first significant digit of a positive number as .NET formats a float or a
-    ///     double: 2 for 123.45, -3 for 0.00123, 23 for 1E+23 and -7 for 1.5E-07.
+    ///     double: 2 for 123.45, -3 for 0.00123, 23 for 1E+23 and -7 for 1.5E-07. Returns null for 0, which has no
+    ///     significant digit, so it is below every power of ten.
     /// </summary>
-    private static int GetLeadingDigitPower(string number)
+    private static int? GetLeadingDigitPower(string number)
     {
         var e = number.IndexOf('E', StringComparison.Ordinal);
         var digits = e < 0 ? number : number[..e];
@@ -116,9 +116,11 @@ internal static partial class DecimalColumnRange
         if (whole != "0")
             return power + whole.Length - 1;
 
-        // As in 0.00123, the first significant digit follows the zeros after the decimal point
-        var fraction = digits[(point + 1)..];
-        return power - (fraction.Length - fraction.TrimStart('0').Length) - 1;
+        // As in 0.00123, the first significant digit follows the zeros after the decimal point. 0, which has no
+        // decimal point, has no significant digit
+        var fraction = point < 0 ? "" : digits[(point + 1)..];
+        var zeros = fraction.Length - fraction.TrimStart('0').Length;
+        return zeros < fraction.Length ? power - zeros - 1 : null;
     }
 
     /// <summary>

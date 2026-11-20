@@ -115,6 +115,14 @@ internal sealed class DecimalColumnRangeTests
     [TestCase(double.MaxValue, 0, 400, 0, false)] // no double reaches 10^400
     [TestCase(double.Epsilon, 0, 1, 400, true)] // every double but 0 reaches 10^-399
     [TestCase(0.0, 0, 1, 400, false)]
+    [TestCase(-0.0, 0, 1, 400, false)]
+    [TestCase(0.0, 0, 5, 2, false)]
+    [TestCase(-0.0, 0, 5, 2, false)]
+    [TestCase(0.0, 0, 1, 1000, false)] // numeric(1,1000) of PostgreSQL 15 or later: Math.Pow(10, -999) is 0
+    [TestCase(-0.0, 0, 1, 1000, false)]
+    [TestCase(double.Epsilon, 0, 1, 1000, true)]
+    [TestCase(1e-323, 0, 1, 324, true)] // 10^-323, the smallest power of ten that Math.Pow does not make 0
+    [TestCase(1e-323, -1, 1, 324, false)] // double.Epsilon
     public void IsTooLarge_Double(double near, int ulps, int precision, int scale, bool expected)
     {
         var value = near;
@@ -131,6 +139,11 @@ internal sealed class DecimalColumnRangeTests
     [TestCase(1e29f, -1, 29, 0, false)]
     [TestCase(1000f, 0, 5, 2, true)]
     [TestCase(1000f, -1, 5, 2, false)]
+    [TestCase(0f, 0, 5, 2, false)]
+    [TestCase(-0f, 0, 5, 2, false)]
+    [TestCase(0f, 0, 1, 1000, false)]
+    [TestCase(-0f, 0, 1, 1000, false)]
+    [TestCase(float.Epsilon, 0, 1, 1000, true)]
     public void IsTooLarge_Float(float near, int ulps, int precision, int scale, bool expected)
     {
         var value = near;
