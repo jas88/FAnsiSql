@@ -91,7 +91,7 @@ internal sealed class MySqlCreateTableTests : DatabaseTests
 
     /// <summary>
     ///     MariaDB reports a display width on every integer column, e.g. bigint(20), where MySQL 8.0.19 and later report
-    ///     none except on tinyint(1).  Columns must be discovered with the same type on both.
+    ///     none except on tinyint(1) and ZEROFILL columns.  Columns must be discovered with the same type on both.
     /// </summary>
     [Test]
     public void DiscoverColumns_IntegerTypes_HaveNoDisplayWidth()
@@ -119,5 +119,40 @@ internal sealed class MySqlCreateTableTests : DatabaseTests
             Assert.That(tbl.DiscoverColumn("MyMediumInt").DataType?.SQLType, Is.EqualTo("mediumint"));
             Assert.That(tbl.DiscoverColumn("MyUnsignedLong").DataType?.SQLType, Is.EqualTo("bigint unsigned"));
         });
+    }
+
+    /// <summary>
+    ///     The display width of a ZEROFILL column is the number of digits its values are padded to with zeros, and MySQL
+    ///     and MariaDB both report it, so it is kept on every integer type.  The type must still be understood.
+    /// </summary>
+    [Test]
+    public void DiscoverColumns_ZerofillIntegerTypes_KeepDisplayWidth()
+    {
+        var db = GetTestDatabase(DbType);
+
+        var tbl = db.CreateTable("ZerofillTypes",
+        [
+            new DatabaseColumnRequest("MyTinyInt", "tinyint(2) zerofill"),
+            new DatabaseColumnRequest("MySmallInt", "smallint(4) zerofill"),
+            new DatabaseColumnRequest("MyMediumInt", "mediumint(6) zerofill"),
+            new DatabaseColumnRequest("MyInt", "int(8) zerofill"),
+            new DatabaseColumnRequest("MyBigInt", "bigint(12) zerofill")
+        ]);
+
+        Assert.Multiple(() =>
+        {
+            AssertDiscoveredType(tbl, "MyTinyInt", "tinyint(2) unsigned zerofill", typeof(byte));
+            AssertDiscoveredType(tbl, "MySmallInt", "smallint(4) unsigned zerofill", typeof(short));
+            AssertDiscoveredType(tbl, "MyMediumInt", "mediumint(6) unsigned zerofill", typeof(int));
+            AssertDiscoveredType(tbl, "MyInt", "int(8) unsigned zerofill", typeof(int));
+            AssertDiscoveredType(tbl, "MyBigInt", "bigint(12) unsigned zerofill", typeof(long));
+        });
+    }
+
+    private static void AssertDiscoveredType(DiscoveredTable tbl, string column, string sqlType, Type cSharpType)
+    {
+        var dataType = tbl.DiscoverColumn(column).DataType;
+        Assert.That(dataType?.SQLType, Is.EqualTo(sqlType), column);
+        Assert.That(dataType?.GetCSharpDataType(), Is.EqualTo(cSharpType), column);
     }
 }

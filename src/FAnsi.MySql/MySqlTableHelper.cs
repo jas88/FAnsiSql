@@ -94,15 +94,17 @@ public sealed partial class MySqlTableHelper : DiscoveredTableHelper
     ///     Removes the display width from an integer type, e.g. int(11) or bigint(20) unsigned.  The width does not limit
     ///     the values a column holds (see https://stackoverflow.com/a/5634147/4824531).  MySQL 8.0.19 and later report it
     ///     only on tinyint(1) and ZEROFILL columns, but MariaDB reports it on every integer column, so without this the
-    ///     same column would have a different SQLType on each.  tinyint(1) is left alone because both report a boolean
-    ///     column that way.
+    ///     same column would have a different SQLType on each.  Both report it on those two, which keep it: tinyint(1)
+    ///     is how both report a boolean column, and the width of a ZEROFILL column is the number of digits its values are
+    ///     padded to with zeros.
     /// </summary>
-    private static string TrimIntDisplayValues(string? type)
+    internal static string TrimIntDisplayValues(string? type)
     {
         if (string.IsNullOrWhiteSpace(type))
             return "";
 
-        if (type.StartsWith("tinyint(1)", StringComparison.OrdinalIgnoreCase))
+        if (type.StartsWith("tinyint(1)", StringComparison.OrdinalIgnoreCase) ||
+            type.Contains("zerofill", StringComparison.OrdinalIgnoreCase))
             return type;
 
         if (IntegerDisplayWidth.IsMatch(type))

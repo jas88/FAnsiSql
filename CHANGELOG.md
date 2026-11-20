@@ -117,10 +117,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     `tinyint(1)` and `ZEROFILL` columns. FAnsi removed it from `int` and `smallint` only, so on MariaDB the `SQLType`
     of a `tinyint`, `mediumint` or `bigint` column kept it (`tinyint(4)`, `mediumint(9)`, `bigint(20)`) where MySQL
     gives `tinyint`, `mediumint` and `bigint`
-  - The width is now removed from every integer type except `tinyint(1)`, which is how both report a boolean column
-  - On MariaDB the type names of existing columns change with it, e.g. a column discovered as `bigint(20)` is now
-    discovered as `bigint`, so anything that stored the old names, such as an RDMP catalogue, sees a one-off change of
-    type. On MySQL only `ZEROFILL` columns of those three types change, as the width was already removed for `int`
+  - The width is now removed from every integer type except on `tinyint(1)`, which is how both report a boolean
+    column, and on `ZEROFILL` columns, where it is the number of digits values are padded to with zeros. Both servers
+    report it on those, so they already had the same type on each
+  - The types discovered for existing columns change as follows, so anything that stored the old names, such as an
+    RDMP catalogue, sees a one-off change of type:
+    - MariaDB, and MySQL before 8.0.19: `tinyint` (other than `tinyint(1)`), `mediumint` and `bigint` columns without
+      `ZEROFILL` lose the width, e.g. `bigint(20)` becomes `bigint` and `bigint(20) unsigned` becomes `bigint unsigned`
+    - MySQL and MariaDB: `int` and `smallint` `ZEROFILL` columns keep the width they used to lose, e.g.
+      `int(10) unsigned zerofill` instead of `int unsigned zerofill`
+    - Nothing else changes
 
 ### Removed
 - **Reflection-based provider loading in the `DiscoveredServer` static constructor, which never loaded anything**
