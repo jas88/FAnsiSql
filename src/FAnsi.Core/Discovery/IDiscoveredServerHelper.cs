@@ -13,9 +13,13 @@ public interface IDiscoveredServerHelper
     DatabaseType DatabaseType { get; }
 
     /// <summary>
-    ///     Creates a new DbCommand for the specified database type.
+    ///     Creates a new <see cref="DbCommand" /> of the API type for the DBMS (e.g. <c>SqlCommand</c> for SQL Server) with
+    ///     <paramref name="s" /> as its CommandText
     /// </summary>
-    /// <include file='../../CommonMethods.doc.xml' path='Methods/Method[@name="GetCommand"]' />
+    /// <param name="s">The SQL that the command will run</param>
+    /// <param name="con">The connection to create the command on, which must be of the same API type</param>
+    /// <param name="transaction">Optional - the transaction to run the command in</param>
+    /// <returns>The new command</returns>
     DbCommand GetCommand(string s, DbConnection con, DbTransaction? transaction = null);
 
     DbDataAdapter GetDataAdapter(DbCommand cmd);

@@ -18,22 +18,23 @@ These tests verify that FAnsiSql and its database-specific implementations can b
 - `MySql.AotTest/` - MySQL (MySqlConnector)
 - `PostgreSql.AotTest/` - PostgreSQL (Npgsql)
 - `Oracle.AotTest/` - Oracle (Oracle.ManagedDataAccess.Core)
+- `Sqlite.AotTest/` - SQLite (Microsoft.Data.Sqlite)
 
 ### Comprehensive Test
-- `FAnsi.AotTest/` - Tests all 4 database implementations in a single AOT binary
+- `FAnsi.AotTest/` - Tests the SQL Server, MySQL, PostgreSQL and Oracle implementations in a single AOT binary
 
 ## Running Tests Locally
 
 ### Build and Run Individual Database Test
 ```bash
-cd Tests/AotCompatibility/SqlServer.AotTest
+cd tests/AotCompatibility/SqlServer.AotTest
 dotnet publish -c Release -r <RID>
 ./bin/Release/net11.0/<RID>/publish/SqlServer.AotTest
 ```
 
 ### Build and Run Comprehensive Test
 ```bash
-cd Tests/AotCompatibility/FAnsi.AotTest
+cd tests/AotCompatibility/FAnsi.AotTest
 dotnet publish -c Release -r <RID>
 ./bin/Release/net11.0/<RID>/publish/FAnsi.AotTest
 ```
@@ -43,80 +44,70 @@ Replace `<RID>` with your platform runtime identifier:
 - macOS: `osx-x64` or `osx-arm64`
 - Windows: `win-x64` or `win-arm64`
 
+Native AOT can only compile for the operating system it runs on, and needs that platform's native toolchain
+(clang on Linux, the Xcode command line tools on macOS, the Visual Studio C++ tools on Windows).
+The programs do not connect to any database, so no database servers are needed.
+
 ## Test Coverage
 
 Each test verifies:
-1. **Implementation Loading** - `ImplementationManager.Load<T>()`
-2. **Server Object Creation** - `DiscoveredServer` instantiation
+1. **Implementation Loading** - `{TypeName}.EnsureLoaded()`, after which the implementation's module initializer
+   has registered it (see below)
+2. **Server Object Creation** - `DiscoveredServer` instantiation, which fails if the implementation is not registered
 3. **Connection String Builder** - Platform-specific builders
 4. **Discovery Objects** - Database/Table/Column object creation
 5. **DataTable Operations** - Bulk copy simulation
-6. **Type Translation** - C# to SQL type mapping
+6. **Type Translation** - C# to SQL type mapping (SQL Server and comprehensive tests only)
 
-## Known Limitations
+## Registering Implementations
 
-### Resource File Issue (Current Blocker)
+Each implementation registers itself from a module initializer when its assembly loads, under Native AOT as
+under JIT. Nothing registers an implementation that your code never refers to, so call
+`{TypeName}.EnsureLoaded()` (for example `MySqlImplementation.EnsureLoaded()`) before creating a
+`DiscoveredServer` for that DBMS.
 
-**Status**: KNOWN ISSUE - AOT compilation succeeds, but runtime fails due to resource embedding
+## Warnings
 
-**Symptom**:
-```
-MissingManifestResourceException: Could not find the resource "FAnsi.FAnsiStrings.resources"
-among the resources "FAnsi.Core.FAnsiStrings.resources"
-```
+Every test project sets `TreatWarningsAsErrors`, so a publish fails on any trim or AOT warning that the native
+compiler (ILC) reports in FAnsiSql or in the test program. ILC reports each warning in a project reference (the
+FAnsiSql libraries) separately, but sums up the warnings in each package assembly as a single IL2104 (trimming)
+or IL3053 (AOT) warning.
 
-**Root Cause**:
-- The FAnsi.Core project embeds resources as "FAnsi.Core.FAnsiStrings.resources"
-- The generated code tries to load "FAnsi.FAnsiStrings.resources"
-- This mismatch is exposed by AOT's stricter resource handling
+The SQL Server and Oracle drivers raise warnings that FAnsiSql cannot fix, so `SqlServer.AotTest`,
+`Oracle.AotTest` and `FAnsi.AotTest` suppress these codes:
 
-**Affected Code Paths**:
-- Error messages in `ImplementationManager.GetImplementation()`
-- Any code path that accesses `FAnsiStrings` resource strings
+| Code | Raised for |
+|------|------------|
+| IL2104 | Microsoft.Data.SqlClient, Microsoft.Data.SqlClient.Internal.Logging, System.Configuration.ConfigurationManager, Oracle.ManagedDataAccess |
+| IL3053 | Microsoft.Data.SqlClient, Oracle.ManagedDataAccess |
+| IL3000 | Oracle.ManagedDataAccess, which reads `Assembly.Location` (always empty in a native binary); not used by `SqlServer.AotTest` |
 
-**Solution Required**:
-This needs to be fixed in `FAnsi.Core/FAnsi.Core.csproj`:
-1. Option 1: Update resource namespace to match (recommended)
-2. Option 2: Add explicit rd.xml resource descriptor
-3. Option 3: Replace resource strings with const strings
+Publish with `-p:TrimmerSingleWarn=false` to list the individual warnings. They are in driver features such as
+diagnostic events, enclave attestation and JSON/vector types in SqlClient, and UDTs, JSON conversion, configuration
+files and dynamic assembly loading in Oracle; test any of these you use under Native AOT.
 
-**Workaround**:
-Tests can be made to pass by avoiding error paths that load resources, but this doesn't fully test the library.
-
-### Driver-Specific Warnings
-
-**Oracle.ManagedDataAccess.Core**:
-- IL2026, IL2057, IL2075: Reflection warnings (expected, Oracle uses reflection internally)
-- IL3050: Dynamic code warnings (JSON serialization, non-critical for most uses)
-
-**Microsoft.Data.SqlClient**:
-- IL2026: DiagnosticSource trimming warnings (telemetry features may be limited)
-- IL2057: UDT type loading warnings (custom SQL types may not work)
-
-**All Drivers**:
-These warnings indicate features that may not work in AOT but don't affect core database operations:
-- Custom user-defined types (UDTs)
-- Some reflection-based features
-- Dynamic JSON serialization
-- Assembly plugin loading
+`MySql.AotTest`, `PostgreSql.AotTest` and `Sqlite.AotTest` suppress nothing: MySqlConnector, Npgsql and
+Microsoft.Data.Sqlite raise no warnings.
 
 ## CI Integration
 
-The GitHub Actions workflow (`/.github/workflows/aot-test.yml`) automatically:
-1. Builds all AOT test projects for linux-x64
-2. Runs each native binary against database services
-3. Checks for AOT/trim warnings
-4. Uploads binaries as artifacts
+The `Build, test, security, and AOT` workflow (`.github/workflows/dotnet-core.yml`):
+1. Publishes each test project for linux-x64 and runs the native binary
+2. Builds `FAnsi.AotTest` with `PublishAot=true` and checks the log for IL warnings
+
+The build fails if a publish fails (including on any warning above that is not suppressed), if a program exits
+with a non-zero code, or if the build reports an IL warning.
 
 ## AOT Compatibility Status
 
 | Component | AOT Compatible | Notes |
 |-----------|---------------|-------|
-| FAnsi.Core | ⚠️ Partial | Resource file issue blocks runtime |
-| FAnsi.MicrosoftSql | ⚠️ Partial | Blocked by Core issue; compiles successfully |
-| FAnsi.MySql | ⚠️ Partial | Blocked by Core issue; compiles successfully |
-| FAnsi.PostgreSql | ⚠️ Partial | Blocked by Core issue; compiles successfully |
-| FAnsi.Oracle | ⚠️ Partial | Blocked by Core issue; compiles successfully |
+| FAnsi.Core | ✅ Fully Compatible | |
+| FAnsi.MicrosoftSql | ⚠️ Partial | No warnings in FAnsiSql code; Microsoft.Data.SqlClient raises some (see Warnings) |
+| FAnsi.MySql | ✅ Fully Compatible | |
+| FAnsi.PostgreSql | ✅ Fully Compatible | |
+| FAnsi.Oracle | ⚠️ Partial | No warnings in FAnsiSql code; Oracle.ManagedDataAccess raises some (see Warnings) |
+| FAnsi.Sqlite | ✅ Fully Compatible | |
 
 **Legend**:
 - ✅ Fully Compatible - Compiles and runs with no issues
@@ -125,11 +116,10 @@ The GitHub Actions workflow (`/.github/workflows/aot-test.yml`) automatically:
 
 ## Future Work
 
-1. **Fix Resource File Issue**: Update FAnsi.Core resource embedding
-2. **Add Connection Tests**: Test actual database connections (requires running DB services)
-3. **Test Bulk Operations**: Verify bulk copy works in AOT
-4. **Measure Performance**: Compare AOT vs JIT startup time and memory usage
-5. **Test on All Platforms**: Verify Linux, macOS, and Windows AOT builds
+1. **Add Connection Tests**: Test actual database connections (requires running DB services)
+2. **Test Bulk Operations**: Verify bulk copy works in AOT
+3. **Measure Performance**: Compare AOT vs JIT startup time and memory usage
+4. **Test on All Platforms**: Verify Linux, macOS, and Windows AOT builds
 
 ## Contributing
 

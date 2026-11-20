@@ -158,7 +158,6 @@ jobs:
 
     # AOT Compatibility Tests (reuses same databases)
     - name: Test SQL Server AOT Compatibility
-      if: false
       run: |
         echo "=== Building SQL Server AOT Test ==="
         dotnet publish tests/AotCompatibility/SqlServer.AotTest/SqlServer.AotTest.csproj \
@@ -168,11 +167,9 @@ jobs:
           --self-contained
 
         echo "=== Running SQL Server AOT Test ==="
-        ./aot-output/sqlserver/SqlServer.AotTest || true
-      continue-on-error: true
+        ./aot-output/sqlserver/SqlServer.AotTest
 
     - name: Test MySQL AOT Compatibility
-      if: false
       run: |
         echo "=== Building MySQL AOT Test ==="
         dotnet publish tests/AotCompatibility/MySql.AotTest/MySql.AotTest.csproj \
@@ -182,11 +179,9 @@ jobs:
           --self-contained
 
         echo "=== Running MySQL AOT Test ==="
-        ./aot-output/mysql/MySql.AotTest || true
-      continue-on-error: true
+        ./aot-output/mysql/MySql.AotTest
 
     - name: Test PostgreSQL AOT Compatibility
-      if: false
       run: |
         echo "=== Building PostgreSQL AOT Test ==="
         dotnet publish tests/AotCompatibility/PostgreSql.AotTest/PostgreSql.AotTest.csproj \
@@ -196,11 +191,9 @@ jobs:
           --self-contained
 
         echo "=== Running PostgreSQL AOT Test ==="
-        ./aot-output/postgresql/PostgreSql.AotTest || true
-      continue-on-error: true
+        ./aot-output/postgresql/PostgreSql.AotTest
 
     - name: Test Oracle AOT Compatibility
-      if: false
       run: |
         echo "=== Building Oracle AOT Test ==="
         dotnet publish tests/AotCompatibility/Oracle.AotTest/Oracle.AotTest.csproj \
@@ -210,11 +203,9 @@ jobs:
           --self-contained
 
         echo "=== Running Oracle AOT Test ==="
-        ./aot-output/oracle/Oracle.AotTest || true
-      continue-on-error: true
+        ./aot-output/oracle/Oracle.AotTest
 
     - name: Test SQLite AOT Compatibility
-      if: false
       run: |
         echo "=== Building SQLite AOT Test ==="
         dotnet publish tests/AotCompatibility/Sqlite.AotTest/Sqlite.AotTest.csproj \
@@ -224,11 +215,9 @@ jobs:
           --self-contained
 
         echo "=== Running SQLite AOT Test ==="
-        ./aot-output/sqlite/Sqlite.AotTest || true
-      continue-on-error: true
+        ./aot-output/sqlite/Sqlite.AotTest
 
     - name: Build Comprehensive AOT Test
-      if: false
       run: |
         echo "=== Building Comprehensive FAnsiSql AOT Test ==="
         dotnet publish tests/AotCompatibility/FAnsi.AotTest/FAnsi.AotTest.csproj \
@@ -245,17 +234,15 @@ jobs:
         file ./aot-output/comprehensive/FAnsi.AotTest
 
     - name: Run Comprehensive AOT Test
-      if: false
       run: |
         echo "=== Running Comprehensive FAnsiSql AOT Test ==="
-        ./aot-output/comprehensive/FAnsi.AotTest || true
+        ./aot-output/comprehensive/FAnsi.AotTest
         echo ""
         echo "Note: AOT tests now have proper resource namespace configuration."
-      continue-on-error: true
 
     - name: Check for AOT warnings
-      if: false
       run: |
+        set -o pipefail
         echo "=== Checking for AOT Analysis Warnings ==="
         dotnet build tests/AotCompatibility/FAnsi.AotTest/FAnsi.AotTest.csproj \
           -c Release \
@@ -264,6 +251,7 @@ jobs:
 
         if grep -i "warning IL" build.log; then
           echo "⚠️  Found AOT/Trim warnings - review required"
+          exit 1
         else
           echo "✅ No AOT/Trim warnings found"
         fi

@@ -3,7 +3,6 @@ using System.Data;
 using FAnsi;
 using FAnsi.Discovery;
 using FAnsi.Discovery.QuerySyntax;
-using FAnsi.Implementation;
 using FAnsi.Implementations.MicrosoftSQL;
 using Microsoft.Data.SqlClient;
 using TypeGuesser;
@@ -15,9 +14,7 @@ try
 {
     // Test 1: Load implementation
     Console.WriteLine("Test 1: Loading SQL Server implementation...");
-#pragma warning disable CS0618 // Type or member is obsolete
-    ImplementationManager.Load<MicrosoftSQLImplementation>();
-#pragma warning restore CS0618 // Type or member is obsolete
+    MicrosoftSQLImplementation.EnsureLoaded();
     Console.WriteLine("✅ Implementation loaded successfully");
     Console.WriteLine();
 
