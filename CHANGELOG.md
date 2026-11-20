@@ -146,6 +146,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     TypeGuesser 2.1.0, and custom deciders must rename their overrides. TypeGuesser's CHANGELOG lists its other changes
   - FAnsiSql 3.8.x reads those fields, so it throws `MissingFieldException` when used with TypeGuesser 2.1.0: upgrade
     FAnsiSql and TypeGuesser together
+- **Bump Microsoft.Data.Sqlite from 10.0.15 to 11.0.0**, which depends on SQLitePCLRaw 3.0.5 itself
+  - FAnsiSql.Sqlite no longer references `SQLitePCLRaw.bundle_e_sqlite3` and `SQLitePCLRaw.core` directly. 3.7.0 added
+    those references to replace the SQLitePCLRaw 2.1.x that Microsoft.Data.Sqlite 10 depends on, because the
+    `SQLitePCLRaw.lib.e_sqlite3` 2.1.11 it brought in has a SQLite older than 3.50.2 (CVE-2025-6965 /
+    GHSA-2m69-gcr7-jv3q)
+  - Applications still get SQLitePCLRaw 3.0.5 and SQLite 3.53.4, in the `SQLite` package that SQLitePCLRaw 3.0.5 uses
+    for the native library, now through Microsoft.Data.Sqlite. An application that references Microsoft.Data.Sqlite
+    itself needs 11.0.0 or later
 - **SQLite boolean, date and time columns are declared `BOOLEAN`, `DATETIME` and `TIME`** instead of `INTEGER`, `TEXT`
   and `TEXT` (see Fixed)
   - SQLite still stores them as 1 and 0 and as ISO 8601 text (`2007-01-01 13:11:00`, `13:11:00`)
