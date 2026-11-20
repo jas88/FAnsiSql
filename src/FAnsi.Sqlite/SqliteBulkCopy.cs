@@ -381,7 +381,7 @@ public sealed class SqliteBulkCopy(DiscoveredTable targetTable, IManagedConnecti
     /// </summary>
     private static object ConvertValueForSqlite(object value)
     {
-        if (value == null || value == DBNull.Value)
+        if (value == DBNull.Value)
             return DBNull.Value;
 
         // Microsoft.Data.Sqlite binds DateTime and TimeSpan natively, as ISO 8601 text (e.g. "2007-01-01 13:11:00"
