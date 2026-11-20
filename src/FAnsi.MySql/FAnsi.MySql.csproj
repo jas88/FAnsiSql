@@ -8,12 +8,12 @@
     <PackageProjectUrl>https://github.com/jas88/FAnsiSql</PackageProjectUrl>
     <PackageLicenseExpression>GPL-3.0-or-later</PackageLicenseExpression>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-    <description>MySQL implementation for FAnsiSql</description>
-    <PackageTags>Ansi,SQL,MySQL</PackageTags>
+    <description>MySQL and MariaDB implementation for FAnsiSql</description>
+    <PackageTags>Ansi,SQL,MySQL,MariaDB</PackageTags>
     <AssemblyTitle>FAnsiSql.MySql</AssemblyTitle>
     <Company>Health Informatics Centre, University of Dundee</Company>
     <Product>FAnsiSql.MySql</Product>
-    <Description>MySQL implementation for FAnsiSql</Description>
+    <Description>MySQL and MariaDB implementation for FAnsiSql</Description>
     <Copyright>Copyright ©  2019-2025</Copyright>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <IsAotCompatible>true</IsAotCompatible>
@@ -33,5 +33,8 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="FAnsiTests" />
   </ItemGroup>
 </Project>

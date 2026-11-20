@@ -1,5 +1,7 @@
 using FAnsi;
+using FAnsi.Implementations.MySql;
 using NUnit.Framework;
+using TypeGuesser;
 
 namespace FAnsiTests.TypeTranslation;
 
@@ -88,4 +90,43 @@ internal sealed class TypeTranslaterTests_MySql : TypeTranslaterTests
     [TestCase("GEOMETRYCOLLECTION")]
     public void TestNotSupportedTypes(string sqlType) =>
         TestNotSupportedTypes(DbType, sqlType);
+
+    /// <summary>
+    ///     MySqlConnector reads every bit column as a ulong.  Only bit and bit(1), which hold a single bit, are
+    ///     booleans.
+    /// </summary>
+    [TestCase("bit", typeof(bool), System.Data.DbType.Boolean)]
+    [TestCase("bit(1)", typeof(bool), System.Data.DbType.Boolean)]
+    [TestCase("tinyint(1)", typeof(bool), System.Data.DbType.Boolean)]
+    [TestCase("bit(2)", typeof(ulong), System.Data.DbType.UInt64)]
+    [TestCase("bit(8)", typeof(ulong), System.Data.DbType.UInt64)]
+    [TestCase("bit(64)", typeof(ulong), System.Data.DbType.UInt64)]
+    [TestCase("BIT(64)", typeof(ulong), System.Data.DbType.UInt64)]
+    public void BitTypes_MapToTheTypeTheyAreReadAs(string sqlType, Type cSharpType, System.Data.DbType dbType)
+    {
+        var tt = MySqlTypeTranslater.Instance;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(tt.GetCSharpTypeForSQLDBType(sqlType), Is.EqualTo(cSharpType));
+            Assert.That(tt.GetDbTypeForSQLDBType(sqlType), Is.EqualTo(dbType));
+        });
+    }
+
+    /// <summary>
+    ///     TypeGuesser has no ulong, so the request for a bit(n) column, from which a Guesser for it starts, has long.
+    ///     A ulong is created as a bigint, as before, which holds every value below 2^63.
+    /// </summary>
+    [Test]
+    public void BitTypes_RequestAndReverseMapping()
+    {
+        var tt = MySqlTypeTranslater.Instance;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(tt.GetDataTypeRequestForSQLDBType("bit(8)").CSharpType, Is.EqualTo(typeof(long)));
+            Assert.That(tt.GetDataTypeRequestForSQLDBType("bit").CSharpType, Is.EqualTo(typeof(bool)));
+            Assert.That(tt.GetSQLDBTypeForCSharpType(new DatabaseTypeRequest(typeof(ulong))), Is.EqualTo("bigint"));
+        });
+    }
 }

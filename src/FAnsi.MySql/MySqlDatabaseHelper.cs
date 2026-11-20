@@ -41,11 +41,20 @@ public sealed class MySqlDatabaseHelper : DiscoveredDatabaseHelper
     protected override string GetCreateTableSqlLineForColumn(DatabaseColumnRequest col, string datatype,
         IQuerySyntaxHelper syntaxHelper) =>
         //if it is not unicode then that's fine
-        col.TypeRequested?.Unicode != true
+        col.TypeRequested?.Unicode != true || !IsCharacterType(datatype, syntaxHelper)
             ? base.GetCreateTableSqlLineForColumn(col, datatype, syntaxHelper)
             :
             //MySql unicode is not a data type it's a character set/collation only
             $"{syntaxHelper.EnsureWrapped(col.ColumnName)} {datatype} CHARACTER SET utf8mb4 {(col.Default != MandatoryScalarFunctions.None ? $"default {syntaxHelper.GetScalarFunctionSql(col.Default)}" : "")} COLLATE {col.Collation ?? "utf8mb4_bin"} {(col is { AllowNulls: true, IsPrimaryKey: false } ? " NULL" : " NOT NULL")} {(col.IsAutoIncrement ? syntaxHelper.GetAutoIncrementKeywordIfAny() : "")}";
+
+    /// <summary>
+    ///     Only the character types (char, varchar, the text types, enum and set) take a CHARACTER SET; MySQL and MariaDB
+    ///     both reject one on any other type as a syntax error.  A request for another type can still be flagged Unicode:
+    ///     TypeGuesser flags any value whose text has a non-ASCII character, and a DateTime formatted by some cultures has
+    ///     one (en-US puts U+202F before AM/PM in .NET on ICU 72 or later).
+    /// </summary>
+    private static bool IsCharacterType(string datatype, IQuerySyntaxHelper syntaxHelper) =>
+        syntaxHelper.TypeTranslater.TryGetCSharpTypeForSQLDBType(datatype) == typeof(string);
 
     public override DirectoryInfo Detach(DiscoveredDatabase database) => throw new NotImplementedException();
 
