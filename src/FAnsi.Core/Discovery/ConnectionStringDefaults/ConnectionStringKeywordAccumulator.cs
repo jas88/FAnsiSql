@@ -18,7 +18,12 @@ namespace FAnsi.Discovery.ConnectionStringDefaults;
 ///         effect as a whole, and <see cref="EnforceOptions" /> applies the keywords as they were when it started.
 ///     </para>
 /// </summary>
-public sealed class ConnectionStringKeywordAccumulator
+/// <remarks>
+///     Initialises a new blank instance that does nothing.  Call <see cref="AddOrUpdateKeyword" /> to adjust the template
+///     connection string options.
+/// </remarks>
+/// <param name="databaseType"></param>
+public sealed class ConnectionStringKeywordAccumulator(DatabaseType databaseType)
 {
     // Cached CompositeFormat for CA1863
     private static readonly CompositeFormat KeywordNotSupportedFormat =
@@ -28,7 +33,8 @@ public sealed class ConnectionStringKeywordAccumulator
     ///     Finds out which keywords are aliases of each other (see <see cref="GetCollisionWithKeyword" />).  That changes
     ///     its contents, so it is only used under <see cref="_lock" />.
     /// </summary>
-    private readonly DbConnectionStringBuilder _builder;
+    private readonly DbConnectionStringBuilder _builder =
+        ImplementationManager.GetImplementation(databaseType).GetBuilder();
 
     /// <summary>
     ///     Held while a keyword is added, so that one thread at a time uses <see cref="_builder" /> and replaces
@@ -45,30 +51,20 @@ public sealed class ConnectionStringKeywordAccumulator
             StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
-    ///     Initialises a new blank instance that does nothing.  Call <see cref="AddOrUpdateKeyword" /> to adjust the template
-    ///     connection string options.
-    /// </summary>
-    /// <param name="databaseType"></param>
-    public ConnectionStringKeywordAccumulator(DatabaseType databaseType) : this(databaseType,
-        ImplementationManager.GetImplementation(databaseType).GetBuilder())
-    {
-    }
-
-    /// <summary>
     ///     Initialises a new blank instance that finds out which keywords are aliases of each other with
-    ///     <paramref name="builder" /> rather than with a connection string builder of <paramref name="databaseType" />, so
-    ///     that tests can see what happens while a keyword is being added
+    ///     <paramref name="builder" /> rather than with a connection string builder of <paramref name="databaseType" />
+    ///     (whose implementation must still be loaded), so that tests can see what happens while a keyword is being added
     /// </summary>
-    internal ConnectionStringKeywordAccumulator(DatabaseType databaseType, DbConnectionStringBuilder builder)
+    internal ConnectionStringKeywordAccumulator(DatabaseType databaseType, DbConnectionStringBuilder builder) :
+        this(databaseType)
     {
-        DatabaseType = databaseType;
         _builder = builder;
     }
 
     /// <summary>
     ///     <see cref="DatabaseType" /> describing what implementation of DbConnectionStringBuilder is being manipulated
     /// </summary>
-    public DatabaseType DatabaseType { get; private set; }
+    public DatabaseType DatabaseType { get; private set; } = databaseType;
 
     /// <summary>
     ///     Adds a new connection string option (which must be compatible with <see cref="DatabaseType" />)
