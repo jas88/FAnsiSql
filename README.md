@@ -6,14 +6,10 @@
 [![NuGet](https://img.shields.io/nuget/v/FAnsiSql.Core.svg)](https://www.nuget.org/packages/FAnsiSql.Core/)
 
 - [Nuget](https://www.nuget.org/packages/FAnsiSql.Core/)
-- [Dependencies](./Packages.md)
-- [Changelog](./CHANGELOG.md)
+- [Dependencies](https://github.com/jas88/FAnsiSql/blob/main/Packages.md)
+- [Changelog](https://github.com/jas88/FAnsiSql/blob/main/CHANGELOG.md)
 
-<p align="right">
-<a href="https://www.publicdomainpictures.net/en/view-image.php?image=184699&picture=a-laugh-every-day-126">
-  <img src="FansiHammerSmall.png" align="right"/>
-</a>
-</p>
+[![A cartoon workman hammering a table into a database](https://raw.githubusercontent.com/jas88/FAnsiSql/main/FansiHammerSmall.png)](https://www.publicdomainpictures.net/en/view-image.php?image=184699&picture=a-laugh-every-day-126)
 
 Ever had difficulty getting a DataTable into a database? Maybe the dates are going in as strings or some clever dude put spaces in the middle of column names?  FAnsiSql has you covered:
 
@@ -88,10 +84,10 @@ Or .NET CLI Console:
 
 Most features are implemented across all 4 DBMS, you can find a breakdown of progress here:
 
-- [Microsoft Sql](./src/FAnsi.MicrosoftSql/README.md)
-- [MySql and MariaDB](./src/FAnsi.MySql/README.md)
-- [Oracle](./src/FAnsi.Oracle/README.md)
-- [Postgres](./src/FAnsi.PostgreSql/README.md)
+- [Microsoft Sql](https://github.com/jas88/FAnsiSql/blob/main/src/FAnsi.MicrosoftSql/README.md)
+- [MySql and MariaDB](https://github.com/jas88/FAnsiSql/blob/main/src/FAnsi.MySql/README.md)
+- [Oracle](https://github.com/jas88/FAnsiSql/blob/main/src/FAnsi.Oracle/README.md)
+- [Postgres](https://github.com/jas88/FAnsiSql/blob/main/src/FAnsi.PostgreSql/README.md)
 
 Implementations are defined in separate assemblies (e.g. FAnsi.Implementations.MicrosoftSQL.dll) to allow for future expansion.  Each implementation uses it's own backing library (e.g. [ODP.net](https://www.oracle.com/technetwork/topics/dotnet/index-085163.html) for Oracle).  Implementations are loaded using [Managed Extensibility Framework](https://docs.microsoft.com/en-us/dotnet/framework/mef/).
 
