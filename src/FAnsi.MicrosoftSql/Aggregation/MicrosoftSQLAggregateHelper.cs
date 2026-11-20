@@ -6,6 +6,16 @@ namespace FAnsi.Implementations.MicrosoftSQL.Aggregation;
 
 public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
 {
+    /// <summary>
+    ///     The most characters in a SQL Server name (sysname), which a pivot column's name is cut to
+    /// </summary>
+    internal const int MaxNameLength = 128;
+
+    /// <summary>
+    ///     The words that can end an item of an ORDER BY list, with the space before them
+    /// </summary>
+    private static readonly string[] OrderByDirections = [" asc", " desc"];
+
     private static string GetDateAxisTableDeclaration(IQueryAxis axis)
     {
         //if pivot dimension is set then this code appears inside dynamic SQL constant string that will be Exec'd so we have to escape single quotes
@@ -131,251 +141,214 @@ public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
 
     protected override string BuildPivotAndAxisAggregate(AggregateCustomLineCollection query)
     {
-        var syntaxHelper = query.SyntaxHelper;
+        var axis = query.Axis ?? throw new ArgumentNullException(nameof(query), "Query Axis cannot be null");
+        var axisSelect = query.AxisSelect ??
+                         throw new ArgumentException("Query has no axis column (CustomLineRole.Axis)", nameof(query));
+        var axisColumnAlias = axisSelect.GetAliasFromText(query.SyntaxHelper) ?? "joinDt";
 
-        var part1 = GetPivotPart1(query, out var pivotAlias, out var countAlias, out var axisColumnAlias);
+        // Only values of records that are on the axis get a column, which has to be worked out before the axis column is
+        // wrapped in a date part function
+        var valuesSql = GetPivotValuesSql(query, axisSelect.GetTextWithoutAlias(query.SyntaxHelper));
 
-        //The dynamic query in which we assemble a query string and EXECUTE it
-        var part2 = string.Format(CultureInfo.InvariantCulture, """
+        WrapAxisColumnWithDatePartFunction(query, axisColumnAlias);
 
-                                                                /*DYNAMIC PIVOT*/
-                                                                declare @Query varchar(MAX)
+        var axisDate = GetDatePartOfColumn(axis.AxisIncrement, "axis.dt");
 
-                                                                SET @Query = '
-                                                                {0}
-                                                                {1}
+        var selectSql = $"""
+                         {GetLines(query, static l => l.LocationToInsert < QueryComponent.SELECT)}
+                         {GetDateAxisTableDeclaration(axis)}
+                         ;WITH fansi_pivot_dataset ({GetDatasetColumns(query)}) AS (
+                         {GetDatasetSql(query)}
+                         )
+                         SELECT {axisDate} AS joinDt
+                         """;
 
-                                                                /*Would normally be Select * but must make it IsNull to ensure we see 0s instead of null*/
-                                                                select '+@FinalSelectList+'
-                                                                from
-                                                                (
+        var fromSql = $"""
+                       FROM @dateAxis axis
+                       LEFT JOIN fansi_pivot_dataset ON fansi_pivot_dataset.fansi_axis = {axisDate}
+                       LEFT JOIN #fansi_pivot_values fansi_pivot_values ON fansi_pivot_values.fansi_value = fansi_pivot_dataset.fansi_value
+                       GROUP BY axis.dt
+                       ORDER BY axis.dt
+                       """;
 
-                                                                SELECT
-                                                                    {5} as joinDt,
-                                                                    {4},
-                                                                    {3}
-                                                                    FROM
-                                                                    @dateAxis axis
-                                                                    LEFT JOIN
-                                                                    (
-                                                                        {2}
-                                                                    )ds
-                                                                    on {5} = ds.{6}
-                                                                ) s
-                                                                PIVOT
-                                                                (
-                                                                	sum({3})
-                                                                	for {4} in ('+@Columns+') --The dynamic Column list we just fetched at top of query
-                                                                ) piv
-                                                                ORDER BY
-                                                                joinDt'
-
-                                                                EXECUTE(@Query)
-
-                                                                """,
-            syntaxHelper.Escape(string.Join(Environment.NewLine,
-                query.Lines.Where(static c => c.LocationToInsert < QueryComponent.SELECT))),
-            syntaxHelper.Escape(GetDateAxisTableDeclaration(query.Axis!)),
-
-            //the entire select query up to the end of the group by (omitting any Top X)
-            syntaxHelper.Escape(string.Join(Environment.NewLine, query.Lines.Where(static c =>
-                c.LocationToInsert is >= QueryComponent.SELECT and < QueryComponent.OrderBy &&
-                c.Role != CustomLineRole.TopX))),
-            syntaxHelper.Escape(countAlias),
-            syntaxHelper.Escape(pivotAlias),
-            syntaxHelper.Escape(GetDatePartOfColumn(query.Axis!.AxisIncrement, "axis.dt")),
-            axisColumnAlias
-        );
-
-        return part1 + part2;
+        return BuildPivot(query, valuesSql, selectSql, fromSql);
     }
 
     protected override string BuildPivotOnlyAggregate(AggregateCustomLineCollection query, CustomLine nonPivotColumn)
     {
         var syntaxHelper = query.SyntaxHelper;
 
-        var part1 = GetPivotPart1(query, out var pivotAlias, out var countAlias, out _);
+        var rowAlias = nonPivotColumn.GetAliasFromText(syntaxHelper) ??
+                       syntaxHelper.GetRuntimeName(nonPivotColumn.GetTextWithoutAlias(syntaxHelper));
 
-        syntaxHelper.SplitLineIntoSelectSQLAndAlias(nonPivotColumn.Text, out var nonPivotColumnSelect,
-            out var nonPivotColumnAlias);
+        var valuesSql = GetPivotValuesSql(query, null);
 
-        //ensure we have an alias for the non pivot column
-        if (string.IsNullOrWhiteSpace(nonPivotColumnAlias))
-            nonPivotColumnAlias = syntaxHelper.GetRuntimeName(nonPivotColumnSelect);
+        var selectSql = $"""
+                         {GetLines(query, static l => l.LocationToInsert < QueryComponent.SELECT)}
+                         ;WITH fansi_pivot_dataset ({GetDatasetColumns(query)}) AS (
+                         {GetDatasetSql(query)}
+                         )
+                         SELECT fansi_pivot_dataset.fansi_row AS {syntaxHelper.EnsureWrapped(rowAlias)}
+                         """;
 
-        //The dynamic query in which we assemble a query string and EXECUTE it
-        var part2 = string.Format(CultureInfo.InvariantCulture, """
+        const string fromSql = """
+                               FROM fansi_pivot_dataset
+                               LEFT JOIN #fansi_pivot_values fansi_pivot_values ON fansi_pivot_values.fansi_value = fansi_pivot_dataset.fansi_value
+                               GROUP BY fansi_pivot_dataset.fansi_row
+                               ORDER BY fansi_pivot_dataset.fansi_row
+                               """;
 
-                                                                /*DYNAMIC PIVOT*/
-                                                                declare @Query varchar(MAX)
-
-                                                                SET @Query = '
-                                                                {0}
-
-                                                                /*Would normally be Select * but must make it IsNull to ensure we see 0s instead of null*/
-                                                                select
-                                                                {1},
-                                                                '+@FinalSelectList+'
-                                                                from
-                                                                (
-                                                                    {2}
-                                                                ) s
-                                                                PIVOT
-                                                                (
-                                                                	sum({3})
-                                                                	for {4} in ('+@Columns+') --The dynamic Column list we just fetched at top of query
-
-                                                                ) piv
-                                                                ORDER BY
-                                                                {1}'
-
-                                                                EXECUTE(@Query)
-
-                                                                """,
-            //anything before the SELECT (i.e. parameters)
-            syntaxHelper.Escape(string.Join(Environment.NewLine,
-                query.Lines.Where(static c => c.LocationToInsert < QueryComponent.SELECT))),
-            syntaxHelper.Escape(nonPivotColumnAlias),
-
-            //the entire select query up to the end of the group by (omitting any Top X)
-            syntaxHelper.Escape(string.Join(Environment.NewLine, query.Lines.Where(static c =>
-                c.LocationToInsert is >= QueryComponent.SELECT and < QueryComponent.OrderBy &&
-                c.Role != CustomLineRole.TopX))),
-            syntaxHelper.Escape(countAlias),
-            syntaxHelper.Escape(pivotAlias));
-
-        return part1 + part2;
+        return BuildPivot(query, valuesSql, selectSql, fromSql);
     }
 
-    private string GetPivotPart1(AggregateCustomLineCollection query, out string pivotAlias, out string countAlias,
-        out string? axisColumnAlias)
+    /// <summary>
+    ///     <para>
+    ///         A query cannot choose its own columns, so a pivot is a batch that ranks the pivot values into the temporary
+    ///         table #fansi_pivot_values (<paramref name="valuesSql" />), builds a column for each and runs the query
+    ///         <paramref name="selectSql" /> ... <paramref name="fromSql" /> with those columns as dynamic SQL.
+    ///     </para>
+    ///     <para>
+    ///         The query joins the dataset to the pivot values on the pivot column's own type.  Each column sums the aggregate
+    ///         over the rows of the dataset with the value ranked at its position and is 0 where there are none.  It is named
+    ///         after the value as SQL Server converts it to text, cut to <see cref="MaxNameLength" /> characters (keeping
+    ///         surrogate pairs together) and quoted with QUOTENAME.  A value left with no name, or with the name of an earlier
+    ///         pivot column, gets its position among the pivot columns as a suffix (e.g. _3, then _3_2 should that be taken
+    ///         too), so that every value has a column with a valid name of its own.  (PIVOT is not used, as its IN list names
+    ///         each column after its value, which a value of more than 128 characters cannot be.)
+    ///     </para>
+    /// </summary>
+    private static string BuildPivot(AggregateCustomLineCollection query, string valuesSql, string selectSql,
+        string fromSql)
     {
         var syntaxHelper = query.SyntaxHelper;
 
-        //find the pivot column e.g. 'hb_extract AS Healthboard'
-        var pivotSelectLine = query.PivotSelect!;
-        var pivotSqlWithoutAlias = pivotSelectLine.GetTextWithoutAlias(syntaxHelper);
-        pivotAlias = pivotSelectLine.GetAliasFromText(syntaxHelper)!;
+        return $"""
+                {GetLines(query, static l => l.LocationToInsert < QueryComponent.SELECT)}
+                /* The values that get a column, ranked in the order of their columns */
+                IF OBJECT_ID('tempdb..#fansi_pivot_values') IS NOT NULL DROP TABLE #fansi_pivot_values;
+                {valuesSql}
 
-        //ensure it has an RHS
-        if (string.IsNullOrWhiteSpace(pivotAlias))
-            pivotAlias = syntaxHelper.GetRuntimeName(pivotSqlWithoutAlias);
+                /* A column for each value, named after the value: cut to {MaxNameLength} characters, with its position as a suffix if that leaves no name or the name of an earlier column */
+                DECLARE @fansi_pivot_columns nvarchar(max) = N'';
+                DECLARE @fansi_pivot_names TABLE (fansi_name nvarchar({MaxNameLength}) COLLATE Latin1_General_BIN2 PRIMARY KEY);
+                DECLARE @fansi_pivot_count int = (SELECT COUNT(*) FROM #fansi_pivot_values);
+                DECLARE @fansi_pivot_rank int = 1;
+                DECLARE @fansi_pivot_text nvarchar(max);
+                DECLARE @fansi_pivot_name nvarchar(max);
+                DECLARE @fansi_pivot_suffix nvarchar(30);
+                DECLARE @fansi_pivot_try int;
+                WHILE @fansi_pivot_rank <= @fansi_pivot_count
+                BEGIN
+                    SELECT @fansi_pivot_text = CONVERT(nvarchar(max), fansi_value) FROM #fansi_pivot_values WHERE fansi_rank = @fansi_pivot_rank;
+                    SET @fansi_pivot_try = 0;
+                    WHILE 1 = 1
+                    BEGIN
+                        SET @fansi_pivot_suffix = CASE WHEN @fansi_pivot_try > 0 THEN N'_' + CONVERT(nvarchar(10), @fansi_pivot_rank) ELSE N'' END
+                            + CASE WHEN @fansi_pivot_try > 1 THEN N'_' + CONVERT(nvarchar(10), @fansi_pivot_try) ELSE N'' END;
+                        SET @fansi_pivot_name = LEFT(@fansi_pivot_text, {MaxNameLength} - LEN(@fansi_pivot_suffix));
+                        IF UNICODE(RIGHT(@fansi_pivot_name, 1)) BETWEEN 55296 AND 56319
+                            SET @fansi_pivot_name = LEFT(@fansi_pivot_name, LEN(@fansi_pivot_name + N'.') - 2);
+                        SET @fansi_pivot_name = @fansi_pivot_name + @fansi_pivot_suffix;
+                        IF @fansi_pivot_name <> N'' AND NOT EXISTS (SELECT 1 FROM @fansi_pivot_names WHERE fansi_name = @fansi_pivot_name)
+                            BREAK;
+                        SET @fansi_pivot_try = @fansi_pivot_try + 1;
+                    END;
+                    INSERT INTO @fansi_pivot_names (fansi_name) VALUES (@fansi_pivot_name);
+                    SET @fansi_pivot_columns = @fansi_pivot_columns + N', ISNULL(SUM(CASE WHEN fansi_pivot_values.fansi_rank = '
+                        + CONVERT(nvarchar(10), @fansi_pivot_rank) + N' THEN fansi_pivot_dataset.fansi_aggregate END), 0) AS '
+                        + QUOTENAME(@fansi_pivot_name);
+                    SET @fansi_pivot_rank = @fansi_pivot_rank + 1;
+                END;
 
-        var countSqlWithoutAlias = query.CountSelect!.GetTextWithoutAlias(syntaxHelper);
-        countAlias = query.CountSelect.GetAliasFromText(syntaxHelper)!;
-
-        var axisColumnWithoutAlias = query.AxisSelect?.GetTextWithoutAlias(query.SyntaxHelper);
-        axisColumnAlias = query.AxisSelect?.GetAliasFromText(query.SyntaxHelper) ?? "joinDt";
-
-        //if there is an axis we don't want to pivot on values that are outside that axis restriction.
-        if (query.Axis != null)
-        {
-            WrapAxisColumnWithDatePartFunction(query, axisColumnAlias);
-        }
-        else
-        {
-            axisColumnAlias = null;
-            axisColumnWithoutAlias = null;
-        }
-
-        //Part 1 is where we get all the unique values from the pivot column (after applying the WHERE logic)
-
-        var anyFilters = query.Lines.Any(static l => l.LocationToInsert == QueryComponent.WHERE);
-
-        var orderBy = $"{countSqlWithoutAlias} desc";
-
-        if (query.TopXOrderBy != null)
-            orderBy = query.TopXOrderBy.Text;
-
-        var havingSqlIfAny = string.Join(Environment.NewLine,
-            query.Lines.Where(static l => l.LocationToInsert == QueryComponent.Having).Select(static l => l.Text));
-
-        // Get the TOP X limit if specified and convert LIMIT N to TOP (N) for SQL Server
-        var topXLimitLine = query.Lines.SingleOrDefault(static c =>
-            c.LocationToInsert == QueryComponent.Postfix && c.Role == CustomLineRole.TopX);
-
-        var topXSqlIfAny = "";
-        if (topXLimitLine != null)
-        {
-            // Convert LIMIT N to TOP (N) for SQL Server
-            var limitText = topXLimitLine.Text.Trim();
-            if (limitText.StartsWith("LIMIT ", StringComparison.OrdinalIgnoreCase))
-            {
-                var limitValue = limitText.Substring(6).Trim();
-                topXSqlIfAny = $"TOP ({limitValue})";
-            }
-        }
-
-        var part1 = string.Format(CultureInfo.InvariantCulture,
-            """
-
-            /*DYNAMICALLY FETCH COLUMN VALUES FOR USE IN PIVOT*/
-            DECLARE @Columns as VARCHAR(MAX)
-            {0}
-
-            /*Get distinct values of the PIVOT Column if you have columns with values T and F and Z this will produce [T],[F],[Z] and you will end up with a pivot against these values*/
-            set @Columns = (
-            {1}
-             {10}
-             ',' + QUOTENAME({2}) as [text()]
-            {3}
-            {4}
-            {5} ( {2} IS NOT NULL and {2} <> '' {7})
-            group by
-            {2}
-            {8}
-            order by
-            {6}
-            FOR XML PATH(''), root('MyString'),type
-            ).value('/MyString[1]','varchar(max)')
-
-            set @Columns = SUBSTRING(@Columns,2,LEN(@Columns))
-
-            DECLARE @FinalSelectList as VARCHAR(MAX)
-            SET @FinalSelectList = {9}
-
-            --Split up that pesky string in tsql which has the column names up into array elements again
-            DECLARE @value varchar(8000)
-            DECLARE @pos INT
-            DECLARE @len INT
-            set @pos = 0
-            set @len = 0
-
-            WHILE CHARINDEX('],', @Columns +',', @pos+1)>0
-            BEGIN
-                set @len = CHARINDEX('],[', @Columns +'],[', @pos+1) - @pos
-                set @value = SUBSTRING(@Columns, @pos+1, @len)
-
-                --We are constructing a version that turns: '[fish],[lama]' into 'ISNULL([fish],0) as [fish], ISNULL([lama],0) as [lama]'
-                SET @FinalSelectList = @FinalSelectList + ', ISNULL(' + @value  + ',0) as ' + @value
-
-                set @pos = CHARINDEX('],[', @Columns +'],[', @pos+@len) +1
-            END
-
-            if LEFT(@FinalSelectList,1)  = ','
-            	SET @FinalSelectList = RIGHT(@FinalSelectList,LEN(@FinalSelectList)-1)
-
-
-            """,
-            //select SQL and parameter declarations
-            string.Join(Environment.NewLine, query.Lines.Where(static l => l.LocationToInsert < QueryComponent.SELECT)),
-            string.Join(Environment.NewLine,
-                query.Lines.Where(static l => l.LocationToInsert == QueryComponent.SELECT)),
-            pivotSqlWithoutAlias,
-
-            //FROM and JOINs that are not to the calendar table
-            string.Join(Environment.NewLine,
-                query.Lines.Where(static l =>
-                    l.LocationToInsert == QueryComponent.FROM || (l.LocationToInsert == QueryComponent.JoinInfoJoin &&
-                                                                  l.Role != CustomLineRole.Axis))),
-            string.Join(Environment.NewLine, query.Lines.Where(static l => l.LocationToInsert == QueryComponent.WHERE)),
-            anyFilters ? "AND" : "WHERE",
-            orderBy,
-            axisColumnWithoutAlias == null ? "" : $"AND  {axisColumnWithoutAlias} is not null",
-            havingSqlIfAny,
-            query.Axis != null ? "'joinDt'" : "''",
-            topXSqlIfAny
-        );
-        return part1;
+                /* The pivot, as dynamic SQL since its columns are only known now */
+                DECLARE @fansi_pivot_query nvarchar(max) = N'{syntaxHelper.Escape(selectSql)}' + @fansi_pivot_columns + N'
+                {syntaxHelper.Escape(fromSql)}';
+                EXECUTE (@fansi_pivot_query);
+                DROP TABLE #fansi_pivot_values;
+                """;
     }
+
+    /// <summary>
+    ///     Returns the statement that ranks (fansi_rank) the values of the pivot column that get a column (fansi_value) into
+    ///     #fansi_pivot_values, in the order their columns appear: those that are neither null nor empty as text (and are on
+    ///     a record with a date for the axis, if <paramref name="axisColumnSql" /> is given), ordered by the TOP X ORDER BY or
+    ///     else by the aggregate, largest first, and limited by the TOP X, if there is one
+    /// </summary>
+    private static string GetPivotValuesSql(AggregateCustomLineCollection query, string? axisColumnSql)
+    {
+        var pivotSelect = query.PivotSelect ??
+                          throw new ArgumentException("Query has no pivot column (CustomLineRole.Pivot)", nameof(query));
+        var countSelect = query.CountSelect ??
+                          throw new ArgumentException("Query has no aggregate column (CustomLineRole.CountFunction)",
+                              nameof(query));
+        var pivotSql = pivotSelect.GetTextWithoutAlias(query.SyntaxHelper);
+        var countSql = countSelect.GetTextWithoutAlias(query.SyntaxHelper);
+
+        // break ties on the value itself so that the columns always come out in the same order, unless it is ordered on
+        // already, which SQL Server does not allow twice
+        var orderBy = query.TopXOrderBy?.Text ?? $"{countSql} desc";
+        if (!IsOrderedOn(orderBy, pivotSql))
+            orderBy += $", {pivotSql}";
+
+        var whereOrAnd = query.Lines.Any(static l => l.LocationToInsert == QueryComponent.WHERE) ? "AND" : "WHERE";
+        var onAxis = axisColumnSql == null ? "" : $" AND ({axisColumnSql}) IS NOT NULL";
+
+        // TOP X lines go in the SELECT, except that a LIMIT X line (as MySQL writes it) is written as TOP (X)
+        var limit = query.Lines.SingleOrDefault(static l =>
+            l.LocationToInsert == QueryComponent.Postfix && l.Role == CustomLineRole.TopX)?.Text.Trim();
+        var topFromLimit = limit != null && limit.StartsWith("LIMIT ", StringComparison.OrdinalIgnoreCase)
+            ? $"TOP ({limit[6..].Trim()})"
+            : "";
+
+        return $"""
+                {GetLines(query, static l => l.LocationToInsert == QueryComponent.SELECT)}
+                {topFromLimit}
+                ROW_NUMBER() OVER (ORDER BY {orderBy}) AS fansi_rank, {pivotSql} AS fansi_value
+                INTO #fansi_pivot_values
+                {GetLines(query, static l => l.LocationToInsert is >= QueryComponent.FROM and <= QueryComponent.WHERE && l.Role != CustomLineRole.Axis)}
+                {whereOrAnd} ({pivotSql}) IS NOT NULL AND CONVERT(nvarchar(max), {pivotSql}) <> N''{onAxis}
+                GROUP BY {pivotSql}
+                {GetLines(query, static l => l.LocationToInsert == QueryComponent.Having)}
+                ORDER BY {orderBy};
+                """;
+    }
+
+    /// <summary>
+    ///     True if <paramref name="sql" /> is one of the comma separated items, less any ASC or DESC, of the ORDER BY list
+    ///     <paramref name="orderBy" />
+    /// </summary>
+    private static bool IsOrderedOn(string orderBy, string sql) =>
+        orderBy.Split(',').Select(static item => item.Trim()).Any(item =>
+            string.Equals(StripDirection(item), sql.Trim(), StringComparison.OrdinalIgnoreCase));
+
+    private static string StripDirection(string orderByItem)
+    {
+        var direction = OrderByDirections.FirstOrDefault(d => orderByItem.EndsWith(d, StringComparison.OrdinalIgnoreCase));
+        return direction == null ? orderByItem : orderByItem[..^direction.Length].Trim();
+    }
+
+    /// <summary>
+    ///     The query being pivoted, from SELECT to HAVING.  Any TOP X applies to the choice of pivot values, not to this
+    /// </summary>
+    private static string GetDatasetSql(AggregateCustomLineCollection query) =>
+        GetLines(query, static l =>
+            l.LocationToInsert is >= QueryComponent.SELECT and <= QueryComponent.Having && l.Role != CustomLineRole.TopX);
+
+    /// <summary>
+    ///     Names for the columns of <see cref="GetDatasetSql" /> (its <see cref="QueryComponent.QueryTimeColumn" /> lines, in
+    ///     order).  Referring to the columns by these names means it does not matter whether, or how, the lines alias them.
+    /// </summary>
+    private static string GetDatasetColumns(AggregateCustomLineCollection query) =>
+        string.Join(", ", query.Lines.Where(static l => l.LocationToInsert == QueryComponent.QueryTimeColumn)
+            .Select(static l => l.Role switch
+            {
+                CustomLineRole.CountFunction => "fansi_aggregate",
+                CustomLineRole.Pivot => "fansi_value",
+                CustomLineRole.Axis => "fansi_axis",
+                CustomLineRole.None => "fansi_row",
+                _ => throw new InvalidOperationException($"A {l.Role} column cannot be part of a pivot: {l.Text}")
+            }));
+
+    private static string GetLines(AggregateCustomLineCollection query, Func<CustomLine, bool> predicate) =>
+        string.Join(Environment.NewLine, query.Lines.Where(predicate).Select(static l => l.Text));
 }

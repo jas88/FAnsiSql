@@ -20,7 +20,7 @@ internal sealed class PivotAggregationTests_Oracle : PivotAggregationTestsBase
     [Test]
     public void Test_Pivot_ColumnNamesAreValidAndUnique() =>
         Test_Pivot_ColumnNamesAreValidAndUnique(DbType,
-            ["T", "_2", "_3", "ab", "ab_5", new string('x', 128), $"{new string('x', 126)}_7"]);
+            ["T", "_2", "_3", "ab", "ab_5", "a`b]c'd", new string('x', 128), $"{new string('x', 126)}_8"]);
 
     [TestCase("DATE",
         new[] { "TIMESTAMP '1901-01-01 00:00:00'", "TIMESTAMP '2001-01-01 00:00:00'", "TIMESTAMP '2001-01-01 12:00:00'" },

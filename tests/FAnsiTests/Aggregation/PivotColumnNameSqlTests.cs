@@ -12,7 +12,7 @@ using NUnit.Framework;
 namespace FAnsiTests.Aggregation;
 
 /// <summary>
-///     Checks, without a database, of the SQL with which the Oracle and PostgreSQL pivots name their columns.  The names
+///     Checks, without a database, of the SQL with which the pivots name their columns.  The names
 ///     are worked out by that SQL when it runs, which the Test_Pivot_ColumnNamesAreValidAndUnique and
 ///     Test_Pivot_DateColumnNames tests of <see cref="PivotAggregationTestsBase" /> check on the databases.
 /// </summary>
@@ -91,6 +91,33 @@ internal sealed class PivotColumnNameSqlTests
     }
 
     /// <summary>
+    ///     SQL Server names each column with QUOTENAME of a name of at most 128 characters rather than of the value, for
+    ///     which QUOTENAME gives NULL once it is longer than 128 characters, so that no value is left out.  The values are
+    ///     ranked once, in a temporary table, and each column counts the value at its rank rather than using PIVOT, whose
+    ///     IN list could only name a column after its value.
+    /// </summary>
+    [Test]
+    public void MicrosoftSql_EachValueGetsAColumnWithAValidNameOfItsOwn()
+    {
+        var sql = BuildPivot(DatabaseType.MicrosoftSQLServer);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(sql, Does.Contain("INTO #fansi_pivot_values"));
+            Assert.That(sql, Does.Contain("SET @fansi_pivot_name = LEFT(@fansi_pivot_text, 128 - LEN(@fansi_pivot_suffix));"));
+            Assert.That(sql, Does.Contain("fansi_name nvarchar(128) COLLATE Latin1_General_BIN2 PRIMARY KEY"));
+            Assert.That(sql,
+                Does.Contain(
+                    "IF @fansi_pivot_name <> N'' AND NOT EXISTS (SELECT 1 FROM @fansi_pivot_names WHERE fansi_name = @fansi_pivot_name)"));
+            Assert.That(sql, Does.Contain("+ QUOTENAME(@fansi_pivot_name);"));
+            Assert.That(sql, Does.Not.Contain("QUOTENAME([Val])"));
+            Assert.That(sql, Does.Not.Contain("PIVOT"));
+            Assert.That(sql, Does.Not.Contain("varchar(MAX)").And.Not.Contain("varchar(8000)"),
+                "the SQL is built as nvarchar, so that no character of a value is lost");
+        });
+    }
+
+    /// <summary>
     ///     Every string literal of the Oracle block is closed, as a quote doubled to escape it comes in a pair
     /// </summary>
     [Test]
@@ -101,6 +128,7 @@ internal sealed class PivotColumnNameSqlTests
     ///     The same query gives the same SQL each time it is built, which callers that cache results by their SQL (as RDMP
     ///     does) rely on
     /// </summary>
+    [TestCase(DatabaseType.MicrosoftSQLServer)]
     [TestCase(DatabaseType.Oracle)]
     [TestCase(DatabaseType.PostgreSql)]
     public void Pivot_IsTheSameEachTime(DatabaseType type)
@@ -114,9 +142,13 @@ internal sealed class PivotColumnNameSqlTests
     /// </summary>
     private static string BuildPivot(DatabaseType type)
     {
-        var server = type == DatabaseType.Oracle
-            ? new DiscoveredServer("Data Source=localhost:1521/XEPDB1;User Id=fansi", type)
-            : new DiscoveredServer("Host=localhost;Database=fansi;Username=fansi", type);
+        var server = new DiscoveredServer(type switch
+        {
+            DatabaseType.MicrosoftSQLServer => "Data Source=localhost;Initial Catalog=fansi;User ID=fansi",
+            DatabaseType.MySql => "Server=localhost;Database=fansi;Uid=fansi",
+            DatabaseType.Oracle => "Data Source=localhost:1521/XEPDB1;User Id=fansi",
+            _ => "Host=localhost;Database=fansi;Username=fansi"
+        }, type);
         var tbl = server.ExpectDatabase("fansi").ExpectTable("PivotColumnNames");
         var syntax = tbl.GetQuerySyntaxHelper();
         var grp = syntax.EnsureWrapped("Grp");

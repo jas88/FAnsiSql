@@ -212,17 +212,19 @@ internal abstract class PivotAggregationTestsBase : AggregationTests
     /// <summary>
     ///     The pivot values of <see cref="Test_Pivot_ColumnNamesAreValidAndUnique" /> and the number of records of each, all
     ///     different so that the order of the columns does not depend on the collation: values made only of double quotes,
-    ///     two that differ only by a double quote and two that start the same and are longer than a name can be
+    ///     two that differ only by a double quote, one with the characters that quote names on SQL Server and MySQL and
+    ///     strings in SQL, and two that start the same and are longer than a name can be
     /// </summary>
     private static readonly (string Value, int Records)[] PivotNameValues =
     [
-        ("T", 7),
-        ("\"", 6),
-        ("\"\"", 5),
-        ("a\"b", 4),
-        ("ab", 3),
-        (new string('x', 140) + "1", 2),
-        (new string('x', 140) + "2", 1)
+        ("T", 9),
+        ("\"", 8),
+        ("\"\"", 7),
+        ("a\"b", 6),
+        ("ab", 5),
+        ("a`b]c'd", 4),
+        (new string('x', 140) + "1", 3),
+        (new string('x', 140) + "2", 2)
     ];
 
     /// <summary>

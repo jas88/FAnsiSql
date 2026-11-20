@@ -20,7 +20,7 @@ internal sealed class PivotAggregationTests_PostgreSql : PivotAggregationTestsBa
     [Test]
     public void Test_Pivot_ColumnNamesAreValidAndUnique() =>
         Test_Pivot_ColumnNamesAreValidAndUnique(DbType,
-            ["T", "\"", "\"\"", "a\"b", "ab", new string('x', 63), $"{new string('x', 61)}_7"]);
+            ["T", "\"", "\"\"", "a\"b", "ab", "a`b]c'd", new string('x', 63), $"{new string('x', 61)}_8"]);
 
     [TestCase("timestamp",
         new[]
