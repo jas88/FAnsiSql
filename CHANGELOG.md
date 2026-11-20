@@ -100,6 +100,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     culture
   - The character set and its collation are now declared only on character types (char, varchar, the text types, enum
     and set)
+- **MySQL: `bit(n)` columns of 2 to 64 bits were read as booleans**
+  - MySqlConnector reads every `bit` column as a `ulong`, but FAnsi gave every `bit` type the C# type `bool`, so
+    `GetDataTable()` made such a column a `bool` one and read every value but 0 as `true`
+  - `GetCSharpDataType()` of a `bit(n)` column with n from 2 to 64, and so the type of its column in `GetDataTable()`,
+    is now `ulong` instead of `bool`, and its `DbType` is `UInt64` instead of `Boolean`. `bit` and `bit(1)` columns are
+    still `bool`
+  - TypeGuesser has no `ulong`, so the `DatabaseTypeRequest` for these columns, and the `Guesser` from `GetGuesser()`,
+    have `long`, the nearest type it has. A `ulong` is still created as a `bigint`, which holds every value below 2^63
+  - `TypeTranslater` has a new protected virtual method, `IsUnsignedLong`, for the SQL types that the ADO.NET provider
+    of a DBMS reads as a `ulong`
 
 ### Changed
 - **Target frameworks are now net10.0 and net11.0**

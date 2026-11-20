@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.RegularExpressions;
 using FAnsi.Discovery.TypeTranslation;
 
@@ -12,6 +13,7 @@ public sealed partial class MySqlTypeTranslater : TypeTranslater
     private static readonly Regex AlsoBitRegex = AlsoBitRe();
     private static readonly Regex AlsoStringRegex = AlsoStringRe();
     private static readonly Regex AlsoFloatingPoint = AlsoFloatingPointRe();
+    private static readonly Regex BitSize = BitSizeRe();
 
     private MySqlTypeTranslater() : base(DateRe(), 4000, 4000)
     {
@@ -102,7 +104,20 @@ public sealed partial class MySqlTypeTranslater : TypeTranslater
     protected override bool IsFloatingPoint(string sqlType) =>
         base.IsFloatingPoint(sqlType) || AlsoFloatingPoint.IsMatch(sqlType);
 
-    protected override bool IsBit(string sqlType) => base.IsBit(sqlType) || AlsoBitRegex.IsMatch(sqlType);
+    protected override bool IsBit(string sqlType) =>
+        !IsUnsignedLong(sqlType) && (base.IsBit(sqlType) || AlsoBitRegex.IsMatch(sqlType));
+
+    /// <summary>
+    ///     A bit(n) with n from 2 to 64.  MySqlConnector reads every bit column as a <see cref="ulong" />, so these are
+    ///     given that type.  bit and bit(1) hold a single bit and are still booleans.
+    /// </summary>
+    protected override bool IsUnsignedLong(string sqlType)
+    {
+        var match = BitSize.Match(sqlType);
+        return match.Success &&
+               int.TryParse(match.Groups[1].ValueSpan, NumberStyles.None, CultureInfo.InvariantCulture, out var bits) &&
+               bits > 1;
+    }
 
     protected override string GetByteArrayDataType() => "longblob";
 
@@ -137,6 +152,9 @@ public sealed partial class MySqlTypeTranslater : TypeTranslater
     [GeneratedRegex(@"^(bigint)|(int8)",
         RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]
     private static partial Regex LongRe();
+
+    [GeneratedRegex(@"^bit\((\d+)\)", RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]
+    private static partial Regex BitSizeRe();
 
     [GeneratedRegex(@"(date)|(timestamp)",
         RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]

@@ -138,6 +138,9 @@ public abstract partial class TypeTranslater : ITypeTranslater
     {
         if (string.IsNullOrWhiteSpace(sqlType)) return null;
 
+        if (IsUnsignedLong(sqlType))
+            return typeof(ulong);
+
         if (IsBit(sqlType))
             return typeof(bool);
 
@@ -180,6 +183,9 @@ public abstract partial class TypeTranslater : ITypeTranslater
     /// <inheritdoc />
     public virtual DbType GetDbTypeForSQLDBType(string sqlType)
     {
+        if (IsUnsignedLong(sqlType))
+            return DbType.UInt64;
+
         if (IsBit(sqlType))
             return DbType.Boolean;
 
@@ -222,6 +228,10 @@ public abstract partial class TypeTranslater : ITypeTranslater
     public virtual DatabaseTypeRequest GetDataTypeRequestForSQLDBType(string sqlType)
     {
         var cSharpType = GetCSharpTypeForSQLDBType(sqlType);
+
+        // A request is for TypeGuesser, which has no ulong (see IsUnsignedLong): long is the nearest type it has
+        if (cSharpType == typeof(ulong))
+            cSharpType = typeof(long);
 
         var digits = GetDigitsBeforeAndAfterDecimalPointIfDecimal(sqlType);
 
@@ -518,6 +528,15 @@ select LEN(dt) from omgdates
         Guesser.MinimumLengthRequiredForDateStringRepresentation; //e.g. "2018-01-30 13:05:45.1266667"
 
     protected virtual bool IsBit(string sqlType) => BitRegex.IsMatch(sqlType);
+
+    /// <summary>
+    ///     True for a SQL type whose values the ADO.NET provider of the DBMS reads as a <see cref="ulong" />, such as a
+    ///     MySQL bit(8).  Such a type is given that C# type and <see cref="DbType.UInt64" />, but its
+    ///     <see cref="DatabaseTypeRequest" /> (and so a <see cref="Guesser" /> for it) has <see cref="long" />, as
+    ///     TypeGuesser has no <see cref="ulong" />.  False unless overridden.
+    /// </summary>
+    /// <param name="sqlType">The SQL type, e.g. bit(8)</param>
+    protected virtual bool IsUnsignedLong(string sqlType) => false;
 
     protected virtual bool IsBool(string sqlType) => BoolRegex.IsMatch(sqlType);
     protected bool IsByte(string sqlType) => ByteRegex.IsMatch(sqlType);
