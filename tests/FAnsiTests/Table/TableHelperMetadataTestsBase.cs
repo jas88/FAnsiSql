@@ -249,29 +249,25 @@ internal abstract class TableHelperMetadataTestsBase : DatabaseTests
 
             Assert.That(columns, Has.Length.EqualTo(4));
 
-            var intCol = columns.FirstOrDefault(c =>
-                c.GetRuntimeName()?.Equals("IntCol", StringComparison.OrdinalIgnoreCase) == true);
-            var stringCol = columns.FirstOrDefault(c =>
-                c.GetRuntimeName()?.Equals("StringCol", StringComparison.OrdinalIgnoreCase) == true);
-            var dateCol = columns.FirstOrDefault(c =>
-                c.GetRuntimeName()?.Equals("DateCol", StringComparison.OrdinalIgnoreCase) == true);
-            var decimalCol = columns.FirstOrDefault(c =>
-                c.GetRuntimeName()?.Equals("DecimalCol", StringComparison.OrdinalIgnoreCase) == true);
+            DiscoveredColumn Column(string name) =>
+                columns.FirstOrDefault(c => c.GetRuntimeName()?.Equals(name, StringComparison.OrdinalIgnoreCase) == true)
+                ?? throw new AssertionException($"Column {name} was not discovered");
+
+            var intCol = Column("IntCol");
+            var stringCol = Column("StringCol");
+            var dateCol = Column("DateCol");
+            var decimalCol = Column("DecimalCol");
 
             Assert.Multiple(() =>
             {
-                Assert.That(intCol, Is.Not.Null);
-                Assert.That(intCol!.DataType?.GetCSharpDataType(), Is.EqualTo(typeof(int)));
+                Assert.That(intCol.DataType?.GetCSharpDataType(), Is.EqualTo(typeof(int)));
 
-                Assert.That(stringCol, Is.Not.Null);
-                Assert.That(stringCol!.DataType?.GetCSharpDataType(), Is.EqualTo(typeof(string)));
+                Assert.That(stringCol.DataType?.GetCSharpDataType(), Is.EqualTo(typeof(string)));
                 Assert.That(stringCol.DataType?.GetLengthIfString(), Is.EqualTo(50));
 
-                Assert.That(dateCol, Is.Not.Null);
-                Assert.That(dateCol!.DataType?.GetCSharpDataType(), Is.EqualTo(typeof(DateTime)));
+                Assert.That(dateCol.DataType?.GetCSharpDataType(), Is.EqualTo(typeof(DateTime)));
 
-                Assert.That(decimalCol, Is.Not.Null);
-                Assert.That(decimalCol!.DataType?.GetCSharpDataType(), Is.EqualTo(typeof(decimal)));
+                Assert.That(decimalCol.DataType?.GetCSharpDataType(), Is.EqualTo(typeof(decimal)));
             });
         }
         finally
