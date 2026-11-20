@@ -25,6 +25,11 @@ public sealed class SqliteQuerySyntaxHelper : QuerySyntaxHelper
     public static readonly SqliteQuerySyntaxHelper Instance = new();
 
     /// <summary>
+    ///     What SQLite calls the database a connection opens, its schema name in SQL
+    /// </summary>
+    private const string MainDatabase = "main";
+
+    /// <summary>
     ///     Dictionary mapping common SQL function names to their SQLite equivalents with usage examples.
     /// </summary>
     private static readonly Dictionary<string, string> Functions = new()
@@ -119,6 +124,17 @@ public sealed class SqliteQuerySyntaxHelper : QuerySyntaxHelper
     /// <param name="database">The path of the database file</param>
     /// <returns><paramref name="database" /></returns>
     public override string GetDatabaseRuntimeName(string database) => database;
+
+    /// <summary>
+    ///     Returns "main", wrapped.  SQL has no name for a database file, the path of the file is not an identifier (and
+    ///     <see cref="QuerySyntaxHelper.EnsureWrapped" /> rejects its dots): SQLite calls the database that a connection
+    ///     opens main, as PRAGMA database_list shows.  Every connection FAnsi opens to a SQLite database opens its file, so
+    ///     main is the name SQL refers to the database by.  It is also why FAnsi leaves SQLite table names unqualified (see
+    ///     <see cref="EnsureFullyQualified(string,string,string)" />).
+    /// </summary>
+    /// <param name="database">The path of the database file</param>
+    /// <returns>"main" wrapped in double quotes</returns>
+    public override string GetDatabaseWrappedName(string database) => EnsureWrappedImpl(MainDatabase);
 
     /// <inheritdoc />
     public override string EnsureWrappedImpl(string databaseOrTableName) =>

@@ -127,6 +127,9 @@ public abstract partial class QuerySyntaxHelper(
     /// <inheritdoc />
     public virtual string GetDatabaseRuntimeName(string database) => GetRuntimeName(database);
 
+    /// <inheritdoc />
+    public virtual string? GetDatabaseWrappedName(string database) => EnsureWrapped(GetDatabaseRuntimeName(database));
+
     public virtual bool TryGetRuntimeName(string s, out string? name)
     {
         try

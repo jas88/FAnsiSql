@@ -107,6 +107,16 @@ public interface IQuerySyntaxHelper
     /// <returns>The name of the database without any qualifiers</returns>
     string GetDatabaseRuntimeName(string database) => GetRuntimeName(database);
 
+    /// <summary>
+    ///     Returns the name to refer to the database called <paramref name="database" /> by in SQL, wrapped and escaped: the
+    ///     name <see cref="DiscoveredDatabase.GetWrappedName" /> returns.  This is <see cref="EnsureWrapped" /> of
+    ///     <see cref="GetDatabaseRuntimeName" /> unless the DBMS does not name its databases with SQL identifiers, e.g. SQL
+    ///     has no name for the file of a SQLite database, and refers to it as main on a connection that opened it.
+    /// </summary>
+    /// <param name="database">The database name e.g. as passed to <see cref="DiscoveredServer.ExpectDatabase" /></param>
+    /// <returns>The wrapped name of the database</returns>
+    string? GetDatabaseWrappedName(string database) => EnsureWrapped(GetDatabaseRuntimeName(database));
+
     bool TryGetRuntimeName(string s, out string? name);
 
     /// <summary>

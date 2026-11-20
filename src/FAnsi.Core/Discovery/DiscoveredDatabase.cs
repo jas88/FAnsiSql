@@ -106,10 +106,11 @@ public sealed class DiscoveredDatabase : IHasRuntimeName, IMightNotExist
 
     /// <summary>
     ///     Returns the wrapped e.g. "[MyDatabase]" name of the database including escaping e.g. if you wanted to name a
-    ///     database "][nquisitor" (which would return "[]][nquisitor]").
+    ///     database "][nquisitor" (which would return "[]][nquisitor]").  This is the name SQL refers to the database by
+    ///     (see <see cref="IQuerySyntaxHelper.GetDatabaseWrappedName" />), for SQLite "main".
     /// </summary>
     /// <returns></returns>
-    public string? GetWrappedName() => _querySyntaxHelper.EnsureWrapped(GetRuntimeName());
+    public string? GetWrappedName() => _querySyntaxHelper.GetDatabaseWrappedName(_database);
 
     /// <summary>
     ///     <para>

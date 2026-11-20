@@ -1,3 +1,4 @@
+using System.Globalization;
 using FAnsi;
 using FAnsi.Discovery;
 using NUnit.Framework;
@@ -144,6 +145,45 @@ internal sealed class DatabaseExistsTests : DatabaseTests
 
             db.Drop();
             Assert.That(File.Exists(file), Is.False);
+        }
+        finally
+        {
+            if (Directory.Exists(directory))
+                Directory.Delete(directory, true);
+        }
+    }
+
+    /// <summary>
+    ///     SQL has no name for a database file: SQLite calls the database a connection opens main.  GetWrappedName gave the
+    ///     path of the file to EnsureWrapped, which rejects the dot in a name like "MyDatabase.db", so it threw for most
+    ///     SQLite databases.
+    /// </summary>
+    [Test]
+    public void GetWrappedName_Sqlite_IsMainAndWorksInSql()
+    {
+        var server = GetTestServer(DatabaseType.Sqlite);
+        var directory = Path.Combine(Path.GetTempPath(), $"FAnsiTests_{Guid.NewGuid():N}");
+        var file = Path.Combine(directory, "MyDatabase.db");
+
+        try
+        {
+            var db = server.CreateDatabase(file);
+            var tbl = db.CreateTable("MyTable",
+                [new DatabaseColumnRequest("MyCol", new DatabaseTypeRequest(typeof(int)))]);
+            tbl.Insert(new Dictionary<string, object> { { "MyCol", 1 } });
+
+            var wrapped = db.GetWrappedName();
+            Assert.That(wrapped, Is.EqualTo("\"main\""));
+
+            // The name refers to the database in SQL run on its connections
+            using (var con = db.Server.GetConnection())
+            {
+                con.Open();
+                using var cmd = db.Server.GetCommand($"SELECT COUNT(*) FROM {wrapped}.{tbl.GetWrappedName()}", con);
+                Assert.That(Convert.ToInt32(cmd.ExecuteScalar(), CultureInfo.InvariantCulture), Is.EqualTo(1));
+            }
+
+            db.Drop();
         }
         finally
         {

@@ -40,10 +40,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     called `fansitests.db`, so `Exists` looked for, and `Create` created, a file called `db` in the working directory.
     The runtime name of a SQLite database is now the path of its file, and `Exists` and `CreateDatabase` use the Data
     Source of the database's connection string
-  - `IQuerySyntaxHelper` has a new member, `GetDatabaseRuntimeName`, which gives the name that
-    `DiscoveredDatabase.GetRuntimeName` returns. It is `GetRuntimeName` for every DBMS but SQLite, for which it is the
-    path of the database file unchanged. It has a default implementation, so other implementations of
-    `IQuerySyntaxHelper` are unaffected
+  - `DiscoveredDatabase.GetWrappedName` wrapped the same `db`. SQL has no name for a database file, so it now returns
+    `"main"`, what SQLite calls the database that a connection opens: every connection FAnsi opens to a SQLite
+    database opens its file
+  - `IQuerySyntaxHelper` has two new members, `GetDatabaseRuntimeName` and `GetDatabaseWrappedName`, which give the
+    names that `DiscoveredDatabase.GetRuntimeName` and `GetWrappedName` return. For every DBMS but SQLite they are
+    `GetRuntimeName` and `EnsureWrapped` of it, as before. They have default implementations, so other implementations
+    of `IQuerySyntaxHelper` are unaffected
 - **SQLite: `GetTodaysDate` gave today's date in UTC, at midnight**
   - `GetScalarFunctionSql(MandatoryScalarFunctions.GetTodaysDate)` was `date('now')`, so a column with
     `Default = MandatoryScalarFunctions.GetTodaysDate` was given midnight at the start of the UTC date, which can be the
