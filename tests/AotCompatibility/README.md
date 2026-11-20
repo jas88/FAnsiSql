@@ -29,14 +29,14 @@ These tests verify that FAnsiSql and its database-specific implementations can b
 ```bash
 cd tests/AotCompatibility/SqlServer.AotTest
 dotnet publish -c Release -r <RID>
-./bin/Release/net10.0/<RID>/publish/SqlServer.AotTest
+./bin/Release/net11.0/<RID>/publish/SqlServer.AotTest
 ```
 
 ### Build and Run Comprehensive Test
 ```bash
 cd tests/AotCompatibility/FAnsi.AotTest
 dotnet publish -c Release -r <RID>
-./bin/Release/net10.0/<RID>/publish/FAnsi.AotTest
+./bin/Release/net11.0/<RID>/publish/FAnsi.AotTest
 ```
 
 Replace `<RID>` with your platform runtime identifier:

@@ -32,7 +32,7 @@
     <!-- Utilities -->
     <PackageVersion Include="System.Linq.Async" Version="7.0.1" />
     <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="10.0.15" />
-    <PackageVersion Include="TypeGuesser" Version="2.0.4" />
+    <PackageVersion Include="TypeGuesser" Version="2.1.0" />
 
     <!-- Testing -->
     <PackageVersion Include="coverlet.collector" Version="6.0.4" />

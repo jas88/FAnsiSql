@@ -460,12 +460,31 @@ public sealed class SqliteTableHelper : DiscoveredTableHelper
                         out var parsedDate))
                     value = parsedDate;
 
+                // SQLite stores the values of decimal columns as REAL
+                if (i < dt.Columns.Count && dt.Columns[i].DataType == typeof(decimal) && value is double real &&
+                    double.IsFinite(real))
+                    value = RealToDecimal(real);
+
                 row[i] = value;
             }
 
             dt.Rows.Add(row);
         }
     }
+
+    /// <summary>
+    ///     Converts the REAL value of a decimal column to a decimal rounded to 15 significant digits, as
+    ///     Convert.ToDecimal(double) did before .NET 11, so that the REAL 9.99 is read as 9.99.
+    /// </summary>
+    /// <remarks>
+    ///     .NET 11 converts a double to decimal exactly, which reads the REAL 9.99 as 9.990000000000000213162820728: more
+    ///     decimal places than the column allows, and not equal to the value that was stored.
+    /// </remarks>
+    /// <param name="real">A finite REAL value</param>
+    /// <exception cref="OverflowException">The value is outside the range of decimal</exception>
+    private static decimal RealToDecimal(double real) =>
+        decimal.Parse(real.ToString("G15", CultureInfo.InvariantCulture), NumberStyles.Float,
+            CultureInfo.InvariantCulture);
 
     /// <summary>
     ///     Checks if the table has a primary key using a database-specific SQL query (90-99% faster than discovering all

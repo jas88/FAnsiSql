@@ -8,6 +8,67 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **SQLite: `SupportsEmbeddedParameters` returned true**
+  - SQLite SQL has no `DECLARE` or `SET` statement, so a parameter cannot be declared and given a value in SQL. Code that
+    trusted the flag, declaring parameters with `GetParameterDeclaration` and setting them with `SET`, failed with
+    `near "SET": syntax error`
+  - `SupportsEmbeddedParameters` now returns false and `GetParameterDeclaration` throws `NotSupportedException`, as they
+    do for Oracle and PostgreSQL. Parameter values have to be passed as `DbParameter`s
+- **Decimal values on .NET 11**
+  - .NET 11 converts a `double` to a `decimal` exactly, so 9.99 becomes 9.990000000000000213162820728, where earlier
+    versions of .NET rounded to 15 significant digits
+  - Bulk insert worked out the largest value of a `decimal(p,s)` column in doubles, so on .NET 11 it rejected the
+    largest values, such as 999.99 for `decimal(5,2)`. It now works it out in decimals
+  - SQLite: `GetDataTable()` rounds the REAL values of a decimal column to 15 significant digits again, so a value
+    stored as 9.99 is read as 9.99 on .NET 11, not as a value with more decimal places than the column allows
+  - Oracle: ODP.NET reads a `NUMBER` column as the first of `short`, `int`, `long`, `float`, `double` and `decimal`
+    that can hold its range, so a `NUMBER(p,s)` with a scale and a precision of 15 or less came back as a `float` or a
+    `double`, and on .NET 11 `GetDataTable()` read the 9.99 of a `NUMBER(5,2)` column as 9.9899997711181640625. These
+    columns are now read as decimals, which also makes them `decimal` columns rather than `float` or `double` ones
+    when `GetDataTable()` is called with `enforceTypesAndNullness: false`. `FLOAT(b)`, `BINARY_FLOAT` and
+    `BINARY_DOUBLE` columns are read as before
+- **Bulk insert allowed values too large for some decimal columns**
+  - Bulk insert on SQL Server, MySQL, Oracle and PostgreSQL checked a value against the largest value of its
+    `decimal(p,s)` column, 10^(p-s) - 10^-s, which a C# `decimal` cannot hold when the column has 28 digits before the
+    decimal point and more than 28 in all: for `decimal(29,1)` it rounded to 10^28, so 10^28, which has 29 digits
+    before the point, was allowed. A value is now rejected when it is 10^(p-s) or more, ignoring its sign, and the error
+    message gives the largest value of the column as text. SQLite does not check decimal values in bulk insert, as it
+    does not enforce the precision or scale of a column, so none of the checks here are made for it
+  - The precision and scale came from the `DecimalSize` of the column, which has no digits before the decimal point
+    when the scale is larger than the precision. So `numeric(3,5)` on PostgreSQL 15 or later and `NUMBER(3,5)` on
+    Oracle, which hold up to 0.00999, allowed values up to 0.99999. The precision and scale are now taken from the SQL
+    type of the column when it declares them, and from its `DecimalSize` otherwise
+  - The decimal places of values for columns with 29 or more digits before the decimal point, which were not checked
+    at all, are now checked as for other decimal columns
+  - On SQL Server, MySQL, Oracle and PostgreSQL, values from `float` and `double` columns are now checked against
+    10^(p-s) as well, whatever the number of digits before the decimal point, as a `float` or `double` can be too large
+    even for `decimal(38,0)`. A value is compared exactly, as the shortest decimal that reads back as it, so 1e29 is
+    too large for `decimal(29,0)`, and one too large for a C# `decimal` (from about 7.9e28) cannot overflow. NaN and
+    infinity are rejected. Their decimal places are still rounded by the database. MySQL clamped a value over the
+    limit, unless in strict mode, and stored NaN and infinity as 0
+  - PostgreSQL: Npgsql writes a `float` or `double` to a `numeric` column as a `decimal`, so one too large for a
+    `decimal` failed with `OverflowException`, even for `numeric(38,0)`, which holds it. It is now written as the whole
+    number it is, so 1e30 is 10^30. NaN and infinity, which Npgsql cannot write to `numeric`, get a clear error
+  - Oracle: ODP.NET rounds a `double` bound to a `NUMBER` column half up to 15 significant digits, so the double just
+    below 10^29, 9.999999999999997E+28, became 10^29, too large for `NUMBER(29,0)`, and 0.12499999999999999 became
+    0.125 before being rounded to the column. It rounds a `float` half up to 7 significant digits, starting from the
+    shortest text that reads back as it, so the float just below 10^21, 9.9999995E+20, became 10^21, too large for
+    `NUMBER(21,0)`, and 0.12499999 became 0.125. A `float` or `double` going into a `NUMBER(p,s)` column is now sent
+    as the number of its shortest text, with all of its digits: up to 9 for a `float` and 17 for a `double`. That is
+    the number bulk insert checks, so Oracle is now sent the number that was checked, as MySQL already was
+  - `ColumnValidationRule` has a new constructor without `maxDecimalValue`, and new `DecimalLimit` and
+    `MaxDecimalValueText` members. The old constructor and `MaxDecimalValue` are obsolete, and `MaxDecimalValue` is 0
+    in the rules that bulk insert makes
+- **The Guesser of a column did not start out guessing the column's type**
+  - TypeGuesser 2.0.x kept only the C# type of the `DatabaseTypeRequest` a `Guesser` is constructed with. Until it saw a
+    value, the `Guesser` from `DiscoveredColumn.GetGuesser()` for an `nvarchar(10)` column, and the one
+    `CreateTable(out typeDictionary, ...)` returns for an explicitly requested one, guessed a non-Unicode string of no
+    width. A type computed from it for wider data was `varchar` rather than `nvarchar` (`varchar2` rather than
+    `nvarchar2` on Oracle), and an `nvarchar(max)` column was guessed as `varchar(4000)`. The `Guesser` of a
+    `decimal(10,5)` column started from no precision or scale, so a type computed from it could be smaller than the
+    column
+  - Fixed by moving to TypeGuesser 2.1.0 (see Changed): a `Guesser` starts from the width, decimal size and Unicode flag
+    of its request, and values seen afterwards only widen the guess
 - **`DiscoveredServer.TestConnection` could return as if it had connected when the connection attempt timed out**
   - It cancels the attempt when the timeout runs out and also waits for the connection to open for that long, but
     ignored the result of the wait. If the wait ran out before the cancellation took effect, for example because the
@@ -15,6 +76,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     a server that had not responded
   - It now throws a `TimeoutException` then too, and cancels the attempt that is still running
 - The `TimeoutException` message from `DiscoveredServer.TestConnection` no longer ends with a stray parenthesis
+
+### Changed
+- **Target frameworks are now net10.0 and net11.0**
+  - net8.0 and net9.0 are no longer built, because both reached end of life on 2026-11-10
+  - Applications targeting net8.0 or net9.0 cannot use this version and must stay on FAnsiSql 3.8.x
+- **Bump TypeGuesser from 2.0.4 to 2.1.0**, which fixes the Guesser of a column (see Fixed)
+  - TypeGuesser types are part of FAnsiSql's API. TypeGuesser 2.1.0 makes `DecimalSize.NumbersBeforeDecimalPlace`,
+    `DecimalSize.NumbersAfterDecimalPlace` and `TypeDeciderFactory.Dictionary` properties instead of fields, and renames
+    the protected `*Impl` members of `DecideTypesForStrings<T>` to `*Core`. Code using them must be rebuilt against
+    TypeGuesser 2.1.0, and custom deciders must rename their overrides. TypeGuesser's CHANGELOG lists its other changes
+  - FAnsiSql 3.8.x reads those fields, so it throws `MissingFieldException` when used with TypeGuesser 2.1.0: upgrade
+    FAnsiSql and TypeGuesser together
 
 ### Removed
 - **Reflection-based provider loading in the `DiscoveredServer` static constructor, which never loaded anything**

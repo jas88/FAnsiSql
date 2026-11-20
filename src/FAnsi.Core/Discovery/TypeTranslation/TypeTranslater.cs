@@ -295,8 +295,8 @@ public abstract partial class TypeTranslater : ITypeTranslater
     {
         if (decimalSize == null || decimalSize.IsEmpty) return "decimal(20,10)";
 
-        // DecimalSize has FIELDS: NumbersBeforeDecimalPlace, NumbersAfterDecimalPlace
-        // DecimalSize has PROPERTIES: Precision (computed as Before+After), Scale (alias for After)
+        // DecimalSize has NumbersBeforeDecimalPlace and NumbersAfterDecimalPlace, Precision (computed as Before+After)
+        // and Scale (alias for After)
         // SQL decimal(precision, scale) where precision = total digits, scale = digits after
         var sqlPrecision = decimalSize.NumbersBeforeDecimalPlace + decimalSize.NumbersAfterDecimalPlace;
         var sqlScale = decimalSize.NumbersAfterDecimalPlace;

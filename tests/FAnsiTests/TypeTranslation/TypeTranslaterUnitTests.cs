@@ -1,5 +1,6 @@
 using System.Data;
 using FAnsi;
+using FAnsi.Discovery;
 using FAnsi.Discovery.TypeTranslation;
 using FAnsi.Implementation;
 using FAnsi.Implementations.MicrosoftSQL;
@@ -13,6 +14,19 @@ namespace FAnsiTests.TypeTranslation;
 
 internal sealed class TypeTranslaterUnitTests
 {
+    [OneTimeSetUp]
+    public void LoadImplementations()
+    {
+        // A DiscoveredColumn needs the implementation of its DBMS
+#pragma warning disable CS0618 // Type or member is obsolete
+        ImplementationManager.Load<MicrosoftSQLImplementation>();
+        ImplementationManager.Load<MySqlImplementation>();
+        ImplementationManager.Load<OracleImplementation>();
+        ImplementationManager.Load<PostgreSqlImplementation>();
+        ImplementationManager.Load<SqliteImplementation>();
+#pragma warning restore CS0618 // Type or member is obsolete
+    }
+
     /// <summary>
     ///     IsSupportedType is a support check for FAnsi not the DBMS.  This test shows that FAnsi's view of 'what is a string'
     ///     is pretty
@@ -21,9 +35,19 @@ internal sealed class TypeTranslaterUnitTests
     /// <param name="dbType"></param>
     /// <param name="sqlDbType"></param>
     /// <param name="expectedOutcome"></param>
+    [TestCase(DatabaseType.MicrosoftSQLServer, "varchar2(10)", true)]
+    [TestCase(DatabaseType.MicrosoftSQLServer, "monkeychar7", true)]
+    [TestCase(DatabaseType.MySql, "varchar2(10)", true)]
+    [TestCase(DatabaseType.MySql, "monkeychar7", true)]
+    [TestCase(DatabaseType.Oracle, "varchar2(10)", true)]
+    [TestCase(DatabaseType.Oracle, "monkeychar7", true)]
+    [TestCase(DatabaseType.PostgreSql, "varchar2(10)", true)]
+    [TestCase(DatabaseType.PostgreSql, "monkeychar7", true)]
+    [TestCase(DatabaseType.Sqlite, "varchar2(10)", true)]
+    [TestCase(DatabaseType.Sqlite, "monkeychar7", true)]
     public void Test_IsSupportedType(DatabaseType dbType, string sqlDbType, bool expectedOutcome)
     {
-        var tt = ImplementationManager.GetImplementation(dbType).GetQuerySyntaxHelper().TypeTranslater;
+        var tt = GetTypeTranslater(dbType);
         Assert.That(tt.IsSupportedSQLDBType(sqlDbType), Is.EqualTo(expectedOutcome),
             $"Unexpected result for IsSupportedSQLDBType with {dbType}.  Input was '{sqlDbType}' expected {expectedOutcome}");
     }
@@ -45,6 +69,112 @@ internal sealed class TypeTranslaterUnitTests
     [TestCase(DatabaseType.Sqlite, "datetime", DbType.DateTime)]
     public void Test_GetDbTypeForSQLDBType_Dates(DatabaseType dbType, string sqlDbType, DbType expected) =>
         Assert.That(GetTypeTranslater(dbType).GetDbTypeForSQLDBType(sqlDbType), Is.EqualTo(expected));
+
+    /// <summary>
+    ///     The <see cref="TypeGuesser.Guesser" /> for a column starts out guessing a string type that is Unicode if the
+    ///     column is, so that a type computed from it for wider data stays Unicode
+    /// </summary>
+    [TestCase(DatabaseType.MicrosoftSQLServer, "nvarchar(10)", true)]
+    [TestCase(DatabaseType.MicrosoftSQLServer, "nchar(10)", true)]
+    [TestCase(DatabaseType.MicrosoftSQLServer, "ntext", true)]
+    [TestCase(DatabaseType.MicrosoftSQLServer, "nvarchar(max)", true)]
+    [TestCase(DatabaseType.MicrosoftSQLServer, "varchar(10)", false)]
+    [TestCase(DatabaseType.MicrosoftSQLServer, "char(10)", false)]
+    [TestCase(DatabaseType.MicrosoftSQLServer, "text", false)]
+    [TestCase(DatabaseType.MicrosoftSQLServer, "varchar(max)", false)]
+    [TestCase(DatabaseType.Oracle, "nvarchar2(10)", true)]
+    [TestCase(DatabaseType.Oracle, "nchar(10)", true)]
+    [TestCase(DatabaseType.Oracle, "nclob", true)]
+    [TestCase(DatabaseType.Oracle, "varchar2(10)", false)]
+    [TestCase(DatabaseType.Oracle, "char(10)", false)]
+    [TestCase(DatabaseType.Oracle, "clob", false)]
+    [TestCase(DatabaseType.MySql, "varchar(10)", false)]
+    [TestCase(DatabaseType.MySql, "text", false)]
+    [TestCase(DatabaseType.PostgreSql, "character varying(10)", false)]
+    [TestCase(DatabaseType.PostgreSql, "text", false)]
+    [TestCase(DatabaseType.Sqlite, "character varying(10)", false)]
+    [TestCase(DatabaseType.Sqlite, "TEXT", false)]
+    public void GetGuesser_StringColumn_KeepsUnicode(DatabaseType dbType, string sqlType, bool expectUnicode)
+    {
+        var guess = GetColumn(dbType, sqlType).GetGuesser().Guess;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(guess.CSharpType, Is.EqualTo(typeof(string)));
+            Assert.That(guess.Unicode, Is.EqualTo(expectUnicode));
+        });
+    }
+
+    /// <summary>
+    ///     The <see cref="TypeGuesser.Guesser" /> for a string column starts out as wide as the column (on Oracle, a
+    ///     non-ASCII character counts as more than one character)
+    /// </summary>
+    [TestCase(DatabaseType.MicrosoftSQLServer, "nvarchar(10)")]
+    [TestCase(DatabaseType.MicrosoftSQLServer, "nchar(10)")]
+    [TestCase(DatabaseType.MicrosoftSQLServer, "varchar(10)")]
+    [TestCase(DatabaseType.Oracle, "nvarchar2(10)")]
+    [TestCase(DatabaseType.Oracle, "varchar2(10)")]
+    [TestCase(DatabaseType.MySql, "varchar(10)")]
+    [TestCase(DatabaseType.PostgreSql, "character varying(10)")]
+    [TestCase(DatabaseType.Sqlite, "character varying(10)")]
+    public void GetGuesser_StringColumn_KeepsWidth(DatabaseType dbType, string sqlType) =>
+        Assert.That(GetColumn(dbType, sqlType).GetGuesser().Guess.Width, Is.EqualTo(10));
+
+    /// <summary>
+    ///     The <see cref="TypeGuesser.Guesser" /> for an unlimited string column starts out guessing the unlimited string type
+    /// </summary>
+    [TestCase(DatabaseType.MicrosoftSQLServer, "nvarchar(max)", "nvarchar(max)")]
+    [TestCase(DatabaseType.MicrosoftSQLServer, "ntext", "nvarchar(max)")]
+    [TestCase(DatabaseType.MicrosoftSQLServer, "varchar(max)", "varchar(max)")]
+    [TestCase(DatabaseType.Oracle, "nclob", "NCLOB")]
+    [TestCase(DatabaseType.Oracle, "clob", "CLOB")]
+    [TestCase(DatabaseType.MySql, "longtext", "longtext")]
+    [TestCase(DatabaseType.PostgreSql, "text", "text")]
+    public void GetGuesser_UnlimitedStringColumn_GuessesUnlimitedType(DatabaseType dbType, string sqlType,
+        string expectedSqlType)
+    {
+        var column = GetColumn(dbType, sqlType);
+        Assert.That(GetTypeTranslater(dbType).GetSQLDBTypeForCSharpType(column.GetGuesser().Guess),
+            Is.EqualTo(expectedSqlType));
+    }
+
+    /// <summary>
+    ///     The <see cref="TypeGuesser.Guesser" /> for a decimal column starts out with the precision and scale of the column,
+    ///     so that a type computed from it for new data never shrinks the column
+    /// </summary>
+    [TestCase(DatabaseType.MicrosoftSQLServer, "decimal(10,5)")]
+    [TestCase(DatabaseType.MySql, "decimal(10,5)")]
+    [TestCase(DatabaseType.Oracle, "decimal(10,5)")]
+    [TestCase(DatabaseType.PostgreSql, "numeric(10,5)")]
+    [TestCase(DatabaseType.Sqlite, "decimal(10,5)")]
+    public void GetGuesser_DecimalColumn_KeepsDecimalSize(DatabaseType dbType, string sqlType)
+    {
+        var guess = GetColumn(dbType, sqlType).GetGuesser().Guess;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(guess.CSharpType, Is.EqualTo(typeof(decimal)));
+            Assert.That(guess.Size.Precision, Is.EqualTo(10));
+            Assert.That(guess.Size.Scale, Is.EqualTo(5));
+        });
+    }
+
+    /// <summary>
+    ///     Creates a column of the given <paramref name="sqlType" />, no database connection is required.
+    /// </summary>
+    private static DiscoveredColumn GetColumn(DatabaseType dbType, string sqlType)
+    {
+        var helper = ImplementationManager.GetImplementation(dbType).GetServerHelper();
+        var table = new DiscoveredServer(helper.GetConnectionStringBuilder("localhost", "db", "frank", "kangaro"))
+            .ExpectDatabase("db").ExpectTable("tbl");
+
+        using var noProprietaryFields = new DataTable();
+        using var reader = noProprietaryFields.CreateDataReader();
+
+        var column = new DiscoveredColumn(table, "MyCol", true);
+        column.DataType = new DiscoveredDataType(reader, sqlType, column);
+        return column;
+    }
 
     private static ITypeTranslater GetTypeTranslater(DatabaseType dbType) =>
         dbType switch

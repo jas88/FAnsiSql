@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <PackageId>FAnsiSql.Oracle</PackageId>
+    <RootNamespace>FAnsi.Implementations.Oracle</RootNamespace>
     <title>FAnsiSql.Oracle</title>
     <authors>Health Informatics Centre - University of Dundee</authors>
     <owners>Health Informatics Centre - University of Dundee</owners>
@@ -33,5 +34,8 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="FAnsiTests" />
   </ItemGroup>
 </Project>

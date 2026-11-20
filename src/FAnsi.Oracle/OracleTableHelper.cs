@@ -546,22 +546,13 @@ public sealed class OracleTableHelper : DiscoveredTableHelper
         return [.. toReturn.Values];
     }
 
+    /// <summary>
+    ///     Fills <paramref name="dt" /> as an <see cref="OracleDataAdapter" /> would, except that the NUMBER(p,s) columns
+    ///     that ODP.NET reads as float or double are read as decimals (see <see cref="OracleDataTableFiller" />)
+    /// </summary>
     public override void FillDataTableWithTopX(DatabaseOperationArgs args, DiscoveredTable table, int topX,
-        DataTable dt)
-    {
-        using var con = args.GetManagedConnection(table);
-        ((OracleConnection)con.Connection).PurgeStatementCache();
-
-        var cols = table.DiscoverColumns();
-
-        //apparently * doesn't fly with Oracle DataAdapter
-        var sql =
-            $"SELECT {string.Join(",", cols.Select(static c => c.GetFullyQualifiedName()).ToArray())} FROM {table.GetFullyQualifiedName()} OFFSET 0 ROWS FETCH NEXT {topX} ROWS ONLY";
-
-        using var cmd = table.Database.Server.GetCommand(sql, con);
-        using var da = table.Database.Server.GetDataAdapter(cmd);
-        args.Fill(da, cmd, dt);
-    }
+        DataTable dt) =>
+        OracleDataTableFiller.FillWithTopX(args, table, topX, dt);
 
 
     protected override string GetRenameTableSql(DiscoveredTable discoveredTable, string? newName)

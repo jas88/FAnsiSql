@@ -8,6 +8,26 @@ namespace FAnsiTests.Table;
 
 internal sealed class BasicInsertTests : DatabaseTests
 {
+    [TestCase(DatabaseType.MicrosoftSQLServer, "Dave")]
+    [TestCase(DatabaseType.MySql, "Dave")]
+    [TestCase(DatabaseType.Oracle, "Dave")]
+    [TestCase(DatabaseType.PostgreSql, "Dave")]
+    [TestCase(DatabaseType.Sqlite, "Dave")]
+    [TestCase(DatabaseType.MicrosoftSQLServer, @"].;\""ffff
+[")]
+    [TestCase(DatabaseType.MySql, @"].;\""ffff
+[")]
+    [TestCase(DatabaseType.Oracle, @"].;\""ffff
+[")]
+    [TestCase(DatabaseType.PostgreSql, @"].;\""ffff
+[")]
+    [TestCase(DatabaseType.Sqlite, @"].;\""ffff
+[")]
+    [TestCase(DatabaseType.MicrosoftSQLServer, 1.5)]
+    [TestCase(DatabaseType.MySql, 1.5)]
+    [TestCase(DatabaseType.Oracle, 1.5)]
+    [TestCase(DatabaseType.PostgreSql, 1.5)]
+    [TestCase(DatabaseType.Sqlite, 1.5)]
     public void CreateTableAndInsertAValue_ColumnOverload(DatabaseType type, object value)
     {
         var db = GetTestDatabase(type);
@@ -30,6 +50,11 @@ internal sealed class BasicInsertTests : DatabaseTests
         tbl.Drop();
     }
 
+    [TestCase(DatabaseType.MicrosoftSQLServer, 1.5)]
+    [TestCase(DatabaseType.MySql, 1.5)]
+    [TestCase(DatabaseType.Oracle, 1.5)]
+    [TestCase(DatabaseType.PostgreSql, 1.5)]
+    [TestCase(DatabaseType.Sqlite, 1.5)]
     public void CreateTableAndInsertAValue_StringOverload(DatabaseType type, object value)
     {
         var db = GetTestDatabase(type);

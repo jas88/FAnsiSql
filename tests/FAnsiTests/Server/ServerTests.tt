@@ -12,7 +12,7 @@
     var baseContent = File.ReadAllText(baseFilePath);
 
     // Extract protected methods using regex
-    var methodPattern = @"^\s*(?:\[[\w\(\),\s=\.\""]+\]\s*)*protected\s+void\s+(\w+)\s*\(DatabaseType\s+type(?:,\s*bool\s+(\w+))?\)";
+    var methodPattern = @"^\s*(?:\[[\w\(\),\s=\.\""]+\]\s*)*protected\s+void\s+(\w+)\s*\(DatabaseType\s+\w+(?:,\s*bool\s+(\w+))?\)";
     var matches = Regex.Matches(baseContent, methodPattern, RegexOptions.Multiline);
 
     var methods = new List<(string name, string? boolParam, List<string> excludedDatabases)>();
