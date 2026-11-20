@@ -9,6 +9,7 @@ using FAnsi.Implementations.Oracle;
 using FAnsi.Implementations.PostgreSql;
 using FAnsi.Implementations.Sqlite;
 using NUnit.Framework;
+using TypeGuesser;
 
 namespace FAnsiTests.TypeTranslation;
 
@@ -55,12 +56,18 @@ internal sealed class TypeTranslaterUnitTests
     /// <summary>
     ///     Each ADO.NET provider has its own idea of what a <see cref="DbType" /> means.  Npgsql sends
     ///     <see cref="DbType.DateTime" /> as 'timestamp with time zone' and <see cref="DbType.DateTime2" /> as 'timestamp
-    ///     without time zone', the other providers expect <see cref="DbType.DateTime" /> for all of their date types.
+    ///     without time zone', the other providers expect <see cref="DbType.DateTime" /> for all of their date types.  A
+    ///     PostgreSQL 'date' gets <see cref="DbType.Date" />, and an 'interval' <see cref="DbType.Object" /> so that Npgsql
+    ///     sends a <see cref="TimeSpan" /> as an 'interval' and not as a 'time', which is limited to a day.
     /// </summary>
     [TestCase(DatabaseType.PostgreSql, "timestamp without time zone", DbType.DateTime2)]
     [TestCase(DatabaseType.PostgreSql, "timestamp", DbType.DateTime2)]
     [TestCase(DatabaseType.PostgreSql, "timestamp with time zone", DbType.DateTime)]
     [TestCase(DatabaseType.PostgreSql, "time without time zone", DbType.Time)]
+    [TestCase(DatabaseType.PostgreSql, "time", DbType.Time)]
+    [TestCase(DatabaseType.PostgreSql, "time with time zone", DbType.Time)]
+    [TestCase(DatabaseType.PostgreSql, "date", DbType.Date)]
+    [TestCase(DatabaseType.PostgreSql, "interval", DbType.Object)]
     [TestCase(DatabaseType.MicrosoftSQLServer, "datetime2", DbType.DateTime)]
     [TestCase(DatabaseType.MicrosoftSQLServer, "datetime", DbType.DateTime)]
     [TestCase(DatabaseType.MySql, "datetime", DbType.DateTime)]
@@ -69,6 +76,71 @@ internal sealed class TypeTranslaterUnitTests
     [TestCase(DatabaseType.Sqlite, "datetime", DbType.DateTime)]
     public void Test_GetDbTypeForSQLDBType_Dates(DatabaseType dbType, string sqlDbType, DbType expected) =>
         Assert.That(GetTypeTranslater(dbType).GetDbTypeForSQLDBType(sqlDbType), Is.EqualTo(expected));
+
+    /// <summary>
+    ///     A 'date' is a <see cref="DateTime" /> and a 'time' a <see cref="TimeSpan" /> whatever the DBMS, so that code
+    ///     working with more than one DBMS gets the same C# types from all of them.  PostgreSQL names its types in more
+    ///     than one way: information_schema says 'time without time zone' for a column created as 'time' or 'time(3)'.
+    /// </summary>
+    [TestCase(DatabaseType.MicrosoftSQLServer, "date", typeof(DateTime))]
+    [TestCase(DatabaseType.MicrosoftSQLServer, "time", typeof(TimeSpan))]
+    [TestCase(DatabaseType.MySql, "date", typeof(DateTime))]
+    [TestCase(DatabaseType.MySql, "time", typeof(TimeSpan))]
+    [TestCase(DatabaseType.PostgreSql, "date", typeof(DateTime))]
+    [TestCase(DatabaseType.PostgreSql, "DATE", typeof(DateTime))]
+    [TestCase(DatabaseType.PostgreSql, "time", typeof(TimeSpan))]
+    [TestCase(DatabaseType.PostgreSql, "time(3)", typeof(TimeSpan))]
+    [TestCase(DatabaseType.PostgreSql, "time without time zone", typeof(TimeSpan))]
+    [TestCase(DatabaseType.PostgreSql, "time with time zone", typeof(TimeSpan))]
+    [TestCase(DatabaseType.PostgreSql, "timetz", typeof(TimeSpan))]
+    [TestCase(DatabaseType.PostgreSql, "interval", typeof(TimeSpan))]
+    [TestCase(DatabaseType.PostgreSql, "timestamp", typeof(DateTime))]
+    [TestCase(DatabaseType.PostgreSql, "timestamp without time zone", typeof(DateTime))]
+    [TestCase(DatabaseType.PostgreSql, "timestamp with time zone", typeof(DateTime))]
+    [TestCase(DatabaseType.PostgreSql, "timestamptz", typeof(DateTime))]
+    public void Test_GetCSharpTypeForSQLDBType_DatesAndTimes(DatabaseType dbType, string sqlDbType, Type expected) =>
+        Assert.That(GetTypeTranslater(dbType).GetCSharpTypeForSQLDBType(sqlDbType), Is.EqualTo(expected));
+
+    /// <summary>
+    ///     The type FAnsi declares a column as for each C# date and time type is one it reads back as the same C# type
+    ///     (a <see cref="DateOnly" /> or <see cref="TimeOnly" /> is read back as a <see cref="DateTime" /> or a
+    ///     <see cref="TimeSpan" />)
+    /// </summary>
+    [TestCase(DatabaseType.MicrosoftSQLServer, typeof(DateTime), "datetime2", typeof(DateTime))]
+    [TestCase(DatabaseType.MicrosoftSQLServer, typeof(TimeSpan), "time", typeof(TimeSpan))]
+    [TestCase(DatabaseType.MySql, typeof(DateTime), "datetime", typeof(DateTime))]
+    [TestCase(DatabaseType.MySql, typeof(TimeSpan), "time", typeof(TimeSpan))]
+    [TestCase(DatabaseType.PostgreSql, typeof(DateTime), "timestamp", typeof(DateTime))]
+    [TestCase(DatabaseType.PostgreSql, typeof(DateOnly), "timestamp", typeof(DateTime))]
+    [TestCase(DatabaseType.PostgreSql, typeof(TimeSpan), "time", typeof(TimeSpan))]
+    [TestCase(DatabaseType.PostgreSql, typeof(TimeOnly), "time", typeof(TimeSpan))]
+    public void Test_CSharpTypeRoundTrip_DatesAndTimes(DatabaseType dbType, Type cSharpType, string expectedSqlType,
+        Type expectedCSharpType)
+    {
+        var tt = GetTypeTranslater(dbType);
+        var sqlType = tt.GetSQLDBTypeForCSharpType(new DatabaseTypeRequest(cSharpType));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(sqlType, Is.EqualTo(expectedSqlType));
+            Assert.That(tt.GetCSharpTypeForSQLDBType(sqlType), Is.EqualTo(expectedCSharpType));
+        });
+    }
+
+    /// <summary>
+    ///     A PostgreSQL date or time column is translated to another DBMS as the type that DBMS uses for the same C# type,
+    ///     and back
+    /// </summary>
+    [TestCase(DatabaseType.PostgreSql, "date", DatabaseType.MicrosoftSQLServer, "datetime2")]
+    [TestCase(DatabaseType.PostgreSql, "time without time zone", DatabaseType.MicrosoftSQLServer, "time")]
+    [TestCase(DatabaseType.PostgreSql, "time with time zone", DatabaseType.MySql, "time")]
+    [TestCase(DatabaseType.PostgreSql, "date", DatabaseType.MySql, "datetime")]
+    [TestCase(DatabaseType.MicrosoftSQLServer, "date", DatabaseType.PostgreSql, "timestamp")]
+    [TestCase(DatabaseType.MicrosoftSQLServer, "time", DatabaseType.PostgreSql, "time")]
+    [TestCase(DatabaseType.MySql, "time", DatabaseType.PostgreSql, "time")]
+    public void Test_TranslateSQLDBType_DatesAndTimes(DatabaseType from, string sqlType, DatabaseType to,
+        string expected) =>
+        Assert.That(GetTypeTranslater(from).TranslateSQLDBType(sqlType, GetTypeTranslater(to)), Is.EqualTo(expected));
 
     /// <summary>
     ///     The <see cref="TypeGuesser.Guesser" /> for a column starts out guessing a string type that is Unicode if the

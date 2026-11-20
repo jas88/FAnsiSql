@@ -53,6 +53,9 @@ public sealed class PostgreSqlBulkCopy(
             (kvp.Value.DataType == null ? null : tt.GetNpgsqlDbTypeForSqlType(kvp.Value.DataType.SQLType)) ??
             tt.GetNpgsqlDbTypeForCSharpType(kvp.Key.DataType)).ToArray();
 
+        //the server cannot be sent anything while the import is in progress
+        var timesWithTimeZone = GetTimesWithTimeZone(con, dt, dataColumns, types);
+
         using (var import = con.BeginBinaryImport(sb.ToString()))
         {
             foreach (DataRow r in dt.Rows)
@@ -65,7 +68,7 @@ public sealed class PostgreSqlBulkCopy(
                     if (r[dc] == DBNull.Value)
                         import.WriteNull();
                     else
-                        import.Write(ConvertToColumnType(r[dc], types[index]), types[index]);
+                        import.Write(ConvertToColumnType(r[dc], types[index], timesWithTimeZone), types[index]);
                 }
             }
 
@@ -76,12 +79,68 @@ public sealed class PostgreSqlBulkCopy(
     }
 
     /// <summary>
+    ///     Returns the 'time with time zone' that the server makes of each time (a <see cref="TimeSpan" /> or
+    ///     <see cref="TimeOnly" />) going into a column of that type, so that it is stored exactly as it would be had it been
+    ///     inserted as a parameter.  PostgreSQL gives a time the offset from UTC of the time zone of the session at that
+    ///     time on the current date.
+    /// </summary>
+    private Dictionary<TimeSpan, DateTimeOffset> GetTimesWithTimeZone(NpgsqlConnection con, DataTable dt,
+        DataColumn[] dataColumns, NpgsqlDbType[] types)
+    {
+        var times = new HashSet<TimeSpan>();
+
+        for (var index = 0; index < dataColumns.Length; index++)
+            if (types[index] == NpgsqlDbType.TimeTz)
+                foreach (DataRow row in dt.Rows)
+                    switch (row[dataColumns[index]])
+                    {
+                        case TimeSpan time:
+                            times.Add(time);
+                            break;
+                        case TimeOnly time:
+                            times.Add(time.ToTimeSpan());
+                            break;
+                    }
+
+        var timesWithTimeZone = new Dictionary<TimeSpan, DateTimeOffset>();
+
+        if (times.Count == 0)
+            return timesWithTimeZone;
+
+        var timesInOrder = times.ToArray();
+
+        using var cmd = new NpgsqlCommand(
+            "SELECT CAST(t AS time with time zone) FROM unnest(@times) WITH ORDINALITY AS u(t, n) ORDER BY n", con,
+            (NpgsqlTransaction?)Connection.Transaction);
+        cmd.Parameters.Add(new NpgsqlParameter
+        {
+            ParameterName = "times",
+            DataTypeName = "time without time zone[]",
+            Value = timesInOrder
+        });
+
+        //matched by position because the server keeps only whole microseconds of each time
+        using var r = cmd.ExecuteReader();
+        for (var i = 0; r.Read(); i++)
+            timesWithTimeZone[timesInOrder[i]] = r.GetFieldValue<DateTimeOffset>(0);
+
+        return timesWithTimeZone;
+    }
+
+    /// <summary>
     ///     Converts <paramref name="value" /> where Npgsql would not itself write it as the <paramref name="columnType" />.
     ///     Npgsql writes any number to the integer and numeric types, except a float or double too large for a decimal
     ///     (see <see cref="ToNumeric" />), and a float or double to real and double precision, the conversions here are
     ///     the ones it leaves out.
     /// </summary>
-    private static object ConvertToColumnType(object value, NpgsqlDbType columnType) =>
+    /// <param name="value">A value (not null) from the DataTable being uploaded</param>
+    /// <param name="columnType">The type Npgsql is to write the value as, that of the column it is going into</param>
+    /// <param name="timesWithTimeZone">
+    ///     The 'time with time zone' to write for each time going into a column of that type, see
+    ///     <see cref="GetTimesWithTimeZone" />
+    /// </param>
+    private static object ConvertToColumnType(object value, NpgsqlDbType columnType,
+        Dictionary<TimeSpan, DateTimeOffset> timesWithTimeZone) =>
         columnType switch
         {
             NpgsqlDbType.Char or NpgsqlDbType.Varchar or NpgsqlDbType.Text => value switch
@@ -113,6 +172,14 @@ public sealed class PostgreSqlBulkCopy(
                 DateOnly date => PostgreSqlTypeTranslater.ToTimestampTz(date.ToDateTime(TimeOnly.MinValue)),
                 _ => value
             },
+            NpgsqlDbType.Date when value is DateTime dateTime => PostgreSqlTypeTranslater.ToDate(dateTime),
+            NpgsqlDbType.TimeTz => value switch
+            {
+                TimeSpan time => timesWithTimeZone[time],
+                TimeOnly time => timesWithTimeZone[time.ToTimeSpan()],
+                _ => value
+            },
+            NpgsqlDbType.Interval when value is TimeOnly time => time.ToTimeSpan(),
             _ => value
         };
 
