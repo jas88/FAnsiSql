@@ -55,8 +55,12 @@ internal sealed class OracleBulkCopy(DiscoveredTable targetTable, IManagedConnec
 
         foreach (var (dataColumn, discoveredColumn) in mapping)
         {
+            // The columns come from OracleTableHelper.DiscoverColumns, which gives every column it finds a data type
+            var dataType = discoveredColumn.DataType ??
+                           throw new InvalidOperationException(
+                               $"Column {discoveredColumn.GetFullyQualifiedName()} has no data type");
             var p = _server.AddParameterWithValueToCommand(parameterNames[dataColumn]!, cmd, DBNull.Value);
-            p.DbType = tt.GetDbTypeForSQLDBType(discoveredColumn.DataType!.SQLType);
+            p.DbType = tt.GetDbTypeForSQLDBType(dataType.SQLType);
             var isFloatingPoint = dataColumn.DataType == typeof(double) || dataColumn.DataType == typeof(float);
 
             switch (p.DbType)
@@ -73,7 +77,7 @@ internal sealed class OracleBulkCopy(DiscoveredTable targetTable, IManagedConnec
                     if (dataColumn.DataType == typeof(byte[])) ((OracleParameter)p).OracleDbType = OracleDbType.Blob;
                     break;
                 // A float or double going into a NUMBER(p,s) column, see ToNumber
-                case DbType.Decimal when isFloatingPoint && discoveredColumn.DataType.GetDecimalSize() != null:
+                case DbType.Decimal when isFloatingPoint && dataType.GetDecimalSize() != null:
                     numberColumns.Add(dataColumn);
                     break;
             }
