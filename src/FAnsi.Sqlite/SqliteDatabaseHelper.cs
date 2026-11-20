@@ -210,6 +210,6 @@ public sealed class SqliteDatabaseHelper : DiscoveredDatabaseHelper
     /// </summary>
     protected override string GetCreateTableSqlLineForColumn(DatabaseColumnRequest col, string datatype,
         IQuerySyntaxHelper syntaxHelper) =>
-        // SQLite requires DEFAULT functions to be wrapped in parentheses: DEFAULT (date('now'))
+        // SQLite requires DEFAULT functions to be wrapped in parentheses: DEFAULT (datetime('now', 'localtime'))
         $"{syntaxHelper.EnsureWrapped(col.ColumnName)} {datatype} {(col.Default != MandatoryScalarFunctions.None ? $"default ({syntaxHelper.GetScalarFunctionSql(col.Default)})" : "")} {(string.IsNullOrWhiteSpace(col.Collation) ? "" : $"COLLATE {col.Collation}")} {(col.AllowNulls && !col.IsPrimaryKey ? " NULL" : " NOT NULL")} {(col.IsAutoIncrement ? syntaxHelper.GetAutoIncrementKeywordIfAny() : "")}";
 }

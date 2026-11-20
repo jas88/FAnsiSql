@@ -44,6 +44,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     `DiscoveredDatabase.GetRuntimeName` returns. It is `GetRuntimeName` for every DBMS but SQLite, for which it is the
     path of the database file unchanged. It has a default implementation, so other implementations of
     `IQuerySyntaxHelper` are unaffected
+- **SQLite: `GetTodaysDate` gave today's date in UTC, at midnight**
+  - `GetScalarFunctionSql(MandatoryScalarFunctions.GetTodaysDate)` was `date('now')`, so a column with
+    `Default = MandatoryScalarFunctions.GetTodaysDate` was given midnight at the start of the UTC date, which can be the
+    day before or after the local one. The other DBMS give the current local date and time, in the time zone of the
+    server or session: `GETDATE()` on SQL Server, `now()` on MySQL and PostgreSQL and `CURRENT_TIMESTAMP` on Oracle
+  - It is now `datetime('now', 'localtime')`, the local date and time to the second of the machine the application runs
+    on, as SQLite runs in the application. `GetSQLFunctionsDictionary` now gives the same for `getdate` and `now`, for
+    which it gave `datetime('now')`, the time in UTC
 - **Decimal values on .NET 11**
   - .NET 11 converts a `double` to a `decimal` exactly, so 9.99 becomes 9.990000000000000213162820728, where earlier
     versions of .NET rounded to 15 significant digits

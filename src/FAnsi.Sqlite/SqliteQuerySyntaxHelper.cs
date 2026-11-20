@@ -35,8 +35,8 @@ public sealed class SqliteQuerySyntaxHelper : QuerySyntaxHelper
         { "substring", "SUBSTR(str, start, length)" },
         { "dateadd", "date(date, '+' || value || ' ' || unit)" }, // SQLite date functions
         { "datediff", "julianday(date1) - julianday(date2)" },
-        { "getdate", "datetime('now')" },
-        { "now", "datetime('now')" },
+        { "getdate", "datetime('now', 'localtime')" },
+        { "now", "datetime('now', 'localtime')" },
         { "cast", "CAST(value AS type)" },
         { "convert", "CAST(value AS type)" }, // SQLite doesn't have CONVERT, use CAST
         { "case", "CASE WHEN x=y THEN 'something' WHEN x=z THEN 'something2' ELSE 'something3' END" }
@@ -204,7 +204,10 @@ public sealed class SqliteQuerySyntaxHelper : QuerySyntaxHelper
     ///     <para>SQLite function mappings:</para>
     ///     <list type="bullet">
     ///         <item>
-    ///             <description>GetTodaysDate: date('now')</description>
+    ///             <description>
+    ///                 GetTodaysDate: datetime('now', 'localtime') - the local date and time, as GETDATE() gives on SQL
+    ///                 Server, now() on MySQL and PostgreSQL and CURRENT_TIMESTAMP on Oracle. 'now' alone is UTC
+    ///             </description>
     ///         </item>
     ///         <item>
     ///             <description>GetGuid: lower(hex(randomblob(16))) - pseudo-UUID</description>
@@ -218,7 +221,8 @@ public sealed class SqliteQuerySyntaxHelper : QuerySyntaxHelper
     public override string GetScalarFunctionSql(MandatoryScalarFunctions function) =>
         function switch
         {
-            MandatoryScalarFunctions.GetTodaysDate => "date('now')",
+            // SQLite runs in the application, so 'localtime' is the time zone of the machine it runs on
+            MandatoryScalarFunctions.GetTodaysDate => "datetime('now', 'localtime')",
             MandatoryScalarFunctions.GetGuid => "lower(hex(randomblob(16)))", // SQLite doesn't have native UUID
             MandatoryScalarFunctions.Len => "LENGTH",
             _ => throw new ArgumentOutOfRangeException(nameof(function))

@@ -1208,10 +1208,6 @@ public abstract class CrossPlatformTestsBase : DatabaseTests
 
     protected void CreateTable_DefaultTest_Date()
     {
-        // SQLite doesn't support DEFAULT value functions like CURRENT_TIMESTAMP in the same way
-        if (DatabaseType == DatabaseType.Sqlite)
-            Assert.Ignore("SQLite DEFAULT value function syntax differs from other databases");
-
         var database = GetTestDatabase(DatabaseType);
 
         var tbl = database.CreateTable("MyTable",
