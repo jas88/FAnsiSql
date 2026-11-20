@@ -15,7 +15,7 @@ public sealed partial class MySqlTableHelper : DiscoveredTableHelper
     public static readonly MySqlTableHelper Instance = new();
 
     private static readonly Regex IntegerDisplayWidth = IntegerDisplayWidthRe();
-    private static readonly Regex BitParentheses = BitParenthesesRe();
+    private static readonly Regex SingleBit = SingleBitRe();
 
     private MySqlTableHelper()
     {
@@ -97,6 +97,10 @@ public sealed partial class MySqlTableHelper : DiscoveredTableHelper
     ///     same column would have a different SQLType on each.  Both report it on those two, which keep it: tinyint(1)
     ///     is how both report a boolean column, and the width of a ZEROFILL column is the number of digits its values are
     ///     padded to with zeros.
+    ///     <para>
+    ///         The n of bit(n) is not a display width but the number of bits the column holds, so it is kept, except in
+    ///         bit(1), which is the same type as bit: both servers report a bit column as bit(1).
+    ///     </para>
     /// </summary>
     internal static string TrimIntDisplayValues(string? type)
     {
@@ -110,8 +114,8 @@ public sealed partial class MySqlTableHelper : DiscoveredTableHelper
         if (IntegerDisplayWidth.IsMatch(type))
             return IntegerDisplayWidth.Replace(type, "$1");
 
-        if (BitParentheses.IsMatch(type))
-            return BitParentheses.Replace(type, "bit");
+        if (SingleBit.IsMatch(type))
+            return SingleBit.Replace(type, "bit");
 
         return type;
     }
@@ -465,6 +469,6 @@ public sealed partial class MySqlTableHelper : DiscoveredTableHelper
         RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]
     private static partial Regex IntegerDisplayWidthRe();
 
-    [GeneratedRegex(@"^bit\(\d+\)", RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]
-    private static partial Regex BitParenthesesRe();
+    [GeneratedRegex(@"^bit\(1\)", RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]
+    private static partial Regex SingleBitRe();
 }

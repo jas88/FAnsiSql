@@ -14,6 +14,8 @@ internal sealed class MySqlCreateTableTests : DatabaseTests
 {
     private const DatabaseType DbType = DatabaseType.MySql;
 
+    private static readonly string[] BitTypes = ["bit", "bit(8)", "bit(64)"];
+
     /// <summary>
     ///     Only character types take a CHARACTER SET.  MySQL and MariaDB both reject one on any other type as a syntax
     ///     error, so the Unicode flag of a request for another type must be ignored.
@@ -155,4 +157,34 @@ internal sealed class MySqlCreateTableTests : DatabaseTests
         Assert.That(dataType?.SQLType, Is.EqualTo(sqlType), column);
         Assert.That(dataType?.GetCSharpDataType(), Is.EqualTo(cSharpType), column);
     }
+
+    /// <summary>
+    ///     The n of bit(n) is the number of bits the column holds, so a column created from the discovered type must
+    ///     hold as many.  bit(1) is the same type as bit, and both servers report a bit column as bit(1).
+    /// </summary>
+    [Test]
+    public void DiscoverColumns_BitTypes_KeepSize()
+    {
+        var db = GetTestDatabase(DbType);
+
+        var tbl = db.CreateTable("BitTypes",
+        [
+            new DatabaseColumnRequest("MyBit", "bit"),
+            new DatabaseColumnRequest("MyBit8", "bit(8)"),
+            new DatabaseColumnRequest("MyBit64", "bit(64)")
+        ]);
+
+        var copy = db.CreateTable("BitTypesCopy",
+            tbl.DiscoverColumns().Select(static c => new DatabaseColumnRequest(c.GetRuntimeName(), SqlTypeOf(c)))
+                .ToArray());
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(tbl.DiscoverColumns().Select(SqlTypeOf), Is.EqualTo(BitTypes).AsCollection);
+            Assert.That(copy.DiscoverColumns().Select(SqlTypeOf), Is.EqualTo(BitTypes).AsCollection);
+        });
+    }
+
+    private static string SqlTypeOf(DiscoveredColumn column) =>
+        column.DataType?.SQLType ?? throw new InvalidOperationException($"No data type was discovered for {column}");
 }

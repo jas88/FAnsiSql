@@ -112,7 +112,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     TypeGuesser 2.1.0, and custom deciders must rename their overrides. TypeGuesser's CHANGELOG lists its other changes
   - FAnsiSql 3.8.x reads those fields, so it throws `MissingFieldException` when used with TypeGuesser 2.1.0: upgrade
     FAnsiSql and TypeGuesser together
-- **MySQL: integer column types are discovered without a display width on MariaDB too**
+- **MySQL: integer types are discovered without a display width on MariaDB too, and bit types with their size**
   - MariaDB reports a display width on every integer column, such as `bigint(20)`, but MySQL 8.0.19 and later only on
     `tinyint(1)` and `ZEROFILL` columns. FAnsi removed it from `int` and `smallint` only, so on MariaDB the `SQLType`
     of a `tinyint`, `mediumint` or `bigint` column kept it (`tinyint(4)`, `mediumint(9)`, `bigint(20)`) where MySQL
@@ -120,12 +120,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - The width is now removed from every integer type except on `tinyint(1)`, which is how both report a boolean
     column, and on `ZEROFILL` columns, where it is the number of digits values are padded to with zeros. Both servers
     report it on those, so they already had the same type on each
+  - The n of `bit(n)` is not a display width but the number of bits the column holds. FAnsi removed it, so a column
+    created from the discovered type `bit` held one bit. It is now kept, except in `bit(1)`, which is still discovered
+    as `bit`, the same type
   - The types discovered for existing columns change as follows, so anything that stored the old names, such as an
     RDMP catalogue, sees a one-off change of type:
     - MariaDB, and MySQL before 8.0.19: `tinyint` (other than `tinyint(1)`), `mediumint` and `bigint` columns without
       `ZEROFILL` lose the width, e.g. `bigint(20)` becomes `bigint` and `bigint(20) unsigned` becomes `bigint unsigned`
     - MySQL and MariaDB: `int` and `smallint` `ZEROFILL` columns keep the width they used to lose, e.g.
       `int(10) unsigned zerofill` instead of `int unsigned zerofill`
+    - MySQL and MariaDB: `bit` columns of 2 to 64 bits keep their size, e.g. `bit(8)` instead of `bit`
     - Nothing else changes
 
 ### Removed
