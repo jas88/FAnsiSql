@@ -249,9 +249,12 @@ internal abstract class TableHelperMetadataTestsBase : DatabaseTests
 
             Assert.That(columns, Has.Length.EqualTo(4));
 
-            DiscoveredColumn Column(string name) =>
-                columns.FirstOrDefault(c => c.GetRuntimeName()?.Equals(name, StringComparison.OrdinalIgnoreCase) == true)
-                ?? throw new AssertionException($"Column {name} was not discovered");
+            DiscoveredColumn Column(string name)
+            {
+                return columns.FirstOrDefault(c =>
+                           c.GetRuntimeName()?.Equals(name, StringComparison.OrdinalIgnoreCase) == true) ??
+                       throw new AssertionException($"Column {name} was not discovered");
+            }
 
             var intCol = Column("IntCol");
             var stringCol = Column("StringCol");
