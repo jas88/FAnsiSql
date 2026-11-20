@@ -1,4 +1,4 @@
-using System.Collections.Frozen;
+using System.Collections.Concurrent;
 using System.Data.Common;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
@@ -16,26 +16,13 @@ namespace FAnsi.Discovery;
 /// </summary>
 public abstract partial class DiscoveredServerHelper(DatabaseType databaseType) : IDiscoveredServerHelper
 {
-    // Lazy-initialize accumulators for all DatabaseType values to avoid race conditions
-    // Uses Lazy<T> to defer creation until implementations are loaded
-    // Only creates accumulators for database types that have loaded implementations
-    private static readonly Lazy<FrozenDictionary<DatabaseType, ConnectionStringKeywordAccumulator>>
-        ConnectionStringKeywordAccumulators =
-            new(() =>
-            {
-                var dict = new Dictionary<DatabaseType, ConnectionStringKeywordAccumulator>();
-                foreach (var dt in Enum.GetValues<DatabaseType>())
-                    try
-                    {
-                        dict[dt] = new ConnectionStringKeywordAccumulator(dt);
-                    }
-                    catch (ImplementationNotFoundException)
-                    {
-                        // Skip database types without loaded implementations
-                    }
-
-                return dict.ToFrozenDictionary();
-            }, LazyThreadSafetyMode.ExecutionAndPublication);
+    /// <summary>
+    ///     The connection string keywords to enforce for each DBMS that has any (see <see cref="AddConnectionStringKeyword" />).
+    ///     A DBMS gets its accumulator when its first keyword is added, which needs its implementation to be loaded by then
+    ///     but not any other, so implementations can be loaded in any order and at any time.
+    /// </summary>
+    private static readonly ConcurrentDictionary<DatabaseType, ConnectionStringKeywordAccumulator>
+        ConnectionStringKeywordAccumulators = new();
 
     private static readonly Regex RVagueVersion = RVagueVersionRe();
 
@@ -250,10 +237,12 @@ public abstract partial class DiscoveredServerHelper(DatabaseType databaseType) 
     ///     Resolves conflicts when multiple calls are made for the same <paramref name="keyword" /> at
     ///     different times
     /// </param>
+    /// <exception cref="ImplementationNotFoundException">The implementation of <paramref name="databaseType" /> is not loaded</exception>
     public static void AddConnectionStringKeyword(DatabaseType databaseType, string keyword, string value,
         ConnectionStringKeywordPriority priority)
     {
-        var accumulator = ConnectionStringKeywordAccumulators.Value[databaseType];
+        var accumulator = ConnectionStringKeywordAccumulators.GetOrAdd(databaseType,
+            static type => new ConnectionStringKeywordAccumulator(type));
         accumulator.AddOrUpdateKeyword(keyword, value, priority);
     }
 
@@ -266,7 +255,7 @@ public abstract partial class DiscoveredServerHelper(DatabaseType databaseType) 
     protected virtual void EnforceKeywords(DbConnectionStringBuilder builder)
     {
         //if we have any keywords to enforce
-        if (ConnectionStringKeywordAccumulators.Value.TryGetValue(DatabaseType, out var accumulator))
+        if (ConnectionStringKeywordAccumulators.TryGetValue(DatabaseType, out var accumulator))
             accumulator.EnforceOptions(builder);
     }
 
