@@ -115,6 +115,43 @@ internal sealed class DatabaseExistsTests : DatabaseTests
     }
 
     /// <summary>
+    ///     Dropping a SQLite database whose file has already gone must still close the idle pooled connections to it.
+    ///     Otherwise the next connection with the same connection string is one of them: opening it does not create the
+    ///     file again, and tables created through it go into the deleted file.  DiscoveredDatabase.Drop refuses a database
+    ///     that does not exist, but the helper's DropDatabase, which it calls, is public, and the file can go in between.
+    /// </summary>
+    [Test]
+    [Platform(Exclude = "Win",
+        Reason = "Windows cannot delete the file of an open connection, so the file cannot be gone while a pooled connection to it is open")]
+    public void Drop_Sqlite_FileAlreadyDeleted_ClosesPooledConnections()
+    {
+        var server = GetTestServer(DatabaseType.Sqlite);
+        var directory = Path.Combine(Path.GetTempPath(), $"FAnsiTests_{Guid.NewGuid():N}");
+        var file = Path.Combine(directory, "Deleted.db");
+
+        try
+        {
+            var db = server.CreateDatabase(file);
+
+            // Leaves an idle connection to the file in the pool
+            db.CreateTable("MyTable", [new DatabaseColumnRequest("MyCol", new DatabaseTypeRequest(typeof(int)))]);
+
+            File.Delete(file);
+            db.Helper.DropDatabase(db);
+
+            using (var con = db.Server.GetConnection())
+                con.Open();
+
+            Assert.That(File.Exists(file), "Expected a connection opened after Drop to create the file again");
+        }
+        finally
+        {
+            if (Directory.Exists(directory))
+                Directory.Delete(directory, true);
+        }
+    }
+
+    /// <summary>
     ///     The name of a SQLite database is the path of its file, and the dot in a name like "fansitests.db" is part of the
     ///     file name.  GetRuntimeName returned "db" for such a database, so Exists looked for a file called "db", and Create
     ///     created one, in the working directory.

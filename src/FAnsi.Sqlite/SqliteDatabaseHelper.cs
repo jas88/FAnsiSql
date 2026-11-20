@@ -56,18 +56,19 @@ public sealed class SqliteDatabaseHelper : DiscoveredDatabaseHelper
     /// <remarks>
     ///     <para>SQLite databases are single files, so dropping involves deleting the file from disk.</para>
     ///     <para>
-    ///         Idle pooled connections are closed first.  Microsoft.Data.Sqlite keeps closed connections open in a pool, they
-    ///         would keep the deleted file open (and on Windows stop it being deleted) and be handed back out to a new
-    ///         database created with the same name.
+    ///         Idle pooled connections are closed first, even if the file has already gone.  Microsoft.Data.Sqlite keeps
+    ///         closed connections open in a pool, they would keep the deleted file open (and on Windows stop it being
+    ///         deleted) and be handed back out to a new database created with the same name.
     ///     </para>
     /// </remarks>
     public override void DropDatabase(DiscoveredDatabase database)
     {
+        SqliteConnection.ClearAllPools();
+
         var filePath = SqliteServerHelper.GetDatabaseFile(database.Server.Builder);
         if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
             return;
 
-        SqliteConnection.ClearAllPools();
         File.Delete(filePath);
     }
 

@@ -34,8 +34,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Microsoft.Data.Sqlite keeps closed connections open in a pool. Dropping a database deleted its file but not the
     pooled connections to it, so creating a database of the same name again reopened one of them and created no file.
     Tables created through such a connection would have gone into the deleted file
-  - `DropDatabase` and `CreateDatabase` now close the idle pooled connections, and `CreateDatabase` creates the file
-    with a connection that does not come from the pool
+  - `DropDatabase` (even when the file has already gone) and `CreateDatabase` now close the idle pooled connections,
+    and `CreateDatabase` creates the file with a connection that does not come from the pool
   - `DiscoveredDatabase.GetRuntimeName` took the dot in a file name for a qualifier and returned `db` for a database
     called `fansitests.db`, so `Exists` looked for, and `Create` created, a file called `db` in the working directory.
     The runtime name of a SQLite database is now the path of its file, and `Exists` and `CreateDatabase` use the Data
