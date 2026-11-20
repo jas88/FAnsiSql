@@ -17,7 +17,7 @@ jobs:
       coverage-stored: ${{ steps.coverage-stored.outputs.stored }}
     permissions:
       actions: read
-      contents: write
+      contents: read
       security-events: write
     services:
       oracle:
@@ -266,15 +266,6 @@ jobs:
           *.nupkg
           *.snupkg
         retention-days: 1
-    - name: Upload release binaries
-      if: contains(github.ref,'refs/tags/')
-      uses: svenstaro/upload-release-action@v2
-      with:
-        repo_token: ${{ secrets.GITHUB_TOKEN }}
-        tag: ${{ github.ref }}
-        file: '*.nupkg'
-        file_glob: true
-        overwrite: true
 
   # Codecov upload runs in its own job so that only this job (not build/test code,
   # package restore or other actions) can mint OIDC tokens. The NuGet trusted
@@ -307,7 +298,7 @@ jobs:
         fail_ci_if_error: true
 
   publish:
-    needs: build
+    needs: [build, mariadb]
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-22.04
     permissions:
@@ -324,3 +315,68 @@ jobs:
         user: jas88
     - name: NuGet push
       run: dotnet nuget push "FAnsi*.nupkg" -s https://api.nuget.org/v3/index.json -k ${{ steps.nuget-login.outputs.NUGET_API_KEY }} --skip-duplicate
+
+  # Attaches the packages to the GitHub release of a tag once build and mariadb have both passed, as publish does for
+  # NuGet. It is a separate job so that publish, which can mint the OIDC token NuGet trusts, cannot write to the
+  # repository, and the third-party action here cannot mint that token
+  release:
+    needs: [build, mariadb]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write  # required to attach the packages to the release
+    steps:
+    - name: Download packages
+      uses: actions/download-artifact@v8
+      with:
+        name: packages
+    - name: Upload release binaries
+      uses: svenstaro/upload-release-action@v2
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        tag: ${{ github.ref }}
+        file: '*.nupkg'
+        file_glob: true
+        overwrite: true
+
+  # The build job tests the MySql implementation against the runner's MySQL 8; this runs those tests again against
+  # MariaDB. Only MariaDB and SQLite are configured here, so the filter leaves out tests that need any other DBMS
+  mariadb:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+    services:
+      mariadb:
+        image: mariadb:12.3  # newest LTS release, supported until June 2029
+        env:
+          MARIADB_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+
+    steps:
+    - uses: actions/checkout@v7
+      with:
+        submodules: recursive
+
+    - name: Replace test configuration for MariaDB
+      run: mv tests/FAnsiTests/TestDatabases{-mariadb,}.xml
+
+    - name: Setup .NET Core
+      uses: actions/setup-dotnet@v6
+      with:
+        global-json-file: global.json
+        cache: true
+        cache-dependency-path: Directory.Packages.props
+
+    - name: Build
+      run: dotnet build tests/FAnsiTests/FAnsiTests.csproj -c Release --nologo
+
+    - name: Test MySql implementation against MariaDB
+      run: |
+        dotnet test --project tests/FAnsiTests/FAnsiTests.csproj -c Release --no-build \
+          --filter "(FullyQualifiedName~MySql|Name~MySql)&Name!~MicrosoftSQLServer&Name!~Oracle&Name!~PostgreSql"

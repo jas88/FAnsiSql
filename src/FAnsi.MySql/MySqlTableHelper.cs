@@ -14,9 +14,9 @@ public sealed partial class MySqlTableHelper : DiscoveredTableHelper
 {
     public static readonly MySqlTableHelper Instance = new();
 
-    private static readonly Regex IntParentheses = IntParenthesesRe();
-    private static readonly Regex SmallintParentheses = SmallintParenthesesRe();
-    private static readonly Regex BitParentheses = BitParenthesesRe();
+    private static readonly Regex IntegerDisplayWidth = IntegerDisplayWidthRe();
+    private static readonly Regex SingleBit = SingleBitRe();
+    private static readonly Regex FourDigitYear = FourDigitYearRe();
 
     private MySqlTableHelper()
     {
@@ -91,21 +91,39 @@ public sealed partial class MySqlTableHelper : DiscoveredTableHelper
     }
 
 
-    private static string TrimIntDisplayValues(string? type)
+    /// <summary>
+    ///     Removes the display width from an integer type, e.g. int(11) or bigint(20) unsigned.  The width does not limit
+    ///     the values a column holds (see https://stackoverflow.com/a/5634147/4824531).  MySQL 8.0.19 and later report it
+    ///     only on tinyint(1) and ZEROFILL columns, but MariaDB reports it on every integer column, so without this the
+    ///     same column would have a different SQLType on each.  Both report it on those two, which keep it: tinyint(1)
+    ///     is how both report a boolean column, and the width of a ZEROFILL column is the number of digits its values are
+    ///     padded to with zeros.
+    ///     <para>
+    ///         The n of bit(n) is not a display width but the number of bits the column holds, so it is kept, except in
+    ///         bit(1), which is the same type as bit: both servers report a bit column as bit(1).
+    ///     </para>
+    ///     <para>
+    ///         MariaDB reports a year column as year(4), and MySQL 8.0.19 and later as year, so the display width is
+    ///         removed from it too.  Neither server has another kind of year column.
+    ///     </para>
+    /// </summary>
+    internal static string TrimIntDisplayValues(string? type)
     {
         if (string.IsNullOrWhiteSpace(type))
             return "";
 
-        //See comments of int(5) means display 5 digits only it doesn't prevent storing larger numbers: https://stackoverflow.com/a/5634147/4824531
+        if (type.StartsWith("tinyint(1)", StringComparison.OrdinalIgnoreCase) ||
+            type.Contains("zerofill", StringComparison.OrdinalIgnoreCase))
+            return type;
 
-        if (IntParentheses.IsMatch(type))
-            return IntParentheses.Replace(type, "int");
+        if (IntegerDisplayWidth.IsMatch(type))
+            return IntegerDisplayWidth.Replace(type, "$1");
 
-        if (SmallintParentheses.IsMatch(type))
-            return SmallintParentheses.Replace(type, "smallint");
+        if (SingleBit.IsMatch(type))
+            return SingleBit.Replace(type, "bit");
 
-        if (BitParentheses.IsMatch(type))
-            return BitParentheses.Replace(type, "bit");
+        if (FourDigitYear.IsMatch(type))
+            return FourDigitYear.Replace(type, "year");
 
         return type;
     }
@@ -455,13 +473,13 @@ public sealed partial class MySqlTableHelper : DiscoveredTableHelper
         throw new NotImplementedException();
     }
 
-    [GeneratedRegex(@"^int\(\d+\)", RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]
-    private static partial Regex IntParenthesesRe();
-
-    [GeneratedRegex(@"^smallint\(\d+\)",
+    [GeneratedRegex(@"^(tinyint|smallint|mediumint|int|bigint)\(\d+\)",
         RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]
-    private static partial Regex SmallintParenthesesRe();
+    private static partial Regex IntegerDisplayWidthRe();
 
-    [GeneratedRegex(@"^bit\(\d+\)", RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]
-    private static partial Regex BitParenthesesRe();
+    [GeneratedRegex(@"^bit\(1\)", RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]
+    private static partial Regex SingleBitRe();
+
+    [GeneratedRegex(@"^year\(4\)", RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]
+    private static partial Regex FourDigitYearRe();
 }

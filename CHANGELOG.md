@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **MariaDB support in FAnsiSql.MySql**
+  - `DatabaseType.MySql` now works with MariaDB as well as MySQL, with the same connection strings and API. It has been
+    tested against MariaDB 12.3, the newest LTS release, and 13.0
+  - CI runs the MySQL tests against MariaDB 12.3 as well as MySQL 8, and packages are only pushed to NuGet or attached
+    to the GitHub release if both pass
+
 ### Fixed
 - **SQLite: `SupportsEmbeddedParameters` returned true**
   - SQLite SQL has no `DECLARE` or `SET` statement, so a parameter cannot be declared and given a value in SQL. Code that
@@ -149,6 +156,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     a server that had not responded
   - It now throws a `TimeoutException` then too, and cancels the attempt that is still running
 - The `TimeoutException` message from `DiscoveredServer.TestConnection` no longer ends with a stray parenthesis
+- **MySQL: calendar aggregates failed on MariaDB with "Unknown system variable 'cte_max_recursion_depth'"**
+  - The date axis is a recursive CTE, and the SQL raised its recursion limit with
+    `SET SESSION cte_max_recursion_depth`, a MySQL variable that MariaDB does not have. MariaDB names its limit
+    `max_recursive_iterations` and, when an axis reaches it (1000 rows by default), returns the rows so far with only
+    a warning instead of failing
+  - The limit is now set to 50000 on both: each assignment is in an executable comment that only its own server runs,
+    `/*!80000 ... */` for MySQL and `/*M!100200 ... */` for MariaDB. MySQL sets the same variables to the same values as
+    before
+- **MySQL: tables with date columns could not be created in some cultures ("You have an error in your SQL syntax")**
+  - A column whose type request was flagged Unicode was declared `CHARACTER SET utf8mb4 COLLATE utf8mb4_bin` whatever
+    its type, and MySQL and MariaDB both reject a character set on a type that is not a character type. TypeGuesser
+    flags a column Unicode if the text of any value has a non-ASCII character, as `DateTime` values have in cultures
+    such as ko-KR, or en-US with ICU 72 or later (U+202F before AM/PM, as on macOS and Windows 11), so `CreateTable`
+    from a `DataTable` with a `DateTime` column failed there. Linux CI was not affected because it uses the invariant
+    culture
+  - The character set and its collation are now declared only on character types (char, varchar, the text types, enum
+    and set)
+- **MySQL: `bit(n)` columns of 2 to 64 bits were read as booleans**
+  - MySqlConnector reads every `bit` column as a `ulong`, but FAnsi gave every `bit` type the C# type `bool`, so
+    `GetDataTable()` made such a column a `bool` one and read every value but 0 as `true`
+  - `GetCSharpDataType()` of a `bit(n)` column with n from 2 to 64, and so the type of its column in `GetDataTable()`,
+    is now `ulong` instead of `bool`, and its `DbType` is `UInt64` instead of `Boolean`. `bit` and `bit(1)` columns are
+    still `bool`
+  - TypeGuesser has no `ulong`, so the `DatabaseTypeRequest` for these columns, and the `Guesser` from `GetGuesser()`,
+    have `long`, the nearest type it has. A `ulong` is still created as a `bigint`, which holds every value below 2^63
+  - `TypeTranslater` has a new protected virtual method, `IsUnsignedLong`, for the SQL types that the ADO.NET provider
+    of a DBMS reads as a `ulong`
 
 ### Changed
 - **Target frameworks are now net10.0 and net11.0**
@@ -161,9 +195,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     TypeGuesser 2.1.0, and custom deciders must rename their overrides. TypeGuesser's CHANGELOG lists its other changes
   - FAnsiSql 3.8.x reads those fields, so it throws `MissingFieldException` when used with TypeGuesser 2.1.0: upgrade
     FAnsiSql and TypeGuesser together
+- **Bump Microsoft.Data.Sqlite from 10.0.15 to 11.0.0**, which depends on SQLitePCLRaw 3.0.5 itself
+  - FAnsiSql.Sqlite no longer references `SQLitePCLRaw.bundle_e_sqlite3` and `SQLitePCLRaw.core` directly. 3.7.0 added
+    those references to replace the SQLitePCLRaw 2.1.x that Microsoft.Data.Sqlite 10 depends on, because the
+    `SQLitePCLRaw.lib.e_sqlite3` 2.1.11 it brought in has a SQLite older than 3.50.2 (CVE-2025-6965 /
+    GHSA-2m69-gcr7-jv3q)
+  - Applications still get SQLitePCLRaw 3.0.5 and SQLite 3.53.4, in the `SQLite` package that SQLitePCLRaw 3.0.5 uses
+    for the native library, now through Microsoft.Data.Sqlite. An application that references Microsoft.Data.Sqlite
+    itself needs 11.0.0 or later
 - PostgreSQL: the `DbDataAdapter` that `GetDataAdapter` returns is no longer an `NpgsqlDataAdapter`, which is sealed. It
   reads `date` columns as `DateTime` and `time` columns as `TimeSpan` instead of the `DateOnly` and `TimeOnly` Npgsql 10
   reads. A `DbDataReader` from `ExecuteReader` still gives the values as Npgsql reads them
+- **MySQL: integer and year types are discovered without a display width on MariaDB too, bit types with their size**
+  - MariaDB reports a display width on every integer column, such as `bigint(20)`, but MySQL 8.0.19 and later only on
+    `tinyint(1)` and `ZEROFILL` columns. FAnsi removed it from `int` and `smallint` only, so on MariaDB the `SQLType`
+    of a `tinyint`, `mediumint` or `bigint` column kept it (`tinyint(4)`, `mediumint(9)`, `bigint(20)`) where MySQL
+    gives `tinyint`, `mediumint` and `bigint`
+  - The width is now removed from every integer type except on `tinyint(1)`, which is how both report a boolean
+    column, and on `ZEROFILL` columns, where it is the number of digits values are padded to with zeros. Both servers
+    report it on those, so they already had the same type on each
+  - The n of `bit(n)` is not a display width but the number of bits the column holds. FAnsi removed it, so a column
+    created from the discovered type `bit` held one bit. It is now kept, except in `bit(1)`, which is still discovered
+    as `bit`, the same type
+  - MariaDB reports a `year` column as `year(4)`, and MySQL 8.0.19 and later as `year`. The width is now removed from
+    it too, so both give `year`
+  - The types discovered for existing columns change as follows, so anything that stored the old names, such as an
+    RDMP catalogue, sees a one-off change of type:
+    - MariaDB, and MySQL before 8.0.19: `tinyint` (other than `tinyint(1)`), `mediumint` and `bigint` columns without
+      `ZEROFILL` lose the width, e.g. `bigint(20)` becomes `bigint` and `bigint(20) unsigned` becomes `bigint unsigned`
+    - MySQL and MariaDB: `int` and `smallint` `ZEROFILL` columns keep the width they used to lose, e.g.
+      `int(10) unsigned zerofill` instead of `int unsigned zerofill`
+    - MySQL and MariaDB: `bit` columns of 2 to 64 bits keep their size, e.g. `bit(8)` instead of `bit`
+    - Servers that report `year(4)`, such as MariaDB: `year` columns lose the width, so `year(4)` becomes `year`
+    - Nothing else changes
 
 ### Removed
 - **Reflection-based provider loading in the `DiscoveredServer` static constructor, which never loaded anything**
