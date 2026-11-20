@@ -148,9 +148,6 @@ internal abstract class TableHelperColumnOperationTestsBase : DatabaseTests
 
     protected void AddColumn_DateTimeColumn_Success(DatabaseType type)
     {
-        if (type == DatabaseType.Sqlite)
-            Assert.Ignore("SQLite stores DateTime as TEXT which causes type mapping issues in discovery");
-
         var db = GetTestDatabase(type);
         var table = db.CreateTable("AddDateColTable",
         [

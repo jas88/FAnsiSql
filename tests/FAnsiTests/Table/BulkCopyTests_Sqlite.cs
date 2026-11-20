@@ -85,7 +85,8 @@ internal sealed class BulkCopyTests_Sqlite : BulkCopyTestsBase
 
     #region Column Mapping
 
-    // Skipped: Upload_ReorderedColumns_MapsCorrectly - SQLite DateTime limitation
+    [Test]
+    public void Upload_ReorderedColumns_MapsCorrectly() => Upload_ReorderedColumns_MapsCorrectly(DbType);
 
     [Test]
     public void Upload_SubsetOfColumns_UsesDefaults() => Upload_SubsetOfColumns_UsesDefaults(DbType);
@@ -118,8 +119,11 @@ internal sealed class BulkCopyTests_Sqlite : BulkCopyTestsBase
     [Test]
     public void Upload_UnicodeStrings_PreservedCorrectly() => Upload_UnicodeStrings_PreservedCorrectly(DbType);
 
-    // Skipped: Upload_DateTimeValues_PreservedCorrectly - SQLite DateTime limitation
-    // Skipped: Upload_DateTimeStrings_ParsedCorrectly - SQLite DateTime limitation
+    [Test]
+    public void Upload_DateTimeValues_PreservedCorrectly() => Upload_DateTimeValues_PreservedCorrectly(DbType);
+
+    [Test]
+    public void Upload_DateTimeStrings_ParsedCorrectly() => Upload_DateTimeStrings_ParsedCorrectly(DbType);
 
     [Test]
     public void Upload_BinaryData_PreservedCorrectly() => Upload_BinaryData_PreservedCorrectly(DbType);

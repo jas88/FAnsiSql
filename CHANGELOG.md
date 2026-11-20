@@ -21,6 +21,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     `near "SET": syntax error`
   - `SupportsEmbeddedParameters` now returns false and `GetParameterDeclaration` throws `NotSupportedException`, as they
     do for Oracle and PostgreSQL. Parameter values have to be passed as `DbParameter`s
+- **SQLite: bulk insert changed strings that looked like dates**
+  - Bulk insert parsed every string going into a `TEXT` column and stored any that parsed as a date as an ISO 8601 date
+    and time, so `"12:30"` became today's date at 12:30 and `"1/2/2003"` became `2003-01-02 00:00:00`. `TEXT` is what
+    FAnsi creates for Unicode strings and strings of unlimited width, and used to create for dates and times
+  - A string going into a string column is now stored exactly as given. A value is only converted when it is a date or
+    a time: a `DateTime`, `DateOnly` or `TimeOnly`, or a string going into a date or time column, which is parsed with
+    the culture of the bulk insert as it is for the other DBMS
+- **SQLite: boolean, date and time columns were discovered as integers and strings**
+  - FAnsi declared boolean columns `INTEGER` and date and time columns `TEXT`, so it could not tell the columns it had
+    created from integer and string columns. `GetDataTable` returned 1 or 0 for a boolean and the text of a date or
+    time, and `Insert` stored a date as the string it was given. `CreateTable` from a `DataTable` of 'T' and 'F'
+    strings failed with "Failed to parse value 'T'", because the column it guessed was a boolean was taken to be an
+    integer column
+  - These columns are now declared `BOOLEAN`, `DATETIME` and `TIME` and are discovered as `bool`, `DateTime` and
+    `TimeSpan`, as they are for the other DBMS. `GetDataTable` returns values of those types, and `Insert` and bulk
+    insert parse strings into them with the culture given
+- **SQLite: creating a database by name failed with "didn't exist after the creation attempt"**
+  - Microsoft.Data.Sqlite keeps closed connections open in a pool. Dropping a database deleted its file but not the
+    pooled connections to it, so creating a database of the same name again reopened one of them and created no file.
+    Tables created through such a connection would have gone into the deleted file
+  - `DropDatabase` (even when the file has already gone) and `CreateDatabase` now close the idle pooled connections,
+    and `CreateDatabase` creates the file with a connection that does not come from the pool
+  - `DiscoveredDatabase.GetRuntimeName` took the dot in a file name for a qualifier and returned `db` for a database
+    called `fansitests.db`, so `Exists` looked for, and `Create` created, a file called `db` in the working directory.
+    The runtime name of a SQLite database is now the path of its file, and `Exists` and `CreateDatabase` use the Data
+    Source of the database's connection string
+  - `DiscoveredDatabase.GetWrappedName` wrapped the same `db`. SQL has no name for a database file, so it now returns
+    `"main"`, what SQLite calls the database that a connection opens: every connection FAnsi opens to a SQLite
+    database opens its file
+  - `IQuerySyntaxHelper` has two new members, `GetDatabaseRuntimeName` and `GetDatabaseWrappedName`, which give the
+    names that `DiscoveredDatabase.GetRuntimeName` and `GetWrappedName` return. For every DBMS but SQLite they are
+    `GetRuntimeName` and `EnsureWrapped` of it, as before. They have default implementations, so other implementations
+    of `IQuerySyntaxHelper` are unaffected
+- **SQLite: `GetTodaysDate` gave today's date in UTC, at midnight**
+  - `GetScalarFunctionSql(MandatoryScalarFunctions.GetTodaysDate)` was `date('now')`, so a column with
+    `Default = MandatoryScalarFunctions.GetTodaysDate` was given midnight at the start of the UTC date, which can be the
+    day before or after the local one. The other DBMS give the current local date and time, in the time zone of the
+    server or session: `GETDATE()` on SQL Server, `now()` on MySQL and PostgreSQL and `CURRENT_TIMESTAMP` on Oracle
+  - It is now `datetime('now', 'localtime')`, the local date and time to the second of the machine the application runs
+    on, as SQLite runs in the application. `GetSQLFunctionsDictionary` now gives the same for `getdate` and `now`, for
+    which it gave `datetime('now')`, the time in UTC
 - **PostgreSQL: `time` columns could not be read and `date` columns could not be used at all**
   - Since 3.6.1 (Npgsql 10), which reads a `time` as a `TimeOnly`, `GetDataTable` of any table with a `time` column failed
     with "Unable to cast object of type 'System.TimeOnly' to type 'System.TimeSpan'"
@@ -147,6 +188,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Applications still get SQLitePCLRaw 3.0.5 and SQLite 3.53.4, in the `SQLite` package that SQLitePCLRaw 3.0.5 uses
     for the native library, now through Microsoft.Data.Sqlite. An application that references Microsoft.Data.Sqlite
     itself needs 11.0.0 or later
+- **SQLite boolean, date and time columns are declared `BOOLEAN`, `DATETIME` and `TIME`** instead of `INTEGER`, `TEXT`
+  and `TEXT` (see Fixed)
+  - SQLite still stores them as 1 and 0 and as ISO 8601 text (`2007-01-01 13:11:00`, `13:11:00`)
+  - Columns created by earlier versions keep their types and are still discovered as integers and strings, so a string
+    bulk inserted into one of their date columns is now stored as given; a `DateTime` is still stored as ISO 8601 text
 - PostgreSQL: the `DbDataAdapter` that `GetDataAdapter` returns is no longer an `NpgsqlDataAdapter`, which is sealed. It
   reads `date` columns as `DateTime` and `time` columns as `TimeSpan` instead of the `DateOnly` and `TimeOnly` Npgsql 10
   reads. A `DbDataReader` from `ExecuteReader` still gives the values as Npgsql reads them

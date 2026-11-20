@@ -54,15 +54,22 @@ public sealed class SqliteDatabaseHelper : DiscoveredDatabaseHelper
     /// </summary>
     /// <param name="database">The database to drop</param>
     /// <remarks>
-    ///     SQLite databases are single files, so dropping involves deleting the file from disk.
-    ///     Associated journal/WAL files are also removed by the file system.
+    ///     <para>SQLite databases are single files, so dropping involves deleting the file from disk.</para>
+    ///     <para>
+    ///         Idle pooled connections are closed first, even if the file has already gone.  Microsoft.Data.Sqlite keeps
+    ///         closed connections open in a pool, they would keep the deleted file open (and on Windows stop it being
+    ///         deleted) and be handed back out to a new database created with the same name.
+    ///     </para>
     /// </remarks>
     public override void DropDatabase(DiscoveredDatabase database)
     {
-        var filePath = database.Server.Builder.TryGetValue("Data Source", out var dataSource)
-            ? dataSource?.ToString()
-            : null;
-        if (!string.IsNullOrEmpty(filePath) && File.Exists(filePath)) File.Delete(filePath);
+        SqliteConnection.ClearAllPools();
+
+        var filePath = SqliteServerHelper.GetDatabaseFile(database.Server.Builder);
+        if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
+            return;
+
+        File.Delete(filePath);
     }
 
     /// <summary>
@@ -204,6 +211,6 @@ public sealed class SqliteDatabaseHelper : DiscoveredDatabaseHelper
     /// </summary>
     protected override string GetCreateTableSqlLineForColumn(DatabaseColumnRequest col, string datatype,
         IQuerySyntaxHelper syntaxHelper) =>
-        // SQLite requires DEFAULT functions to be wrapped in parentheses: DEFAULT (date('now'))
+        // SQLite requires DEFAULT functions to be wrapped in parentheses: DEFAULT (datetime('now', 'localtime'))
         $"{syntaxHelper.EnsureWrapped(col.ColumnName)} {datatype} {(col.Default != MandatoryScalarFunctions.None ? $"default ({syntaxHelper.GetScalarFunctionSql(col.Default)})" : "")} {(string.IsNullOrWhiteSpace(col.Collation) ? "" : $"COLLATE {col.Collation}")} {(col.AllowNulls && !col.IsPrimaryKey ? " NULL" : " NOT NULL")} {(col.IsAutoIncrement ? syntaxHelper.GetAutoIncrementKeywordIfAny() : "")}";
 }

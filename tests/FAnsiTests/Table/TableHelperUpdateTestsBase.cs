@@ -1340,10 +1340,6 @@ internal abstract class TableHelperUpdateTestsBase : DatabaseTests
 
     protected void UpdateWithJoin_DateTimeValues_UpdatesCorrectly(DatabaseType dbType)
     {
-        if (dbType == DatabaseType.Sqlite)
-            Assert.Ignore(
-                "SQLite stores DateTime as TEXT strings; ADO.NET returns string type. Fundamental SQLite limitation.");
-
         var db = GetTestDatabase(dbType);
 
         DiscoveredTable tbl1;
@@ -1396,26 +1392,18 @@ internal abstract class TableHelperUpdateTestsBase : DatabaseTests
                 cmd.ExecuteNonQuery();
             }
 
-            // Verify date was updated
-            using (var cmd = db.Server.GetCommand(
-                       $"SELECT {syntaxHelper.EnsureWrapped("EventDate")} FROM {tbl1.GetFullyQualifiedName()} WHERE {syntaxHelper.EnsureWrapped("Id")} = 1",
-                       con))
-            {
-                var result = cmd.ExecuteScalar();
-                Assert.That(result, Is.InstanceOf<DateTime>());
-                Assert.That(((DateTime)result).ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
-                    Is.EqualTo(newDate.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)));
-            }
+            // Read the dates back with GetDataTable, which gives them as DateTime for every DBMS. ExecuteScalar would not:
+            // SQLite stores a date as text, and Microsoft.Data.Sqlite returns that text
+            using var result = tbl1.GetDataTable();
+            var eventDates = result.Rows.Cast<DataRow>().ToDictionary(
+                static r => Convert.ToInt32(r["Id"], CultureInfo.InvariantCulture), static r => r["EventDate"]);
 
-            // Verify other row wasn't updated
-            using (var cmd = db.Server.GetCommand(
-                       $"SELECT {syntaxHelper.EnsureWrapped("EventDate")} FROM {tbl1.GetFullyQualifiedName()} WHERE {syntaxHelper.EnsureWrapped("Id")} = 2",
-                       con))
+            Assert.Multiple(() =>
             {
-                var result = cmd.ExecuteScalar();
-                Assert.That(((DateTime)result).ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
-                    Is.EqualTo(oldDate.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)));
-            }
+                // The row that joined was updated, the other was not
+                Assert.That(eventDates[1], Is.TypeOf<DateTime>().And.EqualTo(newDate));
+                Assert.That(eventDates[2], Is.TypeOf<DateTime>().And.EqualTo(oldDate));
+            });
         }
         finally
         {

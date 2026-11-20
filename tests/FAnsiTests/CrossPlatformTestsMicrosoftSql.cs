@@ -84,6 +84,11 @@ internal sealed class CrossPlatformTestsMicrosoftSql : CrossPlatformTestsBase
     public new void HorribleDatabaseAndTableNames(string horribleDatabaseName, string horribleTableName) =>
         base.HorribleDatabaseAndTableNames(horribleDatabaseName, horribleTableName);
 
+    [TestCase("_-o-_", ":>0<:")]
+    public new void HorribleDatabaseAndTableNames_CreatePrimaryKey(string horribleDatabaseName,
+        string horribleTableName) =>
+        base.HorribleDatabaseAndTableNames_CreatePrimaryKey(horribleDatabaseName, horribleTableName);
+
     [TestCase("_-o-_", ":>0<:", "-_")]
     [TestCase("Comment", "SSSS", "Space Out")]
     public new void HorribleColumnNames(string horribleDatabaseName, string horribleTableName, string columnName) =>
