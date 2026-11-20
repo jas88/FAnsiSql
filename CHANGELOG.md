@@ -31,6 +31,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     offset of the time zone of the session, as `Insert` does
   - An `interval` was taken to be an `int` because its name starts with "int". It is now a `TimeSpan` that can be a day or
     more, or negative, and both `Insert` and bulk insert write it as an `interval`
+- **PostgreSQL: aggregates with a pivot column did not pivot**
+  - The SQL built for a pivot had no column for each pivot value and ignored any TOP X. Without a calendar axis it was
+    rejected: the query being pivoted was not grouped (`must appear in the GROUP BY clause`) and WHERE and HAVING lines
+    were put in the wrong place (`syntax error at or near "WHERE"`). With an axis it returned a row for each pair of date
+    and pivot value
+  - A pivot now comes out as it does on SQL Server and MySQL: one column for each value of the pivot column that is
+    neither null nor empty, in order of the aggregate, largest first, or of the TOP X ORDER BY, and only the first X
+    values when there is a TOP X. Each column holds the aggregate for its value, 0 where there is none. The columns of
+    the query being pivoted are found by position, so it does not matter whether its lines alias or quote them
+  - A query cannot choose its own columns, so the SQL for a pivot is now a `DO` block that opens a cursor, followed by
+    `FETCH ALL` from the cursor and `CLOSE`. The cursor is named after a hash of the query (`fansi_pivot_` and 16 hex
+    digits), so pivots on one connection never share a cursor and the same query always gives the same SQL
+  - Each column is named after its value as PostgreSQL writes it as text (a date in the session's `DateStyle`), cut to
+    whole characters within `max_identifier_length` (63) bytes. A value whose name an earlier pivot column already has,
+    as two long values that start the same can, gets its position among the pivot columns as a suffix (e.g. `_3`), so no
+    two columns share a name
+- **Oracle: aggregates with a pivot column did not pivot**
+  - The SQL built for a pivot had no column for each pivot value and ignored any TOP X. Without a calendar axis the query
+    being pivoted was not grouped (ORA-00937); with one it returned a row for each pair of date and pivot value
+  - A pivot now comes out as it does on SQL Server, MySQL and PostgreSQL. It is an anonymous PL/SQL block that returns
+    its rows with `DBMS_SQL.RETURN_RESULT`, which needs Oracle 12c or later
+  - Each column is named after its value. A date is written as `YYYY-MM-DD HH24:MI:SS` and a timestamp with its fraction
+    of a second, if any (a `TIMESTAMP WITH TIME ZONE` as its UTC time followed by ` UTC`), whatever the session's NLS
+    formats, whose defaults leave out the century and the time. Other values are written with `TO_CHAR`
+  - A name leaves out the double quotes and NUL characters an Oracle name cannot hold and is cut to whole characters
+    within 128 bytes. A value left with no name (one made only of double quotes), or with the name of an earlier pivot
+    column, gets its position among the pivot columns as a suffix (e.g. `_3`), so every column has a valid name of its
+    own
+- **SQL Server: pivot values were left out or lost characters**
+  - A pivot named each column with `QUOTENAME` of its value, which is NULL for more than 128 characters, so such values
+    were left out. Its SQL was built in `varchar`, which loses the characters the code page lacks, and it compared values
+    with `''`, which left out 0 and 1900-01-01 in number and date columns
+  - A pivot no longer uses `PIVOT`, whose `IN` list names each column after its value. The values are ranked into the
+    temporary table `#fansi_pivot_values`, of the pivot column's own type, and each column sums the aggregate of the value
+    at its rank, 0 where there is none. The SQL is `nvarchar` throughout
+  - Each column is named after its value cut to 128 characters, keeping surrogate pairs together, and quoted with
+    `QUOTENAME`. A value left with no name, or with the name of an earlier pivot column, gets its position among the pivot
+    columns as a suffix (e.g. `_3`), as on Oracle and PostgreSQL
+- **MySQL: pivot values could break the SQL or be left out**
+  - A pivot put each value between backticks as the name of its column without doubling a backtick in it, so a value with
+    a backtick broke the SQL. A value with a character outside the Basic Multilingual Plane, such as an emoji, failed with
+    "Invalid utf8mb4 character string". Without a calendar axis `GROUP_CONCAT` stopped at 1024 bytes, which broke the SQL
+    or left out columns once there were many or long values. A null value took one of the TOP X places and an empty one
+    got a column with an empty name
+  - As on the other DBMS, values that are null or empty no longer get a column, and ties are broken on the value so that
+    the columns always come in the same order
+  - Each column is named after its value with any backtick doubled: without NUL characters, with characters outside the
+    Basic Multilingual Plane as `?`, trimmed of spaces at either end and cut to 64 characters. A value left with no name,
+    or with the name of an earlier pivot column, gets its position among the pivot columns as a suffix (e.g. `_3`). MySQL
+    has no loop outside stored programs, so the second suffix (`_3_2`) is tried only once
+  - In a pivot with a calendar axis, the columns of the derived table are named after their position, as MySQL compares
+    column names there ignoring case, and get their names in the outer `SELECT`
 - **Decimal values on .NET 11**
   - .NET 11 converts a `double` to a `decimal` exactly, so 9.99 becomes 9.990000000000000213162820728, where earlier
     versions of .NET rounded to 15 significant digits

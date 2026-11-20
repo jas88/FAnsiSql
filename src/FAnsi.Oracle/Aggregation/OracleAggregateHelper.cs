@@ -201,118 +201,134 @@ order by dt*/
 
     protected override string BuildPivotOnlyAggregate(AggregateCustomLineCollection query, CustomLine nonPivotColumn)
     {
-        var pivotSqlWithoutAlias = query.PivotSelect!.GetTextWithoutAlias(query.SyntaxHelper);
-        var countSqlWithoutAlias = query.CountSelect!.GetTextWithoutAlias(query.SyntaxHelper);
+        var syntaxHelper = query.SyntaxHelper;
 
-        query.SyntaxHelper.SplitLineIntoOuterMostMethodAndContents(countSqlWithoutAlias, out var aggregateMethod,
-            out var aggregateParameter);
+        var rowAlias = nonPivotColumn.GetAliasFromText(syntaxHelper) ??
+                       syntaxHelper.GetRuntimeName(nonPivotColumn.GetTextWithoutAlias(syntaxHelper));
 
-        if (aggregateParameter.Equals("*", StringComparison.Ordinal))
-            aggregateParameter = "1";
+        var pivotValuesSql = GetPivotValuesSql(query, null);
 
-        var nonPivotColumnAlias = nonPivotColumn.GetAliasFromText(query.SyntaxHelper);
-        if (string.IsNullOrWhiteSpace(nonPivotColumnAlias))
-            nonPivotColumnAlias =
-                query.SyntaxHelper.GetRuntimeName(nonPivotColumn.GetTextWithoutAlias(query.SyntaxHelper));
+        var selectSql = $"""
+                         WITH fansi_pivot_dataset ({GetDatasetColumns(query)}) AS (
+                         {WrapAvgWithRound(GetDatasetSql(query))}
+                         ),
+                         fansi_pivot_values AS (
+                         {pivotValuesSql}
+                         )
+                         SELECT fansi_pivot_dataset.fansi_row AS {syntaxHelper.EnsureWrapped(rowAlias)}
+                         """;
 
-        var havingSqlIfAny = string.Join(Environment.NewLine,
-            query.Lines.Where(static l => l.LocationToInsert == QueryComponent.Having).Select(static l => l.Text));
+        const string fromSql = """
+                               FROM fansi_pivot_dataset
+                               LEFT JOIN fansi_pivot_values ON fansi_pivot_values.fansi_value = fansi_pivot_dataset.fansi_value
+                               GROUP BY fansi_pivot_dataset.fansi_row
+                               ORDER BY fansi_pivot_dataset.fansi_row
+                               """;
 
-        // Wrap the aggregate method if it's AVG to prevent overflow
-        var wrappedAggregateMethod = aggregateMethod.Equals("AVG", StringComparison.OrdinalIgnoreCase)
-            ? $"ROUND({aggregateMethod}(case when {pivotSqlWithoutAlias} = pv.piv then {aggregateParameter} else null end), 10)"
-            : $"{aggregateMethod}(case when {pivotSqlWithoutAlias} = pv.piv then {aggregateParameter} else null end)";
-
-        // Oracle has native PIVOT syntax but requires knowing the pivot values in advance
-        // We'll use a two-step approach: first get distinct values, then use dynamic SQL or CASE statements
-        // For now, using CASE statements similar to MySQL approach
-        return string.Format(
-            CultureInfo.InvariantCulture,
-            """
-
-            {0}
-            /* Oracle pivot implementation using subquery */
-            with source_data as (
-                {1}
-            ),
-            pivot_values as (
-                select distinct {2} as piv
-                from source_data
-                where {2} is not null
-                order by {2}
-            )
-            select
-                s.{3},
-                {4}
-            from source_data s
-            cross join pivot_values pv
-            group by s.{3}
-            order by s.{3}
-            {5}
-
-            """,
-            string.Join(Environment.NewLine, query.Lines.Where(static l => l.LocationToInsert < QueryComponent.SELECT)),
-            string.Join(Environment.NewLine,
-                query.Lines.Where(static c =>
-                    c.LocationToInsert is >= QueryComponent.SELECT and < QueryComponent.GroupBy)),
-            pivotSqlWithoutAlias,
-            nonPivotColumnAlias,
-            wrappedAggregateMethod,
-            havingSqlIfAny
-        );
+        return BuildPivot(query, pivotValuesSql, selectSql, fromSql);
     }
 
     protected override string BuildPivotAndAxisAggregate(AggregateCustomLineCollection query)
     {
-        var pivotSqlWithoutAlias = query.PivotSelect!.GetTextWithoutAlias(query.SyntaxHelper);
-        var countSqlWithoutAlias = query.CountSelect!.GetTextWithoutAlias(query.SyntaxHelper);
-        var axisColumnAlias = query.AxisSelect!.GetAliasFromText(query.SyntaxHelper) ?? "joinDt";
+        var axis = query.Axis ?? throw new ArgumentNullException(nameof(query), "Query Axis cannot be null");
+        var axisSelect = query.AxisSelect ??
+                         throw new ArgumentException("Query has no axis column (CustomLineRole.Axis)", nameof(query));
+        var axisColumnAlias = axisSelect.GetAliasFromText(query.SyntaxHelper) ?? "joinDt";
 
-        query.SyntaxHelper.SplitLineIntoOuterMostMethodAndContents(countSqlWithoutAlias, out var aggregateMethod,
-            out var aggregateParameter);
-
-        if (aggregateParameter.Equals("*", StringComparison.Ordinal))
-            aggregateParameter = "1";
+        // Only values of records that are on the axis get a column, which has to be worked out before the axis column is
+        // wrapped in a date part function
+        var pivotValuesSql = GetPivotValuesSql(query, axisSelect.GetTextWithoutAlias(query.SyntaxHelper));
 
         WrapAxisColumnWithDatePartFunction(query, axisColumnAlias);
 
-        var calendar = GetDateAxisTableDeclaration(query.Axis!);
+        var axisDate = GetDatePartOfColumn(axis.AxisIncrement, "calendar.dt");
 
-        // Oracle pivot with date axis
-        return string.Format(
-            CultureInfo.InvariantCulture,
-            """
+        var selectSql = $"""
+                         {GetDateAxisTableDeclaration(axis)},
+                         fansi_pivot_dataset ({GetDatasetColumns(query)}) AS (
+                         {WrapAvgWithRound(GetDatasetSql(query))}
+                         ),
+                         fansi_pivot_values AS (
+                         {pivotValuesSql}
+                         )
+                         SELECT {axisDate} AS "joinDt"
+                         """;
 
-            {0}
-            {1},
-            source_data as (
-                {2}
-            ),
-            pivot_values as (
-                select distinct {3} as piv
-                from source_data
-                where {3} is not null
-                order by {3}
-            )
-            select
-                {4} as "joinDt",
-                {5}
-            from calendar
-            cross join pivot_values
-            left join source_data ds on ds.{6} = {4}
-            group by calendar.dt, pivot_values.piv
-            order by calendar.dt
+        var fromSql = $"""
+                       FROM calendar
+                       LEFT JOIN fansi_pivot_dataset ON fansi_pivot_dataset.fansi_axis = {axisDate}
+                       LEFT JOIN fansi_pivot_values ON fansi_pivot_values.fansi_value = fansi_pivot_dataset.fansi_value
+                       GROUP BY calendar.dt
+                       ORDER BY calendar.dt
+                       """;
 
-            """,
-            string.Join(Environment.NewLine, query.Lines.Where(static c => c.LocationToInsert < QueryComponent.SELECT)),
-            calendar,
-            string.Join(Environment.NewLine,
-                query.Lines.Where(static c =>
-                    c.LocationToInsert is >= QueryComponent.SELECT and <= QueryComponent.Having)),
-            pivotSqlWithoutAlias,
-            GetDatePartOfColumn(query.Axis!.AxisIncrement, "calendar.dt"),
-            $"{aggregateMethod}(case when {pivotSqlWithoutAlias} = pivot_values.piv then {aggregateParameter} else null end)",
-            axisColumnAlias
-        );
+        return BuildPivot(query, pivotValuesSql, selectSql, fromSql);
     }
+
+    /// <summary>
+    ///     Returns the PL/SQL block that pivots the query <paramref name="selectSql" /> ... <paramref name="fromSql" /> on the
+    ///     values listed by <paramref name="pivotValuesSql" />, see <see cref="OraclePivotBlock.Build" />
+    /// </summary>
+    private static string BuildPivot(AggregateCustomLineCollection query, string pivotValuesSql, string selectSql,
+        string fromSql) =>
+        OraclePivotBlock.Build(GetLines(query, static l => l.LocationToInsert < QueryComponent.SELECT), pivotValuesSql,
+            selectSql, fromSql);
+
+    /// <summary>
+    ///     Returns a query of the values of the pivot column that get a column, numbered (fansi_rank) in the order their
+    ///     columns appear: those that are not null (and are on a record with a date for the axis, if
+    ///     <paramref name="axisColumnSql" /> is given), ordered by the TOP X ORDER BY or else by the aggregate, largest first,
+    ///     and limited by the TOP X, if there is one
+    /// </summary>
+    private static string GetPivotValuesSql(AggregateCustomLineCollection query, string? axisColumnSql)
+    {
+        var pivotSelect = query.PivotSelect ??
+                          throw new ArgumentException("Query has no pivot column (CustomLineRole.Pivot)", nameof(query));
+        var countSelect = query.CountSelect ??
+                          throw new ArgumentException("Query has no aggregate column (CustomLineRole.CountFunction)",
+                              nameof(query));
+        var pivotSql = pivotSelect.GetTextWithoutAlias(query.SyntaxHelper);
+        var countSql = countSelect.GetTextWithoutAlias(query.SyntaxHelper);
+
+        // break ties on the value itself, the ranking has to come out the same each time the query is run
+        var orderBy = $"{query.TopXOrderBy?.Text ?? $"{countSql} desc"}, {pivotSql}";
+
+        var whereOrAnd = query.Lines.Any(static l => l.LocationToInsert == QueryComponent.WHERE) ? "AND" : "WHERE";
+        var onAxis = axisColumnSql == null ? "" : $" AND ({axisColumnSql}) IS NOT NULL";
+
+        return $"""
+                SELECT ROW_NUMBER() OVER (ORDER BY {orderBy}) AS fansi_rank, {pivotSql} AS fansi_value
+                {GetLines(query, static l => l.LocationToInsert is >= QueryComponent.FROM and <= QueryComponent.WHERE && l.Role != CustomLineRole.Axis)}
+                {whereOrAnd} ({pivotSql}) IS NOT NULL{onAxis}
+                GROUP BY {pivotSql}
+                {GetLines(query, static l => l.LocationToInsert == QueryComponent.Having)}
+                ORDER BY {orderBy}
+                {GetLines(query, static l => l.LocationToInsert == QueryComponent.Postfix && l.Role == CustomLineRole.TopX)}
+                """;
+    }
+
+    /// <summary>
+    ///     The query being pivoted, from SELECT to HAVING.  Any TOP X applies to the choice of pivot values, not to this
+    /// </summary>
+    private static string GetDatasetSql(AggregateCustomLineCollection query) =>
+        GetLines(query, static l =>
+            l.LocationToInsert is >= QueryComponent.SELECT and <= QueryComponent.Having && l.Role != CustomLineRole.TopX);
+
+    /// <summary>
+    ///     Names for the columns of <see cref="GetDatasetSql" /> (its <see cref="QueryComponent.QueryTimeColumn" /> lines, in
+    ///     order).  Referring to the columns by these names means it does not matter whether, or how, the lines alias them.
+    /// </summary>
+    private static string GetDatasetColumns(AggregateCustomLineCollection query) =>
+        string.Join(", ", query.Lines.Where(static l => l.LocationToInsert == QueryComponent.QueryTimeColumn)
+            .Select(static l => l.Role switch
+            {
+                CustomLineRole.CountFunction => "fansi_aggregate",
+                CustomLineRole.Pivot => "fansi_value",
+                CustomLineRole.Axis => "fansi_axis",
+                CustomLineRole.None => "fansi_row",
+                _ => throw new InvalidOperationException($"A {l.Role} column cannot be part of a pivot: {l.Text}")
+            }));
+
+    private static string GetLines(AggregateCustomLineCollection query, Func<CustomLine, bool> predicate) =>
+        string.Join(Environment.NewLine, query.Lines.Where(predicate).Select(static l => l.Text));
 }
