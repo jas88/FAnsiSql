@@ -79,6 +79,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     offset of the time zone of the session, as `Insert` does
   - An `interval` was taken to be an `int` because its name starts with "int". It is now a `TimeSpan` that can be a day or
     more, or negative, and both `Insert` and bulk insert write it as an `interval`
+- **A DBMS loaded after another had been used could not be used**
+  - `DiscoveredServerHelper` set up its table of connection string keywords once, the first time a connection string was
+    built, with an entry for each implementation loaded by then. `AddConnectionStringKeyword` for a DBMS loaded later
+    failed with `KeyNotFoundException`, so keywords could not be added for it. `MySqlServerHelper` adds MySQL's keywords
+    in its static constructor, so after, say, `PostgreSqlImplementation.EnsureLoaded()` and a PostgreSQL
+    `DiscoveredServer`, `MySqlImplementation.EnsureLoaded()` and any use of MySQL failed with `TypeInitializationException`
+    for the rest of the process
+  - A DBMS now gets its entry when its first keyword is added, so implementations can be loaded one at a time, in any
+    order
 - **Decimal values on .NET 11**
   - .NET 11 converts a `double` to a `decimal` exactly, so 9.99 becomes 9.990000000000000213162820728, where earlier
     versions of .NET rounded to 15 significant digits
