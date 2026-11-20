@@ -49,11 +49,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - PostgreSQL: Npgsql writes a `float` or `double` to a `numeric` column as a `decimal`, so one too large for a
     `decimal` failed with `OverflowException`, even for `numeric(38,0)`, which holds it. It is now written as the whole
     number it is, so 1e30 is 10^30. NaN and infinity, which Npgsql cannot write to `numeric`, get a clear error
-  - Oracle: ODP.NET converts a `float` or `double` bound to a `NUMBER` column to 15 significant digits, so the double
-    just below 10^29, 9.999999999999997E+28, became 10^29, too large for `NUMBER(29,0)`, and 0.12499999999999999
-    became 0.125 before being rounded to the column. A `float` or `double` going into a `NUMBER(p,s)` column is now
-    sent as the number of the shortest text that reads back as it, which is the number that is checked and the one
-    MySQL is sent
+  - Oracle: ODP.NET rounds a `double` bound to a `NUMBER` column half up to 15 significant digits, so the double just
+    below 10^29, 9.999999999999997E+28, became 10^29, too large for `NUMBER(29,0)`, and 0.12499999999999999 became
+    0.125 before being rounded to the column. It rounds a `float` half up to 7 significant digits, starting from the
+    shortest text that reads back as it, so the float just below 10^21, 9.9999995E+20, became 10^21, too large for
+    `NUMBER(21,0)`, and 0.12499999 became 0.125. A `float` or `double` going into a `NUMBER(p,s)` column is now sent
+    as the number of its shortest text, with all of its digits: up to 9 for a `float` and 17 for a `double`. That is
+    the number bulk insert checks, so Oracle is now sent the number that was checked, as MySQL already was
   - `ColumnValidationRule` has a new constructor without `maxDecimalValue`, and new `DecimalLimit` and
     `MaxDecimalValueText` members. The old constructor and `MaxDecimalValue` are obsolete, and `MaxDecimalValue` is 0
     in the rules that bulk insert makes

@@ -116,9 +116,11 @@ internal sealed class OracleBulkCopy(DiscoveredTable targetTable, IManagedConnec
 
     /// <summary>
     ///     Returns a float or double for a NUMBER(p,s) column as the NUMBER of the shortest text that reads back as it,
-    ///     which is what bulk insert checks the value as and what MySQL is sent. ODP.NET would convert it to a NUMBER
-    ///     of 15 significant digits, which rounds the double just below 10^29, 9.999999999999997E+28, up to 10^29, too
-    ///     large for NUMBER(29,0), and 0.12499999999999999 up to 0.125.
+    ///     with all of its digits. That is the number bulk insert checks the value as, and the number MySQL is sent for
+    ///     it. ODP.NET would round a double half up to 15 significant digits, which rounds the double just below 10^29,
+    ///     9.999999999999997E+28, up to 10^29, too large for NUMBER(29,0), and 0.12499999999999999 up to 0.125. It
+    ///     would round the shortest text of a float half up to 7 significant digits, which rounds the float just below
+    ///     10^21, 9.9999995E+20, up to 10^21, too large for NUMBER(21,0), and 0.12499999 up to 0.125.
     /// </summary>
     /// <remarks>
     ///     NaN, infinity and numbers outside the range of NUMBER are left for ODP.NET to convert as before. ODP.NET
