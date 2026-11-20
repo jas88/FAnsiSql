@@ -139,6 +139,13 @@ public sealed class PostgreSqlAggregateHelper : AggregateHelper
     ///         earlier run of the same query stopped before its CLOSE and left the cursor open in the session, the block
     ///         closes it first.
     ///     </para>
+    ///     <para>
+    ///         Each column is named after its value as PostgreSQL writes it as text (so a date follows the session's DateStyle,
+    ///         which always writes the whole date and time), quoted as needed and cut to whole characters within
+    ///         max_identifier_length (63) bytes, as PostgreSQL would otherwise cut it.  A value whose name an earlier pivot
+    ///         column already has, as two long values that start the same can, gets its position among the pivot columns
+    ///         as a suffix (e.g. _3, then _3_2 should that be taken too), so that every column has a name of its own.
+    ///     </para>
     /// </summary>
     private static string BuildPivot(AggregateCustomLineCollection query, string pivotValuesSql, string selectSql,
         string fromSql)
@@ -149,13 +156,36 @@ public sealed class PostgreSqlAggregateHelper : AggregateHelper
         var block = $"""
                      DECLARE
                          fansi_pivot_value text;
+                         fansi_pivot_name text;
+                         fansi_pivot_suffix text;
+                         fansi_pivot_names text[] := ARRAY[]::text[];
+                         fansi_pivot_rank integer := 0;
+                         fansi_pivot_try integer;
+                         fansi_pivot_max_bytes integer := current_setting('max_identifier_length')::integer;
                          fansi_pivot_columns text := '';
                      BEGIN
                          FOR fansi_pivot_value IN EXECUTE {sqlQuote}
                      {pivotValuesSql}
                      {sqlQuote}
                          LOOP
-                             fansi_pivot_columns := fansi_pivot_columns || format(', COALESCE(SUM(CASE WHEN fansi_pivot_dataset.fansi_value = %L THEN fansi_pivot_dataset.fansi_aggregate END), 0) AS %I', fansi_pivot_value, fansi_pivot_value);
+                             fansi_pivot_rank := fansi_pivot_rank + 1;
+
+                             -- the value cut to whole characters within max_identifier_length bytes, and a suffix if that is taken
+                             fansi_pivot_try := 0;
+                             LOOP
+                                 fansi_pivot_suffix := CASE WHEN fansi_pivot_try > 0 THEN '_' || fansi_pivot_rank ELSE '' END
+                                     || CASE WHEN fansi_pivot_try > 1 THEN '_' || fansi_pivot_try ELSE '' END;
+                                 fansi_pivot_name := left(fansi_pivot_value, fansi_pivot_max_bytes);
+                                 WHILE octet_length(fansi_pivot_name || fansi_pivot_suffix) > fansi_pivot_max_bytes LOOP
+                                     fansi_pivot_name := left(fansi_pivot_name, -1);
+                                 END LOOP;
+                                 fansi_pivot_name := fansi_pivot_name || fansi_pivot_suffix;
+                                 EXIT WHEN fansi_pivot_name <> '' AND NOT (fansi_pivot_name = ANY (fansi_pivot_names));
+                                 fansi_pivot_try := fansi_pivot_try + 1;
+                             END LOOP;
+                             fansi_pivot_names := fansi_pivot_names || fansi_pivot_name;
+
+                             fansi_pivot_columns := fansi_pivot_columns || format(', COALESCE(SUM(CASE WHEN fansi_pivot_dataset.fansi_value = %L THEN fansi_pivot_dataset.fansi_aggregate END), 0) AS %I', fansi_pivot_value, fansi_pivot_name);
                          END LOOP;
 
                          IF EXISTS (SELECT 1 FROM pg_catalog.pg_cursors WHERE name = '{cursor}') THEN

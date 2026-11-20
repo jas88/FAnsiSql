@@ -43,12 +43,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - A query cannot choose its own columns, so the SQL for a pivot is now a `DO` block that opens a cursor, followed by
     `FETCH ALL` from the cursor and `CLOSE`. The cursor is named after a hash of the query (`fansi_pivot_` and 16 hex
     digits), so pivots on one connection never share a cursor and the same query always gives the same SQL
+  - Each column is named after its value as PostgreSQL writes it as text (a date in the session's `DateStyle`), cut to
+    whole characters within `max_identifier_length` (63) bytes. A value whose name an earlier pivot column already has,
+    as two long values that start the same can, gets its position among the pivot columns as a suffix (e.g. `_3`), so no
+    two columns share a name
 - **Oracle: aggregates with a pivot column did not pivot**
   - The SQL built for a pivot had no column for each pivot value and ignored any TOP X. Without a calendar axis the query
     being pivoted was not grouped (ORA-00937); with one it returned a row for each pair of date and pivot value
   - A pivot now comes out as it does on SQL Server, MySQL and PostgreSQL. It is an anonymous PL/SQL block that returns
-    its rows with `DBMS_SQL.RETURN_RESULT`, which needs Oracle 12c or later. Each column is named after `TO_CHAR` of its
-    value, so the names of date columns follow the session's `NLS_DATE_FORMAT`
+    its rows with `DBMS_SQL.RETURN_RESULT`, which needs Oracle 12c or later
+  - Each column is named after its value. A date is written as `YYYY-MM-DD HH24:MI:SS` and a timestamp with its fraction
+    of a second, if any (a `TIMESTAMP WITH TIME ZONE` as its UTC time followed by ` UTC`), whatever the session's NLS
+    formats, whose defaults leave out the century and the time. Other values are written with `TO_CHAR`
+  - A name leaves out the double quotes and NUL characters an Oracle name cannot hold and is cut to whole characters
+    within 128 bytes. A value left with no name (one made only of double quotes), or with the name of an earlier pivot
+    column, gets its position among the pivot columns as a suffix (e.g. `_3`), so every column has a valid name of its
+    own
 - **Decimal values on .NET 11**
   - .NET 11 converts a `double` to a `decimal` exactly, so 9.99 becomes 9.990000000000000213162820728, where earlier
     versions of .NET rounded to 15 significant digits

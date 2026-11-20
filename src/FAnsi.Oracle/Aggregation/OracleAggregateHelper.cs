@@ -266,64 +266,13 @@ order by dt*/
     }
 
     /// <summary>
-    ///     <para>
-    ///         Oracle's PIVOT needs its values written into the query, so a pivot is built by an anonymous PL/SQL block.  It
-    ///         reads the values listed by <paramref name="pivotValuesSql" />, adds a column for each to the query
-    ///         <paramref name="selectSql" /> ... <paramref name="fromSql" /> and returns that query's rows as an implicit
-    ///         result (DBMS_SQL.RETURN_RESULT, Oracle 12c and later), which ODP.NET reads like the result of a SELECT.
-    ///     </para>
-    ///     <para>
-    ///         The query joins the dataset to the pivot values on the pivot column's own type, so values are matched
-    ///         exactly whatever the session's NLS settings.  Each column sums the aggregate over the rows of the dataset with
-    ///         the value ranked at its position and is 0 where there are none (as ISNULL(...,0) gives on SQL Server).  The
-    ///         column is named after TO_CHAR of the value (cut to 128 bytes, without any double quote) and also checks that
-    ///         text, so that should the ranking change between the two runs of the query its counts are left out rather than
-    ///         shown under another value's name.
-    ///     </para>
+    ///     Returns the PL/SQL block that pivots the query <paramref name="selectSql" /> ... <paramref name="fromSql" /> on the
+    ///     values listed by <paramref name="pivotValuesSql" />, see <see cref="OraclePivotBlock.Build" />
     /// </summary>
     private static string BuildPivot(AggregateCustomLineCollection query, string pivotValuesSql, string selectSql,
-        string fromSql)
-    {
-        var valuesSql = $"""
-                         SELECT fansi_rank, TO_CHAR(fansi_value) FROM (
-                         {pivotValuesSql}
-                         ) ORDER BY fansi_rank
-                         """;
-
-        var block = $"""
-                     {GetLines(query, static l => l.LocationToInsert < QueryComponent.SELECT)}
-                     DECLARE
-                         fansi_pivot_sql CLOB;
-                         fansi_pivot_columns CLOB;
-                         fansi_pivot_rank NUMBER;
-                         fansi_pivot_label VARCHAR2(32767);
-                         fansi_values_cursor SYS_REFCURSOR;
-                         fansi_result_cursor SYS_REFCURSOR;
-                     BEGIN
-                         fansi_pivot_sql := {ToClob(valuesSql)};
-                         OPEN fansi_values_cursor FOR fansi_pivot_sql;
-                         LOOP
-                             FETCH fansi_values_cursor INTO fansi_pivot_rank, fansi_pivot_label;
-                             EXIT WHEN fansi_values_cursor%NOTFOUND;
-                             fansi_pivot_columns := fansi_pivot_columns
-                                 || ', COALESCE(SUM(CASE WHEN fansi_pivot_values.fansi_rank = ' || fansi_pivot_rank
-                                 || ' AND TO_CHAR(fansi_pivot_values.fansi_value) = ''' || REPLACE(fansi_pivot_label, '''', '''''')
-                                 || ''' THEN fansi_pivot_dataset.fansi_aggregate END), 0) AS "'
-                                 || REPLACE(SUBSTRB(fansi_pivot_label, 1, 128), '"') || '"';
-                         END LOOP;
-                         CLOSE fansi_values_cursor;
-
-                         fansi_pivot_sql := {ToClob(selectSql)}
-                             || fansi_pivot_columns
-                             || {ToClob(Environment.NewLine + fromSql)};
-                         OPEN fansi_result_cursor FOR fansi_pivot_sql;
-                         DBMS_SQL.RETURN_RESULT(fansi_result_cursor);
-                     END;
-                     """;
-
-        // PL/SQL sent with Windows line endings can fail to compile (PLS-00103)
-        return block.ReplaceLineEndings("\n");
-    }
+        string fromSql) =>
+        OraclePivotBlock.Build(GetLines(query, static l => l.LocationToInsert < QueryComponent.SELECT), pivotValuesSql,
+            selectSql, fromSql);
 
     /// <summary>
     ///     Returns a query of the values of the pivot column that get a column, numbered (fansi_rank) in the order their
@@ -382,30 +331,4 @@ order by dt*/
 
     private static string GetLines(AggregateCustomLineCollection query, Func<CustomLine, bool> predicate) =>
         string.Join(Environment.NewLine, query.Lines.Where(predicate).Select(static l => l.Text));
-
-    /// <summary>
-    ///     Returns a PL/SQL expression for a CLOB holding <paramref name="sql" />.  It is built from several string literals
-    ///     because a PL/SQL literal cannot be longer than 32767 bytes, which a long query (e.g. one with a big IN list) can be.
-    /// </summary>
-    private static string ToClob(string sql)
-    {
-        // 4000 characters are at most 16000 bytes in any character set
-        const int maxLiteralLength = 4000;
-
-        var literals = new List<string>();
-
-        for (var start = 0; start < sql.Length;)
-        {
-            var length = Math.Min(maxLiteralLength, sql.Length - start);
-
-            // keep surrogate pairs together
-            if (start + length < sql.Length && char.IsHighSurrogate(sql[start + length - 1]))
-                length--;
-
-            literals.Add($"TO_CLOB('{sql.Substring(start, length).Replace("'", "''", StringComparison.Ordinal)}')");
-            start += length;
-        }
-
-        return literals.Count == 0 ? "TO_CLOB('')" : string.Join($"{Environment.NewLine}|| ", literals);
-    }
 }

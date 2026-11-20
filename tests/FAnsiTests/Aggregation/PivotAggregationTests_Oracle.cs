@@ -12,4 +12,29 @@ internal sealed class PivotAggregationTests_Oracle : PivotAggregationTestsBase
 
     [Test]
     public void Test_Pivot_SameConnectionAfterFailedPivot() => Test_Pivot_SameConnectionAfterFailedPivot(DbType);
+
+    /// <summary>
+    ///     A name cannot hold a double quote: a value made only of them gets its position as its name, and one that
+    ///     loses its double quote or is cut to 128 bytes gets its position as a suffix if an earlier column has its name
+    /// </summary>
+    [Test]
+    public void Test_Pivot_ColumnNamesAreValidAndUnique() =>
+        Test_Pivot_ColumnNamesAreValidAndUnique(DbType,
+            ["T", "_2", "_3", "ab", "ab_5", new string('x', 128), $"{new string('x', 126)}_7"]);
+
+    [TestCase("DATE",
+        new[] { "TIMESTAMP '1901-01-01 00:00:00'", "TIMESTAMP '2001-01-01 00:00:00'", "TIMESTAMP '2001-01-01 12:00:00'" },
+        new[] { "1901-01-01 00:00:00", "2001-01-01 00:00:00", "2001-01-01 12:00:00" })]
+    [TestCase("TIMESTAMP",
+        new[] { "TIMESTAMP '1901-01-01 00:00:00'", "TIMESTAMP '2001-01-01 12:00:00'", "TIMESTAMP '2001-01-01 12:00:00.5'" },
+        new[] { "1901-01-01 00:00:00", "2001-01-01 12:00:00", "2001-01-01 12:00:00.5" })]
+    [TestCase("TIMESTAMP WITH TIME ZONE",
+        new[]
+        {
+            "TIMESTAMP '1901-01-01 00:00:00 +00:00'", "TIMESTAMP '2001-01-01 01:00:00 +01:00'",
+            "TIMESTAMP '2001-01-01 12:00:00.5 +00:00'"
+        },
+        new[] { "1901-01-01 00:00:00 UTC", "2001-01-01 00:00:00 UTC", "2001-01-01 12:00:00.5 UTC" })]
+    public void Test_Pivot_DateColumnNames(string sqlType, string[] values, string[] expectedNames) =>
+        Test_Pivot_DateColumnNames(DbType, sqlType, values, expectedNames);
 }

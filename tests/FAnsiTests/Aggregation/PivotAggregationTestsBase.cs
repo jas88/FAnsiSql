@@ -5,6 +5,7 @@ using FAnsi;
 using FAnsi.Discovery;
 using FAnsi.Discovery.QuerySyntax;
 using NUnit.Framework;
+using TypeGuesser;
 
 namespace FAnsiTests.Aggregation;
 
@@ -116,26 +117,180 @@ internal abstract class PivotAggregationTestsBase : AggregationTests
     }
 
     /// <summary>
+    ///     Every pivot column gets a valid name of its own, whatever its value (see <see cref="PivotNameValues" />), and
+    ///     counts the records of that value
+    /// </summary>
+    /// <param name="type">The DBMS to pivot on</param>
+    /// <param name="expectedNames">The names the pivot columns should get, in the order of <see cref="PivotNameValues" /></param>
+    protected void Test_Pivot_ColumnNamesAreValidAndUnique(DatabaseType type, string[] expectedNames)
+    {
+        using var dt = new DataTable();
+        dt.Columns.Add("Grp");
+        dt.Columns.Add("Val");
+        foreach (var (value, records) in PivotNameValues)
+            for (var i = 0; i < records; i++)
+                dt.Rows.Add("g", value);
+
+        var db = GetTestTable(type).Database;
+        DropIfExists(db, "PivotColumnNames");
+        var tbl = db.CreateTable("PivotColumnNames", dt);
+
+        try
+        {
+            using var pivot = Pivot(tbl);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(GetPivotColumnNames(pivot), Is.EqualTo(expectedNames));
+                Assert.That(GetPivotCounts(pivot), Is.EqualTo(PivotNameValues.Select(static v => v.Records)));
+            });
+        }
+        finally
+        {
+            tbl.Drop();
+        }
+    }
+
+    /// <summary>
+    ///     Dates that differ only in their century, time of day or fraction of a second get pivot columns of their own, named
+    ///     after the whole date and time whatever the session's date formats: here Oracle's defaults, which leave out the
+    ///     century and the time, and PostgreSQL's ISO DateStyle
+    /// </summary>
+    /// <param name="type">The DBMS to pivot on</param>
+    /// <param name="sqlType">The type of the date column</param>
+    /// <param name="values">The dates as SQL literals, each with fewer records than the one before so that this is the order of their columns</param>
+    /// <param name="expectedNames">The names the pivot columns should get</param>
+    protected void Test_Pivot_DateColumnNames(DatabaseType type, string sqlType, string[] values, string[] expectedNames)
+    {
+        var db = GetTestTable(type).Database;
+        DropIfExists(db, "PivotDateNames");
+        var tbl = db.CreateTable("PivotDateNames",
+        [
+            new DatabaseColumnRequest("Grp", new DatabaseTypeRequest(typeof(string), 1)),
+            new DatabaseColumnRequest("Val", sqlType)
+        ]);
+
+        try
+        {
+            var syntax = tbl.GetQuerySyntaxHelper();
+            using (var con = db.Server.GetConnection())
+            {
+                con.Open();
+                for (var i = 0; i < values.Length; i++)
+                    for (var records = values.Length - i; records > 0; records--)
+                    {
+                        using var cmd = db.Server.GetCommand(
+                            $"INSERT INTO {tbl.GetFullyQualifiedName()} ({syntax.EnsureWrapped("Grp")}, {syntax.EnsureWrapped("Val")}) VALUES ('g', {values[i]})",
+                            con);
+                        cmd.ExecuteNonQuery();
+                    }
+            }
+
+            string[] sessionSql = type == DatabaseType.Oracle
+                ?
+                [
+                    "ALTER SESSION SET NLS_DATE_FORMAT = 'DD-MON-RR'",
+                    "ALTER SESSION SET NLS_TIMESTAMP_FORMAT = 'DD-MON-RR HH.MI.SSXFF AM'",
+                    "ALTER SESSION SET NLS_TIMESTAMP_TZ_FORMAT = 'DD-MON-RR HH.MI.SSXFF AM TZR'"
+                ]
+                : ["SET DateStyle TO 'ISO, MDY'"];
+
+            using var pivot = Pivot(tbl, sessionSql);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(GetPivotColumnNames(pivot), Is.EqualTo(expectedNames));
+                Assert.That(GetPivotCounts(pivot), Is.EqualTo(Enumerable.Range(1, values.Length).Reverse()));
+            });
+        }
+        finally
+        {
+            tbl.Drop();
+        }
+    }
+
+    /// <summary>
+    ///     The pivot values of <see cref="Test_Pivot_ColumnNamesAreValidAndUnique" /> and the number of records of each, all
+    ///     different so that the order of the columns does not depend on the collation: values made only of double quotes,
+    ///     two that differ only by a double quote and two that start the same and are longer than a name can be
+    /// </summary>
+    private static readonly (string Value, int Records)[] PivotNameValues =
+    [
+        ("T", 7),
+        ("\"", 6),
+        ("\"\"", 5),
+        ("a\"b", 4),
+        ("ab", 3),
+        (new string('x', 140) + "1", 2),
+        (new string('x', 140) + "2", 1)
+    ];
+
+    /// <summary>
     ///     The lines of a pivot of <paramref name="countSql" /> (e.g. the number of records) for each Category and EventDate
     /// </summary>
-    private static List<CustomLine> GetPivotLines(DiscoveredTable tbl, string countSql)
+    private static List<CustomLine> GetPivotLines(DiscoveredTable tbl, string countSql) =>
+        GetPivotLines(tbl, countSql, "Category", "Cat", "EventDate", "Ev");
+
+    /// <summary>
+    ///     The lines of a pivot of <paramref name="countSql" /> for each <paramref name="pivotColumn" /> value, in a row for
+    ///     each <paramref name="rowColumn" /> value
+    /// </summary>
+    private static List<CustomLine> GetPivotLines(DiscoveredTable tbl, string countSql, string rowColumn, string rowAlias,
+        string pivotColumn, string pivotAlias)
     {
         var syntax = tbl.GetQuerySyntaxHelper();
-        var category = syntax.EnsureWrapped("Category");
-        var eventDate = syntax.EnsureWrapped("EventDate");
+        var row = syntax.EnsureWrapped(rowColumn);
+        var pivot = syntax.EnsureWrapped(pivotColumn);
 
         return
         [
             new CustomLine("SELECT", QueryComponent.SELECT),
             new CustomLine($"{countSql} as MyCount,", QueryComponent.QueryTimeColumn)
                 { Role = CustomLineRole.CountFunction },
-            new CustomLine($"{category} as Cat,", QueryComponent.QueryTimeColumn),
-            new CustomLine($"{eventDate} as Ev", QueryComponent.QueryTimeColumn) { Role = CustomLineRole.Pivot },
+            new CustomLine($"{row} as {rowAlias},", QueryComponent.QueryTimeColumn),
+            new CustomLine($"{pivot} as {pivotAlias}", QueryComponent.QueryTimeColumn) { Role = CustomLineRole.Pivot },
             new CustomLine($"FROM {tbl.GetFullyQualifiedName()}", QueryComponent.FROM),
             new CustomLine("GROUP BY", QueryComponent.GroupBy),
-            new CustomLine($"{category},", QueryComponent.GroupBy),
-            new CustomLine(eventDate, QueryComponent.GroupBy) { Role = CustomLineRole.Pivot }
+            new CustomLine($"{row},", QueryComponent.GroupBy),
+            new CustomLine(pivot, QueryComponent.GroupBy) { Role = CustomLineRole.Pivot }
         ];
+    }
+
+    /// <summary>
+    ///     Pivots the number of records of <paramref name="tbl" /> for each Val, in a row for each Grp, on a connection of its
+    ///     own (so that the session settings <paramref name="sessionSql" /> run first do not outlast it)
+    /// </summary>
+    private static DataTable Pivot(DiscoveredTable tbl, params string[] sessionSql)
+    {
+        var builder = new DbConnectionStringBuilder { ConnectionString = tbl.Database.Server.Builder.ConnectionString };
+        builder["Pooling"] = false;
+        var svr = new DiscoveredServer(builder.ConnectionString, tbl.Database.Server.DatabaseType);
+
+        var sql = tbl.GetQuerySyntaxHelper().AggregateHelper
+            .BuildAggregate(GetPivotLines(tbl, "count(*)", "Grp", "Grp", "Val", "Val"), null);
+
+        using var con = svr.GetConnection();
+        con.Open();
+        foreach (var setting in sessionSql)
+        {
+            using var cmd = svr.GetCommand(setting, con);
+            cmd.ExecuteNonQuery();
+        }
+
+        return Fill(svr, con, sql);
+    }
+
+    private static IEnumerable<string> GetPivotColumnNames(DataTable pivot) =>
+        pivot.Columns.Cast<DataColumn>().Skip(1).Select(static c => c.ColumnName);
+
+    private static IEnumerable<int> GetPivotCounts(DataTable pivot) =>
+        pivot.Rows[0].ItemArray.Skip(1).Select(static v => Convert.ToInt32(v, CultureInfo.InvariantCulture));
+
+    private static void DropIfExists(DiscoveredDatabase db, string tableName)
+    {
+        var tbl = db.ExpectTable(tableName);
+        if (tbl.Exists())
+            tbl.Drop();
     }
 
     private static DataTable Fill(DiscoveredServer svr, DbConnection con, string sql)
