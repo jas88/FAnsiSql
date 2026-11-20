@@ -88,10 +88,10 @@ Or .NET CLI Console:
 
 Most features are implemented across all 4 DBMS, you can find a breakdown of progress here:
 
-- [Microsoft Sql](./Implementations/FAnsi.Implementations.MicrosoftSQL/README.md) 
-- [MySql and MariaDB](./Implementations/FAnsi.Implementations.MySql/README.md)
-- [Oracle](./Implementations/FAnsi.Implementations.Oracle/README.md)
-- [Postgres](./Implementations/FAnsi.Implementations.PostgreSql/README.md)
+- [Microsoft Sql](./src/FAnsi.MicrosoftSql/README.md)
+- [MySql and MariaDB](./src/FAnsi.MySql/README.md)
+- [Oracle](./src/FAnsi.Oracle/README.md)
+- [Postgres](./src/FAnsi.PostgreSql/README.md)
 
 Implementations are defined in separate assemblies (e.g. FAnsi.Implementations.MicrosoftSQL.dll) to allow for future expansion.  Each implementation uses it's own backing library (e.g. [ODP.net](https://www.oracle.com/technetwork/topics/dotnet/index-085163.html) for Oracle).  Implementations are loaded using [Managed Extensibility Framework](https://docs.microsoft.com/en-us/dotnet/framework/mef/).
 
