@@ -16,6 +16,7 @@ public sealed partial class MySqlTableHelper : DiscoveredTableHelper
 
     private static readonly Regex IntegerDisplayWidth = IntegerDisplayWidthRe();
     private static readonly Regex SingleBit = SingleBitRe();
+    private static readonly Regex FourDigitYear = FourDigitYearRe();
 
     private MySqlTableHelper()
     {
@@ -101,6 +102,10 @@ public sealed partial class MySqlTableHelper : DiscoveredTableHelper
     ///         The n of bit(n) is not a display width but the number of bits the column holds, so it is kept, except in
     ///         bit(1), which is the same type as bit: both servers report a bit column as bit(1).
     ///     </para>
+    ///     <para>
+    ///         MariaDB reports a year column as year(4), and MySQL 8.0.19 and later as year, so the display width is
+    ///         removed from it too.  Neither server has another kind of year column.
+    ///     </para>
     /// </summary>
     internal static string TrimIntDisplayValues(string? type)
     {
@@ -116,6 +121,9 @@ public sealed partial class MySqlTableHelper : DiscoveredTableHelper
 
         if (SingleBit.IsMatch(type))
             return SingleBit.Replace(type, "bit");
+
+        if (FourDigitYear.IsMatch(type))
+            return FourDigitYear.Replace(type, "year");
 
         return type;
     }
@@ -471,4 +479,7 @@ public sealed partial class MySqlTableHelper : DiscoveredTableHelper
 
     [GeneratedRegex(@"^bit\(1\)", RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]
     private static partial Regex SingleBitRe();
+
+    [GeneratedRegex(@"^year\(4\)", RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant)]
+    private static partial Regex FourDigitYearRe();
 }

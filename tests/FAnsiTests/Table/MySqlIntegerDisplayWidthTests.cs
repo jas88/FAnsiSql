@@ -5,8 +5,8 @@ namespace FAnsiTests.Table;
 
 /// <summary>
 ///     Which types reported by MySQL and MariaDB lose the number in brackets when columns are discovered: integer
-///     types lose their display width, but bit keeps its size.  The servers report types in lower case, so the other
-///     cases are only covered here.
+///     types and year lose their display width, but bit keeps its size.  The servers report types in lower case, so the
+///     other cases are only covered here.
 /// </summary>
 internal sealed class MySqlIntegerDisplayWidthTests
 {
@@ -48,6 +48,15 @@ internal sealed class MySqlIntegerDisplayWidthTests
     [TestCase("bit(64)", "bit(64)")]
     [TestCase("BIT(8)", "BIT(8)")]
     public void TrimIntDisplayValues_Bit_KeepsSizeUnlessOne(string type, string expected) =>
+        Assert.That(MySqlTableHelper.TrimIntDisplayValues(type), Is.EqualTo(expected));
+
+    /// <summary>
+    ///     MariaDB reports a year column as year(4), and MySQL 8.0.19 and later as year
+    /// </summary>
+    [TestCase("year(4)", "year")]
+    [TestCase("YEAR(4)", "year")]
+    [TestCase("year", "year")]
+    public void TrimIntDisplayValues_Year_RemovesWidth(string type, string expected) =>
         Assert.That(MySqlTableHelper.TrimIntDisplayValues(type), Is.EqualTo(expected));
 
     /// <summary>

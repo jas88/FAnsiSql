@@ -122,7 +122,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     TypeGuesser 2.1.0, and custom deciders must rename their overrides. TypeGuesser's CHANGELOG lists its other changes
   - FAnsiSql 3.8.x reads those fields, so it throws `MissingFieldException` when used with TypeGuesser 2.1.0: upgrade
     FAnsiSql and TypeGuesser together
-- **MySQL: integer types are discovered without a display width on MariaDB too, and bit types with their size**
+- **MySQL: integer and year types are discovered without a display width on MariaDB too, bit types with their size**
   - MariaDB reports a display width on every integer column, such as `bigint(20)`, but MySQL 8.0.19 and later only on
     `tinyint(1)` and `ZEROFILL` columns. FAnsi removed it from `int` and `smallint` only, so on MariaDB the `SQLType`
     of a `tinyint`, `mediumint` or `bigint` column kept it (`tinyint(4)`, `mediumint(9)`, `bigint(20)`) where MySQL
@@ -133,6 +133,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - The n of `bit(n)` is not a display width but the number of bits the column holds. FAnsi removed it, so a column
     created from the discovered type `bit` held one bit. It is now kept, except in `bit(1)`, which is still discovered
     as `bit`, the same type
+  - MariaDB reports a `year` column as `year(4)`, and MySQL 8.0.19 and later as `year`. The width is now removed from
+    it too, so both give `year`
   - The types discovered for existing columns change as follows, so anything that stored the old names, such as an
     RDMP catalogue, sees a one-off change of type:
     - MariaDB, and MySQL before 8.0.19: `tinyint` (other than `tinyint(1)`), `mediumint` and `bigint` columns without
@@ -140,6 +142,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - MySQL and MariaDB: `int` and `smallint` `ZEROFILL` columns keep the width they used to lose, e.g.
       `int(10) unsigned zerofill` instead of `int unsigned zerofill`
     - MySQL and MariaDB: `bit` columns of 2 to 64 bits keep their size, e.g. `bit(8)` instead of `bit`
+    - Servers that report `year(4)`, such as MariaDB: `year` columns lose the width, so `year(4)` becomes `year`
     - Nothing else changes
 
 ### Removed

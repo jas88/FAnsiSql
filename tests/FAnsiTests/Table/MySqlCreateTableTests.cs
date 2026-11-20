@@ -185,6 +185,20 @@ internal sealed class MySqlCreateTableTests : DatabaseTests
         });
     }
 
+    /// <summary>
+    ///     MariaDB reports a year column as year(4), and MySQL 8.0.19 and later as year.  It must be discovered as year
+    ///     on both.
+    /// </summary>
+    [Test]
+    public void DiscoverColumns_Year_HasNoDisplayWidth()
+    {
+        var db = GetTestDatabase(DbType);
+
+        var tbl = db.CreateTable("YearTypes", [new DatabaseColumnRequest("MyYear", "year")]);
+
+        Assert.That(tbl.DiscoverColumn("MyYear").DataType?.SQLType, Is.EqualTo("year"));
+    }
+
     private static string SqlTypeOf(DiscoveredColumn column) =>
         column.DataType?.SQLType ?? throw new InvalidOperationException($"No data type was discovered for {column}");
 }
