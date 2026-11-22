@@ -57,7 +57,7 @@ internal abstract class PivotWithTopXTestsBase : AggregationTests
             $"Expected 3 columns (Ev + 2 pivot columns), got {dt.Columns.Count}");
 
         // Verify the two most common categories are present as columns
-        var columnNames = dt.Columns.Cast<DataColumn>().Select(c => c.ColumnName).ToList();
+        var columnNames = dt.Columns.Cast<DataColumn>().Select(static c => c.ColumnName).ToList();
         TestContext.Out.WriteLine($"Columns: {string.Join(", ", columnNames)}");
 
         var ev = syntax.GetRuntimeName("Ev");
@@ -211,7 +211,7 @@ internal abstract class PivotWithTopXTestsBase : AggregationTests
         Assert.That(dt.Columns.Count, Is.EqualTo(3),
             $"Expected 3 columns with alphabetical ordering, got {dt.Columns.Count}");
 
-        var columnNames = dt.Columns.Cast<DataColumn>().Select(c => c.ColumnName).ToList();
+        var columnNames = dt.Columns.Cast<DataColumn>().Select(static c => c.ColumnName).ToList();
         Assert.That(columnNames, Has.Member("E&, %a' mp;E").And.Member("F"),
             "The pivot columns should be the first 2 categories alphabetically");
     }
@@ -312,7 +312,7 @@ internal abstract class PivotWithTopXTestsBase : AggregationTests
         Assert.That(dt.Columns.Count, Is.EqualTo(2),
             $"Expected 2 columns (Ev + 1 pivot), got {dt.Columns.Count}");
 
-        var columnNames = dt.Columns.Cast<DataColumn>().Select(c => c.ColumnName).ToList();
+        var columnNames = dt.Columns.Cast<DataColumn>().Select(static c => c.ColumnName).ToList();
         TestContext.Out.WriteLine($"Columns: {string.Join(", ", columnNames)}");
 
         Assert.That(columnNames, Contains.Item(syntax.GetRuntimeName("Ev")), "Should have EventDate column");
