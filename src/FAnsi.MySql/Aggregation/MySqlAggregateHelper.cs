@@ -9,6 +9,11 @@ public sealed class MySqlAggregateHelper : AggregateHelper
     public static readonly MySqlAggregateHelper Instance = new();
 
     /// <summary>
+    ///     The most characters in a MySQL column name, which a pivot column's name is cut to
+    /// </summary>
+    internal const int MaxNameLength = 64;
+
+    /// <summary>
     ///     The assignments for a <c>SET SESSION</c> statement that let the dateAxis CTE recurse 50000 times, enough for
     ///     about 137 years of days.  Both servers stop at 1000 by default, but they name the limit differently and the
     ///     SQL is built without a connection, so each assignment is in an executable comment that only one of them runs:
@@ -141,7 +146,7 @@ public sealed class MySqlAggregateHelper : AggregateHelper
             throw new InvalidOperationException("BuildPivotAndAxisAggregate requires Axis to be non-null");
 
         var axisColumnWithoutAlias = query.AxisSelect.GetTextWithoutAlias(query.SyntaxHelper);
-        var part1 = GetPivotPart1(query);
+        var part1 = GetPivotPart1(query, true);
 
         // Get the dateAxis CTE to include in the dynamic SQL
         var dateAxisCte = GetDateAxisTableDeclaration(query.Axis);
@@ -159,16 +164,13 @@ public sealed class MySqlAggregateHelper : AggregateHelper
                                                            CONCAT(
                                                            '{2}
                                                            SELECT
-                                                           {3} as joinDt,',@columnsSelectFromDataset,'
+                                                           {3} as joinDt',@columnsSelectFromDataset,'
                                                            FROM
                                                            dateAxis
                                                            LEFT JOIN
                                                            (
                                                                {4}
-                                                               {5} AS joinDt,
-                                                           '
-                                                               ,@columnsSelectCases,
-                                                           '
+                                                               {5} AS joinDt',@columnsSelectCases,'
                                                            {6}
                                                            group by
                                                            {5}
@@ -202,9 +204,13 @@ public sealed class MySqlAggregateHelper : AggregateHelper
 
     protected override string BuildPivotOnlyAggregate(AggregateCustomLineCollection query, CustomLine nonPivotColumn)
     {
-        var part1 = GetPivotPart1(query);
+        var part1 = GetPivotPart1(query, false);
 
-        var joinAlias = nonPivotColumn.GetAliasFromText(query.SyntaxHelper);
+        // The row column without the comma that ends its line, as the pivot columns bring their own
+        var syntaxHelper = query.SyntaxHelper;
+        var rowSql = nonPivotColumn.GetTextWithoutAlias(syntaxHelper);
+        var rowAlias = syntaxHelper.EnsureWrapped(nonPivotColumn.GetAliasFromText(syntaxHelper) ??
+                                                  syntaxHelper.GetRuntimeName(rowSql));
 
         return string.Format(CultureInfo.InvariantCulture, """
 
@@ -233,13 +239,13 @@ public sealed class MySqlAggregateHelper : AggregateHelper
                                                            """,
             string.Join(Environment.NewLine, query.Lines.Where(static l => l.LocationToInsert < QueryComponent.SELECT)),
             part1,
-            nonPivotColumn,
+            syntaxHelper.Escape($"{rowSql} AS {rowAlias}"),
 
             //everything inclusive of FROM but stopping before GROUP BY
             query.SyntaxHelper.Escape(string.Join(Environment.NewLine,
                 query.Lines.Where(static c =>
                     c.LocationToInsert is >= QueryComponent.FROM and < QueryComponent.GroupBy))),
-            joinAlias,
+            syntaxHelper.Escape(rowAlias),
 
             //any HAVING SQL
             query.SyntaxHelper.Escape(string.Join(Environment.NewLine,
@@ -248,13 +254,36 @@ public sealed class MySqlAggregateHelper : AggregateHelper
     }
 
     /// <summary>
-    ///     Returns the section of the PIVOT which identifies unique values.
-    ///     For MySQL 8.0+ this uses a CTE instead of a temporary table and builds dynamic CASE statements.
-    ///     IMPORTANT: When using TOP X (LIMIT), the LIMIT clause must be placed at the CTE level
-    ///     AFTER the GROUP BY and HAVING clauses, NOT inside the ROW_NUMBER() OVER() window function.
-    ///     MySQL does not allow LIMIT inside window function OVER() clauses (GitHub Issue #38).
+    ///     <para>
+    ///         Returns the section of the PIVOT which identifies unique values.  For MySQL 8.0+ this uses a CTE instead of a
+    ///         temporary table and builds dynamic CASE statements.  IMPORTANT: When using TOP X (LIMIT), the LIMIT clause must
+    ///         be placed at the CTE level AFTER the GROUP BY and HAVING clauses, NOT inside the ROW_NUMBER() OVER() window
+    ///         function.  MySQL does not allow LIMIT inside window function OVER() clauses (GitHub Issue #38).
+    ///     </para>
+    ///     <para>
+    ///         The values that get a column are those neither null nor empty (and on a record with a date for the axis, if
+    ///         there is one), ranked (rn) in the order of their columns.  Each column is named after its value: its text
+    ///         without NUL characters, with any character outside the Basic Multilingual Plane (which a MySQL name cannot
+    ///         hold) as ?, trimmed of the spaces MySQL takes off the start of a name and cut to whole characters within
+    ///         <see cref="MaxNameLength" />.  A value left with no name, or with the name of an earlier pivot column, gets
+    ///         its position among the pivot columns as a suffix (e.g. _3, then _3_2 should that be taken too).  MySQL has
+    ///         no loop outside stored programs, so the second suffix is tried once: names can only repeat when values are
+    ///         written like other columns' names and suffixes, which MySQL allows in a SELECT list.
+    ///     </para>
+    ///     <para>
+    ///         Each column list (@columnsSelectCases, @columnsSelectFromDataset) starts with the comma that separates it
+    ///         from the column before it, and is empty when no value gets a column, so that the pivot then has only its
+    ///         row (or axis) column, as on the other DBMS.  (GROUP_CONCAT of no rows is NULL, which would make the whole
+    ///         statement NULL.)
+    ///     </para>
     /// </summary>
-    private static string GetPivotPart1(AggregateCustomLineCollection query)
+    /// <param name="query">The pivot</param>
+    /// <param name="namedInDerivedTable">
+    ///     True when the CASE columns (@columnsSelectCases) go into a derived table, as for the axis pivot.  MySQL compares
+    ///     column names there ignoring case, so they are named fansi_pivot_ and their position, and the SELECT from the
+    ///     derived table (@columnsSelectFromDataset) gives them their names.  Otherwise they get their names themselves.
+    /// </param>
+    private static string GetPivotPart1(AggregateCustomLineCollection query, bool namedInDerivedTable)
     {
         if (query.PivotSelect == null)
             throw new InvalidOperationException("GetPivotPart1 requires PivotSelect to be non-null");
@@ -270,16 +299,14 @@ public sealed class MySqlAggregateHelper : AggregateHelper
         if (aggregateParameter.Equals("*", StringComparison.Ordinal))
             aggregateParameter = "1";
 
-        // If there is an axis, only pull pivot values where the values appear in that axis range
-        var whereDateColumnNotNull = "";
+        // Only values that are neither null nor empty get a column, and if there is an axis only those of records that
+        // are on it
+        var whereNotNullOrEmpty = query.Lines.Any(static l => l.LocationToInsert == QueryComponent.WHERE)
+            ? "AND "
+            : "WHERE ";
+        whereNotNullOrEmpty += $"({pivotSqlWithoutAlias}) IS NOT NULL AND CAST(({pivotSqlWithoutAlias}) AS CHAR) <> ''";
         if (query.AxisSelect != null)
-        {
-            var axisColumnWithoutAlias = query.AxisSelect.GetTextWithoutAlias(query.SyntaxHelper);
-            whereDateColumnNotNull += query.Lines.Any(static l => l.LocationToInsert == QueryComponent.WHERE)
-                ? "AND "
-                : "WHERE ";
-            whereDateColumnNotNull += $"{axisColumnWithoutAlias} IS NOT NULL";
-        }
+            whereNotNullOrEmpty += $" AND ({query.AxisSelect.GetTextWithoutAlias(query.SyntaxHelper)}) IS NOT NULL";
 
         // Work out how to order the pivot columns
         var orderBy = $"{countSqlWithoutAlias} desc";
@@ -290,6 +317,9 @@ public sealed class MySqlAggregateHelper : AggregateHelper
         if (topXOrderByLine != null)
             orderBy = topXOrderByLine.Text;
 
+        // break ties on the value itself so that the columns, and so their names, always come out in the same order
+        orderBy += $", {pivotSqlWithoutAlias}";
+
         var topXLimitLine =
             query.Lines.SingleOrDefault(static c =>
                 c.LocationToInsert == QueryComponent.Postfix && c.Role == CustomLineRole.TopX);
@@ -298,9 +328,16 @@ public sealed class MySqlAggregateHelper : AggregateHelper
         var havingSqlIfAny = string.Join(Environment.NewLine,
             query.Lines.Where(static l => l.LocationToInsert == QueryComponent.Having).Select(static l => l.Text));
 
+        var caseAlias = namedInDerivedTable
+            ? "CONCAT('fansi_pivot_', rn)"
+            : "CONCAT('`', REPLACE(CONVERT(name USING utf8mb4) COLLATE utf8mb4_bin, '`', '``'), '`')";
+
         return string.Format(CultureInfo.InvariantCulture, """
 
-                                                           /* Get unique pivot values and build both column lists in a single query */
+                                                           /* GROUP_CONCAT stops at 1024 bytes by default, which would leave out columns */
+                                                           SET SESSION group_concat_max_len = 1073741824;
+
+                                                           /* Get unique pivot values and their column names, and build both column lists in a single query */
                                                            WITH pivotValues AS (
                                                                SELECT
                                                                {1} as piv,
@@ -312,18 +349,38 @@ public sealed class MySqlAggregateHelper : AggregateHelper
                                                                {7}
                                                                ORDER BY {6}
                                                                {5}
+                                                           ),
+                                                           pivotTexts AS (
+                                                               SELECT piv, rn,
+                                                               RTRIM(LEFT(TRIM(REPLACE(CONVERT(CAST(piv AS CHAR) USING utf8mb3), CHAR(0 USING utf8mb3), '')), {8})) AS base
+                                                               FROM pivotValues
+                                                           ),
+                                                           pivotTries AS (
+                                                               SELECT piv, rn, base,
+                                                               CASE WHEN base <> '' AND ROW_NUMBER() OVER (PARTITION BY CAST(base AS BINARY) ORDER BY rn) = 1 THEN 0 ELSE 1 END AS try
+                                                               FROM pivotTexts
+                                                           ),
+                                                           pivotFirstNames AS (
+                                                               SELECT piv, rn, base, try, {9} AS name
+                                                               FROM pivotTries
+                                                           ),
+                                                           pivotNames AS (
+                                                               SELECT piv, rn,
+                                                               CASE WHEN EXISTS (SELECT 1 FROM pivotFirstNames e WHERE e.rn < f.rn AND CAST(e.name AS BINARY) = CAST(f.name AS BINARY)) THEN {10} ELSE name END AS name
+                                                               FROM pivotFirstNames f
                                                            )
+                                                           /* Each list starts with a comma, and is '' rather than NULL (GROUP_CONCAT of no rows) if no value gets a column */
                                                            SELECT
-                                                             GROUP_CONCAT(
+                                                             COALESCE(CONCAT(', ', GROUP_CONCAT(
                                                                CONCAT(
-                                                                 '{0}(CASE WHEN {1} = ', QUOTE(piv), ' COLLATE utf8mb4_bin THEN {2} ELSE NULL END) AS `', piv,'`'
+                                                                 '{0}(CASE WHEN {1} = ', QUOTE(piv), ' COLLATE utf8mb4_bin THEN {2} ELSE NULL END) AS ', {11}
                                                                ) ORDER BY rn
-                                                             ),
-                                                             GROUP_CONCAT(
-                                                               CONCAT('dataset.`', piv,'`') ORDER BY rn
-                                                             )
+                                                             )), ''),
+                                                             COALESCE(CONCAT(', ', GROUP_CONCAT(
+                                                               CONCAT('dataset.fansi_pivot_', rn, ' AS `', REPLACE(CONVERT(name USING utf8mb4) COLLATE utf8mb4_bin, '`', '``'), '`') ORDER BY rn
+                                                             )), '')
                                                            INTO @columnsSelectCases, @columnsSelectFromDataset
-                                                           FROM pivotValues;
+                                                           FROM pivotNames;
 
                                                            """,
             aggregateMethod,
@@ -333,11 +390,26 @@ public sealed class MySqlAggregateHelper : AggregateHelper
                 query.Lines.Where(static l =>
                     l.LocationToInsert is >= QueryComponent.FROM and <= QueryComponent.WHERE &&
                     l.Role != CustomLineRole.Axis)),
-            whereDateColumnNotNull,
+            whereNotNullOrEmpty,
             topXLimitSqlIfAny,
             orderBy,
-            havingSqlIfAny
+            havingSqlIfAny,
+            MaxNameLength,
+            GetPivotNameSql("try"),
+            GetPivotNameSql("f.try + 1", "f."),
+            caseAlias
         );
+    }
+
+    /// <summary>
+    ///     The SQL for the name of a pivot column on try <paramref name="trySql" /> (0 for none, 1 for the suffix _rn and 2 for
+    ///     _rn_2): its base name cut to whole characters so that with the suffix it is at most <see cref="MaxNameLength" />
+    /// </summary>
+    private static string GetPivotNameSql(string trySql, string prefix = "")
+    {
+        var suffix =
+            $"CONCAT(CASE WHEN {trySql} > 0 THEN CONCAT('_', {prefix}rn) ELSE '' END, CASE WHEN {trySql} > 1 THEN CONCAT('_', {trySql}) ELSE '' END)";
+        return $"CONCAT(RTRIM(LEFT({prefix}base, {MaxNameLength} - CHAR_LENGTH({suffix}))), {suffix})";
     }
 
     protected override IQuerySyntaxHelper GetQuerySyntaxHelper() => MySqlQuerySyntaxHelper.Instance;

@@ -1,4 +1,5 @@
 using FAnsi;
+using FAnsiTests.TestGeneration;
 using NUnit.Framework;
 
 namespace FAnsiTests.Aggregation;
@@ -7,11 +8,11 @@ internal sealed class CalendarWithPivotAggregationTests_Sqlite : CalendarWithPiv
 {
     private const DatabaseType DbType = DatabaseType.Sqlite;
 
-    [Test]
-    [Ignore("Pivot with calendar not supported on this database")]
-    public void Test_Calendar_WithPivot_Easy() => Test_Calendar_WithPivot(DbType, true);
+    [TestCase(DbType)]
+    [SkipDatabase(DbType, SqliteCannotPivot)]
+    public void Test_Calendar_WithPivot_Easy(DatabaseType type) => Test_Calendar_WithPivot(type, true);
 
-    [Test]
-    [Ignore("Pivot with calendar not supported on this database")]
-    public void Test_Calendar_WithPivot_Hard() => Test_Calendar_WithPivot(DbType, false);
+    [TestCase(DbType)]
+    [SkipDatabase(DbType, SqliteCannotPivot)]
+    public void Test_Calendar_WithPivot_Hard(DatabaseType type) => Test_Calendar_WithPivot(type, false);
 }

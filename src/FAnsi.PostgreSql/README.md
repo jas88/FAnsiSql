@@ -45,7 +45,8 @@
 - Aggregation 
   - [X] Basic GROUP BY
   - [X] Calendar/Axis Table GROUP BY
-  - [ ] Dynamic Pivot GROUP BY
+  - [X] Dynamic Pivot GROUP BY
   
 
 ##Issues
+A query cannot choose its own columns, so the SQL for a dynamic pivot is a `DO` block (PL/pgSQL) that opens a cursor, followed by `FETCH ALL` from the cursor and `CLOSE`.  The cursor is named after a hash of the query (`fansi_pivot_` and 16 hex digits).  Run it all on one connection, e.g. as a single command.  Each pivot column is named after its value, cut to `max_identifier_length` (63) bytes, and a column that would have the name of another gets its position as a suffix (e.g. `_3`).

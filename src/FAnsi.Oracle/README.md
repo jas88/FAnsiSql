@@ -45,10 +45,12 @@
 - Aggregation 
   - [X] Basic GROUP BY
   - [X] Calendar/Axis Table GROUP BY
-  - [ ] Dynamic Pivot GROUP BY
+  - [X] Dynamic Pivot GROUP BY (Requires Oracle 12c)
   
 
 ##Issues
+A query cannot choose its own columns, so the SQL for a dynamic pivot is an anonymous PL/SQL block that returns its rows as an implicit result (`DBMS_SQL.RETURN_RESULT`), which ODP.NET's `ExecuteReader` and `OracleDataAdapter.Fill` read like the result of a query.  Each pivot column is named after its value, with dates and timestamps written as `YYYY-MM-DD HH24:MI:SS` (and any fraction of a second) whatever the session's NLS formats.  A name leaves out the double quotes an Oracle name cannot hold and is cut to the most bytes a name can have on the server (128, or 30 on Oracle 12.1 and where `COMPATIBLE` is lower than 12.2), and a column that would have no name, or the name of another column, gets its position as a suffix (e.g. `_3`).
+
 Oracle [does not have a bit data type](https://asktom.oracle.com/pls/asktom/f?p=100:11:0::::P11_QUESTION_ID:6263249199595#876972400346931526).  If you ask to create a bool column you will get a varchar2(5)
 
 ```csharp
