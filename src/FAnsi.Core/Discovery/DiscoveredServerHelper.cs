@@ -19,7 +19,9 @@ public abstract partial class DiscoveredServerHelper(DatabaseType databaseType) 
     /// <summary>
     ///     The connection string keywords to enforce for each DBMS that has any (see <see cref="AddConnectionStringKeyword" />).
     ///     A DBMS gets its accumulator when its first keyword is added, which needs its implementation to be loaded by then
-    ///     but not any other, so implementations can be loaded in any order and at any time.
+    ///     but not any other, so implementations can be loaded in any order and at any time.  The accumulator goes in only
+    ///     once it holds that keyword, so a connection string built meanwhile finds either no accumulator or one with the
+    ///     keyword.
     /// </summary>
     private static readonly ConcurrentDictionary<DatabaseType, ConnectionStringKeywordAccumulator>
         ConnectionStringKeywordAccumulators = new();
@@ -241,8 +243,19 @@ public abstract partial class DiscoveredServerHelper(DatabaseType databaseType) 
     public static void AddConnectionStringKeyword(DatabaseType databaseType, string keyword, string value,
         ConnectionStringKeywordPriority priority)
     {
-        var accumulator = ConnectionStringKeywordAccumulators.GetOrAdd(databaseType,
-            static type => new ConnectionStringKeywordAccumulator(type));
+        if (!ConnectionStringKeywordAccumulators.TryGetValue(databaseType, out var accumulator))
+        {
+            //the first keyword of this DBMS goes into its new accumulator before the accumulator goes into the table
+            var created = new ConnectionStringKeywordAccumulator(databaseType);
+            created.AddOrUpdateKeyword(keyword, value, priority);
+
+            if (ConnectionStringKeywordAccumulators.TryAdd(databaseType, created))
+                return;
+
+            //another thread added the first keyword of this DBMS meanwhile, so this one goes into its accumulator instead
+            accumulator = ConnectionStringKeywordAccumulators[databaseType];
+        }
+
         accumulator.AddOrUpdateKeyword(keyword, value, priority);
     }
 

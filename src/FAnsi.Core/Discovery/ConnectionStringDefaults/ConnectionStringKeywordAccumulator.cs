@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+using System.Collections.Immutable;
 using System.Data.Common;
 using System.Globalization;
 using System.Text;
@@ -13,6 +13,10 @@ namespace FAnsi.Discovery.ConnectionStringDefaults;
 ///         to new novel connection strings (see <see cref="EnforceOptions" />).
 ///     </para>
 ///     <para>Also handles connection string keyword aliases (where two words mean the same thing)</para>
+///     <para>
+///         Keywords can be added and enforced from several threads at once.  Each <see cref="AddOrUpdateKeyword" /> takes
+///         effect as a whole, and <see cref="EnforceOptions" /> applies the keywords as they were when it started.
+///     </para>
 /// </summary>
 /// <remarks>
 ///     Initialises a new blank instance that does nothing.  Call <see cref="AddOrUpdateKeyword" /> to adjust the template
@@ -25,11 +29,37 @@ public sealed class ConnectionStringKeywordAccumulator(DatabaseType databaseType
     private static readonly CompositeFormat KeywordNotSupportedFormat =
         CompositeFormat.Parse(FAnsiStrings.ConnectionStringKeyword_ValueNotSupported);
 
+    /// <summary>
+    ///     Finds out which keywords are aliases of each other (see <see cref="GetCollisionWithKeyword" />).  That changes
+    ///     its contents, so it is only used under <see cref="_lock" />.
+    /// </summary>
     private readonly DbConnectionStringBuilder _builder =
         ImplementationManager.GetImplementation(databaseType).GetBuilder();
 
-    private readonly ConcurrentDictionary<string, Tuple<string, ConnectionStringKeywordPriority>> _keywords =
-        new(StringComparer.OrdinalIgnoreCase);
+    /// <summary>
+    ///     Held while a keyword is added, so that one thread at a time uses <see cref="_builder" /> and replaces
+    ///     <see cref="_keywords" />
+    /// </summary>
+    private readonly Lock _lock = new();
+
+    /// <summary>
+    ///     The keywords with their values and priorities.  The dictionary is never changed, only replaced under
+    ///     <see cref="_lock" />, so <see cref="EnforceOptions" /> can read it without the lock.
+    /// </summary>
+    private volatile ImmutableDictionary<string, Tuple<string, ConnectionStringKeywordPriority>> _keywords =
+        ImmutableDictionary.Create<string, Tuple<string, ConnectionStringKeywordPriority>>(
+            StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    ///     Initialises a new blank instance that finds out which keywords are aliases of each other with
+    ///     <paramref name="builder" /> rather than with a connection string builder of <paramref name="databaseType" />
+    ///     (whose implementation must still be loaded), so that tests can see what happens while a keyword is being added
+    /// </summary>
+    internal ConnectionStringKeywordAccumulator(DatabaseType databaseType, DbConnectionStringBuilder builder) :
+        this(databaseType)
+    {
+        _builder = builder;
+    }
 
     /// <summary>
     ///     <see cref="DatabaseType" /> describing what implementation of DbConnectionStringBuilder is being manipulated
@@ -44,25 +74,15 @@ public sealed class ConnectionStringKeywordAccumulator(DatabaseType databaseType
     /// <param name="priority"></param>
     public void AddOrUpdateKeyword(string keyword, string value, ConnectionStringKeywordPriority priority)
     {
-        var collision = GetCollisionWithKeyword(keyword, value);
-
-        if (collision != null)
+        lock (_lock)
         {
-            //if there is already a semantically equivalent keyword....
+            //if there is already a semantically equivalent keyword, update that one rather than recording this one too
+            var key = GetCollisionWithKeyword(keyword, value) ?? keyword;
 
-            //if it is of lower or equal priority, update it atomically
-            _keywords.AddOrUpdate(collision,
-                Tuple.Create(value, priority),
-                (_, existing) => existing.Item2 <= priority ? Tuple.Create(value, priority) : existing);
-
-            //either way don't record it as a new keyword
-            return;
+            //a value already there is only replaced by one of the same or a higher priority
+            if (!_keywords.TryGetValue(key, out var existing) || existing.Item2 <= priority)
+                _keywords = _keywords.SetItem(key, Tuple.Create(value, priority));
         }
-
-        //Add or update the keyword atomically - only update if new priority is higher
-        _keywords.AddOrUpdate(keyword,
-            Tuple.Create(value, priority),
-            (_, existing) => existing.Item2 <= priority ? Tuple.Create(value, priority) : existing);
     }
 
     /// <summary>
