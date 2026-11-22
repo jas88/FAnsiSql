@@ -66,7 +66,7 @@ internal sealed partial class PivotObjectNameSqlTests
         [
             GetTemporaryTable(PivotColumnNameSqlTests.BuildPivot(SqlServer, fromSql: "[fansi]..[Other]")),
             GetTemporaryTable(PivotColumnNameSqlTests.BuildPivot(SqlServer, preSelectSql: "DECLARE @fansi_test int = 1;")),
-            GetTemporaryTable(PivotColumnNameSqlTests.BuildPivot(SqlServer, withAxis: true))
+            GetTemporaryTable(PivotColumnNameSqlTests.BuildPivot(SqlServer, true))
         ];
 
         Assert.Multiple(() =>
