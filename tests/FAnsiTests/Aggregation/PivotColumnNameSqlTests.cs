@@ -1,6 +1,7 @@
 using FAnsi;
 using FAnsi.Discovery;
 using FAnsi.Discovery.QuerySyntax;
+using FAnsi.Discovery.QuerySyntax.Aggregation;
 using FAnsi.Implementations.MicrosoftSQL;
 using FAnsi.Implementations.MySql;
 using FAnsi.Implementations.Oracle;
@@ -128,7 +129,7 @@ internal sealed class PivotColumnNameSqlTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(sql, Does.Contain("INTO #fansi_pivot_values"));
+            Assert.That(sql, Does.Match(@"INTO #fansi_pivot_[0-9a-f]{16}\r?\n"));
             Assert.That(sql, Does.Contain("SET @fansi_pivot_name = LEFT(@fansi_pivot_text, 128 - LEN(@fansi_pivot_suffix));"));
             Assert.That(sql, Does.Contain("fansi_name nvarchar(128) COLLATE Latin1_General_BIN2 PRIMARY KEY"));
             Assert.That(sql,
@@ -189,9 +190,15 @@ internal sealed class PivotColumnNameSqlTests
     }
 
     /// <summary>
-    ///     The SQL of a pivot of the number of records for each Val, in a row for each Grp, of a table that need not exist
+    ///     The SQL of a pivot of the number of records for each Val of a table that need not exist, in a row for each Grp or,
+    ///     with <paramref name="withAxis" />, for each year of a calendar axis on EventDate
     /// </summary>
-    private static string BuildPivot(DatabaseType type)
+    /// <param name="type">The DBMS whose SQL to build, whose implementation has to be loaded</param>
+    /// <param name="withAxis">True for a pivot with a calendar axis</param>
+    /// <param name="preSelectSql">A line to go before the SELECT of the query, if any</param>
+    /// <param name="fromSql">The table to pivot as it is written after FROM, if not the table PivotColumnNames</param>
+    internal static string BuildPivot(DatabaseType type, bool withAxis = false, string? preSelectSql = null,
+        string? fromSql = null)
     {
         var server = new DiscoveredServer(type switch
         {
@@ -202,21 +209,31 @@ internal sealed class PivotColumnNameSqlTests
         }, type);
         var tbl = server.ExpectDatabase("fansi").ExpectTable("PivotColumnNames");
         var syntax = tbl.GetQuerySyntaxHelper();
-        var grp = syntax.EnsureWrapped("Grp");
         var val = syntax.EnsureWrapped("Val");
+
+        // the column of the rows, or the date that puts a record on the axis
+        var grp = syntax.EnsureWrapped(withAxis ? "EventDate" : "Grp");
+        var grpRole = withAxis ? CustomLineRole.Axis : CustomLineRole.None;
 
         List<CustomLine> lines =
         [
             new("SELECT", QueryComponent.SELECT),
             new("count(*) as MyCount,", QueryComponent.QueryTimeColumn) { Role = CustomLineRole.CountFunction },
-            new($"{grp} as Grp,", QueryComponent.QueryTimeColumn),
+            new($"{grp} as Grp,", QueryComponent.QueryTimeColumn) { Role = grpRole },
             new($"{val} as Val", QueryComponent.QueryTimeColumn) { Role = CustomLineRole.Pivot },
-            new($"FROM {tbl.GetFullyQualifiedName()}", QueryComponent.FROM),
+            new($"FROM {fromSql ?? tbl.GetFullyQualifiedName()}", QueryComponent.FROM),
             new("GROUP BY", QueryComponent.GroupBy),
-            new($"{grp},", QueryComponent.GroupBy),
+            new($"{grp},", QueryComponent.GroupBy) { Role = grpRole },
             new(val, QueryComponent.GroupBy) { Role = CustomLineRole.Pivot }
         ];
 
-        return syntax.AggregateHelper.BuildAggregate(lines, null);
+        if (preSelectSql != null)
+            lines.Insert(0, new CustomLine(preSelectSql, QueryComponent.VariableDeclaration));
+
+        var axis = withAxis
+            ? new QueryAxis { StartDate = "'2001-01-01'", EndDate = "'2010-01-01'", AxisIncrement = AxisIncrement.Year }
+            : null;
+
+        return syntax.AggregateHelper.BuildAggregate(lines, axis);
     }
 }

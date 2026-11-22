@@ -1,4 +1,6 @@
 using System.Globalization;
+using System.Security.Cryptography;
+using System.Text;
 using FAnsi.Discovery.QuerySyntax;
 using FAnsi.Discovery.QuerySyntax.Aggregation;
 
@@ -15,6 +17,12 @@ public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
     ///     The words that can end an item of an ORDER BY list, with the space before them
     /// </summary>
     private static readonly string[] OrderByDirections = [" asc", " desc"];
+
+    /// <summary>
+    ///     Goes between the parts of a query that are hashed to name its temporary table.  SQL does not hold a NUL, so no
+    ///     two queries give the same text to hash.
+    /// </summary>
+    private const char HashSeparator = '\0';
 
     private static string GetDateAxisTableDeclaration(IQueryAxis axis)
     {
@@ -147,8 +155,9 @@ public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
         var axisColumnAlias = axisSelect.GetAliasFromText(query.SyntaxHelper) ?? "joinDt";
 
         // Only values of records that are on the axis get a column, which has to be worked out before the axis column is
-        // wrapped in a date part function
-        var valuesSql = GetPivotValuesSql(query, axisSelect.GetTextWithoutAlias(query.SyntaxHelper));
+        // wrapped in a date part function, as does the name of their table, which is made from the query as it was given
+        var valuesTable = GetPivotValuesTableName(query);
+        var valuesSql = GetPivotValuesSql(query, axisSelect.GetTextWithoutAlias(query.SyntaxHelper), valuesTable);
 
         WrapAxisColumnWithDatePartFunction(query, axisColumnAlias);
 
@@ -166,12 +175,12 @@ public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
         var fromSql = $"""
                        FROM @dateAxis axis
                        LEFT JOIN fansi_pivot_dataset ON fansi_pivot_dataset.fansi_axis = {axisDate}
-                       LEFT JOIN #fansi_pivot_values fansi_pivot_values ON fansi_pivot_values.fansi_value = fansi_pivot_dataset.fansi_value
+                       LEFT JOIN {valuesTable} fansi_pivot_values ON fansi_pivot_values.fansi_value = fansi_pivot_dataset.fansi_value
                        GROUP BY axis.dt
                        ORDER BY axis.dt
                        """;
 
-        return BuildPivot(query, valuesSql, selectSql, fromSql);
+        return BuildPivot(query, valuesTable, valuesSql, selectSql, fromSql);
     }
 
     protected override string BuildPivotOnlyAggregate(AggregateCustomLineCollection query, CustomLine nonPivotColumn)
@@ -181,7 +190,8 @@ public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
         var rowAlias = nonPivotColumn.GetAliasFromText(syntaxHelper) ??
                        syntaxHelper.GetRuntimeName(nonPivotColumn.GetTextWithoutAlias(syntaxHelper));
 
-        var valuesSql = GetPivotValuesSql(query, null);
+        var valuesTable = GetPivotValuesTableName(query);
+        var valuesSql = GetPivotValuesSql(query, null, valuesTable);
 
         var selectSql = $"""
                          {GetLines(query, static l => l.LocationToInsert < QueryComponent.SELECT)}
@@ -191,21 +201,23 @@ public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
                          SELECT fansi_pivot_dataset.fansi_row AS {syntaxHelper.EnsureWrapped(rowAlias)}
                          """;
 
-        const string fromSql = """
-                               FROM fansi_pivot_dataset
-                               LEFT JOIN #fansi_pivot_values fansi_pivot_values ON fansi_pivot_values.fansi_value = fansi_pivot_dataset.fansi_value
-                               GROUP BY fansi_pivot_dataset.fansi_row
-                               ORDER BY fansi_pivot_dataset.fansi_row
-                               """;
+        var fromSql = $"""
+                       FROM fansi_pivot_dataset
+                       LEFT JOIN {valuesTable} fansi_pivot_values ON fansi_pivot_values.fansi_value = fansi_pivot_dataset.fansi_value
+                       GROUP BY fansi_pivot_dataset.fansi_row
+                       ORDER BY fansi_pivot_dataset.fansi_row
+                       """;
 
-        return BuildPivot(query, valuesSql, selectSql, fromSql);
+        return BuildPivot(query, valuesTable, valuesSql, selectSql, fromSql);
     }
 
     /// <summary>
     ///     <para>
     ///         A query cannot choose its own columns, so a pivot is a batch that ranks the pivot values into the temporary
-    ///         table #fansi_pivot_values (<paramref name="valuesSql" />), builds a column for each and runs the query
-    ///         <paramref name="selectSql" /> ... <paramref name="fromSql" /> with those columns as dynamic SQL.
+    ///         table <paramref name="valuesTable" /> (<paramref name="valuesSql" />), builds a column for each and runs the
+    ///         query <paramref name="selectSql" /> ... <paramref name="fromSql" /> with those columns as dynamic SQL.  The
+    ///         batch first drops the table should an earlier run of the query have stopped before dropping it, which is why
+    ///         the table has a name of the query's own (see <see cref="GetPivotValuesTableName" />).
     ///     </para>
     ///     <para>
     ///         The query joins the dataset to the pivot values on the pivot column's own type.  Each column sums the aggregate
@@ -217,21 +229,21 @@ public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
     ///         each column after its value, which a value of more than 128 characters cannot be.)
     ///     </para>
     /// </summary>
-    private static string BuildPivot(AggregateCustomLineCollection query, string valuesSql, string selectSql,
-        string fromSql)
+    private static string BuildPivot(AggregateCustomLineCollection query, string valuesTable, string valuesSql,
+        string selectSql, string fromSql)
     {
         var syntaxHelper = query.SyntaxHelper;
 
         return $"""
                 {GetLines(query, static l => l.LocationToInsert < QueryComponent.SELECT)}
                 /* The values that get a column, ranked in the order of their columns */
-                IF OBJECT_ID('tempdb..#fansi_pivot_values') IS NOT NULL DROP TABLE #fansi_pivot_values;
+                IF OBJECT_ID('tempdb..{valuesTable}') IS NOT NULL DROP TABLE {valuesTable};
                 {valuesSql}
 
                 /* A column for each value, named after the value: cut to {MaxNameLength} characters, with its position as a suffix if that leaves no name or the name of an earlier column */
                 DECLARE @fansi_pivot_columns nvarchar(max) = N'';
                 DECLARE @fansi_pivot_names TABLE (fansi_name nvarchar({MaxNameLength}) COLLATE Latin1_General_BIN2 PRIMARY KEY);
-                DECLARE @fansi_pivot_count int = (SELECT COUNT(*) FROM #fansi_pivot_values);
+                DECLARE @fansi_pivot_count int = (SELECT COUNT(*) FROM {valuesTable});
                 DECLARE @fansi_pivot_rank int = 1;
                 DECLARE @fansi_pivot_text nvarchar(max);
                 DECLARE @fansi_pivot_name nvarchar(max);
@@ -239,7 +251,7 @@ public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
                 DECLARE @fansi_pivot_try int;
                 WHILE @fansi_pivot_rank <= @fansi_pivot_count
                 BEGIN
-                    SELECT @fansi_pivot_text = CONVERT(nvarchar(max), fansi_value) FROM #fansi_pivot_values WHERE fansi_rank = @fansi_pivot_rank;
+                    SELECT @fansi_pivot_text = CONVERT(nvarchar(max), fansi_value) FROM {valuesTable} WHERE fansi_rank = @fansi_pivot_rank;
                     SET @fansi_pivot_try = 0;
                     WHILE 1 = 1
                     BEGIN
@@ -264,17 +276,44 @@ public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
                 DECLARE @fansi_pivot_query nvarchar(max) = N'{syntaxHelper.Escape(selectSql)}' + @fansi_pivot_columns + N'
                 {syntaxHelper.Escape(fromSql)}';
                 EXECUTE (@fansi_pivot_query);
-                DROP TABLE #fansi_pivot_values;
+                DROP TABLE {valuesTable};
                 """;
     }
 
     /// <summary>
-    ///     Returns the statement that ranks (fansi_rank) the values of the pivot column that get a column (fansi_value) into
-    ///     #fansi_pivot_values, in the order their columns appear: those that are neither null nor empty as text (and are on
-    ///     a record with a date for the axis, if <paramref name="axisColumnSql" /> is given), ordered by the TOP X ORDER BY or
-    ///     else by the aggregate, largest first, and limited by the TOP X, if there is one
+    ///     Returns a name for the temporary table of a pivot's values, made from a hash of the query: of each of its lines,
+    ///     with where it goes and its role, and of its axis.  The batch drops any table of that name before it starts, so
+    ///     the name must not be one that a caller could have given a temporary table of their own, as a fixed name like
+    ///     #fansi_pivot_values might be.  The same query always gets the same name, so its SQL is the same each time it is
+    ///     built (which matters to callers that cache results by their SQL, as RDMP does).
     /// </summary>
-    private static string GetPivotValuesSql(AggregateCustomLineCollection query, string? axisColumnSql)
+    private static string GetPivotValuesTableName(AggregateCustomLineCollection query)
+    {
+        var parts = query.Lines.Select(static l =>
+            $"{l.LocationToInsert}{HashSeparator}{l.Role}{HashSeparator}{l.Text}");
+
+        if (query.Axis is { } axis)
+            parts = parts.Append($"{axis.AxisIncrement}{HashSeparator}{axis.StartDate}{HashSeparator}{axis.EndDate}");
+
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(string.Join(HashSeparator, parts)));
+
+        // #fansi_pivot_ and 16 lower case hex digits: far from the 116 characters the name of a temporary table can have
+        var name = new StringBuilder("#fansi_pivot_");
+        foreach (var b in hash.AsSpan(0, 8))
+            name.Append(b.ToString("x2", CultureInfo.InvariantCulture));
+
+        return name.ToString();
+    }
+
+    /// <summary>
+    ///     Returns the statement that ranks (fansi_rank) the values of the pivot column that get a column (fansi_value) into
+    ///     the temporary table <paramref name="valuesTable" />, in the order their columns appear: those that are neither
+    ///     null nor empty as text (and are on a record with a date for the axis, if <paramref name="axisColumnSql" /> is
+    ///     given), ordered by the TOP X ORDER BY or else by the aggregate, largest first, and limited by the TOP X, if
+    ///     there is one
+    /// </summary>
+    private static string GetPivotValuesSql(AggregateCustomLineCollection query, string? axisColumnSql,
+        string valuesTable)
     {
         var pivotSelect = query.PivotSelect ??
                           throw new ArgumentException("Query has no pivot column (CustomLineRole.Pivot)", nameof(query));
@@ -304,7 +343,7 @@ public sealed class MicrosoftSQLAggregateHelper : AggregateHelper
                 {GetLines(query, static l => l.LocationToInsert == QueryComponent.SELECT)}
                 {topFromLimit}
                 ROW_NUMBER() OVER (ORDER BY {orderBy}) AS fansi_rank, {pivotSql} AS fansi_value
-                INTO #fansi_pivot_values
+                INTO {valuesTable}
                 {GetLines(query, static l => l.LocationToInsert is >= QueryComponent.FROM and <= QueryComponent.WHERE && l.Role != CustomLineRole.Axis)}
                 {whereOrAnd} ({pivotSql}) IS NOT NULL AND CONVERT(nvarchar(max), {pivotSql}) <> N''{onAxis}
                 GROUP BY {pivotSql}

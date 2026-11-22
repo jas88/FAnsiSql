@@ -122,9 +122,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - A pivot named each column with `QUOTENAME` of its value, which is NULL for more than 128 characters, so such values
     were left out. Its SQL was built in `varchar`, which loses the characters the code page lacks, and it compared values
     with `''`, which left out 0 and 1900-01-01 in number and date columns
-  - A pivot no longer uses `PIVOT`, whose `IN` list names each column after its value. The values are ranked into the
-    temporary table `#fansi_pivot_values`, of the pivot column's own type, and each column sums the aggregate of the value
-    at its rank, 0 where there is none. The SQL is `nvarchar` throughout
+  - A pivot no longer uses `PIVOT`, whose `IN` list names each column after its value. The values are ranked into a
+    temporary table of the pivot column's own type, and each column sums the aggregate of the value at its rank, 0 where
+    there is none. The table is named after a hash of the query (`#fansi_pivot_` and 16 hex digits), so it is never a
+    temporary table of the caller's and the same query always gives the same SQL. The SQL is `nvarchar` throughout
   - Each column is named after its value cut to 128 characters, keeping surrogate pairs together, and quoted with
     `QUOTENAME`. A value left with no name, or with the name of an earlier pivot column, gets its position among the pivot
     columns as a suffix (e.g. `_3`), as on Oracle and PostgreSQL
