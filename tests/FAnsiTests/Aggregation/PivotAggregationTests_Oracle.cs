@@ -19,7 +19,9 @@ internal sealed class PivotAggregationTests_Oracle : PivotAggregationTestsBase
 
     /// <summary>
     ///     A name cannot hold a double quote: a value made only of them gets its position as its name, and one that
-    ///     loses its double quote or is cut to 128 bytes gets its position as a suffix if an earlier column has its name
+    ///     loses its double quote or is cut to the most bytes a name can have gets its position as a suffix if an earlier
+    ///     column has its name.  The names expected are those of a server whose names can have 128 bytes: Oracle 12.2 or
+    ///     later with COMPATIBLE 12.2 or higher.
     /// </summary>
     [Test]
     public void Test_Pivot_ColumnNamesAreValidAndUnique() =>

@@ -54,7 +54,8 @@ internal sealed class PivotColumnNameSqlTests
 
     /// <summary>
     ///     Oracle names a column after its value without the double quotes and NUL characters a name cannot hold, within
-    ///     128 bytes, and gives a value left with no name or the name of an earlier column a suffix
+    ///     the most bytes a name can have on the server, and gives a value left with no name or the name of an earlier
+    ///     column a suffix
     /// </summary>
     [Test]
     public void Oracle_EachColumnGetsAValidNameOfItsOwn()
@@ -63,12 +64,39 @@ internal sealed class PivotColumnNameSqlTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(OraclePivotBlock.MaxNameBytes, Is.EqualTo(128));
-            Assert.That(sql, Does.Contain("SUBSTR(REPLACE(REPLACE(fansi_text, '\"'), CHR(0)), 1, 128)"));
-            Assert.That(sql, Does.Contain("LENGTHB(fansi_name) + NVL(LENGTHB(fansi_suffix), 0) > 128"));
+            Assert.That(sql,
+                Does.Contain("SUBSTR(REPLACE(REPLACE(fansi_text, '\"'), CHR(0)), 1, fansi_pivot_max_bytes)"));
+            Assert.That(sql,
+                Does.Contain("LENGTHB(fansi_name) + NVL(LENGTHB(fansi_suffix), 0) > fansi_pivot_max_bytes"));
             Assert.That(sql,
                 Does.Contain("EXIT WHEN fansi_pivot_name IS NOT NULL AND NOT fansi_pivot_names.EXISTS(fansi_pivot_name);"));
             Assert.That(sql, Does.Contain("AS \"' || fansi_pivot_name || '\"'"));
+        });
+    }
+
+    /// <summary>
+    ///     An Oracle name can have 128 bytes from Oracle 12.2 with COMPATIBLE 12.2 or higher, and 30 on Oracle 12.1 or with
+    ///     a lower COMPATIBLE.  The block asks the server it runs on, rather than have a limit written into it, so that its
+    ///     SQL is the same for every server.  ORA_MAX_NAME_LEN_SUPPORTED gives the limit, and conditional compilation
+    ///     leaves it out on Oracle 12.1, which does not have that function.
+    /// </summary>
+    [Test]
+    public void Oracle_NamesAreCutToWhatTheServerAllows()
+    {
+        var sql = BuildPivot(DatabaseType.Oracle);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(OraclePivotBlock.MaxNameBytes, Is.EqualTo(128));
+            Assert.That(OraclePivotBlock.MaxShortNameBytes, Is.EqualTo(30));
+            Assert.That(sql,
+                Does.Contain(
+                    "fansi_pivot_max_bytes PLS_INTEGER := $IF DBMS_DB_VERSION.VER_LE_12_1 $THEN 30 $ELSE ORA_MAX_NAME_LEN_SUPPORTED $END;"));
+            Assert.That(sql.IndexOf("$IF", StringComparison.Ordinal),
+                Is.GreaterThan(sql.IndexOf("DECLARE", StringComparison.Ordinal)),
+                "Oracle does not allow a conditional compilation directive before the DECLARE of an anonymous block");
+            Assert.That(sql, Does.Not.Contain(", 1, 128)").And.Not.Contain("> 128"),
+                "a name must not be cut to a length written into the SQL");
         });
     }
 

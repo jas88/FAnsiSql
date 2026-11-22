@@ -113,9 +113,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     of a second, if any (a `TIMESTAMP WITH TIME ZONE` as its UTC time followed by ` UTC`), whatever the session's NLS
     formats, whose defaults leave out the century and the time. Other values are written with `TO_CHAR`
   - A name leaves out the double quotes and NUL characters an Oracle name cannot hold and is cut to whole characters
-    within 128 bytes. A value left with no name (one made only of double quotes), or with the name of an earlier pivot
-    column, gets its position among the pivot columns as a suffix (e.g. `_3`), so every column has a valid name of its
-    own
+    within the most bytes a name can have on the server: 128, or 30 on Oracle 12.1 and where `COMPATIBLE` is lower than
+    12.2. The block asks the server for that limit (`ORA_MAX_NAME_LEN_SUPPORTED`, which conditional compilation leaves
+    out on Oracle 12.1), so its SQL is the same for every server. A value left with no name (one made only of double
+    quotes), or with the name of an earlier pivot column, gets its position among the pivot columns as a suffix (e.g.
+    `_3`), so every column has a valid name of its own
 - **SQL Server: pivot values were left out or lost characters**
   - A pivot named each column with `QUOTENAME` of its value, which is NULL for more than 128 characters, so such values
     were left out. Its SQL was built in `varchar`, which loses the characters the code page lacks, and it compared values

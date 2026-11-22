@@ -9,9 +9,25 @@ namespace FAnsi.Implementations.Oracle.Aggregation;
 internal static class OraclePivotBlock
 {
     /// <summary>
-    ///     The most bytes in an Oracle name (from Oracle 12.2, with COMPATIBLE 12.2 or higher)
+    ///     The most bytes in an Oracle name with long identifiers: from Oracle 12.2, when COMPATIBLE is 12.2 or higher
     /// </summary>
     internal const int MaxNameBytes = 128;
+
+    /// <summary>
+    ///     The most bytes in an Oracle name without long identifiers: on Oracle 12.1, or when COMPATIBLE is lower than 12.2
+    ///     (which Oracle 12.2, 18c and 19c allow)
+    /// </summary>
+    internal const int MaxShortNameBytes = 30;
+
+    /// <summary>
+    ///     The PL/SQL for the most bytes a name can have on the server the block runs on.  From Oracle 12.2 the function
+    ///     ORA_MAX_NAME_LEN_SUPPORTED gives it, as COMPATIBLE allows (<see cref="MaxNameBytes" /> or
+    ///     <see cref="MaxShortNameBytes" />).  Oracle 12.1 does not have the function, so conditional compilation leaves it
+    ///     out there, where the most is <see cref="MaxShortNameBytes" />.  The limit is worked out where the block runs, so
+    ///     the SQL of the block is the same whatever the server.
+    /// </summary>
+    internal static readonly string MaxNameBytesSql =
+        $"$IF DBMS_DB_VERSION.VER_LE_12_1 $THEN {MaxShortNameBytes} $ELSE ORA_MAX_NAME_LEN_SUPPORTED $END";
 
     /// <summary>
     ///     How a DATE pivot value is written to name its column, whatever the session's NLS_DATE_FORMAT
@@ -48,10 +64,10 @@ internal static class OraclePivotBlock
     ///         is written out in full (<see cref="DateFormat" />, <see cref="TimestampFormat" />) rather than in the
     ///         session's NLS format, which by default leaves out the century and the time and so can give two dates the same
     ///         text.  Each column is named after that text, without the double quotes and NUL characters an Oracle name
-    ///         cannot hold and cut to whole characters within <see cref="MaxNameBytes" />.  A value left with no name (one
-    ///         made only of double quotes), or with the name of an earlier pivot column, gets its position among the pivot
-    ///         columns as a suffix (e.g. _3, then _3_2 should that be taken too), so that every column has a valid name of
-    ///         its own.
+    ///         cannot hold and cut to whole characters within the most bytes a name can have on the server
+    ///         (<see cref="MaxNameBytesSql" />).  A value left with no name (one made only of double quotes), or with the
+    ///         name of an earlier pivot column, gets its position among the pivot columns as a suffix (e.g. _3, then _3_2
+    ///         should that be taken too), so that every column has a valid name of its own.
     ///     </para>
     /// </summary>
     /// <param name="preSelectSql">The lines of the query that go before its SELECT</param>
@@ -65,6 +81,8 @@ internal static class OraclePivotBlock
                      DECLARE
                          TYPE fansi_name_set IS TABLE OF BOOLEAN INDEX BY VARCHAR2({MaxNameBytes});
                          fansi_pivot_names fansi_name_set;
+                         -- The most bytes a name can have on this server
+                         fansi_pivot_max_bytes PLS_INTEGER := {MaxNameBytesSql};
                          fansi_pivot_sql CLOB;
                          fansi_pivot_columns CLOB;
                          fansi_pivot_type PLS_INTEGER;
@@ -92,9 +110,9 @@ internal static class OraclePivotBlock
 
                          -- fansi_text as a name, without the characters a name cannot hold and cut so that with fansi_suffix it fits
                          FUNCTION fansi_pivot_column_name(fansi_text VARCHAR2, fansi_suffix VARCHAR2) RETURN VARCHAR2 IS
-                             fansi_name VARCHAR2(32767) := SUBSTR(REPLACE(REPLACE(fansi_text, '"'), CHR(0)), 1, {MaxNameBytes});
+                             fansi_name VARCHAR2(32767) := SUBSTR(REPLACE(REPLACE(fansi_text, '"'), CHR(0)), 1, fansi_pivot_max_bytes);
                          BEGIN
-                             WHILE fansi_name IS NOT NULL AND LENGTHB(fansi_name) + NVL(LENGTHB(fansi_suffix), 0) > {MaxNameBytes} LOOP
+                             WHILE fansi_name IS NOT NULL AND LENGTHB(fansi_name) + NVL(LENGTHB(fansi_suffix), 0) > fansi_pivot_max_bytes LOOP
                                  fansi_name := SUBSTR(fansi_name, 1, LENGTH(fansi_name) - 1);
                              END LOOP;
                              RETURN fansi_name || fansi_suffix;
