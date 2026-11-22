@@ -1,26 +1,32 @@
 using System.Text.RegularExpressions;
 using FAnsi;
 using FAnsi.Implementations.MicrosoftSQL;
+using FAnsi.Implementations.PostgreSql;
 using NUnit.Framework;
 
 namespace FAnsiTests.Aggregation;
 
 /// <summary>
 ///     Checks, without a database, of the names pivots give what they make on a connection besides their columns: on SQL
-///     Server the temporary table of the pivot values.  A name is made from a hash of the query, so that it is not one a
-///     caller would use and so that the same query always gives the same SQL, which callers that cache results by their
-///     SQL (as RDMP does) rely on.
+///     Server the temporary table of the pivot values, and on PostgreSQL the cursor of the rows.  A name is made from a
+///     hash of the query, so that it is not one a caller or another pivot would use and so that the same query always
+///     gives the same SQL, which callers that cache results by their SQL (as RDMP does) rely on.
 /// </summary>
 internal sealed partial class PivotObjectNameSqlTests
 {
     private const DatabaseType SqlServer = DatabaseType.MicrosoftSQLServer;
+    private const DatabaseType PostgreSql = DatabaseType.PostgreSql;
 
     /// <summary>
     ///     Loads the implementations whose SQL is checked here.  These tests use no database, so they have no base class
     ///     that loads them.
     /// </summary>
     [OneTimeSetUp]
-    public void LoadImplementations() => MicrosoftSQLImplementation.EnsureLoaded();
+    public void LoadImplementations()
+    {
+        MicrosoftSQLImplementation.EnsureLoaded();
+        PostgreSqlImplementation.EnsureLoaded();
+    }
 
     /// <summary>
     ///     SQL Server ranks the pivot values into a temporary table named #fansi_pivot_ and 16 hex digits, and uses that
@@ -95,6 +101,65 @@ internal sealed partial class PivotObjectNameSqlTests
     }
 
     /// <summary>
+    ///     PostgreSQL names the cursor of a pivot fansi_pivot_ and 16 hex digits, and uses that one name throughout the
+    ///     script: to close a cursor an earlier run of the query left open, to declare it, to fetch its rows and to close it
+    /// </summary>
+    [TestCase(false)]
+    [TestCase(true)]
+    public void PostgreSql_CursorHasOneNameThroughoutTheScript(bool withAxis)
+    {
+        var sql = PivotColumnNameSqlTests.BuildPivot(PostgreSql, withAxis);
+        var cursor = GetCursor(sql);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(sql, Does.Contain($"FROM pg_catalog.pg_cursors WHERE name = '{cursor}'"));
+            Assert.That(sql, Does.Contain($"EXECUTE 'CLOSE {cursor}';"));
+            Assert.That(sql, Does.Contain($"EXECUTE 'DECLARE {cursor} CURSOR WITH HOLD FOR '"));
+            Assert.That(sql, Does.Contain($"FETCH ALL FROM {cursor};"));
+            Assert.That(sql, Does.EndWith($"CLOSE {cursor};"));
+        });
+    }
+
+    /// <summary>
+    ///     The name of the cursor comes from all of the query, the lines before its SELECT among them: the same query gets
+    ///     the same name each time, and a query that differs only in what comes before its SELECT gets another, as one
+    ///     that differs in its table does.  Pivots that shared a name would close each other's cursor.
+    /// </summary>
+    [TestCase(false)]
+    [TestCase(true)]
+    public void PostgreSql_CursorIsNamedAfterAllOfTheQuery(bool withAxis)
+    {
+        var cursor = GetCursor(PivotColumnNameSqlTests.BuildPivot(PostgreSql, withAxis));
+        var again = GetCursor(PivotColumnNameSqlTests.BuildPivot(PostgreSql, withAxis));
+
+        string[] others =
+        [
+            GetCursor(PivotColumnNameSqlTests.BuildPivot(PostgreSql, withAxis, "SET search_path TO first;")),
+            GetCursor(PivotColumnNameSqlTests.BuildPivot(PostgreSql, withAxis, "SET search_path TO second;")),
+            GetCursor(PivotColumnNameSqlTests.BuildPivot(PostgreSql, withAxis, fromSql: "\"fansi\".public.\"Other\"")),
+            GetCursor(PivotColumnNameSqlTests.BuildPivot(PostgreSql, !withAxis))
+        ];
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(again, Is.EqualTo(cursor));
+            Assert.That(others, Has.None.EqualTo(cursor));
+            Assert.That(others, Is.Unique);
+        });
+    }
+
+    /// <summary>
+    ///     The one cursor that <paramref name="sql" /> uses
+    /// </summary>
+    private static string GetCursor(string sql)
+    {
+        var cursors = PivotCursor().Matches(sql).Select(static m => m.Value).Distinct().ToList();
+        Assert.That(cursors, Has.Count.EqualTo(1), "The script should use one cursor");
+        return cursors[0];
+    }
+
+    /// <summary>
     ///     The one temporary table that <paramref name="sql" /> uses
     /// </summary>
     private static string GetTemporaryTable(string sql)
@@ -112,4 +177,7 @@ internal sealed partial class PivotObjectNameSqlTests
 
     [GeneratedRegex(@"#\w+", RegexOptions.CultureInvariant)]
     private static partial Regex TemporaryTable();
+
+    [GeneratedRegex(@"\bfansi_pivot_[0-9a-f]{16}\b", RegexOptions.CultureInvariant)]
+    private static partial Regex PivotCursor();
 }

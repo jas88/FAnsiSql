@@ -98,8 +98,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     values when there is a TOP X. Each column holds the aggregate for its value, 0 where there is none. The columns of
     the query being pivoted are found by position, so it does not matter whether its lines alias or quote them
   - A query cannot choose its own columns, so the SQL for a pivot is now a `DO` block that opens a cursor, followed by
-    `FETCH ALL` from the cursor and `CLOSE`. The cursor is named after a hash of the query (`fansi_pivot_` and 16 hex
-    digits), so pivots on one connection never share a cursor and the same query always gives the same SQL
+    `FETCH ALL` from the cursor and `CLOSE`. The cursor is named after a hash of the whole query, with any lines that
+    come before its `SELECT` (`fansi_pivot_` and 16 hex digits), so pivots on one connection never share a cursor and
+    the same query always gives the same SQL
   - Each column is named after its value as PostgreSQL writes it as text (a date in the session's `DateStyle`), cut to
     whole characters within `max_identifier_length` (63) bytes. A value whose name an earlier pivot column already has,
     as two long values that start the same can, gets its position among the pivot columns as a suffix (e.g. `_3`), so no

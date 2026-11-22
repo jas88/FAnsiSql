@@ -118,6 +118,44 @@ internal abstract class PivotAggregationTestsBase : AggregationTests
     }
 
     /// <summary>
+    ///     On PostgreSQL, pivots that differ only in what comes before their SELECT each have a cursor of their own.  A
+    ///     client can run the statements of a pivot one at a time, so the DO block of one pivot must not take another's
+    ///     open cursor for one that an earlier run of its own query left, and close it.
+    /// </summary>
+    protected void Test_Pivot_QueriesThatDifferBeforeSelectHaveCursorsOfTheirOwn(DatabaseType type)
+    {
+        var tbl = GetTestTable(type);
+        var svr = tbl.Database.Server;
+
+        var first = BuildPivotWithLineBeforeSelect(tbl, "/* The first pivot */");
+        var second = BuildPivotWithLineBeforeSelect(tbl, "/* The second pivot */");
+
+        using var con = svr.GetConnection();
+        con.Open();
+
+        // The first pivot only as far as its DO block, which leaves its cursor open, and then all of the second
+        var fetch = first.IndexOf("FETCH ALL FROM", StringComparison.Ordinal);
+        using (var cmd = svr.GetCommand(first[..fetch], con))
+        {
+            cmd.ExecuteNonQuery();
+        }
+
+        using var secondRows = Fill(svr, con, second);
+
+        // The cursor of the first pivot is still open, so the rest of its script can read and close it
+        using var firstRows = Fill(svr, con, first[fetch..]);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(secondRows.Columns, Has.Count.EqualTo(9));
+            Assert.That(secondRows.Rows, Has.Count.EqualTo(4));
+            Assert.That(firstRows.Columns, Has.Count.EqualTo(9));
+            Assert.That(firstRows.Rows, Has.Count.EqualTo(4));
+            Assert.That(CountPostgreSqlPivotCursors(svr, con), Is.Zero, "No pivot cursor should be left open");
+        });
+    }
+
+    /// <summary>
     ///     Every pivot column gets a valid name of its own, whatever its value (see <see cref="PivotNameValues" />), and
     ///     counts the records of that value
     /// </summary>
@@ -318,6 +356,18 @@ internal abstract class PivotAggregationTestsBase : AggregationTests
             new CustomLine($"{row},", QueryComponent.GroupBy),
             new CustomLine(pivot, QueryComponent.GroupBy) { Role = CustomLineRole.Pivot }
         ];
+    }
+
+    /// <summary>
+    ///     The SQL of the pivot of the number of records for each Category and EventDate, with the line
+    ///     <paramref name="preSelectSql" /> before its SELECT
+    /// </summary>
+    private static string BuildPivotWithLineBeforeSelect(DiscoveredTable tbl, string preSelectSql)
+    {
+        var lines = GetPivotLines(tbl, "count(*)");
+        lines.Insert(0, new CustomLine(preSelectSql, QueryComponent.VariableDeclaration));
+
+        return tbl.GetQuerySyntaxHelper().AggregateHelper.BuildAggregate(lines, null);
     }
 
     /// <summary>

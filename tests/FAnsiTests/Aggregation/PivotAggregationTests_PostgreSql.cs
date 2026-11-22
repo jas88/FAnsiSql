@@ -13,6 +13,10 @@ internal sealed class PivotAggregationTests_PostgreSql : PivotAggregationTestsBa
     [Test]
     public void Test_Pivot_SameConnectionAfterFailedPivot() => Test_Pivot_SameConnectionAfterFailedPivot(DbType);
 
+    [Test]
+    public void Test_Pivot_QueriesThatDifferBeforeSelectHaveCursorsOfTheirOwn() =>
+        Test_Pivot_QueriesThatDifferBeforeSelectHaveCursorsOfTheirOwn(DbType);
+
     [TestCase(false)]
     [TestCase(true)]
     public void Test_Pivot_OnlyNullOrEmptyValues(bool withAxis) => Test_Pivot_OnlyNullOrEmptyValues(DbType, withAxis);

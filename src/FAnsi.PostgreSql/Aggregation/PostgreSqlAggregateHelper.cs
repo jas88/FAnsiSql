@@ -150,7 +150,8 @@ public sealed class PostgreSqlAggregateHelper : AggregateHelper
     private static string BuildPivot(AggregateCustomLineCollection query, string pivotValuesSql, string selectSql,
         string fromSql)
     {
-        var cursor = GetPivotCursorName(pivotValuesSql, selectSql, fromSql);
+        var preSelectSql = GetLines(query, static l => l.LocationToInsert < QueryComponent.SELECT);
+        var cursor = GetPivotCursorName(preSelectSql, pivotValuesSql, selectSql, fromSql);
         var sqlQuote = GetDollarQuote("fansi_sql", pivotValuesSql + selectSql + fromSql);
 
         var block = $"""
@@ -203,7 +204,7 @@ public sealed class PostgreSqlAggregateHelper : AggregateHelper
         var blockQuote = GetDollarQuote("fansi_pivot", block);
 
         return $"""
-                {GetLines(query, static l => l.LocationToInsert < QueryComponent.SELECT)}
+                {preSelectSql}
                 DO {blockQuote}
                 {block}
                 {blockQuote};
@@ -213,13 +214,19 @@ public sealed class PostgreSqlAggregateHelper : AggregateHelper
     }
 
     /// <summary>
-    ///     Returns a name for the cursor of a pivot, made from a hash of its query.  Every query has its own, so pivots run
-    ///     on one connection never use or close each other's cursor, and the same query always gets the same name, so its
-    ///     SQL is the same each time it is built (which matters to callers that cache results by their SQL, as RDMP does).
+    ///     Returns a name for the cursor of a pivot, made from a hash of all the SQL that its query gives it: the lines
+    ///     that go before the DO block (<paramref name="preSelectSql" />) as well as the queries inside it.  A pivot that
+    ///     differs only in those lines is another pivot, as they can change its rows (e.g. by setting search_path).  Every
+    ///     query has its own, so pivots run on one connection never use or close each other's cursor, and the same query
+    ///     always gets the same name, so its SQL is the same each time it is built (which matters to callers that cache
+    ///     results by their SQL, as RDMP does).
     /// </summary>
-    private static string GetPivotCursorName(string pivotValuesSql, string selectSql, string fromSql)
+    private static string GetPivotCursorName(string preSelectSql, string pivotValuesSql, string selectSql,
+        string fromSql)
     {
-        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(string.Join("\n", pivotValuesSql, selectSql, fromSql)));
+        // SQL does not hold a NUL, so with one between its parts no two queries give the same text to hash
+        var hash = SHA256.HashData(
+            Encoding.UTF8.GetBytes(string.Join('\0', preSelectSql, pivotValuesSql, selectSql, fromSql)));
 
         // fansi_pivot_ and 16 lower case hex digits: an identifier that needs no quotes and is far from the 63 byte limit
         var name = new StringBuilder("fansi_pivot_");
