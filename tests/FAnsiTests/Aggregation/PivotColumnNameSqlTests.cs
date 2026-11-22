@@ -6,7 +6,6 @@ using FAnsi.Implementations.MySql;
 using FAnsi.Implementations.Oracle;
 using FAnsi.Implementations.Oracle.Aggregation;
 using FAnsi.Implementations.PostgreSql;
-using FAnsi.Implementations.Sqlite;
 using NUnit.Framework;
 
 namespace FAnsiTests.Aggregation;
@@ -19,9 +18,8 @@ namespace FAnsiTests.Aggregation;
 internal sealed class PivotColumnNameSqlTests
 {
     /// <summary>
-    ///     Loads every implementation, not only the two tested here: the first <see cref="DiscoveredServer" /> made sets up
-    ///     the connection string keywords of just the implementations loaded at the time, so a DBMS loaded after that
-    ///     cannot be used
+    ///     Loads the implementations whose SQL is checked here.  These tests use no database, so they have no base class
+    ///     that loads them.
     /// </summary>
     [OneTimeSetUp]
     public void LoadImplementations()
@@ -30,7 +28,6 @@ internal sealed class PivotColumnNameSqlTests
         MySqlImplementation.EnsureLoaded();
         OracleImplementation.EnsureLoaded();
         PostgreSqlImplementation.EnsureLoaded();
-        SqliteImplementation.EnsureLoaded();
     }
 
     /// <summary>
