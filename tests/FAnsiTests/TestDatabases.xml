@@ -13,7 +13,9 @@
 	</TestDatabase>
 	<TestDatabase>
 		<DatabaseType>Sqlite</DatabaseType>
-		<ConnectionString>Data Source=:memory:</ConnectionString>
+		<!-- A file in the working directory of the tests (their output directory). An in-memory database does not
+		     outlive its connection, and FAnsi opens a connection for each operation -->
+		<ConnectionString>Data Source=fansitests.db</ConnectionString>
 	</TestDatabase>
 	<!--         <TestDatabase>
             <DatabaseType>Oracle</DatabaseType>

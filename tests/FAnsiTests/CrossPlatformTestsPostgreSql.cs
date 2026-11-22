@@ -84,6 +84,11 @@ internal sealed class CrossPlatformTestsPostgreSql : CrossPlatformTestsBase
     public new void HorribleDatabaseAndTableNames(string horribleDatabaseName, string horribleTableName) =>
         base.HorribleDatabaseAndTableNames(horribleDatabaseName, horribleTableName);
 
+    [TestCase("_-o-_", ":>0<:")]
+    public new void HorribleDatabaseAndTableNames_CreatePrimaryKey(string horribleDatabaseName,
+        string horribleTableName) =>
+        base.HorribleDatabaseAndTableNames_CreatePrimaryKey(horribleDatabaseName, horribleTableName);
+
     [TestCase("_-o-_", ":>0<:", "-_")]
     [TestCase("Comment", "Comment", "Comment")]  // reserved keyword in Oracle
     [TestCase("Comment", "SSSS", "Space Out")]

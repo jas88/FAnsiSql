@@ -25,6 +25,11 @@ public sealed class SqliteQuerySyntaxHelper : QuerySyntaxHelper
     public static readonly SqliteQuerySyntaxHelper Instance = new();
 
     /// <summary>
+    ///     What SQLite calls the database a connection opens, its schema name in SQL
+    /// </summary>
+    private const string MainDatabase = "main";
+
+    /// <summary>
     ///     Dictionary mapping common SQL function names to their SQLite equivalents with usage examples.
     /// </summary>
     private static readonly Dictionary<string, string> Functions = new()
@@ -35,8 +40,8 @@ public sealed class SqliteQuerySyntaxHelper : QuerySyntaxHelper
         { "substring", "SUBSTR(str, start, length)" },
         { "dateadd", "date(date, '+' || value || ' ' || unit)" }, // SQLite date functions
         { "datediff", "julianday(date1) - julianday(date2)" },
-        { "getdate", "datetime('now')" },
-        { "now", "datetime('now')" },
+        { "getdate", "datetime('now', 'localtime')" },
+        { "now", "datetime('now', 'localtime')" },
         { "cast", "CAST(value AS type)" },
         { "convert", "CAST(value AS type)" }, // SQLite doesn't have CONVERT, use CAST
         { "case", "CASE WHEN x=y THEN 'something' WHEN x=z THEN 'something2' ELSE 'something3' END" }
@@ -110,6 +115,26 @@ public sealed class SqliteQuerySyntaxHelper : QuerySyntaxHelper
     ///     (which SQLite overrides to handle doubled quotes).
     /// </remarks>
     public override string? GetRuntimeName(string? s) => base.GetRuntimeName(s);
+
+    /// <summary>
+    ///     Returns <paramref name="database" /> unchanged.  A SQLite database is a file and its name is the path of the
+    ///     file (the Data Source of the connection string), not a SQL identifier.  <see cref="GetRuntimeName" /> would
+    ///     take the dot in "fansitests.db" to be a qualifier and return "db".
+    /// </summary>
+    /// <param name="database">The path of the database file</param>
+    /// <returns><paramref name="database" /></returns>
+    public override string GetDatabaseRuntimeName(string database) => database;
+
+    /// <summary>
+    ///     Returns "main", wrapped.  SQL has no name for a database file, the path of the file is not an identifier (and
+    ///     <see cref="QuerySyntaxHelper.EnsureWrapped" /> rejects its dots): SQLite calls the database that a connection
+    ///     opens main, as PRAGMA database_list shows.  Every connection FAnsi opens to a SQLite database opens its file, so
+    ///     main is the name SQL refers to the database by.  It is also why FAnsi leaves SQLite table names unqualified (see
+    ///     <see cref="EnsureFullyQualified(string,string,string)" />).
+    /// </summary>
+    /// <param name="database">The path of the database file</param>
+    /// <returns>"main" wrapped in double quotes</returns>
+    public override string GetDatabaseWrappedName(string database) => EnsureWrappedImpl(MainDatabase);
 
     /// <inheritdoc />
     public override string EnsureWrappedImpl(string databaseOrTableName) =>
@@ -195,7 +220,10 @@ public sealed class SqliteQuerySyntaxHelper : QuerySyntaxHelper
     ///     <para>SQLite function mappings:</para>
     ///     <list type="bullet">
     ///         <item>
-    ///             <description>GetTodaysDate: date('now')</description>
+    ///             <description>
+    ///                 GetTodaysDate: datetime('now', 'localtime') - the local date and time, as GETDATE() gives on SQL
+    ///                 Server, now() on MySQL and PostgreSQL and CURRENT_TIMESTAMP on Oracle. 'now' alone is UTC
+    ///             </description>
     ///         </item>
     ///         <item>
     ///             <description>GetGuid: lower(hex(randomblob(16))) - pseudo-UUID</description>
@@ -209,7 +237,8 @@ public sealed class SqliteQuerySyntaxHelper : QuerySyntaxHelper
     public override string GetScalarFunctionSql(MandatoryScalarFunctions function) =>
         function switch
         {
-            MandatoryScalarFunctions.GetTodaysDate => "date('now')",
+            // SQLite runs in the application, so 'localtime' is the time zone of the machine it runs on
+            MandatoryScalarFunctions.GetTodaysDate => "datetime('now', 'localtime')",
             MandatoryScalarFunctions.GetGuid => "lower(hex(randomblob(16)))", // SQLite doesn't have native UUID
             MandatoryScalarFunctions.Len => "LENGTH",
             _ => throw new ArgumentOutOfRangeException(nameof(function))

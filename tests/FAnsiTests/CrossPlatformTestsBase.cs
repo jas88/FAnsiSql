@@ -722,10 +722,6 @@ public abstract class CrossPlatformTestsBase : DatabaseTests
 
     protected void CreateDateColumnFromDataTable()
     {
-        // SQLite has date type affinity issues - returns string instead of DateTime
-        if (DatabaseType == DatabaseType.Sqlite)
-            Assert.Ignore("SQLite does not preserve DateTime type when creating from DataTable");
-
         var database = GetTestDatabase(DatabaseType);
 
         var dt = new DataTable();
@@ -770,9 +766,8 @@ public abstract class CrossPlatformTestsBase : DatabaseTests
                 Is.EqualTo(typeof(int)));
             Assert.That(syntaxHelper.TypeTranslater.GetCSharpTypeForSQLDBType(stringCol.DataType?.SQLType),
                 Is.EqualTo(typeof(string)));
-            // SQLite is dynamically typed and stores DateTime as TEXT (string)
             Assert.That(syntaxHelper.TypeTranslater.GetCSharpTypeForSQLDBType(dateCol.DataType?.SQLType),
-                Is.EqualTo(DatabaseType == DatabaseType.Sqlite ? typeof(string) : typeof(DateTime)));
+                Is.EqualTo(typeof(DateTime)));
             Assert.That(syntaxHelper.TypeTranslater.GetCSharpTypeForSQLDBType(decimalCol.DataType?.SQLType),
                 Is.EqualTo(typeof(decimal)));
             Assert.That(tbl.GetRowCount(), Is.EqualTo(0));
@@ -1045,7 +1040,19 @@ public abstract class CrossPlatformTestsBase : DatabaseTests
         });
     }
 
-    protected void HorribleDatabaseAndTableNames(string horribleDatabaseName, string horribleTableName)
+    protected void HorribleDatabaseAndTableNames(string horribleDatabaseName, string horribleTableName) =>
+        HorribleDatabaseAndTableNames(horribleDatabaseName, horribleTableName, false);
+
+    /// <summary>
+    ///     <see cref="HorribleDatabaseAndTableNames(string,string)" /> followed by creating a primary key on the emptied
+    ///     table.  Separate because SQLite cannot add a primary key to a table that already exists.
+    /// </summary>
+    protected void HorribleDatabaseAndTableNames_CreatePrimaryKey(string horribleDatabaseName,
+        string horribleTableName) =>
+        HorribleDatabaseAndTableNames(horribleDatabaseName, horribleTableName, true);
+
+    private void HorribleDatabaseAndTableNames(string horribleDatabaseName, string horribleTableName,
+        bool createPrimaryKey)
     {
         AssertCanCreateDatabases();
 
@@ -1106,6 +1113,11 @@ public abstract class CrossPlatformTestsBase : DatabaseTests
             });
 
             tbl.Truncate();
+
+            Assert.That(tbl.GetRowCount(), Is.EqualTo(0));
+
+            if (!createPrimaryKey)
+                return;
 
             tbl.CreatePrimaryKey(tbl.DiscoverColumn("Field3"));
 
@@ -1196,10 +1208,6 @@ public abstract class CrossPlatformTestsBase : DatabaseTests
 
     protected void CreateTable_DefaultTest_Date()
     {
-        // SQLite doesn't support DEFAULT value functions like CURRENT_TIMESTAMP in the same way
-        if (DatabaseType == DatabaseType.Sqlite)
-            Assert.Ignore("SQLite DEFAULT value function syntax differs from other databases");
-
         var database = GetTestDatabase(DatabaseType);
 
         var tbl = database.CreateTable("MyTable",

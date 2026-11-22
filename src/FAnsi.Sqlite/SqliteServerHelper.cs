@@ -98,35 +98,63 @@ public sealed class SqliteServerHelper : DiscoveredServerHelper
     /// </summary>
     /// <param name="database">The database to check</param>
     /// <returns>True if the database file exists on disk, false otherwise</returns>
+    /// <remarks>
+    ///     The file is the Data Source of the database's connection string, the file its connections open.
+    /// </remarks>
     public override bool DatabaseExists(DiscoveredDatabase database)
     {
-        var filePath = database.GetRuntimeName();
+        var filePath = GetDatabaseFile(database.Server.Builder);
         return !string.IsNullOrEmpty(filePath) && File.Exists(filePath);
     }
 
     /// <summary>
     ///     Creates a new SQLite database file.
     /// </summary>
-    /// <param name="builder">The connection string builder (not used for SQLite creation)</param>
-    /// <param name="newDatabaseName">The name/path of the database file to create</param>
+    /// <param name="builder">The connection string builder of the server the database is being created on</param>
+    /// <param name="newDatabaseName">The database to create, its name is the path of the database file</param>
     /// <remarks>
     ///     <para>SQLite databases are created automatically when a connection is opened to a non-existent file.</para>
     ///     <para>This method ensures the parent directory exists before creating the database.</para>
+    ///     <para>
+    ///         Idle pooled connections are closed first.  Microsoft.Data.Sqlite pools connections by connection string, so
+    ///         one left open on a file of the same name that has since been deleted would be handed back out: opening it
+    ///         would not create the file, and the tables created through it would go into the deleted file.
+    ///     </para>
     /// </remarks>
     public override void CreateDatabase(DbConnectionStringBuilder builder, IHasRuntimeName newDatabaseName)
     {
-        var filePath = newDatabaseName.GetRuntimeName();
+        // A DiscoveredDatabase knows the connection string its connections will use, anything else only has a name
+        var newBuilder = newDatabaseName is DiscoveredDatabase database
+            ? new SqliteConnectionStringBuilder(database.Server.Builder.ConnectionString)
+            : new SqliteConnectionStringBuilder(builder.ConnectionString)
+            {
+                DataSource = newDatabaseName.GetRuntimeName()
+            };
+
+        var filePath = newBuilder.DataSource;
+        if (string.IsNullOrWhiteSpace(filePath))
+            throw new ArgumentException($"No database file given for SQLite database '{newDatabaseName}'",
+                nameof(newDatabaseName));
 
         // Ensure directory exists
         var directory = Path.GetDirectoryName(filePath);
         if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory)) Directory.CreateDirectory(directory);
 
-        // Create the database file by opening a connection
-        var newBuilder = new SqliteConnectionStringBuilder { DataSource = filePath };
+        SqliteConnection.ClearAllPools();
+
+        // Create the database file by opening a connection that does not come from the pool
+        newBuilder.Pooling = false;
         using var connection = new SqliteConnection(newBuilder.ConnectionString);
         connection.Open();
-        // SQLite database is created when the connection is opened
     }
+
+    /// <summary>
+    ///     Returns the database file a SQLite connection string points at (its Data Source), or null if it has none.
+    /// </summary>
+    /// <param name="builder">A SQLite connection string builder</param>
+    /// <returns>The path of the database file, as given in the connection string</returns>
+    internal static string? GetDatabaseFile(DbConnectionStringBuilder builder) =>
+        builder.TryGetValue("Data Source", out var dataSource) ? dataSource.ToString() : null;
 
     /// <summary>
     ///     Retrieves descriptive information about the SQLite server/database file.

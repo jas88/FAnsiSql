@@ -13,9 +13,6 @@ namespace FAnsiTests.Table;
 
 internal sealed class CreateTableTests : DatabaseTests
 {
-    private const string SqliteHasNoBooleanType =
-        "SQLite has no boolean type: FAnsi creates a bool column as INTEGER, which is then discovered as int, so 'T' and 'F' cannot be inserted into it";
-
     [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void CreateSimpleTable_Exists(DatabaseType type)
     {
@@ -98,20 +95,9 @@ internal sealed class CreateTableTests : DatabaseTests
         var dob = colsDictionary["dob"];
         Assert.Multiple(() =>
         {
-            // SQLite stores DateTime as TEXT with max length
-            if (type == DatabaseType.Sqlite)
-            {
-                Assert.That(dob.DataType?.GetLengthIfString(), Is.EqualTo(int.MaxValue));
-                Assert.That(syntaxHelper.TypeTranslater.GetCSharpTypeForSQLDBType(dob.DataType?.SQLType),
-                    Is.EqualTo(typeof(string)));
-            }
-            else
-            {
-                Assert.That(dob.DataType?.GetLengthIfString(), Is.EqualTo(-1));
-                Assert.That(syntaxHelper.TypeTranslater.GetCSharpTypeForSQLDBType(dob.DataType?.SQLType),
-                    Is.EqualTo(typeof(DateTime)));
-            }
-
+            Assert.That(dob.DataType?.GetLengthIfString(), Is.EqualTo(-1));
+            Assert.That(syntaxHelper.TypeTranslater.GetCSharpTypeForSQLDBType(dob.DataType?.SQLType),
+                Is.EqualTo(typeof(DateTime)));
             Assert.That(dob.AllowNulls, Is.EqualTo(false));
             Assert.That(dob.IsPrimaryKey, Is.False);
         });
@@ -266,17 +252,8 @@ internal sealed class CreateTableTests : DatabaseTests
                 return;
             }*/
 
-            // SQLite stores boolean as INTEGER, Guesser sees it as int
-            if (type == DatabaseType.Sqlite)
-            {
-                Assert.That(tbl.DiscoverColumn("MyBoolCol").GetGuesser().Guess.CSharpType, Is.EqualTo(typeof(int)));
-                Assert.That(tbl.GetDataTable().Rows[0][0], Is.EqualTo(1));
-            }
-            else
-            {
-                Assert.That(tbl.DiscoverColumn("MyBoolCol").GetGuesser().Guess.CSharpType, Is.EqualTo(typeof(bool)));
-                Assert.That(tbl.GetDataTable().Rows[0][0], Is.EqualTo(true));
-            }
+            Assert.That(tbl.DiscoverColumn("MyBoolCol").GetGuesser().Guess.CSharpType, Is.EqualTo(typeof(bool)));
+            Assert.That(tbl.GetDataTable().Rows[0][0], Is.EqualTo(true));
         });
     }
 
@@ -455,7 +432,6 @@ internal sealed class CreateTableTests : DatabaseTests
     [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     [SkipDatabase(DatabaseType.Oracle,
         "Oracle doesn't really support bits https://stackoverflow.com/questions/2426145/oracles-lack-of-a-bit-datatype-for-table-columns")]
-    [SkipDatabase(DatabaseType.Sqlite, SqliteHasNoBooleanType)]
     public void Test_CreateTable_TF(DatabaseType dbType)
     {
         //T and F is normally True and False.  If you want to keep it as a string set DoNotRetype
@@ -474,6 +450,42 @@ internal sealed class CreateTableTests : DatabaseTests
         Assert.That(dt2.Rows.Cast<DataRow>().Select(static c => c[0]).ToArray(), Does.Contain(false));
 
         tbl.Drop();
+    }
+
+    /// <summary>
+    ///     SQLite has no boolean type.  FAnsi used to declare a bool column INTEGER, which is then discovered as an int column,
+    ///     so creating a table from a column of 'T' and 'F' failed parsing 'T' as an int.  A bool column is now declared
+    ///     BOOLEAN, which SQLite stores as the integers 1 and 0.
+    /// </summary>
+    [Test]
+    public void Test_CreateTable_TF_Sqlite_StoredAsIntegers()
+    {
+        var db = GetTestDatabase(DatabaseType.Sqlite);
+        using var dt = new DataTable();
+        dt.Columns.Add("Hb");
+        dt.Rows.Add("T");
+        dt.Rows.Add("F");
+
+        var tbl = db.CreateTable("T1", dt);
+        tbl.Insert(new Dictionary<string, object> { { "Hb", "T" } });
+
+        Assert.That(tbl.DiscoverColumn("Hb").DataType?.SQLType, Is.EqualTo("BOOLEAN"));
+
+        var stored = new List<(string StorageClass, long Value)>();
+        using (var con = db.Server.GetConnection())
+        {
+            con.Open();
+            using var cmd = db.Server.GetCommand(
+                $"SELECT typeof(\"Hb\"), \"Hb\" FROM {tbl.GetFullyQualifiedName()} ORDER BY rowid", con);
+            using var r = cmd.ExecuteReader();
+            while (r.Read())
+                stored.Add((r.GetString(0), r.GetInt64(1)));
+        }
+
+        Assert.That(stored, Is.EqualTo(new[] { ("integer", 1L), ("integer", 0L), ("integer", 1L) }));
+
+        using var result = tbl.GetDataTable();
+        Assert.That(result.Rows.Cast<DataRow>().Select(static r => r[0]), Is.EquivalentTo(new object[] { true, false, true }));
     }
 
     [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
@@ -562,9 +574,6 @@ internal sealed class CreateTableTests : DatabaseTests
     [TestCaseSource(typeof(All), nameof(All.DatabaseTypesWithBoolFlags))]
     public void CreateTable_GuessSettings_StaticDefaults_TF(DatabaseType dbType, bool treatAsBoolean)
     {
-        if (dbType == DatabaseType.Sqlite && treatAsBoolean)
-            Assert.Ignore(SqliteHasNoBooleanType);
-
         //T and F is normally True and False.  If you want to keep it as a string set DoNotRetype
         var db = GetTestDatabase(dbType);
         using var dt = new DataTable();
@@ -648,9 +657,6 @@ internal sealed class CreateTableTests : DatabaseTests
     [TestCaseSource(typeof(All), nameof(All.DatabaseTypesWithBoolFlags))]
     public void CreateTable_GuessSettings_InArgs_TF(DatabaseType dbType, bool treatAsBoolean)
     {
-        if (dbType == DatabaseType.Sqlite && treatAsBoolean)
-            Assert.Ignore(SqliteHasNoBooleanType);
-
         //T and F is normally True and False.  If you want to keep it as a string set DoNotRetype
         var db = GetTestDatabase(dbType);
         var dt = new DataTable();
@@ -705,20 +711,10 @@ internal sealed class CreateTableTests : DatabaseTests
         var tbl = db.CreateTable(args);
         var col = tbl.DiscoverColumn("DateCol");
 
-        // SQLite stores DateTime as TEXT (string type)
-        if (dbType == DatabaseType.Sqlite)
-            Assert.That(col.DataType?.GetCSharpDataType(), Is.EqualTo(typeof(string)));
-        else
-            Assert.That(col.DataType?.GetCSharpDataType(),
-                Is.EqualTo(useCustomDate ? typeof(DateTime) : typeof(string)));
+        Assert.That(col.DataType?.GetCSharpDataType(), Is.EqualTo(useCustomDate ? typeof(DateTime) : typeof(string)));
 
         var dtDown = tbl.GetDataTable();
-
-        // SQLite stores dates as strings, doesn't convert them
-        if (dbType == DatabaseType.Sqlite)
-            Assert.That(dtDown.Rows[0][0], Is.EqualTo("013020"));
-        else
-            Assert.That(dtDown.Rows[0][0], Is.EqualTo(useCustomDate ? new DateTime(2020, 01, 30) : "013020"));
+        Assert.That(dtDown.Rows[0][0], Is.EqualTo(useCustomDate ? new DateTime(2020, 01, 30) : "013020"));
     }
 
     [Test]

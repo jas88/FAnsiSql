@@ -82,6 +82,10 @@ internal sealed class TableHelperUpdateTests_Sqlite : TableHelperUpdateTestsBase
         UpdateWithJoin_BooleanValues_UpdatesCorrectly(DbType);
 
     [Test]
+    public void UpdateWithJoin_DateTimeValues_UpdatesCorrectly() =>
+        UpdateWithJoin_DateTimeValues_UpdatesCorrectly(DbType);
+
+    [Test]
     public void UpdateWithJoin_InOperator_UpdatesCorrectly() => UpdateWithJoin_InOperator_UpdatesCorrectly(DbType);
 
     [Test]

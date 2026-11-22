@@ -14,6 +14,8 @@ internal sealed class TableHelperErrorHandlingTests_Sqlite : TableHelperErrorHan
     public void AddColumn_DuplicateColumnName_ThrowsException() =>
         AddColumn_DuplicateColumnName_ThrowsException(DbType);
 
+    // Not run: AddColumn_InvalidDataType_ThrowsException, SQLite accepts any name as a column type
+
     [Test]
     public void DropColumn_NonExistentColumn_ThrowsException() => DropColumn_NonExistentColumn_ThrowsException(DbType);
 

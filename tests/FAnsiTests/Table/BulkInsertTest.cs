@@ -721,10 +721,7 @@ internal sealed class BulkInsertTest : DatabaseTests
     [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]
     public void TestBulkInsert_SchemaTooNarrow_StringError(DatabaseType type)
     {
-        // SQLite doesn't enforce string length constraints
-        if (type == DatabaseType.Sqlite)
-            Assert.Ignore("SQLite does not enforce string length constraints");
-
+        // SQLite does not enforce the width of a column, but bulk insert checks string widths before inserting anything
         var db = GetTestDatabase(type);
 
         var tbl = db.CreateTable("MyBulkInsertTest",
@@ -785,14 +782,7 @@ internal sealed class BulkInsertTest : DatabaseTests
         }
 
         var dtDown = tbl.GetDataTable();
-        var dateValue = dtDown.Rows[0]["MyDate"];
-
-        // SQLite returns dates as strings
-        if (type == DatabaseType.Sqlite && dateValue is string strDate)
-            Assert.That(DateTime.ParseExact(strDate, "yyyyMMdd", CultureInfo.InvariantCulture),
-                Is.EqualTo(new DateTime(2001, 12, 30)));
-        else
-            Assert.That(dateValue, Is.EqualTo(new DateTime(2001, 12, 30)));
+        Assert.That(dtDown.Rows[0]["MyDate"], Is.EqualTo(new DateTime(2001, 12, 30)));
     }
 
     [TestCaseSource(typeof(All), nameof(All.DatabaseTypes))]

@@ -17,6 +17,8 @@ internal sealed class TableHelperMetadataTests_Sqlite : TableHelperMetadataTests
     public void HasPrimaryKey_CompositePrimaryKey_ReturnsTrue() =>
         HasPrimaryKey_CompositePrimaryKey_ReturnsTrue(DbType);
 
+    // Not run: HasPrimaryKey_AfterAddingPrimaryKey_ReturnsTrue, SQLite cannot add a primary key to an existing table
+
     [Test]
     public void DiscoverColumns_EmptyTable_ReturnsColumns() => DiscoverColumns_EmptyTable_ReturnsColumns(DbType);
 
@@ -35,6 +37,9 @@ internal sealed class TableHelperMetadataTests_Sqlite : TableHelperMetadataTests
     [Test]
     public void DiscoverRelationships_NoRelationships_ReturnsEmpty() =>
         DiscoverRelationships_NoRelationships_ReturnsEmpty(DbType);
+
+    // Not run: DiscoverRelationships_WithForeignKey_ReturnsRelationship, SQLite cannot add a foreign key to an existing
+    // table
 
     [Test]
     public void ScriptTableCreation_ReturnsValidSql() => ScriptTableCreation_ReturnsValidSql(DbType);

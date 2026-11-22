@@ -17,6 +17,9 @@ internal sealed class TableHelperColumnOperationTests_Sqlite : TableHelperColumn
     public void AddColumn_NotNullColumn_Success() => AddColumn_NotNullColumn_Success(DbType);
 
     [Test]
+    public void AddColumn_DateTimeColumn_Success() => AddColumn_DateTimeColumn_Success(DbType);
+
+    [Test]
     public void AddColumn_DecimalColumn_Success() => AddColumn_DecimalColumn_Success(DbType);
 
     [Test]
