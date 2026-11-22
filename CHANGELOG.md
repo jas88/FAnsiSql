@@ -88,6 +88,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     for the rest of the process
   - A DBMS now gets its entry when its first keyword is added, so implementations can be loaded one at a time, in any
     order
+- **Connection string keywords added from two threads at once could be mixed up**
+  - `ConnectionStringKeywordAccumulator.AddOrUpdateKeyword`, which `AddConnectionStringKeyword` calls, finds out whether
+    a keyword is an alias of one already added with a connection string builder that two calls at once both changed.
+    One call could then take its keyword for an alias of the one the other call was adding, so that keyword got the
+    value of the first, and the first keyword was lost
+  - Keywords are now added one at a time. `EnforceOptions`, which applies them to each connection string built, does
+    not wait for that: it applies the keywords as they were when it started
 - **PostgreSQL: aggregates with a pivot column did not pivot**
   - The SQL built for a pivot had no column for each pivot value and ignored any TOP X. Without a calendar axis it was
     rejected: the query being pivoted was not grouped (`must appear in the GROUP BY clause`) and WHERE and HAVING lines
