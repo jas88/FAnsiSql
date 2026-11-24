@@ -85,6 +85,10 @@ internal sealed class BulkCopyTests_PostgreSql : BulkCopyTestsBase
     [Test]
     public void Upload_DuplicatePrimaryKey_ThrowsException() => Upload_DuplicatePrimaryKey_ThrowsException(DbType);
 
+    [Test]
+    public void Upload_DuplicatePrimaryKeyInTransaction_FailsPromptly() =>
+        Upload_DuplicatePrimaryKeyInTransaction_FailsPromptly(DbType);
+
     #endregion
 
     #region Column Mapping
