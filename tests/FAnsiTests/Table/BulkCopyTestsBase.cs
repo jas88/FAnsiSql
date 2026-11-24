@@ -544,17 +544,17 @@ internal abstract class BulkCopyTestsBase : DatabaseTests
             using var bulk2 = tbl.BeginBulkInsert(CultureInfo.InvariantCulture, transaction.ManagedTransaction);
 
             var stopwatch = Stopwatch.StartNew();
-            var ex = Assert.Catch(() => bulk2.Upload(dt2));
+            var ex = Assert.Catch(() => bulk2.Upload(dt2)) ??
+                     throw new AssertionException("Expected an exception to be thrown");
             stopwatch.Stop();
 
-            Assert.That(ex, Is.Not.Null, "Expected an exception to be thrown");
             Assert.That(stopwatch.Elapsed, Is.LessThan(MaxTimeToReportFailure),
                 "Reporting the failed bulk insert took as long as waiting for a lock that the transaction itself holds");
 
             // The row at fault is the second one, and the complaint of the database about it must not be lost
             if (type is DatabaseType.MicrosoftSQLServer or DatabaseType.Sqlite)
             {
-                var report = ex!.ToString();
+                var report = ex.ToString();
                 Assert.Multiple(() =>
                 {
                     Assert.That(ex, Is.InstanceOf<FileLoadException>());
