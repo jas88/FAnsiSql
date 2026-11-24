@@ -28,6 +28,12 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
         CompositeFormat.Parse(SR
             .MicrosoftSQLBulkCopy_AttemptLineByLineInsert_Second_Pass_Exception__Failed_to_load_data_row__0__the_following_values_were_rejected_by_the_database___1__2__3_);
 
+    /// <summary>
+    ///     Name of the savepoint that the line by line investigation of a failed bulk insert is rolled back to when it
+    ///     runs in a transaction of the caller.
+    /// </summary>
+    private const string InvestigationSavepoint = "FAnsiBulkCopyInvestigation";
+
     private readonly SqlBulkCopy _bulkCopy;
     private Dictionary<int, ColumnMappingMetadata>? _columnMetadataCache;
 
@@ -157,9 +163,15 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
     }
 
     /// <summary>
-    ///     Creates a new transaction and does one line at a time bulk insertions of the <paramref name="insert" /> to
-    ///     determine which line (and value)
-    ///     is causing the problem.  Transaction is always rolled back.
+    ///     Does one line at a time bulk insertions of the <paramref name="insert" /> to determine which line (and value)
+    ///     is causing the problem.  The insertions are always rolled back.
+    ///     <para>
+    ///         If the bulk insert is running in a transaction of the caller then the lines are tried in that transaction,
+    ///         after a savepoint which they are rolled back to.  The transaction still holds the locks it took for the
+    ///         failed insert, so another connection would only wait for them until it timed out, and it could not see
+    ///         rows the transaction has not committed, which may be the ones the insert clashed with.
+    ///     </para>
+    ///     <para>Otherwise the failed insert has been rolled back, and the lines are tried on a new connection.</para>
     /// </summary>
     /// <param name="e"></param>
     /// <param name="insert"></param>
@@ -169,11 +181,26 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
     private Exception AttemptLineByLineInsert(Exception e, SqlBulkCopy insert, DataTable dt,
         DiscoveredServer serverForLineByLineInvestigation)
     {
-        var line = 1;
         var firstPass = ExceptionToListOfInnerMessages(e, true);
         firstPass = firstPass.Replace(Environment.NewLine, $"{Environment.NewLine}\t");
         firstPass = Environment.NewLine + SR.MicrosoftSQLBulkCopy_AttemptLineByLineInsert_First_Pass_Exception_ +
                     Environment.NewLine + firstPass;
+
+        if (Connection.Transaction is SqlTransaction callerTransaction)
+        {
+            // Throws if the failure ended the transaction, and the caller is then told that the investigation failed
+            callerTransaction.Save(InvestigationSavepoint);
+            try
+            {
+                return InsertOneLineAtATime(e, insert, dt, firstPass, (SqlConnection)Connection.Connection,
+                    callerTransaction);
+            }
+            finally
+            {
+                // Takes out the lines that were inserted, and leaves the rest of the transaction as it was
+                callerTransaction.Rollback(InvestigationSavepoint);
+            }
+        }
 
         //have to use a new object because current one could have a broken transaction associated with it
         using var con = (SqlConnection)serverForLineByLineInvestigation.GetConnection();
@@ -181,61 +208,7 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
         using var investigationTransaction = con.BeginTransaction("Investigate BulkCopyFailure");
         try
         {
-            // Transaction will auto-dispose and rollback on scope exit
-            using (var investigationOneLineAtATime =
-                   new SqlBulkCopy(con, SqlBulkCopyOptions.KeepIdentity, investigationTransaction))
-            {
-                investigationOneLineAtATime.DestinationTableName = insert.DestinationTableName;
-
-                foreach (SqlBulkCopyColumnMapping m in insert.ColumnMappings)
-                    investigationOneLineAtATime.ColumnMappings.Add(m);
-
-                //try a line at a time
-                foreach (DataRow dr in dt.Rows)
-                    try
-                    {
-                        investigationOneLineAtATime.WriteToServer(new[] { dr }); //try one line
-                        line++;
-                    }
-                    catch (Exception exception) when (exception is SqlException or DataException)
-                    {
-                        if (BcpColIdToString(investigationOneLineAtATime, exception as SqlException, out var result,
-                                out var badMapping))
-                        {
-                            if (badMapping is null || !dt.Columns.Contains(badMapping.SourceColumn))
-                                return new InvalidOperationException(
-                                    string.Format(CultureInfo.InvariantCulture,
-                                        FormatBulkInsertFailedOnDataRow,
-                                        line, result), e);
-
-                            var sourceValue = dr[badMapping.SourceColumn];
-                            var destColumn = TargetTableColumns.SingleOrDefault(c =>
-                                StringComparisonHelper.ColumnNamesEqual(c.GetRuntimeName(),
-                                    badMapping.DestinationColumn));
-
-                            if (destColumn != null)
-                                return new FileLoadException(
-                                    string.Format(CultureInfo.InvariantCulture,
-                                        FormatBulkInsertFailedOnDataRowWithDetails, line, badMapping.SourceColumn,
-                                        sourceValue, destColumn.DataType, Environment.NewLine, result), exception);
-
-                            return new InvalidOperationException(
-                                string.Format(CultureInfo.InvariantCulture, FormatBulkInsertFailedOnDataRow, line,
-                                    result), e);
-                        }
-
-                        return new FileLoadException(
-                            string.Format(CultureInfo.InvariantCulture, FormatSecondPassException, line,
-                                Environment.NewLine, string.Join(Environment.NewLine, dr.ItemArray), firstPass),
-                            exception);
-                    }
-
-                //it worked... how!?
-                return new InvalidOperationException(
-                    SR
-                        .MicrosoftSQLBulkCopy_AttemptLineByLineInsert_Second_Pass_Exception__Bulk_insert_failed_but_when_we_tried_to_repeat_it_a_line_at_a_time_it_worked +
-                    firstPass, e);
-            }
+            return InsertOneLineAtATime(e, insert, dt, firstPass, con, investigationTransaction);
         }
         finally
         {
@@ -243,6 +216,75 @@ public sealed partial class MicrosoftSQLBulkCopy : BulkCopy
             // But we rollback explicitly here for clarity and immediate release of locks
             investigationTransaction.Rollback();
         }
+    }
+
+    /// <summary>
+    ///     Bulk inserts the rows of <paramref name="dt" /> one at a time in <paramref name="transaction" /> until one
+    ///     fails, and describes that failure.  The caller rolls the insertions back.
+    /// </summary>
+    /// <param name="e">The failure of the bulk insert of the whole table</param>
+    /// <param name="insert">The bulk insert that failed</param>
+    /// <param name="dt"></param>
+    /// <param name="firstPass">The description of <paramref name="e" /> to end the message with</param>
+    /// <param name="con"></param>
+    /// <param name="transaction"></param>
+    /// <returns></returns>
+    private Exception InsertOneLineAtATime(Exception e, SqlBulkCopy insert, DataTable dt, string firstPass,
+        SqlConnection con, SqlTransaction transaction)
+    {
+        var line = 1;
+
+        using var investigationOneLineAtATime = new SqlBulkCopy(con, SqlBulkCopyOptions.KeepIdentity, transaction);
+        investigationOneLineAtATime.DestinationTableName = insert.DestinationTableName;
+
+        foreach (SqlBulkCopyColumnMapping m in insert.ColumnMappings)
+            investigationOneLineAtATime.ColumnMappings.Add(m);
+
+        //try a line at a time
+        foreach (DataRow dr in dt.Rows)
+            try
+            {
+                investigationOneLineAtATime.WriteToServer(new[] { dr }); //try one line
+                line++;
+            }
+            catch (Exception exception) when (exception is SqlException or DataException)
+            {
+                if (BcpColIdToString(investigationOneLineAtATime, exception as SqlException, out var result,
+                        out var badMapping))
+                {
+                    if (badMapping is null || !dt.Columns.Contains(badMapping.SourceColumn))
+                        return new InvalidOperationException(
+                            string.Format(CultureInfo.InvariantCulture,
+                                FormatBulkInsertFailedOnDataRow,
+                                line, result), e);
+
+                    var sourceValue = dr[badMapping.SourceColumn];
+                    var destColumn = TargetTableColumns.SingleOrDefault(c =>
+                        StringComparisonHelper.ColumnNamesEqual(c.GetRuntimeName(),
+                            badMapping.DestinationColumn));
+
+                    if (destColumn != null)
+                        return new FileLoadException(
+                            string.Format(CultureInfo.InvariantCulture,
+                                FormatBulkInsertFailedOnDataRowWithDetails, line, badMapping.SourceColumn,
+                                sourceValue, destColumn.DataType, Environment.NewLine, result), exception);
+
+                    return new InvalidOperationException(
+                        string.Format(CultureInfo.InvariantCulture, FormatBulkInsertFailedOnDataRow, line,
+                            result), e);
+                }
+
+                return new FileLoadException(
+                    string.Format(CultureInfo.InvariantCulture, FormatSecondPassException, line,
+                        Environment.NewLine, string.Join(Environment.NewLine, dr.ItemArray), firstPass),
+                    exception);
+            }
+
+        //it worked... how!?
+        return new InvalidOperationException(
+            SR
+                .MicrosoftSQLBulkCopy_AttemptLineByLineInsert_Second_Pass_Exception__Bulk_insert_failed_but_when_we_tried_to_repeat_it_a_line_at_a_time_it_worked +
+            firstPass, e);
     }
 
     /// <summary>

@@ -54,6 +54,12 @@ public sealed class SqliteBulkCopy(DiscoveredTable targetTable, IManagedConnecti
     /// </remarks>
     public static int BatchSize { get; set; } = 5000; // Optimized for SQLite performance
 
+    /// <summary>
+    ///     Name of the savepoint that the line by line investigation of a failed bulk insert is rolled back to when it
+    ///     runs in a transaction of the caller.
+    /// </summary>
+    private const string InvestigationSavepoint = "FAnsiBulkCopyInvestigation";
+
     public override int UploadImpl(DataTable dt)
     {
         // Single-pass validation: empty string to NULL, string length (no decimal validation for SQLite's dynamic typing)
@@ -104,7 +110,9 @@ public sealed class SqliteBulkCopy(DiscoveredTable targetTable, IManagedConnecti
 
     private int BulkInsertImpl(DataTable dt)
     {
-        var ourTrans = Connection.Transaction == null
+        // Disposed, and so rolled back, if the insert fails.  Left open it would keep the database locked against the
+        // connection that looks for the row at fault
+        using var ourTrans = Connection.Transaction == null
             ? Connection.Connection.BeginTransaction(IsolationLevel.ReadUncommitted)
             : null;
         var matchedColumns = GetMapping(dt.Columns.Cast<DataColumn>());
@@ -201,27 +209,67 @@ public sealed class SqliteBulkCopy(DiscoveredTable targetTable, IManagedConnecti
     }
 
     /// <summary>
-    ///     Creates a new transaction and does one line at a time bulk insertions to determine which line (and value)
-    ///     is causing the problem. Transaction is always rolled back.
+    ///     Does one line at a time insertions to determine which line (and value) is causing the problem.  The
+    ///     insertions are always rolled back.
+    ///     <para>
+    ///         If the bulk insert is running in a transaction of the caller then the lines are tried in that transaction,
+    ///         after a savepoint which they are rolled back to.  The transaction still holds its lock on the database,
+    ///         so another connection would only wait for it until it timed out.
+    ///     </para>
+    ///     <para>Otherwise the failed insert has been rolled back, and the lines are tried on a new connection.</para>
     /// </summary>
     /// <param name="originalException">The original exception that triggered line-by-line investigation</param>
     /// <param name="dt">The DataTable being inserted</param>
     /// <returns>Enhanced exception with row and column details</returns>
     private Exception AttemptLineByLineInsert(Exception originalException, DataTable dt)
     {
-        var line = 1;
         var firstPass = ExceptionToListOfInnerMessages(originalException, true);
         firstPass = firstPass.Replace(Environment.NewLine, $"{Environment.NewLine}\t");
         firstPass = Environment.NewLine + "First Pass Exception:" + Environment.NewLine + firstPass;
 
-        var matchedColumns = GetMapping(dt.Columns.Cast<DataColumn>());
+        if (Connection.Transaction is SqliteTransaction callerTransaction)
+        {
+            callerTransaction.Save(InvestigationSavepoint);
+            try
+            {
+                return InsertOneLineAtATime(originalException, dt, firstPass, (SqliteConnection)Connection.Connection,
+                    callerTransaction);
+            }
+            finally
+            {
+                // Takes out the lines that were inserted, and leaves the rest of the transaction as it was.  Rolling
+                // back to a savepoint keeps it, so it is released as well
+                callerTransaction.Rollback(InvestigationSavepoint);
+                callerTransaction.Release(InvestigationSavepoint);
+            }
+        }
 
         // Create new connection for investigation to avoid transaction issues
         using var con = (SqliteConnection)TargetTable.Database.Server.GetConnection();
         con.Open();
-        var investigationTransaction = con.BeginTransaction(IsolationLevel.ReadUncommitted);
 
-        using var cmd = new SqliteCommand("", con, investigationTransaction);
+        // Disposed, and so rolled back, however the investigation ends
+        using var investigationTransaction = con.BeginTransaction(IsolationLevel.ReadUncommitted);
+        return InsertOneLineAtATime(originalException, dt, firstPass, con, investigationTransaction);
+    }
+
+    /// <summary>
+    ///     Inserts the rows of <paramref name="dt" /> one at a time in <paramref name="transaction" /> until one fails,
+    ///     and describes that failure.  The caller rolls the insertions back.
+    /// </summary>
+    /// <param name="originalException">The failure of the bulk insert of the whole table</param>
+    /// <param name="dt">The DataTable being inserted</param>
+    /// <param name="firstPass">The description of <paramref name="originalException" /> to end the message with</param>
+    /// <param name="con"></param>
+    /// <param name="transaction"></param>
+    /// <returns>Enhanced exception with row and column details</returns>
+    private Exception InsertOneLineAtATime(Exception originalException, DataTable dt, string firstPass,
+        SqliteConnection con, SqliteTransaction transaction)
+    {
+        var line = 1;
+        var matchedColumns = GetMapping(dt.Columns.Cast<DataColumn>());
+
+        using var cmd = new SqliteCommand("", con, transaction);
         if (BulkInsertBatchTimeoutInSeconds != 0)
             cmd.CommandTimeout = BulkInsertBatchTimeoutInSeconds;
 
@@ -284,7 +332,6 @@ public sealed class SqliteBulkCopy(DiscoveredTable targetTable, IManagedConnecti
         }
 
         // All rows worked individually - unexpected!
-        investigationTransaction.Rollback();
         return new InvalidOperationException(
             $"Second Pass Exception: Bulk insert failed but when we tried to repeat it a line at a time it worked{firstPass}",
             originalException);

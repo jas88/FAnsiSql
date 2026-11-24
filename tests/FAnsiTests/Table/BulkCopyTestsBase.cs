@@ -1,4 +1,5 @@
 using System.Data;
+using System.Diagnostics;
 using System.Globalization;
 using System.Text;
 using FAnsi;
@@ -18,6 +19,12 @@ namespace FAnsiTests.Table;
 /// </summary>
 internal abstract class BulkCopyTestsBase : DatabaseTests
 {
+    /// <summary>
+    ///     How long a failed bulk insert may take to report its failure.  Well under the 30 seconds that a command waits
+    ///     for a lock by default, and far longer than any of the test uploads takes.
+    /// </summary>
+    private static readonly TimeSpan MaxTimeToReportFailure = TimeSpan.FromSeconds(10);
+
     /// <summary>
     ///     Helper method to assert that an operation throws an exception.
     ///     Different databases throw different exception types:
@@ -494,6 +501,82 @@ internal abstract class BulkCopyTestsBase : DatabaseTests
             using var bulk2 = tbl.BeginBulkInsert(CultureInfo.InvariantCulture);
             AssertThrowsException(type, () => bulk2.Upload(dt2));
         }
+    }
+
+    /// <summary>
+    ///     A bulk insert that fails inside the caller's transaction must report the failure promptly.  The transaction
+    ///     still holds its locks on the table, so an investigation of the failure on a second connection can only wait
+    ///     until it times out (30 seconds by default).
+    /// </summary>
+    protected void Upload_DuplicatePrimaryKeyInTransaction_FailsPromptly(DatabaseType type)
+    {
+        var db = GetTestDatabase(type);
+        var tbl = db.CreateTable("TestPKDuplicateInTransaction",
+        [
+            new DatabaseColumnRequest("Id", new DatabaseTypeRequest(typeof(int)))
+            {
+                IsPrimaryKey = true,
+                AllowNulls = false
+            },
+            new DatabaseColumnRequest("Value", new DatabaseTypeRequest(typeof(string), 50))
+        ]);
+
+        // A committed row for the upload to clash with
+        using (var dt1 = new DataTable())
+        {
+            dt1.Columns.Add("Id", typeof(int));
+            dt1.Columns.Add("Value", typeof(string));
+            dt1.Rows.Add(1, "First");
+
+            using var bulk1 = tbl.BeginBulkInsert(CultureInfo.InvariantCulture);
+            bulk1.Upload(dt1);
+        }
+
+        using var transaction = tbl.Database.Server.BeginNewTransactedConnection();
+        try
+        {
+            using var dt2 = new DataTable();
+            dt2.Columns.Add("Id", typeof(int));
+            dt2.Columns.Add("Value", typeof(string));
+            dt2.Rows.Add(2, "New");
+            dt2.Rows.Add(1, "Duplicate"); // Same PK as the committed row
+
+            using var bulk2 = tbl.BeginBulkInsert(CultureInfo.InvariantCulture, transaction.ManagedTransaction);
+
+            var stopwatch = Stopwatch.StartNew();
+            var ex = Assert.Catch(() => bulk2.Upload(dt2));
+            stopwatch.Stop();
+
+            Assert.That(ex, Is.Not.Null, "Expected an exception to be thrown");
+            Assert.That(stopwatch.Elapsed, Is.LessThan(MaxTimeToReportFailure),
+                "Reporting the failed bulk insert took as long as waiting for a lock that the transaction itself holds");
+
+            // The row at fault is the second one, and the complaint of the database about it must not be lost
+            if (type is DatabaseType.MicrosoftSQLServer or DatabaseType.Sqlite)
+            {
+                var report = ex!.ToString();
+                Assert.Multiple(() =>
+                {
+                    Assert.That(ex, Is.InstanceOf<FileLoadException>());
+                    Assert.That(ex.Message, Does.Contain("data row 2"));
+                    Assert.That(report, Does.Contain(type == DatabaseType.MicrosoftSQLServer
+                        ? "Violation of PRIMARY KEY constraint"
+                        : "UNIQUE constraint failed"));
+                    Assert.That(report, Does.Not.Contain(type == DatabaseType.MicrosoftSQLServer
+                        ? "Timeout Expired"
+                        : "database is locked").IgnoreCase);
+
+                    // The transaction is still open and holds none of the rows tried while looking for the bad one
+                    Assert.That(tbl.GetRowCount(transaction.ManagedTransaction), Is.EqualTo(1));
+                });
+            }
+        }
+        finally
+        {
+            transaction.ManagedTransaction?.AbandonAndCloseConnection();
+        }
+
+        Assert.That(tbl.GetRowCount(), Is.EqualTo(1));
     }
 
     #endregion

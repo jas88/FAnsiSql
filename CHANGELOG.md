@@ -15,6 +15,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     to the GitHub release if both pass
 
 ### Fixed
+- **SQL Server and SQLite: a bulk insert that failed in a transaction took 30 seconds to say so**
+  - When a bulk insert fails, FAnsi inserts the rows again one at a time to find the row at fault, and used to do so
+    on a new connection. If the bulk insert was running in a transaction of the caller, that transaction still held
+    its locks on the table, so the new connection waited for them until its 30 second timeout. The exception then
+    blamed data row 1, whichever row was at fault, and had the timeout as its inner exception
+  - The rows are now tried in the transaction of the caller, after a savepoint which they are rolled back to, so the
+    failure is reported at once, names the right row, and leaves the transaction as it was. Rows that the transaction
+    has inserted but not committed are also seen, so a clash with one of them is found
+  - On SQLite the same wait followed a failed bulk insert that was not in a transaction, because the transaction that
+    the bulk insert opened for itself was left open. It is now rolled back
 - **SQLite: `SupportsEmbeddedParameters` returned true**
   - SQLite SQL has no `DECLARE` or `SET` statement, so a parameter cannot be declared and given a value in SQL. Code that
     trusted the flag, declaring parameters with `GetParameterDeclaration` and setting them with `SET`, failed with
